@@ -13,6 +13,7 @@
     git
     gnumake
     navi
+    pandoc
     ripgrep
     starship
     tailscale
