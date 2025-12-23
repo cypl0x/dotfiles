@@ -11,6 +11,7 @@
     eza  # Modern replacement for ls (formerly exa)
     fzf
     git
+    gnumake
     navi
     ripgrep
     starship
