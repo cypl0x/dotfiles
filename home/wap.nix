@@ -1,7 +1,5 @@
-{ config, pkgs, lib, ... }:
-
-{
-  imports = [ ./common.nix ];
+{lib, ...}: {
+  imports = [./common.nix];
 
   home.username = "wap";
 

@@ -93,9 +93,42 @@ show: ## Show flake outputs
 	$(NIX) flake show
 
 .PHONY: fmt
-fmt: ## Format nix files
-	@echo "${GREEN}Formatting...${RESET}"
+fmt: ## Format nix files with alejandra
+	@echo "${GREEN}Formatting Nix files with alejandra...${RESET}"
 	$(NIX) fmt
+
+.PHONY: fmt-check
+fmt-check: ## Check if nix files are formatted
+	@echo "${GREEN}Checking Nix file formatting...${RESET}"
+	fd -e nix -x alejandra --check {}
+
+# ============================================================================
+# Linting & Quality Checks
+# ============================================================================
+
+.PHONY: lint
+lint: lint-statix lint-deadnix ## Run all linting checks (statix + deadnix)
+
+.PHONY: lint-statix
+lint-statix: ## Check for anti-patterns with statix
+	@echo "${GREEN}Running statix linter...${RESET}"
+	statix check .
+
+.PHONY: lint-deadnix
+lint-deadnix: ## Check for unused code with deadnix
+	@echo "${GREEN}Running deadnix linter...${RESET}"
+	deadnix --fail .
+
+.PHONY: lint-fix
+lint-fix: ## Auto-fix issues where possible
+	@echo "${GREEN}Auto-fixing with statix...${RESET}"
+	statix fix .
+	@echo "${GREEN}Formatting with alejandra...${RESET}"
+	$(NIX) fmt
+
+.PHONY: qa
+qa: fmt-check lint ## Run all quality assurance checks (format + lint)
+	@echo "${GREEN}All QA checks passed!${RESET}"
 
 # ============================================================================
 # Development

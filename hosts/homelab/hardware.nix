@@ -1,5 +1,5 @@
-{ modulesPath, ... }: {
-  imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
+{modulesPath, ...}: {
+  imports = [(modulesPath + "/profiles/qemu-guest.nix")];
 
   # Boot loader (hardware-specific)
   boot = {
@@ -10,8 +10,8 @@
     };
 
     # Kernel modules
-    initrd.availableKernelModules = [ "ata_piix" "uhci_hcd" "xen_blkfront" "vmw_pvscsi" ];
-    initrd.kernelModules = [ "nvme" ];
+    initrd.availableKernelModules = ["ata_piix" "uhci_hcd" "xen_blkfront" "vmw_pvscsi"];
+    initrd.kernelModules = ["nvme"];
   };
 
   # File systems

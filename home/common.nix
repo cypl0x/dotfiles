@@ -1,6 +1,4 @@
-{ config, pkgs, ... }:
-
-{
+{config, ...}: {
   # Home Manager needs a bit of information about you and the paths it should manage.
   home = {
     # username is set by the importing module
@@ -83,7 +81,7 @@
 
       oh-my-zsh = {
         enable = true;
-        plugins = [ "git" "fzf" "tmux" ];
+        plugins = ["git" "fzf" "tmux"];
         theme = "robbyrussell"; # Overridden by starship anyway
       };
 
@@ -97,7 +95,7 @@
         if [ -f ${./shell/zsh/completions.sh} ]; then
           source ${./shell/zsh/completions.sh}
         fi
-        
+
         # Shellfish integration
         if [ -f ${./shell/shellfishrc} ]; then
           source ${./shell/shellfishrc}

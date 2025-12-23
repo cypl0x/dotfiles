@@ -1,27 +1,27 @@
-{ pkgs, ... }: {
+{pkgs, ...}: {
   # Monitoring and observability tools
 
   environment.systemPackages = with pkgs; [
     # Tor monitoring
-    nyx                          # Interactive Tor relay monitor (formerly arm)
+    nyx # Interactive Tor relay monitor (formerly arm)
 
     # Network monitoring
-    vnstat                       # Network traffic statistics
-    bandwhich                    # Terminal bandwidth utilization tool
-    nethogs                      # Per-process network usage
-    iftop                        # Network bandwidth monitoring
+    vnstat # Network traffic statistics
+    bandwhich # Terminal bandwidth utilization tool
+    nethogs # Per-process network usage
+    iftop # Network bandwidth monitoring
 
     # System monitoring
-    htop                         # Interactive process viewer
-    btop                         # Resource monitor (modern htop alternative)
+    htop # Interactive process viewer
+    btop # Resource monitor (modern htop alternative)
 
     # Log analysis
-    goaccess                     # Real-time web log analyzer
-    lnav                         # Advanced log file viewer
-    multitail                    # Monitor multiple log files
+    goaccess # Real-time web log analyzer
+    lnav # Advanced log file viewer
+    multitail # Monitor multiple log files
 
     # Metrics and observability
-    prometheus-node-exporter     # System metrics exporter
+    prometheus-node-exporter # System metrics exporter
   ];
 
   # Enable vnstat service for persistent network statistics

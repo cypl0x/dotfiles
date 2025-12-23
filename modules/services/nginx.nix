@@ -1,4 +1,4 @@
-{ config, pkgs, ... }: {
+_: {
   # Base nginx configuration with security hardening
   # Virtual hosts should be defined in host-specific configuration
 
@@ -31,7 +31,7 @@
   };
 
   # Open firewall for nginx (HTTP and HTTPS)
-  networking.firewall.allowedTCPPorts = [ 80 443 ];
+  networking.firewall.allowedTCPPorts = [80 443];
 
   # ACME (Let's Encrypt) configuration
   security.acme = {

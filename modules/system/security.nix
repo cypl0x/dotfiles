@@ -1,10 +1,10 @@
-{ pkgs, ... }: {
+_: {
   # SSH with ShellFish Support
   services.openssh = {
     enable = true;
     settings = {
       # Allow LC_TERMINAL for ShellFish
-      AcceptEnv = [ "LANG" "LC_*" ];
+      AcceptEnv = ["LANG" "LC_*"];
 
       # Security Hardening
       PermitRootLogin = "prohibit-password";

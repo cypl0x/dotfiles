@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{pkgs, ...}: {
   # Root user configuration
   users.users.root = {
     shell = pkgs.zsh;

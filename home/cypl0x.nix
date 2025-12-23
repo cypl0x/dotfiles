@@ -1,10 +1,8 @@
-{ config, pkgs, ... }:
-
-{
-  imports = [ ./common.nix ];
+_: {
+  imports = [./common.nix];
 
   home.username = "cypl0x";
-  
+
   # Override git config if needed (though it matches the common default)
   programs.git = {
     settings = {

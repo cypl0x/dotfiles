@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+_: {
   imports = [
     # Hardware and platform configuration
     ./hardware.nix
@@ -41,7 +41,7 @@
 
   # System settings
   time.timeZone = "UTC";
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = ["nix-command" "flakes"];
 
   system.stateVersion = "23.11";
 }

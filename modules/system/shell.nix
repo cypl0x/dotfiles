@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+_: {
   # Zsh configuration
   programs.zsh = {
     enable = true;
@@ -9,6 +9,6 @@
     syntaxHighlighting.enable = true;
   };
 
-  # Set default shell for users is handled in user modules, 
+  # Set default shell for users is handled in user modules,
   # but enabling the shell package here ensures it is installed.
 }

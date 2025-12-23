@@ -1,11 +1,7 @@
-{ config, pkgs, ... }:
-
-let
+{pkgs, ...}: let
   # Build documentation from markdown
-  docs = import ../../web/docs.nix { inherit pkgs; };
-in
-
-{
+  docs = import ../../web/docs.nix {inherit pkgs;};
+in {
   # Host-specific service configurations
   # Base nginx configuration is in ../../modules/services/nginx.nix
 
@@ -18,7 +14,7 @@ in
       # Force SSL and redirect HTTP to HTTPS
       forceSSL = true;
       # Also handle www subdomain
-      serverAliases = [ "www.wolfhard.net" ];
+      serverAliases = ["www.wolfhard.net"];
 
       root = "/var/www/wolfhard";
 
@@ -64,7 +60,7 @@ in
     "wolfhard.dev" = {
       enableACME = true;
       forceSSL = true;
-      serverAliases = [ "www.wolfhard.dev" ];
+      serverAliases = ["www.wolfhard.dev"];
 
       root = "/var/www/wolfhard";
 
@@ -84,7 +80,7 @@ in
     "wolfhard.tech" = {
       enableACME = true;
       forceSSL = true;
-      serverAliases = [ "www.wolfhard.tech" ];
+      serverAliases = ["www.wolfhard.tech"];
 
       root = "/var/www/wolfhard";
 
@@ -248,8 +244,8 @@ in
   # Create symlink from /var/www/wolfhard to /etc/nginx/www
   systemd.services.nginx-www-setup = {
     description = "Setup nginx www directory";
-    wantedBy = [ "nginx.service" ];
-    before = [ "nginx.service" ];
+    wantedBy = ["nginx.service"];
+    before = ["nginx.service"];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
