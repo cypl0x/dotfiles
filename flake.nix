@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration flake for homelab";
+  description = "nix flake dotfiles";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
