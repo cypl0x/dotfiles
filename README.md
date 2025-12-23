@@ -69,7 +69,7 @@ cd /root
 git clone <your-repo-url> dotfiles
 
 # Or initialize this existing directory
-cd /root/dotfiles
+cd ~/dotfiles
 git init
 git add .
 git commit -m "Initial commit: NixOS flake configuration"
@@ -80,7 +80,7 @@ git commit -m "Initial commit: NixOS flake configuration"
 Before switching, test that the flake builds correctly:
 
 ```bash
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake check
 ```
 
@@ -88,10 +88,10 @@ nix flake check
 
 ```bash
 # Rebuild using the flake
-sudo nixos-rebuild switch --flake /root/dotfiles#homelab
+sudo nixos-rebuild switch --flake ~/dotfiles#homelab
 
 # Or if you're in the dotfiles directory
-cd /root/dotfiles
+cd ~/dotfiles
 sudo nixos-rebuild switch --flake .#homelab
 ```
 
@@ -101,7 +101,7 @@ To make the flake the default configuration for future boots:
 
 ```bash
 # Symlink the flake to /etc/nixos (optional for convenience)
-sudo ln -sf /root/dotfiles/flake.nix /etc/nixos/flake.nix
+sudo ln -sf ~/dotfiles/flake.nix /etc/nixos/flake.nix
 ```
 
 ### Step 6: Verify the Migration
@@ -118,27 +118,27 @@ systemctl status
 
 ```bash
 # Rebuild and switch to new configuration
-sudo nixos-rebuild switch --flake /root/dotfiles#homelab
+sudo nixos-rebuild switch --flake ~/dotfiles#homelab
 
 # Rebuild and switch, showing detailed build logs
-sudo nixos-rebuild switch --flake /root/dotfiles#homelab --show-trace
+sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace
 
 # Build but don't activate (test configuration)
-sudo nixos-rebuild build --flake /root/dotfiles#homelab
+sudo nixos-rebuild build --flake ~/dotfiles#homelab
 
 # Rebuild and activate on next boot (safer for remote systems)
-sudo nixos-rebuild boot --flake /root/dotfiles#homelab
+sudo nixos-rebuild boot --flake ~/dotfiles#homelab
 ```
 
 ### Updating the System
 
 ```bash
 # Update flake inputs (nixpkgs, etc.)
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake update
 
 # Update and rebuild in one go
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake update && sudo nixos-rebuild switch --flake .#homelab
 
 # Update only specific input
@@ -149,7 +149,7 @@ nix flake lock --update-input nixpkgs
 
 ```bash
 # Update flake.lock and rebuild
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake update
 sudo nixos-rebuild switch --flake .#homelab
 
@@ -178,7 +178,7 @@ sudo /nix/var/nix/profiles/system/bin/switch-to-configuration switch
 
 ```bash
 # Check flake for errors
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake check
 
 # Show flake info
@@ -202,15 +202,15 @@ Add these to your shell configuration for easier NixOS management. They're alrea
 
 ```bash
 # Quick rebuild from dotfiles
-alias nrs='sudo nixos-rebuild switch --flake /root/dotfiles#homelab'
-alias nrb='sudo nixos-rebuild boot --flake /root/dotfiles#homelab'
-alias nrt='sudo nixos-rebuild test --flake /root/dotfiles#homelab'
+alias nrs='sudo nixos-rebuild switch --flake ~/dotfiles#homelab'
+alias nrb='sudo nixos-rebuild boot --flake ~/dotfiles#homelab'
+alias nrt='sudo nixos-rebuild test --flake ~/dotfiles#homelab'
 
 # Rebuild with verbose output
-alias nrsv='sudo nixos-rebuild switch --flake /root/dotfiles#homelab --show-trace'
+alias nrsv='sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace'
 
 # Build without switching (test configuration)
-alias nrbs='sudo nixos-rebuild build --flake /root/dotfiles#homelab'
+alias nrbs='sudo nixos-rebuild build --flake ~/dotfiles#homelab'
 ```
 
 ### Update & Upgrade Functions
@@ -218,7 +218,7 @@ alias nrbs='sudo nixos-rebuild build --flake /root/dotfiles#homelab'
 ```bash
 # Update flake and rebuild
 nixup() {
-  cd /root/dotfiles
+  cd ~/dotfiles
   nix flake update
   sudo nixos-rebuild switch --flake .#homelab
 }
@@ -230,7 +230,7 @@ nixup-input() {
     echo "Example: nixup-input nixpkgs"
     return 1
   fi
-  cd /root/dotfiles
+  cd ~/dotfiles
   nix flake lock --update-input "$1"
   sudo nixos-rebuild switch --flake .#homelab
 }
@@ -360,19 +360,19 @@ nixtry() {
 ```bash
 # Quick flake check
 nixcheck() {
-  cd /root/dotfiles
+  cd ~/dotfiles
   nix flake check
 }
 
 # Show flake outputs
 nixshow() {
-  cd /root/dotfiles
+  cd ~/dotfiles
   nix flake show
 }
 
 # Format nix files
 nixfmt() {
-  find /root/dotfiles -name '*.nix' -type f -exec nixfmt {} \;
+  find ~/dotfiles -name '*.nix' -type f -exec nixfmt {} \;
 }
 ```
 
@@ -385,7 +385,7 @@ nixfmt() {
 nixup
 
 # Or manually:
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake update
 nrs  # (alias for nixos-rebuild switch)
 ```
@@ -397,7 +397,7 @@ nrs  # (alias for nixos-rebuild switch)
 3. Rebuild:
 
 ```bash
-cd /root/dotfiles
+cd ~/dotfiles
 nrs  # or: sudo nixos-rebuild switch --flake .#homelab
 ```
 
@@ -405,7 +405,7 @@ nrs  # or: sudo nixos-rebuild switch --flake .#homelab
 
 ```bash
 # Build configuration without activating
-nrbs  # or: sudo nixos-rebuild build --flake /root/dotfiles#homelab
+nrbs  # or: sudo nixos-rebuild build --flake ~/dotfiles#homelab
 
 # If build succeeds, then switch
 nrs
@@ -493,7 +493,7 @@ navi
 ## Git Workflow for Dotfiles
 
 ```bash
-cd /root/dotfiles
+cd ~/dotfiles
 
 # Make changes to configuration files
 vim hosts/homelab/configuration.nix
@@ -516,7 +516,7 @@ git push
 
 ```bash
 # Check for syntax errors
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake check
 
 # Build with detailed error messages
@@ -546,7 +546,7 @@ df -h /nix
 
 ```bash
 # Update all inputs
-cd /root/dotfiles
+cd ~/dotfiles
 nix flake update
 
 # Or update just nixpkgs
@@ -655,7 +655,7 @@ curl -I http://wolfhard.net
 tail -f /var/log/nginx/wolfhard.net.access.log
 
 # Update content
-vim /root/dotfiles/web/static/index.html
+vim ~/dotfiles/web/static/index.html
 nrs  # Rebuild to deploy changes
 ```
 

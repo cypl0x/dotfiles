@@ -44,15 +44,15 @@
       fpath+=${pkgs.zsh-completions}/share/zsh/site-functions
 
       # NixOS rebuild aliases
-      alias nrs='sudo nixos-rebuild switch --flake /root/dotfiles#homelab'
-      alias nrb='sudo nixos-rebuild boot --flake /root/dotfiles#homelab'
-      alias nrt='sudo nixos-rebuild test --flake /root/dotfiles#homelab'
-      alias nrsv='sudo nixos-rebuild switch --flake /root/dotfiles#homelab --show-trace'
-      alias nrbs='sudo nixos-rebuild build --flake /root/dotfiles#homelab'
+      alias nrs='sudo nixos-rebuild switch --flake ~/dotfiles#homelab'
+      alias nrb='sudo nixos-rebuild boot --flake ~/dotfiles#homelab'
+      alias nrt='sudo nixos-rebuild test --flake ~/dotfiles#homelab'
+      alias nrsv='sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace'
+      alias nrbs='sudo nixos-rebuild build --flake ~/dotfiles#homelab'
 
       # NixOS update function
       nixup() {
-        cd /root/dotfiles
+        cd ~/dotfiles
         nix flake update
         sudo nixos-rebuild switch --flake .#homelab
       }
@@ -64,7 +64,7 @@
           echo "Example: nixup-input nixpkgs"
           return 1
         fi
-        cd /root/dotfiles
+        cd ~/dotfiles
         nix flake lock --update-input "$1"
         sudo nixos-rebuild switch --flake .#homelab
       }
@@ -173,13 +173,13 @@
 
       # Flake check
       nixcheck() {
-        cd /root/dotfiles
+        cd ~/dotfiles
         nix flake check
       }
 
       # Show flake outputs
       nixshow() {
-        cd /root/dotfiles
+        cd ~/dotfiles
         nix flake show
       }
     '';

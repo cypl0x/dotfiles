@@ -139,12 +139,12 @@ sudo systemctl status nginx
 
 1. Edit files in `web/static/`:
    ```bash
-   vim /root/dotfiles/web/static/index.html
+   vim ~/dotfiles/web/static/index.html
    ```
 
 2. Rebuild system:
    ```bash
-   nrs  # or: nixos-rebuild switch --flake /root/dotfiles#homelab
+   nrs  # or: nixos-rebuild switch --flake ~/dotfiles#homelab
    ```
 
 3. Changes are automatically deployed
@@ -164,7 +164,7 @@ sudo vim /etc/nginx/www/index.html
 
 1. Create new HTML file in `web/static/`:
    ```bash
-   vim /root/dotfiles/web/static/about.html
+   vim ~/dotfiles/web/static/about.html
    ```
 
 2. Add to nginx.nix `environment.etc`:
@@ -190,8 +190,8 @@ sudo vim /etc/nginx/www/index.html
 
 1. Create CSS file:
    ```bash
-   mkdir -p /root/dotfiles/web/static/css
-   vim /root/dotfiles/web/static/css/style.css
+   mkdir -p ~/dotfiles/web/static/css
+   vim ~/dotfiles/web/static/css/style.css
    ```
 
 2. Add to nginx.nix:
@@ -590,7 +590,7 @@ awk '{print $1}' /var/log/nginx/wolfhard.net.access.log | sort | uniq -c | sort 
 Website content is stored in git:
 
 ```bash
-cd /root/dotfiles
+cd ~/dotfiles
 git add web/
 git commit -m "Update website content"
 git push
