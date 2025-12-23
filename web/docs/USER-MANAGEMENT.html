@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NixOS User &amp; Password Management - Documentation</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            padding: 2rem 3rem;
+            border-bottom: 3px solid #4a9eff;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .breadcrumb {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .breadcrumb a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .content-wrapper {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .sidebar {
+            width: 250px;
+            padding: 2rem 0 2rem 2rem;
+            background: rgba(25, 25, 25, 0.8);
+            border-right: 1px solid rgba(74, 158, 255, 0.2);
+        }
+
+        .sidebar h2 {
+            font-size: 1rem;
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #TOC {
+            list-style: none;
+        }
+
+        #TOC ul {
+            list-style: none;
+            margin-left: 1rem;
+        }
+
+        #TOC a {
+            color: #aaa;
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        #TOC a:hover {
+            color: #4a9eff;
+        }
+
+        #TOC > ul > li > a {
+            color: #ccc;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 3rem;
+            overflow-x: auto;
+        }
+
+        .main-content h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+        }
+
+        .main-content h1:first-child {
+            margin-top: 0;
+        }
+
+        .main-content h2 {
+            color: #fff;
+            font-size: 2rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(74, 158, 255, 0.3);
+        }
+
+        .main-content h3 {
+            color: #ddd;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .main-content h4 {
+            color: #ccc;
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .main-content p {
+            margin-bottom: 1rem;
+            color: #d0d0d0;
+        }
+
+        .main-content ul,
+        .main-content ol {
+            margin-bottom: 1rem;
+            margin-left: 2rem;
+            color: #d0d0d0;
+        }
+
+        .main-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .main-content code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+
+        .main-content pre {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #4a9eff;
+        }
+
+        .main-content pre code {
+            background: none;
+            padding: 0;
+            color: #f8f8f2;
+            font-size: 0.9rem;
+        }
+
+        .main-content blockquote {
+            border-left: 4px solid #4a9eff;
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .main-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            background: rgba(40, 40, 40, 0.6);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .main-content th {
+            background: rgba(74, 158, 255, 0.2);
+            color: #fff;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .main-content td {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d0d0d0;
+        }
+
+        .main-content tr:hover {
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .main-content a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .main-content a:hover {
+            text-decoration: underline;
+        }
+
+        .main-content hr {
+            border: none;
+            border-top: 2px solid rgba(74, 158, 255, 0.3);
+            margin: 2rem 0;
+        }
+
+        .footer {
+            background: rgba(25, 25, 25, 0.9);
+            padding: 2rem 3rem;
+            border-top: 1px solid rgba(74, 158, 255, 0.2);
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+                padding: 2rem;
+            }
+
+            .main-content {
+                padding: 2rem;
+            }
+
+            .header {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="breadcrumb">
+                <a href="/">← Home</a> / <a href="/index.html">Documentation</a>
+            </div>
+            <h1>NixOS User &amp; Password Management</h1>
+        </div>
+
+        <div class="content-wrapper">
+            <nav class="sidebar">
+                <h2>Contents</h2>
+<ul>
+<li><a href="#nixos-user-password-management"
+id="toc-nixos-user-password-management">NixOS User &amp; Password
+Management</a>
+<ul>
+<li><a href="#overview" id="toc-overview">Overview</a></li>
+<li><a href="#methods-for-setting-passwords"
+id="toc-methods-for-setting-passwords">Methods for Setting Passwords</a>
+<ul>
+<li><a href="#imperative-password-setting-recommended-for-development"
+id="toc-imperative-password-setting-recommended-for-development">1.
+Imperative Password Setting (Recommended for Development)</a></li>
+<li><a href="#hashed-passwords-semi-declarative"
+id="toc-hashed-passwords-semi-declarative">2. Hashed Passwords
+(Semi-Declarative)</a></li>
+<li><a href="#hashed-password-files-best-practice"
+id="toc-hashed-password-files-best-practice">3. Hashed Password Files
+(Best Practice)</a></li>
+<li><a href="#initial-password-first-login-only"
+id="toc-initial-password-first-login-only">4. Initial Password (First
+Login Only)</a></li>
+<li><a href="#secrets-management-tools-production"
+id="toc-secrets-management-tools-production">5. Secrets Management Tools
+(Production)</a></li>
+</ul></li>
+<li><a href="#complete-user-configuration-example"
+id="toc-complete-user-configuration-example">Complete User Configuration
+Example</a></li>
+<li><a href="#user-management-commands"
+id="toc-user-management-commands">User Management Commands</a>
+<ul>
+<li><a href="#generate-password-hash"
+id="toc-generate-password-hash">Generate Password Hash</a></li>
+<li><a href="#setchange-password-imperatively"
+id="toc-setchange-password-imperatively">Set/Change Password
+Imperatively</a></li>
+<li><a href="#list-users" id="toc-list-users">List Users</a></li>
+<li><a href="#delete-users" id="toc-delete-users">Delete Users</a></li>
+</ul></li>
+<li><a href="#best-practices" id="toc-best-practices">Best Practices</a>
+<ul>
+<li><a href="#developmentlocal-systems"
+id="toc-developmentlocal-systems">1. Development/Local Systems</a></li>
+<li><a href="#personal-dotfiles-private-repo"
+id="toc-personal-dotfiles-private-repo">2. Personal Dotfiles (Private
+Repo)</a></li>
+<li><a href="#public-dotfiles" id="toc-public-dotfiles">3. Public
+Dotfiles</a></li>
+<li><a href="#production-systems" id="toc-production-systems">4.
+Production Systems</a></li>
+</ul></li>
+<li><a href="#common-user-groups" id="toc-common-user-groups">Common
+User Groups</a></li>
+<li><a href="#example-add-two-users-to-your-dotfiles"
+id="toc-example-add-two-users-to-your-dotfiles">Example: Add Two Users
+to Your Dotfiles</a></li>
+<li><a href="#handling-ssh-keys" id="toc-handling-ssh-keys">Handling SSH
+Keys</a></li>
+<li><a href="#security-considerations"
+id="toc-security-considerations">Security Considerations</a></li>
+<li><a href="#migration-strategy" id="toc-migration-strategy">Migration
+Strategy</a></li>
+<li><a href="#resources" id="toc-resources">Resources</a></li>
+</ul></li>
+</ul>
+            </nav>
+
+            <article class="main-content">
+<h1 id="nixos-user-password-management">NixOS User &amp; Password
+Management</h1>
+<h2 id="overview">Overview</h2>
+<p>NixOS handles user management declaratively, but passwords require
+special handling since they shouldn’t be stored in plain text in your
+configuration files (especially if you’re using git).</p>
+<h2 id="methods-for-setting-passwords">Methods for Setting
+Passwords</h2>
+<h3 id="imperative-password-setting-recommended-for-development">1.
+Imperative Password Setting (Recommended for Development)</h3>
+<p>Define users in configuration without passwords, then set passwords
+manually:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">description</span> <span class="op">=</span> <span class="st">&quot;Alice Smith&quot;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="st">&quot;networkmanager&quot;</span> <span class="op">];</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">shell</span> <span class="op">=</span> pkgs<span class="op">.</span>zsh<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>bob = <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="va">description</span> <span class="op">=</span> <span class="st">&quot;Bob Jones&quot;</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;users&quot;</span> <span class="op">];</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="va">shell</span> <span class="op">=</span> pkgs<span class="op">.</span>bash<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>After rebuilding, set passwords manually:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd alice</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd bob</span></code></pre></div>
+<p><strong>Pros:</strong> - Passwords not in configuration files -
+Simple and secure for local systems - Passwords survive rebuilds</p>
+<p><strong>Cons:</strong> - Not fully declarative - Manual step required
+on new systems</p>
+<h3 id="hashed-passwords-semi-declarative">2. Hashed Passwords
+(Semi-Declarative)</h3>
+<p>Generate a password hash and store it in configuration:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate password hash</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mkpasswd</span> <span class="at">-m</span> sha-512</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Enter password when prompted, copy the hash</span></span></code></pre></div>
+<p>Add to configuration:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">hashedPassword</span> <span class="op">=</span> <span class="st">&quot;$6$rounds=656000$YourHashHere...&quot;</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p><strong>Pros:</strong> - Declarative - Works on fresh installs</p>
+<p><strong>Cons:</strong> - Hash visible in configuration (still secure,
+but not ideal for git) - Hard to manage many users</p>
+<h3 id="hashed-password-files-best-practice">3. Hashed Password Files
+(Best Practice)</h3>
+<p>Store hashed passwords in separate files outside git:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate password and save to file</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mkpasswd</span> <span class="at">-m</span> sha-512 <span class="op">&gt;</span> /etc/nixos/secrets/alice-password-hash</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">mkpasswd</span> <span class="at">-m</span> sha-512 <span class="op">&gt;</span> /etc/nixos/secrets/bob-password-hash</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Protect the files</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> 600 /etc/nixos/secrets/<span class="pp">*</span></span></code></pre></div>
+<p>In configuration:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">hashedPasswordFile</span> <span class="op">=</span> <span class="st">&quot;/etc/nixos/secrets/alice-password-hash&quot;</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>bob = <span class="op">{</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="va">hashedPasswordFile</span> <span class="op">=</span> <span class="st">&quot;/etc/nixos/secrets/bob-password-hash&quot;</span><span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;users&quot;</span> <span class="op">];</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>In <code>.gitignore</code>:</p>
+<pre><code>secrets/</code></pre>
+<p><strong>Pros:</strong> - Fully declarative - Secrets not in git -
+Clean separation</p>
+<p><strong>Cons:</strong> - Need to manage secret files separately -
+Must backup secret files</p>
+<h3 id="initial-password-first-login-only">4. Initial Password (First
+Login Only)</h3>
+<p>Set a temporary password that must be changed on first login:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">initialPassword</span> <span class="op">=</span> <span class="st">&quot;changeme123&quot;</span><span class="op">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>Or with hash:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">initialHashedPassword</span> <span class="op">=</span> <span class="st">&quot;$6$rounds=656000$...&quot;</span><span class="op">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p><strong>Important:</strong> <code>initialPassword</code> only works
+on first user creation. Subsequent rebuilds won’t change the
+password.</p>
+<h3 id="secrets-management-tools-production">5. Secrets Management Tools
+(Production)</h3>
+<p>For production systems, use dedicated secrets management:</p>
+<h4 id="sops-nix">sops-nix</h4>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In flake.nix inputs</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>inputs<span class="op">.</span>sops<span class="op">-</span>nix<span class="op">.</span>url = <span class="st">&quot;github:Mic92/sops-nix&quot;</span>;</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># In configuration</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>imports = <span class="op">[</span> inputs<span class="op">.</span>sops-nix<span class="op">.</span>nixosModules<span class="op">.</span>sops <span class="op">]</span>;</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>sops<span class="op">.</span>defaultSopsFile = <span class="ss">./secrets/secrets.yaml</span>;</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>sops<span class="op">.</span>secrets<span class="op">.</span>alice<span class="op">-</span>password<span class="op">.</span>neededForUsers = <span class="cn">true</span>;</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="va">hashedPasswordFile</span> <span class="op">=</span> config<span class="op">.</span>sops<span class="op">.</span>secrets<span class="op">.</span>alice<span class="op">-</span>password<span class="op">.</span>path<span class="op">;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h4 id="agenix">agenix</h4>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Similar approach using age encryption</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">hashedPasswordFile</span> <span class="op">=</span> config<span class="op">.</span>age<span class="op">.</span>secrets<span class="op">.</span>alice<span class="op">-</span>password<span class="op">.</span>path<span class="op">;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h2 id="complete-user-configuration-example">Complete User Configuration
+Example</h2>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="op">{</span> <span class="va">pkgs</span><span class="op">,</span> <span class="op">...</span> <span class="op">}</span>: <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create a secrets directory (outside git)</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># mkdir -p /etc/nixos/secrets</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># chmod 700 /etc/nixos/secrets</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="va">users</span>.<span class="va">users</span>.<span class="va">alice</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">description</span> <span class="op">=</span> <span class="st">&quot;Alice Smith&quot;</span><span class="op">;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;wheel&quot;</span>          <span class="co"># sudo access</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;networkmanager&quot;</span> <span class="co"># manage network</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;docker&quot;</span>         <span class="co"># docker access</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">];</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="va">shell</span> <span class="op">=</span> pkgs<span class="op">.</span>zsh<span class="op">;</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="va">hashedPasswordFile</span> <span class="op">=</span> <span class="st">&quot;/etc/nixos/secrets/alice-password-hash&quot;</span><span class="op">;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    <span class="va">openssh</span>.<span class="va">authorizedKeys</span>.<span class="va">keys</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;ssh-ed25519 AAAAC3... alice@laptop&quot;</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">];</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  <span class="va">users</span>.<span class="va">users</span>.<span class="va">bob</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    <span class="va">description</span> <span class="op">=</span> <span class="st">&quot;Bob Jones&quot;</span><span class="op">;</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;users&quot;</span> <span class="op">];</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    <span class="va">shell</span> <span class="op">=</span> pkgs<span class="op">.</span>bash<span class="op">;</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>    <span class="va">hashedPasswordFile</span> <span class="op">=</span> <span class="st">&quot;/etc/nixos/secrets/bob-password-hash&quot;</span><span class="op">;</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Service account (no password, SSH only)</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>  <span class="va">users</span>.<span class="va">users</span>.<span class="va">deploy</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>    <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>    <span class="va">description</span> <span class="op">=</span> <span class="st">&quot;Deployment User&quot;</span><span class="op">;</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>    <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>    <span class="va">openssh</span>.<span class="va">authorizedKeys</span>.<span class="va">keys</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;ssh-ed25519 AAAAC3... deploy@ci-server&quot;</span></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">];</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="user-management-commands">User Management Commands</h2>
+<h3 id="generate-password-hash">Generate Password Hash</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Using mkpasswd (recommended)</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mkpasswd</span> <span class="at">-m</span> sha-512</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Save directly to file</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">mkpasswd</span> <span class="at">-m</span> sha-512 <span class="op">&gt;</span> /etc/nixos/secrets/user-password-hash</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Using openssl</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> passwd <span class="at">-6</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Using Python</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-c</span> <span class="st">&#39;import crypt; print(crypt.crypt(&quot;password&quot;, crypt.mksalt(crypt.METHOD_SHA512)))&#39;</span></span></code></pre></div>
+<h3 id="setchange-password-imperatively">Set/Change Password
+Imperatively</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set password for user</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd alice</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Force password change on next login</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd <span class="at">-e</span> alice</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Lock account</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd <span class="at">-l</span> alice</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Unlock account</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd <span class="at">-u</span> alice</span></code></pre></div>
+<h3 id="list-users">List Users</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># All users</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /etc/passwd</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Normal users only</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="fu">awk</span> <span class="at">-F:</span> <span class="st">&#39;$3 &gt;= 1000 {print $1}&#39;</span> /etc/passwd</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Users with sudo access (wheel group)</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="fu">getent</span> group wheel</span></code></pre></div>
+<h3 id="delete-users">Delete Users</h3>
+<p>Remove from configuration and rebuild, or:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove user and home directory</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> userdel <span class="at">-r</span> alice</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Just remove user</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> userdel alice</span></code></pre></div>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="developmentlocal-systems">1. Development/Local Systems</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>Then: <code>sudo passwd alice</code></p>
+<h3 id="personal-dotfiles-private-repo">2. Personal Dotfiles (Private
+Repo)</h3>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">hashedPasswordFile</span> <span class="op">=</span> <span class="st">&quot;/etc/nixos/secrets/alice-password-hash&quot;</span><span class="op">;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>With <code>.gitignore</code>:</p>
+<pre><code>secrets/</code></pre>
+<h3 id="public-dotfiles">3. Public Dotfiles</h3>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># No password in config - set manually</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="op">];</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>Document in README: “Run <code>sudo passwd alice</code> after first
+rebuild”</p>
+<h3 id="production-systems">4. Production Systems</h3>
+<p>Use sops-nix or agenix for encrypted secrets management.</p>
+<h2 id="common-user-groups">Common User Groups</h2>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>extraGroups = <span class="op">[</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;wheel&quot;</span>          <span class="co"># sudo/admin access</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;networkmanager&quot;</span> <span class="co"># manage network connections</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;docker&quot;</span>         <span class="co"># docker daemon access</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;libvirtd&quot;</span>       <span class="co"># KVM/QEMU virtual machines</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;audio&quot;</span>          <span class="co"># audio devices</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;video&quot;</span>          <span class="co"># video devices</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;input&quot;</span>          <span class="co"># input devices</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;dialout&quot;</span>        <span class="co"># serial ports</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;plugdev&quot;</span>        <span class="co"># pluggable devices</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;users&quot;</span>          <span class="co"># standard user group</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="op">]</span>;</span></code></pre></div>
+<h2 id="example-add-two-users-to-your-dotfiles">Example: Add Two Users
+to Your Dotfiles</h2>
+<p>Create a new module: <code>hosts/homelab/users.nix</code></p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="op">{</span> <span class="va">pkgs</span><span class="op">,</span> <span class="op">...</span> <span class="op">}</span>: <span class="op">{</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Enable sudo without password for wheel group (optional)</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">security</span>.<span class="va">sudo</span>.<span class="va">wheelNeedsPassword</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">users</span>.<span class="va">users</span>.<span class="va">alice</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">description</span> <span class="op">=</span> <span class="st">&quot;Alice Smith&quot;</span><span class="op">;</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;wheel&quot;</span> <span class="st">&quot;networkmanager&quot;</span> <span class="op">];</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">shell</span> <span class="op">=</span> pkgs<span class="op">.</span>zsh<span class="op">;</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Password will be set manually with: sudo passwd alice</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  <span class="va">users</span>.<span class="va">users</span>.<span class="va">bob</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    <span class="va">description</span> <span class="op">=</span> <span class="st">&quot;Bob Jones&quot;</span><span class="op">;</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>    <span class="va">extraGroups</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;users&quot;</span> <span class="op">];</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    <span class="va">shell</span> <span class="op">=</span> pkgs<span class="op">.</span>bash<span class="op">;</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Password will be set manually with: sudo passwd bob</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Import in <code>configuration.nix</code>:</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>imports = <span class="op">[</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./hardware-configuration.nix</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./vultr.nix</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./users.nix</span>  <span class="co"># Add this line</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="op">]</span>;</span></code></pre></div>
+<p>Rebuild and set passwords:</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nixos-rebuild switch <span class="at">--flake</span> .#homelab</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd alice</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd bob</span></code></pre></div>
+<h2 id="handling-ssh-keys">Handling SSH Keys</h2>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">openssh</span>.<span class="va">authorizedKeys</span>.<span class="va">keys</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... alice@laptop&quot;</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB... alice@desktop&quot;</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">];</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>Or from files:</p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>users<span class="op">.</span>users<span class="op">.</span>alice = <span class="op">{</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">isNormalUser</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">openssh</span>.<span class="va">authorizedKeys</span>.<span class="va">keyFiles</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="ss">./ssh-keys/alice.pub</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">];</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h2 id="security-considerations">Security Considerations</h2>
+<ol type="1">
+<li><strong>Never</strong> store plain text passwords in
+configuration</li>
+<li><strong>Always</strong> add <code>secrets/</code> to
+<code>.gitignore</code></li>
+<li>Use <code>hashedPasswordFile</code> for declarative passwords</li>
+<li>Consider SSH keys instead of passwords for remote access</li>
+<li>Use strong password hashing: SHA-512 with high rounds</li>
+<li>For production, use sops-nix or agenix</li>
+<li>Regularly rotate passwords</li>
+<li>Use <code>initialPassword</code> only for development/testing</li>
+</ol>
+<h2 id="migration-strategy">Migration Strategy</h2>
+<p>If you have existing users with passwords:</p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract current password hash</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> cat /etc/shadow <span class="kw">|</span> <span class="fu">grep</span> alice</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Save to file</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> cat /etc/shadow <span class="kw">|</span> <span class="fu">grep</span> alice <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-d:</span> <span class="at">-f2</span> <span class="op">&gt;</span> /etc/nixos/secrets/alice-password-hash</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Add to configuration</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="ex">users.users.alice.hashedPasswordFile</span> = <span class="st">&quot;/etc/nixos/secrets/alice-password-hash&quot;</span><span class="kw">;</span></span></code></pre></div>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a
+href="https://nixos.org/manual/nixos/stable/index.html#sec-user-management">NixOS
+Manual: User Management</a></li>
+<li><a href="https://github.com/Mic92/sops-nix">sops-nix</a></li>
+<li><a href="https://github.com/ryantm/agenix">agenix</a></li>
+<li><a href="https://linux.die.net/man/1/mkpasswd">mkpasswd man
+page</a></li>
+</ul>
+            </article>
+        </div>
+
+        <div class="footer">
+            <p>Generated from <a href="https://github.com/wolfhardprell/dotfiles">wolfhardprell/dotfiles</a></p>
+            <p>© 2025 Wolfhard Prell</p>
+        </div>
+    </div>
+</body>
+</html>

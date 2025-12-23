@@ -19,9 +19,17 @@ dotfiles/
 │   ├── shell-aliases.sh           # 100+ aliases and functions
 │   └── shell-completions.sh       # Auto-loading completions
 ├── web/
-│   └── static/                    # Static website content
-│       ├── index.html
-│       └── 404.html
+│   ├── static/                    # Static website content
+│   │   ├── index.html
+│   │   └── 404.html
+│   ├── docs.nix                   # Nix derivation for building docs
+│   ├── docs-template.html         # Pandoc HTML template
+│   └── build-docs.sh              # Manual docs build script
+├── docs/                          # Markdown documentation
+│   ├── NGINX.md
+│   ├── USER-MANAGEMENT.md
+│   ├── ALIASES.md
+│   └── COMPLETIONS.md
 └── modules/                       # Custom NixOS modules (future use)
 ```
 
@@ -38,7 +46,8 @@ dotfiles/
 - **Tailscale** configured as exit node
 - **Tor relay** (non-exit) named "cypl0x"
 - **SSH hardening** with ShellFish iOS support
-- **Nginx web server** on port 8080 with security hardening
+- **Nginx web server** with HTTPS and multiple domains
+- **Auto-generated documentation site** at docs.wolfhard.net (from markdown)
 - **Development tools**: vim, emacs, ripgrep, bat, fzf
 
 ## Migrating from Global NixOS Config to Dotfiles Flake
@@ -602,7 +611,9 @@ See [COMPLETIONS.md](docs/COMPLETIONS.md) for full list and documentation.
 
 Hardened Nginx configuration with HTTPS via Let's Encrypt.
 
-**Domains**: wolfhard.net, wolfhard.dev, wolfhard.tech (+ www subdomains)
+**Domains**:
+- **Main sites**: wolfhard.net, wolfhard.dev, wolfhard.tech (+ www subdomains)
+- **Documentation**: docs.wolfhard.net, docs.wolfhard.dev, docs.wolfhard.tech
 
 **Features**:
 - **HTTPS with Let's Encrypt** (automatic certificate management)
@@ -611,6 +622,25 @@ Hardened Nginx configuration with HTTPS via Let's Encrypt.
 - **Static asset caching** (1 year for images/fonts/css/js)
 - **TLS 1.2/1.3** with modern cipher suites
 - Custom error pages, Gzip compression
+- **Auto-generated documentation site** from markdown files
+
+**Documentation Subdomain**:
+
+The `docs.*` subdomains serve automatically compiled HTML documentation from the markdown files in the `docs/` directory. The documentation is built during system rebuild using Pandoc.
+
+**How it works**:
+1. Write markdown files in `docs/` directory
+2. Run `sudo nixos-rebuild switch --flake .#homelab`
+3. Documentation is automatically compiled to HTML and deployed to `docs.wolfhard.net`
+
+**Manual build** (for testing):
+```bash
+# Build docs locally with pandoc
+nix-shell -p pandoc --run "./web/build-docs.sh"
+
+# View generated docs
+ls -la web/docs/
+```
 
 **Quick start**:
 

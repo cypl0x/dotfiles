@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shell Completions Reference - Documentation</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            padding: 2rem 3rem;
+            border-bottom: 3px solid #4a9eff;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .breadcrumb {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .breadcrumb a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .content-wrapper {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .sidebar {
+            width: 250px;
+            padding: 2rem 0 2rem 2rem;
+            background: rgba(25, 25, 25, 0.8);
+            border-right: 1px solid rgba(74, 158, 255, 0.2);
+        }
+
+        .sidebar h2 {
+            font-size: 1rem;
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #TOC {
+            list-style: none;
+        }
+
+        #TOC ul {
+            list-style: none;
+            margin-left: 1rem;
+        }
+
+        #TOC a {
+            color: #aaa;
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        #TOC a:hover {
+            color: #4a9eff;
+        }
+
+        #TOC > ul > li > a {
+            color: #ccc;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 3rem;
+            overflow-x: auto;
+        }
+
+        .main-content h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+        }
+
+        .main-content h1:first-child {
+            margin-top: 0;
+        }
+
+        .main-content h2 {
+            color: #fff;
+            font-size: 2rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(74, 158, 255, 0.3);
+        }
+
+        .main-content h3 {
+            color: #ddd;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .main-content h4 {
+            color: #ccc;
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .main-content p {
+            margin-bottom: 1rem;
+            color: #d0d0d0;
+        }
+
+        .main-content ul,
+        .main-content ol {
+            margin-bottom: 1rem;
+            margin-left: 2rem;
+            color: #d0d0d0;
+        }
+
+        .main-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .main-content code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+
+        .main-content pre {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #4a9eff;
+        }
+
+        .main-content pre code {
+            background: none;
+            padding: 0;
+            color: #f8f8f2;
+            font-size: 0.9rem;
+        }
+
+        .main-content blockquote {
+            border-left: 4px solid #4a9eff;
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .main-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            background: rgba(40, 40, 40, 0.6);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .main-content th {
+            background: rgba(74, 158, 255, 0.2);
+            color: #fff;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .main-content td {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d0d0d0;
+        }
+
+        .main-content tr:hover {
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .main-content a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .main-content a:hover {
+            text-decoration: underline;
+        }
+
+        .main-content hr {
+            border: none;
+            border-top: 2px solid rgba(74, 158, 255, 0.3);
+            margin: 2rem 0;
+        }
+
+        .footer {
+            background: rgba(25, 25, 25, 0.9);
+            padding: 2rem 3rem;
+            border-top: 1px solid rgba(74, 158, 255, 0.2);
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+                padding: 2rem;
+            }
+
+            .main-content {
+                padding: 2rem;
+            }
+
+            .header {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="breadcrumb">
+                <a href="/">← Home</a> / <a href="/index.html">Documentation</a>
+            </div>
+            <h1>Shell Completions Reference</h1>
+        </div>
+
+        <div class="content-wrapper">
+            <nav class="sidebar">
+                <h2>Contents</h2>
+<ul>
+<li><a href="#shell-completions-reference"
+id="toc-shell-completions-reference">Shell Completions Reference</a>
+<ul>
+<li><a href="#how-it-works" id="toc-how-it-works">How It Works</a></li>
+<li><a href="#currently-supported-tools"
+id="toc-currently-supported-tools">Currently Supported Tools</a>
+<ul>
+<li><a href="#system-package-management"
+id="toc-system-package-management">System &amp; Package
+Management</a></li>
+<li><a href="#networking-vpn" id="toc-networking-vpn">Networking &amp;
+VPN</a></li>
+<li><a href="#version-control" id="toc-version-control">Version
+Control</a></li>
+<li><a href="#container-orchestration"
+id="toc-container-orchestration">Container &amp; Orchestration</a></li>
+<li><a href="#cloud-providers" id="toc-cloud-providers">Cloud
+Providers</a></li>
+<li><a href="#infrastructure-as-code"
+id="toc-infrastructure-as-code">Infrastructure as Code</a></li>
+<li><a href="#gitops-cd" id="toc-gitops-cd">GitOps &amp; CD</a></li>
+<li><a href="#programming-languages-tools"
+id="toc-programming-languages-tools">Programming Languages &amp;
+Tools</a></li>
+<li><a href="#file-management-shell-utilities"
+id="toc-file-management-shell-utilities">File Management &amp; Shell
+Utilities</a></li>
+<li><a href="#configuration-management"
+id="toc-configuration-management">Configuration Management</a></li>
+<li><a href="#development-tools" id="toc-development-tools">Development
+Tools</a></li>
+</ul></li>
+<li><a href="#legend" id="toc-legend">Legend</a></li>
+<li><a href="#how-completions-are-loaded"
+id="toc-how-completions-are-loaded">How Completions Are Loaded</a>
+<ul>
+<li><a href="#dynamic-completions-runtime-generation"
+id="toc-dynamic-completions-runtime-generation">1. Dynamic Completions
+(Runtime Generation)</a></li>
+<li><a href="#package-completions-pre-installed"
+id="toc-package-completions-pre-installed">2. Package Completions
+(Pre-installed)</a></li>
+<li><a href="#plugin-completions-oh-my-zsh"
+id="toc-plugin-completions-oh-my-zsh">3. Plugin Completions
+(Oh-My-Zsh)</a></li>
+</ul></li>
+<li><a href="#completion-features"
+id="toc-completion-features">Completion Features</a>
+<ul>
+<li><a href="#case-insensitive-matching"
+id="toc-case-insensitive-matching">Case-Insensitive Matching</a></li>
+<li><a href="#menu-selection" id="toc-menu-selection">Menu
+Selection</a></li>
+<li><a href="#completion-grouping"
+id="toc-completion-grouping">Completion Grouping</a></li>
+<li><a href="#completion-caching" id="toc-completion-caching">Completion
+Caching</a></li>
+</ul></li>
+<li><a href="#testing-completions" id="toc-testing-completions">Testing
+Completions</a>
+<ul>
+<li><a href="#check-if-a-completion-is-loaded"
+id="toc-check-if-a-completion-is-loaded">Check if a completion is
+loaded</a></li>
+<li><a href="#debug-completion-issues"
+id="toc-debug-completion-issues">Debug completion issues</a></li>
+<li><a href="#rebuild-completion-cache"
+id="toc-rebuild-completion-cache">Rebuild completion cache</a></li>
+</ul></li>
+<li><a href="#adding-new-completions"
+id="toc-adding-new-completions">Adding New Completions</a></li>
+<li><a href="#performance-considerations"
+id="toc-performance-considerations">Performance Considerations</a>
+<ul>
+<li><a href="#startup-time" id="toc-startup-time">Startup Time</a></li>
+<li><a href="#optimization-tips" id="toc-optimization-tips">Optimization
+Tips</a></li>
+</ul></li>
+<li><a href="#common-issues" id="toc-common-issues">Common Issues</a>
+<ul>
+<li><a href="#completions-not-working"
+id="toc-completions-not-working">Completions Not Working</a></li>
+<li><a href="#slow-shell-startup" id="toc-slow-shell-startup">Slow Shell
+Startup</a></li>
+<li><a href="#conflicting-completions"
+id="toc-conflicting-completions">Conflicting Completions</a></li>
+</ul></li>
+<li><a href="#best-practices" id="toc-best-practices">Best
+Practices</a></li>
+<li><a href="#examples" id="toc-examples">Examples</a>
+<ul>
+<li><a href="#using-completions" id="toc-using-completions">Using
+Completions</a></li>
+<li><a href="#custom-completion-example"
+id="toc-custom-completion-example">Custom Completion Example</a></li>
+</ul></li>
+<li><a href="#see-also" id="toc-see-also">See Also</a></li>
+</ul></li>
+</ul>
+            </nav>
+
+            <article class="main-content">
+<h1 id="shell-completions-reference">Shell Completions Reference</h1>
+<p>This dotfiles configuration automatically loads shell completions for
+various CLI tools.</p>
+<h2 id="how-it-works">How It Works</h2>
+<p>The <code>home/shell-completions.sh</code> file is sourced during
+shell initialization and automatically enables completions for installed
+tools. It checks if each command exists before attempting to load its
+completions, so there’s no need to modify the file when installing or
+removing packages.</p>
+<h2 id="currently-supported-tools">Currently Supported Tools</h2>
+<h3 id="system-package-management">System &amp; Package Management</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>nix</strong></td>
+<td>✅ Active</td>
+<td>Built-in</td>
+<td>NixOS module handles completions</td>
+</tr>
+<tr>
+<td><strong>nixos-rebuild</strong></td>
+<td>✅ Active</td>
+<td>Built-in</td>
+<td>Part of NixOS system</td>
+</tr>
+</tbody>
+</table>
+<h3 id="networking-vpn">Networking &amp; VPN</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>tailscale</strong></td>
+<td>✅ Active</td>
+<td>Dynamic</td>
+<td><code>tailscale completion zsh</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="version-control">Version Control</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>git</strong></td>
+<td>✅ Active</td>
+<td>Plugin</td>
+<td>Oh-My-Zsh git plugin</td>
+</tr>
+<tr>
+<td><strong>gh</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td>GitHub CLI - <code>gh completion</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="container-orchestration">Container &amp; Orchestration</h3>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 29%" />
+<col style="width: 22%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>docker</strong></td>
+<td>📦 Optional</td>
+<td>Package</td>
+<td>Docker completions from package</td>
+</tr>
+<tr>
+<td><strong>docker-compose</strong></td>
+<td>📦 Optional</td>
+<td>Package</td>
+<td>Docker Compose completions</td>
+</tr>
+<tr>
+<td><strong>kubectl</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>kubectl completion zsh</code></td>
+</tr>
+<tr>
+<td><strong>helm</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>helm completion zsh</code></td>
+</tr>
+<tr>
+<td><strong>minikube</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>minikube completion zsh</code></td>
+</tr>
+<tr>
+<td><strong>kind</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>kind completion zsh</code></td>
+</tr>
+<tr>
+<td><strong>podman</strong></td>
+<td>📦 Optional</td>
+<td>Package</td>
+<td>Podman completions from package</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cloud-providers">Cloud Providers</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>aws</strong></td>
+<td>📦 Optional</td>
+<td>Built-in</td>
+<td><code>complete -C aws_completer aws</code></td>
+</tr>
+<tr>
+<td><strong>az</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td>Azure CLI completions</td>
+</tr>
+<tr>
+<td><strong>gcloud</strong></td>
+<td>📦 Optional</td>
+<td>SDK</td>
+<td>Google Cloud SDK completions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="infrastructure-as-code">Infrastructure as Code</h3>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 29%" />
+<col style="width: 22%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>terraform</strong></td>
+<td>📦 Optional</td>
+<td>Built-in</td>
+<td>Terraform built-in completions</td>
+</tr>
+<tr>
+<td><strong>ansible</strong></td>
+<td>📦 Optional</td>
+<td>Package</td>
+<td>Ansible completions from package</td>
+</tr>
+<tr>
+<td><strong>vagrant</strong></td>
+<td>📦 Optional</td>
+<td>Package</td>
+<td>Vagrant completions from package</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gitops-cd">GitOps &amp; CD</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>flux</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>flux completion zsh</code></td>
+</tr>
+<tr>
+<td><strong>argocd</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>argocd completion zsh</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="programming-languages-tools">Programming Languages &amp;
+Tools</h3>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 29%" />
+<col style="width: 22%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>rustup</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>rustup completions zsh</code></td>
+</tr>
+<tr>
+<td><strong>cargo</strong></td>
+<td>📦 Optional</td>
+<td>Package</td>
+<td>Cargo completions from package</td>
+</tr>
+<tr>
+<td><strong>poetry</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>poetry completions zsh</code></td>
+</tr>
+<tr>
+<td><strong>pipenv</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td>Pipenv environment completions</td>
+</tr>
+<tr>
+<td><strong>deno</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>deno completions zsh</code></td>
+</tr>
+<tr>
+<td><strong>bun</strong></td>
+<td>📦 Optional</td>
+<td>Built-in</td>
+<td>Bun completions from <code>~/.bun/_bun</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="file-management-shell-utilities">File Management &amp; Shell
+Utilities</h3>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 29%" />
+<col style="width: 22%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>fzf</strong></td>
+<td>✅ Active</td>
+<td>Plugin</td>
+<td>Oh-My-Zsh fzf plugin</td>
+</tr>
+<tr>
+<td><strong>tmux</strong></td>
+<td>✅ Active</td>
+<td>Plugin</td>
+<td>Oh-My-Zsh tmux plugin</td>
+</tr>
+<tr>
+<td><strong>bat</strong></td>
+<td>✅ Active</td>
+<td>Package</td>
+<td>Bat completions from package</td>
+</tr>
+<tr>
+<td><strong>eza</strong></td>
+<td>✅ Active</td>
+<td>Package</td>
+<td>Eza completions from package</td>
+</tr>
+<tr>
+<td><strong>rg</strong> (ripgrep)</td>
+<td>✅ Active</td>
+<td>Package</td>
+<td>Ripgrep completions from package</td>
+</tr>
+<tr>
+<td><strong>direnv</strong></td>
+<td>📦 Optional</td>
+<td>Hook</td>
+<td><code>direnv hook zsh</code></td>
+</tr>
+<tr>
+<td><strong>zoxide</strong></td>
+<td>📦 Optional</td>
+<td>Hook</td>
+<td><code>zoxide init zsh</code></td>
+</tr>
+<tr>
+<td><strong>atuin</strong></td>
+<td>📦 Optional</td>
+<td>Hook</td>
+<td><code>atuin init zsh</code></td>
+</tr>
+<tr>
+<td><strong>starship</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>starship completions zsh</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration-management">Configuration Management</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>chezmoi</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>chezmoi completion zsh</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="development-tools">Development Tools</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Status</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>hugo</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>hugo completion zsh</code></td>
+</tr>
+<tr>
+<td><strong>just</strong></td>
+<td>📦 Optional</td>
+<td>Dynamic</td>
+<td><code>just --completions zsh</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="legend">Legend</h2>
+<ul>
+<li>✅ <strong>Active</strong>: Currently installed and completions
+enabled</li>
+<li>📦 <strong>Optional</strong>: Will be enabled automatically if
+package is installed</li>
+<li><strong>Dynamic</strong>: Completions generated at runtime via
+<code>eval</code> or <code>source &lt;(command)</code></li>
+<li><strong>Package</strong>: Completions provided by the NixOS
+package</li>
+<li><strong>Built-in</strong>: Completions built into the tool</li>
+<li><strong>Plugin</strong>: Completions from Oh-My-Zsh or other
+plugin</li>
+<li><strong>Hook</strong>: Shell integration hook (does more than just
+completions)</li>
+</ul>
+<h2 id="how-completions-are-loaded">How Completions Are Loaded</h2>
+<h3 id="dynamic-completions-runtime-generation">1. Dynamic Completions
+(Runtime Generation)</h3>
+<p>These tools generate their completions on-the-fly:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Example: tailscale</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">eval</span> <span class="st">&quot;</span><span class="va">$(</span><span class="ex">tailscale</span> completion zsh<span class="va">)</span><span class="st">&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Example: kubectl</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">source</span> <span class="op">&lt;(</span><span class="ex">kubectl</span> completion zsh<span class="op">)</span></span></code></pre></div>
+<p><strong>Pros:</strong> - Always up-to-date with tool version - No
+separate completion file needed</p>
+<p><strong>Cons:</strong> - Slight shell startup delay - Requires tool
+to be installed</p>
+<h3 id="package-completions-pre-installed">2. Package Completions
+(Pre-installed)</h3>
+<p>NixOS packages often include completion files that are automatically
+added to the completion path:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Completions are in: /nix/store/.../share/zsh/site-functions/</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Automatically discovered by zsh</span></span></code></pre></div>
+<p><strong>Pros:</strong> - Fast (no generation needed) - Part of
+package installation</p>
+<h3 id="plugin-completions-oh-my-zsh">3. Plugin Completions
+(Oh-My-Zsh)</h3>
+<p>Oh-My-Zsh plugins provide completions:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ohMyZsh = <span class="op">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">enable</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">plugins</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;git&quot;</span> <span class="st">&quot;fzf&quot;</span> <span class="st">&quot;tmux&quot;</span> <span class="op">];</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h2 id="completion-features">Completion Features</h2>
+<h3 id="case-insensitive-matching">Case-Insensitive Matching</h3>
+<p>Completions are case-insensitive by default:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># All of these work:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout MAIN</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout Main</span></code></pre></div>
+<h3 id="menu-selection">Menu Selection</h3>
+<p>Use arrow keys to navigate completion menu:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Navigate with arrows, press Enter to select</span></span></code></pre></div>
+<h3 id="completion-grouping">Completion Grouping</h3>
+<p>Completions are grouped by type:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Shows: Commands, Management Commands, Options separately</span></span></code></pre></div>
+<h3 id="completion-caching">Completion Caching</h3>
+<p>Completions are cached for performance:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Cache location: ~/.zsh/cache</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Clear cache: rm -rf ~/.zsh/cache</span></span></code></pre></div>
+<h2 id="testing-completions">Testing Completions</h2>
+<h3 id="check-if-a-completion-is-loaded">Check if a completion is
+loaded</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 1: Try to complete</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl</span> <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 2: Check completion function</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">which</span> _kubectl</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 3: List all completions</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="ex">compaudit</span></span></code></pre></div>
+<h3 id="debug-completion-issues">Debug completion issues</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable completion debugging</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">zstyle</span> <span class="st">&#39;:completion:*&#39;</span> verbose yes</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Test specific completion</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">_complete_help</span> <span class="op">&lt;</span>command<span class="op">&gt;</span> <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span></code></pre></div>
+<h3 id="rebuild-completion-cache">Rebuild completion cache</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove cache</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> ~/.zcompdump<span class="pp">*</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rebuild</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">compinit</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Or restart shell</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span> zsh</span></code></pre></div>
+<h2 id="adding-new-completions">Adding New Completions</h2>
+<p>To add completions for a new tool:</p>
+<ol type="1">
+<li><strong>Check if the tool supports completions:</strong></li>
+</ol>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>tool<span class="op">&gt;</span> completion <span class="ex">--help</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>tool<span class="op">&gt;</span> --help <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> completion</span></code></pre></div>
+<ol start="2" type="1">
+<li><strong>Add to <code>home/shell-completions.sh</code>:</strong></li>
+</ol>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="ex">_has_command</span> mytool<span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="kw">[[</span> <span class="ot">-n</span> <span class="st">&quot;</span><span class="va">$ZSH_VERSION</span><span class="st">&quot;</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">eval</span> <span class="st">&quot;</span><span class="va">$(</span><span class="ex">mytool</span> completion zsh<span class="va">)</span><span class="st">&quot;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">elif</span> <span class="kw">[[</span> <span class="ot">-n</span> <span class="st">&quot;</span><span class="va">$BASH_VERSION</span><span class="st">&quot;</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">eval</span> <span class="st">&quot;</span><span class="va">$(</span><span class="ex">mytool</span> completion bash<span class="va">)</span><span class="st">&quot;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span></code></pre></div>
+<ol start="3" type="1">
+<li><strong>Rebuild and test:</strong></li>
+</ol>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span>  <span class="co"># Rebuild system</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span> zsh  <span class="co"># Restart shell</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">mytool</span> <span class="op">&lt;</span>TAB<span class="op">&gt;</span>  <span class="co"># Test completion</span></span></code></pre></div>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="startup-time">Startup Time</h3>
+<p>Each dynamic completion adds ~10-50ms to shell startup. Current
+configuration:</p>
+<ul>
+<li><strong>Fast</strong> (&lt;5ms): Package completions (bat, eza,
+rg)</li>
+<li><strong>Medium</strong> (5-20ms): Simple dynamic (tailscale,
+gh)</li>
+<li><strong>Slow</strong> (20-50ms): Complex dynamic (kubectl, helm,
+terraform)</li>
+</ul>
+<h3 id="optimization-tips">Optimization Tips</h3>
+<ol type="1">
+<li><strong>Use package completions when available</strong>
+(fastest)</li>
+<li><strong>Lazy-load expensive completions:</strong></li>
+</ol>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Instead of loading kubectl immediately:</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kubectl()</span> <span class="kw">{</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">unfunction</span> kubectl</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="bu">source</span> <span class="op">&lt;(</span><span class="ex">kubectl</span> completion zsh<span class="op">)</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">kubectl</span> <span class="st">&quot;</span><span class="va">$@</span><span class="st">&quot;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
+<ol start="3" type="1">
+<li><strong>Cache completions to file:</strong></li>
+</ol>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate once</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl</span> completion zsh <span class="op">&gt;</span> ~/.zsh/completions/_kubectl</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add to fpath</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="va">fpath</span><span class="op">=</span><span class="va">(</span>~/.zsh/completions <span class="va">$fpath)</span></span></code></pre></div>
+<h2 id="common-issues">Common Issues</h2>
+<h3 id="completions-not-working">Completions Not Working</h3>
+<p><strong>Problem:</strong> Pressing TAB shows nothing</p>
+<p><strong>Solutions:</strong></p>
+<ol type="1">
+<li><p>Check if tool is installed:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">which</span> kubectl</span></code></pre></div></li>
+<li><p>Check if completion function exists:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">which</span> _kubectl</span></code></pre></div></li>
+<li><p>Rebuild completion cache:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> ~/.zcompdump<span class="pp">*</span> <span class="kw">&amp;&amp;</span> <span class="ex">compinit</span></span></code></pre></div></li>
+<li><p>Check for errors:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Restart shell with verbose output</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zsh</span> <span class="at">-xv</span></span></code></pre></div></li>
+</ol>
+<h3 id="slow-shell-startup">Slow Shell Startup</h3>
+<p><strong>Problem:</strong> Shell takes &gt;1 second to start</p>
+<p><strong>Solutions:</strong></p>
+<ol type="1">
+<li><p>Profile startup time:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add to ~/.zshrc temporarily</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="ex">zmodload</span> zsh/zprof</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ... rest of config</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="ex">zprof</span>  <span class="co"># At the end</span></span></code></pre></div></li>
+<li><p>Lazy-load expensive completions (see optimization tips)</p></li>
+<li><p>Remove unused completions from
+<code>shell-completions.sh</code></p></li>
+</ol>
+<h3 id="conflicting-completions">Conflicting Completions</h3>
+<p><strong>Problem:</strong> Completion behaves unexpectedly</p>
+<p><strong>Solutions:</strong></p>
+<ol type="1">
+<li><p>Check completion order:</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$fpath</span></span></code></pre></div></li>
+<li><p>Check which completion is active:</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">which</span> _kubectl</span></code></pre></div></li>
+<li><p>Ensure completions load in correct order in
+<code>shell-completions.sh</code></p></li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<ol type="1">
+<li><p><strong>Only enable completions you use</strong> - Remove unused
+tools from <code>shell-completions.sh</code></p></li>
+<li><p><strong>Prefer package completions</strong> - Faster than dynamic
+generation</p></li>
+<li><p><strong>Group similar tools</strong> - Keep cloud tools together,
+containers together, etc.</p></li>
+<li><p><strong>Document custom completions</strong> - Add comments for
+non-standard setups</p></li>
+<li><p><strong>Test after adding</strong> - Always verify new
+completions work</p></li>
+<li><p><strong>Profile startup time</strong> - Keep it under
+500ms</p></li>
+</ol>
+<h2 id="examples">Examples</h2>
+<h3 id="using-completions">Using Completions</h3>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tailscale - complete subcommands</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="ex">tailscale</span> <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Shows: up, down, status, netcheck, etc.</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Kubectl - complete resources</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl</span> get <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Shows: pods, services, deployments, etc.</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Git - complete branches</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Shows: main, develop, feature/xyz, etc.</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Docker - complete images</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Shows: available images</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Nix - complete packages</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a><span class="ex">nix</span> shell nixpkgs#<span class="op">&lt;</span>TAB<span class="op">&gt;</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Shows: available packages</span></span></code></pre></div>
+<h3 id="custom-completion-example">Custom Completion Example</h3>
+<p>Create a completion for a custom script:</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># File: ~/.zsh/completions/_myscript</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="co">#compdef myscript</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">_myscript()</span> <span class="kw">{</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="at">-a</span> <span class="va">commands</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="va">commands</span><span class="op">=</span><span class="va">(</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;start:Start the service&#39;</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;stop:Stop the service&#39;</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;status:Check service status&#39;</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  <span class="va">)</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>  <span class="ex">_describe</span> <span class="st">&#39;command&#39;</span> commands</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a><span class="ex">_myscript</span> <span class="st">&quot;</span><span class="va">$@</span><span class="st">&quot;</span></span></code></pre></div>
+<p>Add to fpath:</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="va">fpath</span><span class="op">=</span><span class="va">(</span>~/.zsh/completions <span class="va">$fpath)</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="ex">compinit</span></span></code></pre></div>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a
+href="http://zsh.sourceforge.net/Doc/Release/Completion-System.html">Zsh
+Completion System</a></li>
+<li><a href="https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins">Oh-My-Zsh
+Plugins</a></li>
+<li><a href="ALIASES.md">Shell Aliases Guide</a></li>
+<li><a href="../README.md">Main README</a></li>
+</ul>
+            </article>
+        </div>
+
+        <div class="footer">
+            <p>Generated from <a href="https://github.com/wolfhardprell/dotfiles">wolfhardprell/dotfiles</a></p>
+            <p>© 2025 Wolfhard Prell</p>
+        </div>
+    </div>
+</body>
+</html>

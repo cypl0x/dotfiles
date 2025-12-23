@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nginx Static Web Server Configuration - Documentation</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            padding: 2rem 3rem;
+            border-bottom: 3px solid #4a9eff;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .breadcrumb {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .breadcrumb a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .content-wrapper {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .sidebar {
+            width: 250px;
+            padding: 2rem 0 2rem 2rem;
+            background: rgba(25, 25, 25, 0.8);
+            border-right: 1px solid rgba(74, 158, 255, 0.2);
+        }
+
+        .sidebar h2 {
+            font-size: 1rem;
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #TOC {
+            list-style: none;
+        }
+
+        #TOC ul {
+            list-style: none;
+            margin-left: 1rem;
+        }
+
+        #TOC a {
+            color: #aaa;
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        #TOC a:hover {
+            color: #4a9eff;
+        }
+
+        #TOC > ul > li > a {
+            color: #ccc;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 3rem;
+            overflow-x: auto;
+        }
+
+        .main-content h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+        }
+
+        .main-content h1:first-child {
+            margin-top: 0;
+        }
+
+        .main-content h2 {
+            color: #fff;
+            font-size: 2rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(74, 158, 255, 0.3);
+        }
+
+        .main-content h3 {
+            color: #ddd;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .main-content h4 {
+            color: #ccc;
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .main-content p {
+            margin-bottom: 1rem;
+            color: #d0d0d0;
+        }
+
+        .main-content ul,
+        .main-content ol {
+            margin-bottom: 1rem;
+            margin-left: 2rem;
+            color: #d0d0d0;
+        }
+
+        .main-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .main-content code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+
+        .main-content pre {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #4a9eff;
+        }
+
+        .main-content pre code {
+            background: none;
+            padding: 0;
+            color: #f8f8f2;
+            font-size: 0.9rem;
+        }
+
+        .main-content blockquote {
+            border-left: 4px solid #4a9eff;
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .main-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            background: rgba(40, 40, 40, 0.6);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .main-content th {
+            background: rgba(74, 158, 255, 0.2);
+            color: #fff;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .main-content td {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d0d0d0;
+        }
+
+        .main-content tr:hover {
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .main-content a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .main-content a:hover {
+            text-decoration: underline;
+        }
+
+        .main-content hr {
+            border: none;
+            border-top: 2px solid rgba(74, 158, 255, 0.3);
+            margin: 2rem 0;
+        }
+
+        .footer {
+            background: rgba(25, 25, 25, 0.9);
+            padding: 2rem 3rem;
+            border-top: 1px solid rgba(74, 158, 255, 0.2);
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+                padding: 2rem;
+            }
+
+            .main-content {
+                padding: 2rem;
+            }
+
+            .header {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="breadcrumb">
+                <a href="/">← Home</a> / <a href="/index.html">Documentation</a>
+            </div>
+            <h1>Nginx Static Web Server Configuration</h1>
+        </div>
+
+        <div class="content-wrapper">
+            <nav class="sidebar">
+                <h2>Contents</h2>
+<ul>
+<li><a href="#nginx-static-web-server-configuration"
+id="toc-nginx-static-web-server-configuration">Nginx Static Web Server
+Configuration</a>
+<ul>
+<li><a href="#overview" id="toc-overview">Overview</a></li>
+<li><a href="#features" id="toc-features">Features</a>
+<ul>
+<li><a href="#security-hardening" id="toc-security-hardening">Security
+Hardening</a></li>
+<li><a href="#virtual-hosts" id="toc-virtual-hosts">Virtual
+Hosts</a></li>
+<li><a href="#default-server" id="toc-default-server">Default
+Server</a></li>
+</ul></li>
+<li><a href="#directory-structure"
+id="toc-directory-structure">Directory Structure</a></li>
+<li><a href="#configuration-files"
+id="toc-configuration-files">Configuration Files</a>
+<ul>
+<li><a href="#main-configuration" id="toc-main-configuration">Main
+Configuration</a></li>
+<li><a href="#website-content" id="toc-website-content">Website
+Content</a></li>
+</ul></li>
+<li><a href="#usage" id="toc-usage">Usage</a>
+<ul>
+<li><a href="#accessing-the-website"
+id="toc-accessing-the-website">Accessing the Website</a></li>
+<li><a href="#viewing-logs" id="toc-viewing-logs">Viewing Logs</a></li>
+<li><a href="#testing-configuration"
+id="toc-testing-configuration">Testing Configuration</a></li>
+</ul></li>
+<li><a href="#updating-website-content"
+id="toc-updating-website-content">Updating Website Content</a>
+<ul>
+<li><a href="#method-1-edit-in-dotfiles-recommended"
+id="toc-method-1-edit-in-dotfiles-recommended">Method 1: Edit in
+Dotfiles (Recommended)</a></li>
+<li><a href="#method-2-direct-edit-temporary"
+id="toc-method-2-direct-edit-temporary">Method 2: Direct Edit
+(Temporary)</a></li>
+</ul></li>
+<li><a href="#adding-new-pages" id="toc-adding-new-pages">Adding New
+Pages</a></li>
+<li><a href="#adding-static-assets" id="toc-adding-static-assets">Adding
+Static Assets</a>
+<ul>
+<li><a href="#css-files" id="toc-css-files">CSS Files</a></li>
+<li><a href="#images" id="toc-images">Images</a></li>
+<li><a href="#javascript" id="toc-javascript">JavaScript</a></li>
+</ul></li>
+<li><a href="#httpsssl-configuration-lets-encrypt"
+id="toc-httpsssl-configuration-lets-encrypt">HTTPS/SSL Configuration
+(Let’s Encrypt)</a>
+<ul>
+<li><a href="#overview-1" id="toc-overview-1">Overview</a></li>
+<li><a href="#how-it-works" id="toc-how-it-works">How It Works</a></li>
+<li><a href="#certificate-management"
+id="toc-certificate-management">Certificate Management</a></li>
+<li><a href="#first-time-setup" id="toc-first-time-setup">First-Time
+Setup</a></li>
+<li><a href="#troubleshooting"
+id="toc-troubleshooting">Troubleshooting</a></li>
+<li><a href="#security-features" id="toc-security-features">Security
+Features</a></li>
+<li><a href="#testing-ssl-configuration"
+id="toc-testing-ssl-configuration">Testing SSL Configuration</a></li>
+</ul></li>
+<li><a href="#dns-configuration" id="toc-dns-configuration">DNS
+Configuration</a>
+<ul>
+<li><a href="#a-records-ipv4" id="toc-a-records-ipv4">A Records
+(IPv4)</a></li>
+<li><a href="#aaaa-records-ipv6" id="toc-aaaa-records-ipv6">AAAA Records
+(IPv6)</a></li>
+</ul></li>
+<li><a href="#adding-https-lets-encrypt"
+id="toc-adding-https-lets-encrypt">Adding HTTPS (Let’s Encrypt)</a>
+<ul>
+<li><a href="#add-acme-configuration" id="toc-add-acme-configuration">1.
+Add ACME Configuration</a></li>
+<li><a href="#update-virtual-hosts" id="toc-update-virtual-hosts">2.
+Update Virtual Hosts</a></li>
+<li><a href="#open-port-80" id="toc-open-port-80">3. Open Port
+80</a></li>
+<li><a href="#rebuild" id="toc-rebuild">4. Rebuild</a></li>
+</ul></li>
+<li><a href="#performance-optimization"
+id="toc-performance-optimization">Performance Optimization</a>
+<ul>
+<li><a href="#enable-http2" id="toc-enable-http2">Enable HTTP/2</a></li>
+<li><a href="#enable-caching" id="toc-enable-caching">Enable
+Caching</a></li>
+<li><a href="#enable-brotli-compression"
+id="toc-enable-brotli-compression">Enable Brotli Compression</a></li>
+</ul></li>
+<li><a href="#security-considerations"
+id="toc-security-considerations">Security Considerations</a>
+<ul>
+<li><a href="#current-security-features"
+id="toc-current-security-features">Current Security Features</a></li>
+<li><a href="#additional-security-measures"
+id="toc-additional-security-measures">Additional Security
+Measures</a></li>
+</ul></li>
+<li><a href="#troubleshooting-1"
+id="toc-troubleshooting-1">Troubleshooting</a>
+<ul>
+<li><a href="#nginx-wont-start" id="toc-nginx-wont-start">Nginx Won’t
+Start</a></li>
+<li><a href="#page-not-found-404" id="toc-page-not-found-404">Page Not
+Found (404)</a></li>
+<li><a href="#permission-denied" id="toc-permission-denied">Permission
+Denied</a></li>
+<li><a href="#port-8080-already-in-use"
+id="toc-port-8080-already-in-use">Port 8080 Already in Use</a></li>
+</ul></li>
+<li><a href="#monitoring" id="toc-monitoring">Monitoring</a>
+<ul>
+<li><a href="#check-nginx-status" id="toc-check-nginx-status">Check
+Nginx Status</a></li>
+<li><a href="#monitor-access" id="toc-monitor-access">Monitor
+Access</a></li>
+</ul></li>
+<li><a href="#backup" id="toc-backup">Backup</a></li>
+<li><a href="#see-also" id="toc-see-also">See Also</a></li>
+</ul></li>
+</ul>
+            </nav>
+
+            <article class="main-content">
+<h1 id="nginx-static-web-server-configuration">Nginx Static Web Server
+Configuration</h1>
+<p>This dotfiles configuration includes a hardened Nginx setup for
+serving static websites with HTTPS.</p>
+<h2 id="overview">Overview</h2>
+<ul>
+<li><strong>Ports</strong>: 80 (HTTP - redirects to HTTPS), 443
+(HTTPS)</li>
+<li><strong>Domains</strong>: wolfhard.net, wolfhard.dev, wolfhard.tech
+(with www subdomains)</li>
+<li><strong>SSL/TLS</strong>: Let’s Encrypt certificates (automatic
+renewal)</li>
+<li><strong>Document Root</strong>: <code>/var/www/wolfhard</code>
+(symlink to <code>/etc/nginx/www</code>)</li>
+<li><strong>Security</strong>: Hardened with modern security headers and
+best practices</li>
+<li><strong>HTTP to HTTPS</strong>: All HTTP traffic automatically
+redirected to HTTPS</li>
+</ul>
+<h2 id="features">Features</h2>
+<h3 id="security-hardening">Security Hardening</h3>
+<ul>
+<li><strong>Security Headers</strong>:
+<ul>
+<li>X-Frame-Options: Prevents clickjacking</li>
+<li>X-Content-Type-Options: Prevents MIME type sniffing</li>
+<li>X-XSS-Protection: XSS attack protection</li>
+<li>Content-Security-Policy: Restricts resource loading</li>
+<li>Referrer-Policy: Controls referrer information</li>
+</ul></li>
+<li><strong>Server Hardening</strong>:
+<ul>
+<li>Server version hidden (server_tokens off)</li>
+<li>Request size limits (10MB max)</li>
+<li>Optimized timeouts and buffer sizes</li>
+<li>Hidden files (.htaccess, .git) blocked</li>
+</ul></li>
+<li><strong>Best Practices</strong>:
+<ul>
+<li>Gzip compression enabled</li>
+<li>Static asset caching (1 year for images/fonts/css/js)</li>
+<li>UTF-8 charset</li>
+<li>Custom error pages (404, 50x)</li>
+</ul></li>
+</ul>
+<h3 id="virtual-hosts">Virtual Hosts</h3>
+<p>All three domains serve the same content:</p>
+<ol type="1">
+<li><strong>wolfhard.net</strong> (+ www.wolfhard.net)</li>
+<li><strong>wolfhard.dev</strong> (+ www.wolfhard.dev)</li>
+<li><strong>wolfhard.tech</strong> (+ www.wolfhard.tech)</li>
+</ol>
+<h3 id="default-server">Default Server</h3>
+<ul>
+<li>Catches all requests to unknown domains</li>
+<li>Returns HTTP 444 (close connection without response)</li>
+<li>Security measure to prevent domain-based attacks</li>
+</ul>
+<h2 id="directory-structure">Directory Structure</h2>
+<pre><code>dotfiles/
+├── hosts/homelab/
+│   └── nginx.nix              # Nginx configuration module
+└── web/
+    └── static/
+        ├── index.html         # Homepage
+        └── 404.html           # 404 error page</code></pre>
+<p>Deployed to:</p>
+<pre><code>/etc/nginx/www/                # NixOS-managed static files
+    ├── index.html
+    └── 404.html
+/var/www/wolfhard -&gt; /etc/nginx/www  # Symlink</code></pre>
+<h2 id="configuration-files">Configuration Files</h2>
+<h3 id="main-configuration">Main Configuration</h3>
+<p>Located at: <code>hosts/homelab/nginx.nix</code></p>
+<p>Key sections: - Recommended Nginx settings enabled - Security headers
+in <code>appendHttpConfig</code> - Virtual host definitions - Firewall
+rules - Static file deployment</p>
+<h3 id="website-content">Website Content</h3>
+<p>Located at: <code>web/static/</code></p>
+<p>Files are automatically deployed to <code>/etc/nginx/www/</code>
+during system rebuild.</p>
+<h2 id="usage">Usage</h2>
+<h3 id="accessing-the-website">Accessing the Website</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Local access</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> http://localhost:8080</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Via domain (requires DNS or /etc/hosts)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> http://wolfhard.net:8080</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Test from browser</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ex">http://your-server-ip:8080</span></span></code></pre></div>
+<h3 id="viewing-logs">Viewing Logs</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Access logs</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-f</span> /var/log/nginx/wolfhard.net.access.log</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-f</span> /var/log/nginx/wolfhard.dev.access.log</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-f</span> /var/log/nginx/wolfhard.tech.access.log</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Error logs</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-f</span> /var/log/nginx/wolfhard.net.error.log</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># All nginx logs</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="ex">journalctl</span> <span class="at">-u</span> nginx <span class="at">-f</span></span></code></pre></div>
+<h3 id="testing-configuration">Testing Configuration</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Test nginx configuration syntax</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nginx <span class="at">-t</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Reload nginx (after manual config changes)</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl reload nginx</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Restart nginx</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart nginx</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Check nginx status</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl status nginx</span></code></pre></div>
+<h2 id="updating-website-content">Updating Website Content</h2>
+<h3 id="method-1-edit-in-dotfiles-recommended">Method 1: Edit in
+Dotfiles (Recommended)</h3>
+<ol type="1">
+<li><p>Edit files in <code>web/static/</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> /root/dotfiles/web/static/index.html</span></code></pre></div></li>
+<li><p>Rebuild system:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span>  <span class="co"># or: nixos-rebuild switch --flake /root/dotfiles#homelab</span></span></code></pre></div></li>
+<li><p>Changes are automatically deployed</p></li>
+</ol>
+<h3 id="method-2-direct-edit-temporary">Method 2: Direct Edit
+(Temporary)</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Edit directly (changes lost on rebuild!)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> vim /etc/nginx/www/index.html</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Nginx automatically serves updated file</span></span></code></pre></div>
+<p><strong>Note</strong>: Direct edits are lost on next system rebuild.
+Always edit in <code>web/static/</code> for permanent changes.</p>
+<h2 id="adding-new-pages">Adding New Pages</h2>
+<ol type="1">
+<li><p>Create new HTML file in <code>web/static/</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> /root/dotfiles/web/static/about.html</span></code></pre></div></li>
+<li><p>Add to nginx.nix <code>environment.etc</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>environment<span class="op">.</span>etc<span class="op">.</span><span class="st">&quot;nginx/www/about.html&quot;</span> = <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">source</span> <span class="op">=</span> <span class="ss">../../web/static/about.html</span><span class="op">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">mode</span> <span class="op">=</span> <span class="st">&quot;0644&quot;</span><span class="op">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">user</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">group</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div></li>
+<li><p>Rebuild:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span></span></code></pre></div></li>
+<li><p>Access at: <code>http://domain:8080/about.html</code></p></li>
+</ol>
+<h2 id="adding-static-assets">Adding Static Assets</h2>
+<h3 id="css-files">CSS Files</h3>
+<ol type="1">
+<li><p>Create CSS file:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /root/dotfiles/web/static/css</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> /root/dotfiles/web/static/css/style.css</span></code></pre></div></li>
+<li><p>Add to nginx.nix:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>environment<span class="op">.</span>etc<span class="op">.</span><span class="st">&quot;nginx/www/css/style.css&quot;</span> = <span class="op">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">source</span> <span class="op">=</span> <span class="ss">../../web/static/css/style.css</span><span class="op">;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">mode</span> <span class="op">=</span> <span class="st">&quot;0644&quot;</span><span class="op">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">user</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">group</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div></li>
+<li><p>Link in HTML:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">link</span><span class="ot"> rel</span><span class="op">=</span><span class="st">&quot;stylesheet&quot;</span><span class="ot"> href</span><span class="op">=</span><span class="st">&quot;/css/style.css&quot;</span><span class="dt">&gt;</span></span></code></pre></div></li>
+</ol>
+<h3 id="images">Images</h3>
+<p>Same process as CSS:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>environment<span class="op">.</span>etc<span class="op">.</span><span class="st">&quot;nginx/www/images/logo.png&quot;</span> = <span class="op">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">source</span> <span class="op">=</span> <span class="ss">../../web/static/images/logo.png</span><span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">mode</span> <span class="op">=</span> <span class="st">&quot;0644&quot;</span><span class="op">;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">user</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">group</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h3 id="javascript">JavaScript</h3>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>environment<span class="op">.</span>etc<span class="op">.</span><span class="st">&quot;nginx/www/js/script.js&quot;</span> = <span class="op">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">source</span> <span class="op">=</span> <span class="ss">../../web/static/js/script.js</span><span class="op">;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">mode</span> <span class="op">=</span> <span class="st">&quot;0644&quot;</span><span class="op">;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">user</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">group</span> <span class="op">=</span> <span class="st">&quot;nginx&quot;</span><span class="op">;</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h2 id="httpsssl-configuration-lets-encrypt">HTTPS/SSL Configuration
+(Let’s Encrypt)</h2>
+<h3 id="overview-1">Overview</h3>
+<p>This configuration uses NixOS’s built-in ACME support for automatic
+Let’s Encrypt certificates.</p>
+<p><strong>Features:</strong> - Automatic certificate issuance on first
+rebuild - Automatic renewal (checked twice daily) - HTTP to HTTPS
+redirect (all HTTP traffic → HTTPS) - Support for multiple domains and
+subdomains</p>
+<h3 id="how-it-works">How It Works</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In nginx.nix</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>security<span class="op">.</span>acme = <span class="op">{</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">acceptTerms</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">defaults</span>.<span class="va">email</span> <span class="op">=</span> <span class="st">&quot;mail@wolfhard.net&quot;</span><span class="op">;</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># For each domain:</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;wolfhard.net&quot;</span> = <span class="op">{</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="va">enableACME</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span>      <span class="co"># Request Let&#39;s Encrypt cert</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="va">forceSSL</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span>        <span class="co"># Redirect HTTP → HTTPS</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="va">serverAliases</span> <span class="op">=</span> <span class="op">[</span> <span class="st">&quot;www.wolfhard.net&quot;</span> <span class="op">];</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h3 id="certificate-management">Certificate Management</h3>
+<p><strong>Certificate location</strong>:
+<code>/var/lib/acme/&lt;domain&gt;/</code></p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check certificate expiry</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> x509 <span class="at">-in</span> /var/lib/acme/wolfhard.net/cert.pem <span class="at">-noout</span> <span class="at">-dates</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># View certificate details</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> x509 <span class="at">-in</span> /var/lib/acme/wolfhard.net/cert.pem <span class="at">-noout</span> <span class="at">-text</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Force certificate renewal</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> start acme-wolfhard.net.service</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Check ACME service status</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> status acme-wolfhard.net.service</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="co"># View renewal logs</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="ex">journalctl</span> <span class="at">-u</span> acme-wolfhard.net.service <span class="at">-f</span></span></code></pre></div>
+<h3 id="first-time-setup">First-Time Setup</h3>
+<p><strong>IMPORTANT</strong>: Configure DNS BEFORE rebuilding!</p>
+<ol type="1">
+<li><p><strong>Set up DNS records</strong> (see DNS Configuration
+section below)</p></li>
+<li><p><strong>Verify DNS propagation</strong>:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> wolfhard.net +short</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Should return your server&#39;s public IP</span></span></code></pre></div></li>
+<li><p><strong>Rebuild system</strong>:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span></span></code></pre></div></li>
+<li><p><strong>Watch certificate issuance</strong> (usually completes in
+&lt; 1 minute):</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">journalctl</span> <span class="at">-fu</span> acme-wolfhard.net.service</span></code></pre></div></li>
+<li><p><strong>Test HTTPS</strong>:</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-I</span> https://wolfhard.net</span></code></pre></div></li>
+<li><p><strong>Test HTTP redirect</strong>:</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-I</span> http://wolfhard.net</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Should show: Location: https://wolfhard.net/</span></span></code></pre></div></li>
+</ol>
+<h3 id="troubleshooting">Troubleshooting</h3>
+<p><strong>Certificate issuance fails:</strong></p>
+<ol type="1">
+<li><p><strong>Check DNS</strong>:</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> wolfhard.net +short  <span class="co"># Must return server IP</span></span></code></pre></div></li>
+<li><p><strong>Check port 80 accessible from internet</strong>:</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># From external machine:</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> http://your-server-ip</span></code></pre></div></li>
+<li><p><strong>View ACME logs</strong>:</p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">journalctl</span> <span class="at">-u</span> acme-wolfhard.net.service <span class="at">-n</span> 100</span></code></pre></div></li>
+<li><p><strong>Use staging server</strong> (to avoid rate limits during
+testing):</p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In nginx.nix</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>security<span class="op">.</span>acme<span class="op">.</span>defaults = <span class="op">{</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">email</span> <span class="op">=</span> <span class="st">&quot;mail@wolfhard.net&quot;</span><span class="op">;</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">server</span> <span class="op">=</span> <span class="st">&quot;https://acme-staging-v02.api.letsencrypt.org/directory&quot;</span><span class="op">;</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<p>Then rebuild and test. Switch back to production when ready.</p></li>
+<li><p><strong>Manual renewal</strong>:</p>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> start acme-wolfhard.net.service</span></code></pre></div></li>
+</ol>
+<p><strong>HTTP redirect not working:</strong></p>
+<ul>
+<li>Check nginx is running: <code>systemctl status nginx</code></li>
+<li>Check firewall: <code>ss -tulpn | grep nginx</code></li>
+<li>View nginx logs: <code>journalctl -u nginx -f</code></li>
+</ul>
+<h3 id="security-features">Security Features</h3>
+<ul>
+<li><strong>TLS 1.2 and 1.3</strong> only (older versions disabled)</li>
+<li><strong>Modern cipher suites</strong> (via
+<code>recommendedTlsSettings</code>)</li>
+<li><strong>HSTS</strong> (HTTP Strict Transport Security)</li>
+<li><strong>Forward secrecy</strong> enabled</li>
+<li><strong>OCSP stapling</strong> enabled</li>
+</ul>
+<h3 id="testing-ssl-configuration">Testing SSL Configuration</h3>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check SSL with openssl</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> s_client <span class="at">-connect</span> wolfhard.net:443 <span class="at">-servername</span> wolfhard.net</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Online SSL test</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Visit: https://www.ssllabs.com/ssltest/analyze.html?d=wolfhard.net</span></span></code></pre></div>
+<h2 id="dns-configuration">DNS Configuration</h2>
+<p>To use your domains, configure DNS records:</p>
+<h3 id="a-records-ipv4">A Records (IPv4)</h3>
+<pre><code>wolfhard.net      A      YOUR_SERVER_IPv4
+www.wolfhard.net  A      YOUR_SERVER_IPv4
+wolfhard.dev      A      YOUR_SERVER_IPv4
+www.wolfhard.dev  A      YOUR_SERVER_IPv4
+wolfhard.tech     A      YOUR_SERVER_IPv4
+www.wolfhard.tech A      YOUR_SERVER_IPv4</code></pre>
+<h3 id="aaaa-records-ipv6">AAAA Records (IPv6)</h3>
+<pre><code>wolfhard.net      AAAA   YOUR_SERVER_IPv6
+www.wolfhard.net  AAAA   YOUR_SERVER_IPv6
+(repeat for other domains)</code></pre>
+<h2 id="adding-https-lets-encrypt">Adding HTTPS (Let’s Encrypt)</h2>
+<p>To enable HTTPS with Let’s Encrypt certificates:</p>
+<h3 id="add-acme-configuration">1. Add ACME Configuration</h3>
+<p>Edit <code>nginx.nix</code>:</p>
+<div class="sourceCode" id="cb32"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>security<span class="op">.</span>acme = <span class="op">{</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">acceptTerms</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">defaults</span>.<span class="va">email</span> <span class="op">=</span> <span class="st">&quot;mail@wolfhard.net&quot;</span><span class="op">;</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h3 id="update-virtual-hosts">2. Update Virtual Hosts</h3>
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;wolfhard.net&quot;</span> = <span class="op">{</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">enableACME</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">forceSSL</span> <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ... rest of config</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h3 id="open-port-80">3. Open Port 80</h3>
+<p>ACME needs port 80 for validation:</p>
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>networking<span class="op">.</span>firewall<span class="op">.</span>allowedTCPPorts = <span class="op">[</span> <span class="dv">80</span> <span class="dv">8080</span> <span class="op">]</span>;</span></code></pre></div>
+<h3 id="rebuild">4. Rebuild</h3>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span></span></code></pre></div>
+<p>Certificates will be automatically obtained and renewed.</p>
+<h2 id="performance-optimization">Performance Optimization</h2>
+<h3 id="enable-http2">Enable HTTP/2</h3>
+<p>Already enabled via <code>recommendedTlsSettings</code> when HTTPS is
+configured.</p>
+<h3 id="enable-caching">Enable Caching</h3>
+<p>Static assets are already cached for 1 year: - Images: jpg, jpeg,
+png, gif, ico, svg - Fonts: woff, woff2, ttf, eot - Scripts: js -
+Styles: css</p>
+<h3 id="enable-brotli-compression">Enable Brotli Compression</h3>
+<p>Add to <code>nginx.nix</code>:</p>
+<div class="sourceCode" id="cb36"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>services<span class="op">.</span>nginx = <span class="op">{</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ... existing config</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">appendHttpConfig</span> <span class="op">=</span> <span class="st">&#39;&#39;</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="st">    # ... existing headers</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a><span class="st">    # Brotli compression</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a><span class="st">    brotli on;</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a><span class="st">    brotli_comp_level 6;</span></span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a><span class="st">    brotli_types text/plain text/css application/json application/javascript text/xml application/xml;</span></span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a><span class="st">  &#39;&#39;</span><span class="op">;</span></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="current-security-features">Current Security Features</h3>
+<p>✅ Security headers (XSS, clickjacking, etc.) ✅ Hidden files blocked
+✅ Server version hidden ✅ Request size limits ✅ Timeout limits ✅
+Default server returns 444 ✅ Dedicated nginx user ✅ File permissions
+set correctly</p>
+<h3 id="additional-security-measures">Additional Security Measures</h3>
+<ol type="1">
+<li><p><strong>Rate Limiting</strong>:</p>
+<div class="sourceCode" id="cb37"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>appendHttpConfig = <span class="st">&#39;&#39;</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="st">  limit_req_zone $binary_remote_addr zone=one:10m rate=10r/s;</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="st">  limit_req zone=one burst=20 nodelay;</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;&#39;</span>;</span></code></pre></div></li>
+<li><p><strong>IP Whitelisting</strong> (if needed):</p>
+<div class="sourceCode" id="cb38"><pre
+class="sourceCode nix"><code class="sourceCode nix"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>locations<span class="op">.</span><span class="st">&quot;/&quot;</span> = <span class="op">{</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">extraConfig</span> <span class="op">=</span> <span class="st">&#39;&#39;</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="st">    allow 1.2.3.4;</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a><span class="st">    deny all;</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a><span class="st">  &#39;&#39;</span><span class="op">;</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>;</span></code></pre></div></li>
+<li><p><strong>Fail2ban Integration</strong>: Monitor logs and ban
+IPs</p></li>
+</ol>
+<h2 id="troubleshooting-1">Troubleshooting</h2>
+<h3 id="nginx-wont-start">Nginx Won’t Start</h3>
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check nginx config</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nginx <span class="at">-t</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check journal</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a><span class="ex">journalctl</span> <span class="at">-u</span> nginx <span class="at">-n</span> 50</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Check permissions</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="at">-la</span> /var/www/wolfhard</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="at">-la</span> /etc/nginx/www</span></code></pre></div>
+<h3 id="page-not-found-404">Page Not Found (404)</h3>
+<div class="sourceCode" id="cb40"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check if files exist</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="at">-la</span> /var/www/wolfhard/</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check nginx error log</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-f</span> /var/log/nginx/wolfhard.net.error.log</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify symlink</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a><span class="fu">readlink</span> /var/www/wolfhard</span></code></pre></div>
+<h3 id="permission-denied">Permission Denied</h3>
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check nginx user</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ps</span> aux <span class="kw">|</span> <span class="fu">grep</span> nginx</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Fix permissions</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chown <span class="at">-R</span> nginx:nginx /var/www</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Check SELinux (if enabled)</span></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> setenforce 0  <span class="co"># temporary</span></span></code></pre></div>
+<h3 id="port-8080-already-in-use">Port 8080 Already in Use</h3>
+<div class="sourceCode" id="cb42"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find process using port</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> lsof <span class="at">-i</span> :8080</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Or use ss</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> ss <span class="at">-tulpn</span> <span class="kw">|</span> <span class="fu">grep</span> 8080</span></code></pre></div>
+<h2 id="monitoring">Monitoring</h2>
+<h3 id="check-nginx-status">Check Nginx Status</h3>
+<div class="sourceCode" id="cb43"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Service status</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> status nginx</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Test config</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nginx <span class="at">-t</span></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Check listening ports</span></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a><span class="ex">ss</span> <span class="at">-tulpn</span> <span class="kw">|</span> <span class="fu">grep</span> nginx</span></code></pre></div>
+<h3 id="monitor-access">Monitor Access</h3>
+<div class="sourceCode" id="cb44"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Real-time access log</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-f</span> /var/log/nginx/wolfhard.net.access.log</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Count requests</span></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wc</span> <span class="at">-l</span> /var/log/nginx/wolfhard.net.access.log</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Top IPs</span></span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a><span class="fu">awk</span> <span class="st">&#39;{print $1}&#39;</span> /var/log/nginx/wolfhard.net.access.log <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="at">-c</span> <span class="kw">|</span> <span class="fu">sort</span> <span class="at">-rn</span> <span class="kw">|</span> <span class="fu">head</span></span></code></pre></div>
+<h2 id="backup">Backup</h2>
+<p>Website content is stored in git:</p>
+<div class="sourceCode" id="cb45"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /root/dotfiles</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add web/</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">&quot;Update website content&quot;</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code></pre></div>
+<p>Logs are in <code>/var/log/nginx/</code> (consider log rotation).</p>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="https://nginx.org/en/docs/">Nginx Documentation</a></li>
+<li><a href="https://ssl-config.mozilla.org/">Mozilla SSL Configuration
+Generator</a></li>
+<li><a href="https://securityheaders.com/">Security Headers</a></li>
+<li><a href="../README.md">Main README</a></li>
+</ul>
+            </article>
+        </div>
+
+        <div class="footer">
+            <p>Generated from <a href="https://github.com/wolfhardprell/dotfiles">wolfhardprell/dotfiles</a></p>
+            <p>© 2025 Wolfhard Prell</p>
+        </div>
+    </div>
+</body>
+</html>
