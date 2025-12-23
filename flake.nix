@@ -25,10 +25,11 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
-                users.cypl0x = import ./home/cypl0x.nix;
-                users.wap = import ./home/wap.nix;
-                # Keep root just in case, though usually less critical for home-manager
-                # users.root = import ./home/root.nix;
+                users = {
+                  cypl0x = import ./home/cypl0x.nix;
+                  wap = import ./home/wap.nix;
+                  root = import ./home/root.nix;
+                };
               };
             }
           ];
