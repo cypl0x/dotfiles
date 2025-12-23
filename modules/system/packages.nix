@@ -15,6 +15,7 @@
     navi
     pandoc
     ripgrep
+    statix
     starship
     tailscale
     tealdeer

@@ -1,0 +1,14 @@
+# Statix configuration
+
+# Files/directories to ignore
+ignore = [
+    ".git",
+    "node_modules",
+    "result"
+]
+
+# Output format (stderr, json)
+format = "stderr"
+
+# Disabled checks (optional, empty means all enabled)
+disabled = []

@@ -174,8 +174,14 @@
       # Flake check
       nixcheck() {
         cd ~/dotfiles
+        echo "Running flake check..."
         nix flake check
+        echo "Running statix check..."
+        statix check
       }
+      
+      # Lint nix files
+      alias nixlint='statix check ~/dotfiles'
 
       # Show flake outputs
       nixshow() {
