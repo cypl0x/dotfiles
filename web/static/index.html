@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Wolfhard Prell - Personal Website">
+    <meta name="author" content="Wolfhard Prell">
+    <title>Wolfhard Prell</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 60px;
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+
+        .section {
+            margin: 30px 0;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #764ba2;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .link-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+        }
+
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .tech-tag {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .contact-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .contact-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .contact-item::before {
+            content: "→";
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .links {
+                flex-direction: column;
+            }
+
+            .link-button {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wolfhard Prell</h1>
+            <p class="subtitle">System Administrator | DevOps Engineer | NixOS Enthusiast</p>
+        </header>
+
+        <main>
+            <section class="section">
+                <h2>About Me</h2>
+                <p>
+                    Welcome to my personal corner of the internet! I'm Wolfhard Prell, a technology enthusiast
+                    with a passion for building reliable, secure, and efficient systems.
+                </p>
+                <p>
+                    I specialize in infrastructure automation, containerization, and creating reproducible
+                    development environments using modern DevOps practices. Currently running this site on
+                    a hardened NixOS setup with declarative configuration management.
+                </p>
+            </section>
+
+            <section class="section">
+                <h2>Technical Expertise</h2>
+                <div class="tech-stack">
+                    <span class="tech-tag">NixOS</span>
+                    <span class="tech-tag">Linux</span>
+                    <span class="tech-tag">Docker</span>
+                    <span class="tech-tag">Kubernetes</span>
+                    <span class="tech-tag">Nginx</span>
+                    <span class="tech-tag">Git</span>
+                    <span class="tech-tag">Terraform</span>
+                    <span class="tech-tag">Ansible</span>
+                    <span class="tech-tag">CI/CD</span>
+                    <span class="tech-tag">Security</span>
+                    <span class="tech-tag">Tailscale</span>
+                    <span class="tech-tag">Tor</span>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2>Infrastructure</h2>
+                <p>
+                    This site is powered by:
+                </p>
+                <ul style="margin-left: 20px; color: #555;">
+                    <li>NixOS with Flakes for declarative configuration</li>
+                    <li>Nginx with security hardening</li>
+                    <li>Tailscale for secure networking</li>
+                    <li>Tor relay (non-exit) - contributing to internet privacy</li>
+                    <li>Git-managed dotfiles for reproducibility</li>
+                </ul>
+            </section>
+
+            <section class="section">
+                <h2>Contact</h2>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <strong>Email:</strong> mail@wolfhard.net
+                    </div>
+                    <div class="contact-item">
+                        <strong>Domains:</strong> wolfhard.net | wolfhard.dev | wolfhard.tech
+                    </div>
+                </div>
+            </section>
+
+            <div class="links">
+                <a href="https://github.com" class="link-button" target="_blank" rel="noopener noreferrer">
+                    GitHub
+                </a>
+                <a href="mailto:mail@wolfhard.net" class="link-button">
+                    Email Me
+                </a>
+            </div>
+        </main>
+
+        <footer>
+            <p>
+                Powered by NixOS | Hosted with ❤️ on reproducible infrastructure
+            </p>
+            <p style="margin-top: 10px; font-size: 0.8em;">
+                © 2025 Wolfhard Prell. Built with pure HTML & CSS.
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
