@@ -2,3 +2,7 @@ result
 .direnv
 .envrc
 .aider*
+
+# ShellFish secrets
+home/shell/.shellfishrc.secrets
+.shellfishrc.secrets

@@ -624,8 +624,9 @@ fi
 
 # Linux-specific
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  alias pbcopy='xclip -selection clipboard'
-  alias pbpaste='xclip -selection clipboard -o'
+  # Use functions instead of aliases so ShellFish can override them
+  pbcopy() { xclip -selection clipboard "$@"; }
+  pbpaste() { xclip -selection clipboard -o "$@"; }
   alias open='xdg-open'
 fi
 

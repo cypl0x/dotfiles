@@ -23,10 +23,8 @@
 #
 # this part does nothing outside ShellFish
 if [[ "$LC_TERMINAL" = "ShellFish" ]]; then
-  # Unalias pbcopy/pbpaste if they exist as aliases (e.g., from aliases.sh)
-  # so we can define them as functions for ShellFish
-  unalias pbcopy 2>/dev/null || true
-  unalias pbpaste 2>/dev/null || true
+  # pbcopy/pbpaste are defined as functions in aliases.sh on Linux
+  # We redefine them here for ShellFish (functions override naturally)
 
   ios_printURIComponent() {
     awk 'BEGIN {while (y++ < 125) z[sprintf("%c", y)] = y
@@ -410,9 +408,20 @@ EOF
     return 0
   fi
   
-  local key=1457f94081aba3b45b0fa54eff55f9676e5e72f31b7f771bc426425c12bc2b33
-  local user=K9e17Q7tHDtcyLKA03WWDy8jph3NWjMP1xv2hrxr
-  local iv=ab5bbeb426015da7eedcee8bee3dffb7
+  # Load credentials from environment variables
+  # Set these in your shell profile or a gitignored secrets file:
+  # export SHELLFISH_KEY="your_key_here"
+  # export SHELLFISH_USER="your_user_here"
+  # export SHELLFISH_IV="your_iv_here"
+  local key=${SHELLFISH_KEY:-}
+  local user=${SHELLFISH_USER:-}
+  local iv=${SHELLFISH_IV:-}
+
+  if [[ -z "$key" || -z "$user" || -z "$iv" ]]; then
+    echo "Error: ShellFish credentials not configured." >&2
+    echo "Set SHELLFISH_KEY, SHELLFISH_USER, and SHELLFISH_IV environment variables." >&2
+    return 1
+  fi
 
   local plain=$(
   echo Secure ShellFish Widget 2.0
@@ -440,9 +449,20 @@ EOF
     return 0
   fi
   
-  local key=1457f94081aba3b45b0fa54eff55f9676e5e72f31b7f771bc426425c12bc2b33
-  local user=K9e17Q7tHDtcyLKA03WWDy8jph3NWjMP1xv2hrxr
-  local iv=ab5bbeb426015da7eedcee8bee3dffb7
+  # Load credentials from environment variables
+  # Set these in your shell profile or a gitignored secrets file:
+  # export SHELLFISH_KEY="your_key_here"
+  # export SHELLFISH_USER="your_user_here"
+  # export SHELLFISH_IV="your_iv_here"
+  local key=${SHELLFISH_KEY:-}
+  local user=${SHELLFISH_USER:-}
+  local iv=${SHELLFISH_IV:-}
+
+  if [[ -z "$key" || -z "$user" || -z "$iv" ]]; then
+    echo "Error: ShellFish credentials not configured." >&2
+    echo "Set SHELLFISH_KEY, SHELLFISH_USER, and SHELLFISH_IV environment variables." >&2
+    return 1
+  fi
 
   local plain=$(
   echo Secure ShellFish Notify 2.0

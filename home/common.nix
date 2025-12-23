@@ -104,11 +104,15 @@
         fi
 
         # Custom functions that were previously in modules/system/shell.nix
+        # Detect dotfiles directory (default to ~/dotfiles if DOTFILES_DIR not set)
+        export DOTFILES_DIR="''${DOTFILES_DIR:-$HOME/dotfiles}"
+
         # NixOS update function
         nixup() {
-          cd ~/dotfiles
+          local hostname=$(hostname)
+          cd "$DOTFILES_DIR"
           nix flake update
-          sudo nixos-rebuild switch --flake .#homelab
+          sudo nixos-rebuild switch --flake ".#$hostname"
         }
 
         # Update specific flake input
@@ -118,34 +122,51 @@
             echo "Example: nixup-input nixpkgs"
             return 1
           fi
-          cd ~/dotfiles
+          local hostname=$(hostname)
+          cd "$DOTFILES_DIR"
           nix flake lock --update-input "$1"
-          sudo nixos-rebuild switch --flake .#homelab
+          sudo nixos-rebuild switch --flake ".#$hostname"
         }
 
         # Quick flake check
         nixcheck() {
-          cd ~/dotfiles
+          cd "$DOTFILES_DIR"
           echo "Running flake check..."
           nix flake check
           echo "Running statix check..."
           statix check
         }
-        
+
         nixshow() {
-          cd ~/dotfiles
+          cd "$DOTFILES_DIR"
           nix flake show
         }
-      '';
 
-      shellAliases = {
-        nrs = "statix check ~/dotfiles && sudo nixos-rebuild switch --flake ~/dotfiles#homelab";
-        nrb = "statix check ~/dotfiles && sudo nixos-rebuild boot --flake ~/dotfiles#homelab";
-        nrt = "statix check ~/dotfiles && sudo nixos-rebuild test --flake ~/dotfiles#homelab";
-        nrsv = "statix check ~/dotfiles && sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace";
-        nrbs = "statix check ~/dotfiles && sudo nixos-rebuild build --flake ~/dotfiles#homelab";
-        nixlint = "statix check ~/dotfiles";
-      };
+        # Quick rebuild shortcuts (using dynamic hostname and dotfiles path)
+        nrs() {
+          statix check "$DOTFILES_DIR" && sudo nixos-rebuild switch --flake "$DOTFILES_DIR#$(hostname)"
+        }
+
+        nrb() {
+          statix check "$DOTFILES_DIR" && sudo nixos-rebuild boot --flake "$DOTFILES_DIR#$(hostname)"
+        }
+
+        nrt() {
+          statix check "$DOTFILES_DIR" && sudo nixos-rebuild test --flake "$DOTFILES_DIR#$(hostname)"
+        }
+
+        nrsv() {
+          statix check "$DOTFILES_DIR" && sudo nixos-rebuild switch --flake "$DOTFILES_DIR#$(hostname)" --show-trace
+        }
+
+        nrbs() {
+          statix check "$DOTFILES_DIR" && sudo nixos-rebuild build --flake "$DOTFILES_DIR#$(hostname)"
+        }
+
+        nixlint() {
+          statix check "$DOTFILES_DIR"
+        }
+      '';
     };
 
     fzf = {

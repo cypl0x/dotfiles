@@ -35,17 +35,7 @@
     BAT_PAGER = "less -R";
   };
 
-  # Git configuration
-  programs.git = {
-    enable = true;
-    config = {
-      user = {
-        name = "Wolfhard Prell";
-        email = "mail@wolfhard.net";
-      };
-      init = {
-        defaultBranch = "main";
-      };
-    };
-  };
+  # Git is configured per-user in home-manager (see home/common.nix)
+  # This ensures each user can have their own git identity
+  programs.git.enable = true;
 }

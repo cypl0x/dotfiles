@@ -7,8 +7,24 @@ pkgs.stdenv.mkDerivation {
   nativeBuildInputs = [ pkgs.pandoc ];
 
   buildPhase = ''
+    set -euo pipefail  # Exit on error, undefined variables, and pipe failures
+
     # Create output directory
     mkdir -p $out
+
+    # Verify static assets exist before copying
+    if [ ! -f ${../web/static/favicon.svg} ]; then
+      echo "Error: favicon.svg not found" >&2
+      exit 1
+    fi
+    if [ ! -f ${../web/static/logo.svg} ]; then
+      echo "Error: logo.svg not found" >&2
+      exit 1
+    fi
+    if [ ! -f ${../web/docs-robots.txt} ]; then
+      echo "Error: docs-robots.txt not found" >&2
+      exit 1
+    fi
 
     # Copy static assets
     cp ${../web/static/favicon.svg} $out/favicon.svg
@@ -113,25 +129,38 @@ pkgs.stdenv.mkDerivation {
         <ul class="doc-list">
 EOF
 
+    # Check if docs directory exists and has markdown files
+    if [ ! -d docs ]; then
+      echo "Warning: docs directory not found, creating empty documentation site" >&2
+      mkdir -p docs
+    fi
+
+    # Count markdown files
+    md_count=$(find docs -maxdepth 1 -name "*.md" -type f | wc -l)
+    if [ "$md_count" -eq 0 ]; then
+      echo "Warning: No markdown files found in docs directory" >&2
+    fi
+
     # Generate index entries for each markdown file
     for md_file in docs/*.md; do
-      if [ -f "$md_file" ]; then
-        filename=$(basename "$md_file" .md)
-        html_file="$filename.html"
+      # Skip if glob didn't match any files
+      [ -f "$md_file" ] || continue
 
-        # Get the first heading from the markdown file as title
-        title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
+      filename=$(basename "$md_file" .md)
+      html_file="$filename.html"
 
-        # Get the second line as description if it exists
-        description=$(sed -n '2p' "$md_file" | sed 's/^[#> ]*//' || echo "")
+      # Get the first heading from the markdown file as title
+      title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
 
-        cat >> $out/index.html <<ITEM
+      # Get the second line as description if it exists
+      description=$(sed -n '2p' "$md_file" | sed 's/^[#> ]*//' || echo "")
+
+      cat >> $out/index.html <<ITEM
             <li class="doc-item">
                 <a href="$html_file">$title</a>
                 <div class="description">$description</div>
             </li>
 ITEM
-      fi
     done
 
     cat >> $out/index.html <<'EOF'
@@ -146,27 +175,44 @@ ITEM
 </html>
 EOF
 
+    # Verify pandoc template exists
+    if [ ! -f ${../web/docs-template.html} ]; then
+      echo "Error: docs-template.html not found" >&2
+      exit 1
+    fi
+
     # Convert each markdown file to HTML using pandoc
     for md_file in docs/*.md; do
-      if [ -f "$md_file" ]; then
-        filename=$(basename "$md_file" .md)
-        html_file="$out/$filename.html"
+      # Skip if glob didn't match any files
+      [ -f "$md_file" ] || continue
 
-        # Get title from first heading
-        title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
+      filename=$(basename "$md_file" .md)
+      html_file="$out/$filename.html"
 
-        echo "Converting $filename.md -> $filename.html"
+      # Get title from first heading
+      title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
 
-        pandoc "$md_file" \
-          --from markdown \
-          --to html5 \
-          --standalone \
-          --template=${../web/docs-template.html} \
-          --metadata title="$title" \
-          --metadata pagetitle="$title - Documentation" \
-          --toc \
-          --toc-depth=3 \
-          --output="$html_file"
+      echo "Converting $filename.md -> $filename.html"
+
+      # Run pandoc with error checking
+      if ! pandoc "$md_file" \
+        --from markdown \
+        --to html5 \
+        --standalone \
+        --template=${../web/docs-template.html} \
+        --metadata title="$title" \
+        --metadata pagetitle="$title - Documentation" \
+        --toc \
+        --toc-depth=3 \
+        --output="$html_file"; then
+        echo "Error: Failed to convert $md_file to HTML" >&2
+        exit 1
+      fi
+
+      # Verify output file was created
+      if [ ! -f "$html_file" ]; then
+        echo "Error: Output file $html_file was not created" >&2
+        exit 1
       fi
     done
 
@@ -187,9 +233,11 @@ SITEMAP_START
 
     # Add each HTML file to sitemap
     for md_file in docs/*.md; do
-      if [ -f "$md_file" ]; then
-        filename=$(basename "$md_file" .md)
-        cat >> $out/sitemap.xml <<SITEMAP_ITEM
+      # Skip if glob didn't match any files
+      [ -f "$md_file" ] || continue
+
+      filename=$(basename "$md_file" .md)
+      cat >> $out/sitemap.xml <<SITEMAP_ITEM
   <!-- $filename documentation -->
   <url>
     <loc>https://docs.wolfhard.net/$filename.html</loc>
@@ -199,7 +247,6 @@ SITEMAP_START
   </url>
 
 SITEMAP_ITEM
-      fi
     done
 
     cat >> $out/sitemap.xml <<'SITEMAP_END'

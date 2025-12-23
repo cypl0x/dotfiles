@@ -9,7 +9,8 @@
   programs.git = {
     settings = {
       user.name = lib.mkForce "Work Account";
-      user.email = lib.mkForce "wap@work.com"; # Placeholder
+      # TODO: Update with actual work email address
+      user.email = lib.mkForce "wap@work.com";
     };
   };
 }
