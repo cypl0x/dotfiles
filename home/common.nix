@@ -35,9 +35,9 @@
 
     git = {
       enable = true;
-      userName = "Wolfhard Prell"; # Can be overridden in user specific files
-      userEmail = "mail@wolfhard.net";
-      extraConfig = {
+      settings = {
+        user.name = "Wolfhard Prell"; # Can be overridden in user specific files
+        user.email = "mail@wolfhard.net";
         init.defaultBranch = "main";
         pull.rebase = true;
       };
