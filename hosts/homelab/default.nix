@@ -22,17 +22,20 @@
   ];
 
   # Basic system settings
-  boot.tmp.cleanOnBoot = true;
+  boot = {
+    tmp.cleanOnBoot = true;
+    loader.grub = {
+      enable = true;
+      efiSupport = true;
+      efiInstallAsRemovable = true;
+    };
+  };
+
   zramSwap.enable = true;
 
   # Network configuration
   networking.hostName = "homelab";
   networking.domain = "";
-
-  # Boot loader configuration
-  boot.loader.grub.enable = true;
-  boot.loader.grub.efiSupport = true;
-  boot.loader.grub.efiInstallAsRemovable = true;
 
   # System settings
   time.timeZone = "UTC";

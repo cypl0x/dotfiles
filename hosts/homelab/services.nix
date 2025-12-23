@@ -201,46 +201,48 @@ in
   ];
 
   # Copy static website files
-  environment.etc."nginx/www/index.html" = {
-    source = ../../web/static/index.html;
-    mode = "0644";
-    user = "nginx";
-    group = "nginx";
-  };
+  environment.etc = {
+    "nginx/www/index.html" = {
+      source = ../../web/static/index.html;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
 
-  environment.etc."nginx/www/404.html" = {
-    source = ../../web/static/404.html;
-    mode = "0644";
-    user = "nginx";
-    group = "nginx";
-  };
+    "nginx/www/404.html" = {
+      source = ../../web/static/404.html;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
 
-  environment.etc."nginx/www/logo.svg" = {
-    source = ../../web/static/logo.svg;
-    mode = "0644";
-    user = "nginx";
-    group = "nginx";
-  };
+    "nginx/www/logo.svg" = {
+      source = ../../web/static/logo.svg;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
 
-  environment.etc."nginx/www/favicon.svg" = {
-    source = ../../web/static/favicon.svg;
-    mode = "0644";
-    user = "nginx";
-    group = "nginx";
-  };
+    "nginx/www/favicon.svg" = {
+      source = ../../web/static/favicon.svg;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
 
-  environment.etc."nginx/www/robots.txt" = {
-    source = ../../web/static/robots.txt;
-    mode = "0644";
-    user = "nginx";
-    group = "nginx";
-  };
+    "nginx/www/robots.txt" = {
+      source = ../../web/static/robots.txt;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
 
-  environment.etc."nginx/www/sitemap.xml" = {
-    source = ../../web/static/sitemap.xml;
-    mode = "0644";
-    user = "nginx";
-    group = "nginx";
+    "nginx/www/sitemap.xml" = {
+      source = ../../web/static/sitemap.xml;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
   };
 
   # Create symlink from /var/www/wolfhard to /etc/nginx/www

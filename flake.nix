@@ -20,6 +20,16 @@
         };
       };
 
+      checks.${system}.statix = pkgs.runCommand "statix-check" {
+        nativeBuildInputs = [ pkgs.statix ];
+        src = ./.;
+      } ''
+        cp -r $src source
+        cd source
+        statix check
+        touch $out
+      '';
+
       devShells.${system}.default = pkgs.mkShell {
         packages = [ pkgs.gnumake ];
       };

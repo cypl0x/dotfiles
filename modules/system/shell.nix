@@ -44,11 +44,12 @@
       fpath+=${pkgs.zsh-completions}/share/zsh/site-functions
 
       # NixOS rebuild aliases
-      alias nrs='sudo nixos-rebuild switch --flake ~/dotfiles#homelab'
-      alias nrb='sudo nixos-rebuild boot --flake ~/dotfiles#homelab'
-      alias nrt='sudo nixos-rebuild test --flake ~/dotfiles#homelab'
-      alias nrsv='sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace'
-      alias nrbs='sudo nixos-rebuild build --flake ~/dotfiles#homelab'
+      # Runs statix check before rebuilding to ensure code quality
+      alias nrs='statix check ~/dotfiles && sudo nixos-rebuild switch --flake ~/dotfiles#homelab'
+      alias nrb='statix check ~/dotfiles && sudo nixos-rebuild boot --flake ~/dotfiles#homelab'
+      alias nrt='statix check ~/dotfiles && sudo nixos-rebuild test --flake ~/dotfiles#homelab'
+      alias nrsv='statix check ~/dotfiles && sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace'
+      alias nrbs='statix check ~/dotfiles && sudo nixos-rebuild build --flake ~/dotfiles#homelab'
 
       # NixOS update function
       nixup() {
@@ -192,8 +193,10 @@
   };
 
   # Install dotfiles to /etc/dotfiles
-  environment.etc."dotfiles/shellfishrc".source = ../../home/shell/shellfishrc;
-  environment.etc."dotfiles/zsh-aliases.sh".source = ../../home/shell/zsh/aliases.sh;
-  environment.etc."dotfiles/zsh-completions.sh".source = ../../home/shell/zsh/completions.sh;
-  environment.etc."dotfiles/starship.toml".source = ../../home/shell/starship.toml;
+  environment.etc = {
+    "dotfiles/shellfishrc".source = ../../home/shell/shellfishrc;
+    "dotfiles/zsh-aliases.sh".source = ../../home/shell/zsh/aliases.sh;
+    "dotfiles/zsh-completions.sh".source = ../../home/shell/zsh/completions.sh;
+    "dotfiles/starship.toml".source = ../../home/shell/starship.toml;
+  };
 }

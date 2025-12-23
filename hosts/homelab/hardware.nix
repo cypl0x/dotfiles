@@ -2,10 +2,16 @@
   imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
 
   # Boot loader (hardware-specific)
-  boot.loader.grub = {
-    efiSupport = true;
-    efiInstallAsRemovable = true;
-    device = "nodev";
+  boot = {
+    loader.grub = {
+      efiSupport = true;
+      efiInstallAsRemovable = true;
+      device = "nodev";
+    };
+
+    # Kernel modules
+    initrd.availableKernelModules = [ "ata_piix" "uhci_hcd" "xen_blkfront" "vmw_pvscsi" ];
+    initrd.kernelModules = [ "nvme" ];
   };
 
   # File systems
@@ -18,8 +24,4 @@
     device = "/dev/vda2";
     fsType = "ext4";
   };
-
-  # Kernel modules
-  boot.initrd.availableKernelModules = [ "ata_piix" "uhci_hcd" "xen_blkfront" "vmw_pvscsi" ];
-  boot.initrd.kernelModules = [ "nvme" ];
 }

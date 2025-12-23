@@ -1,4 +1,4 @@
-{ ... }: {
+_: {
   # Tor Relay (non-exit)
   services.tor = {
     enable = true;
