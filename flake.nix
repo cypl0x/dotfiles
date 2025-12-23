@@ -3,9 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, home-manager }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -16,6 +20,17 @@
           inherit system;
           modules = [
             ./hosts/homelab
+            home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                users.cypl0x = import ./home/cypl0x.nix;
+                users.wap = import ./home/wap.nix;
+                # Keep root just in case, though usually less critical for home-manager
+                # users.root = import ./home/root.nix;
+              };
+            }
           ];
         };
       };

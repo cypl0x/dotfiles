@@ -16,6 +16,8 @@
 
     # User configuration
     ../../modules/users/root.nix
+    ../../modules/users/cypl0x.nix
+    ../../modules/users/wap.nix
 
     # Host-specific configuration
     ./services.nix

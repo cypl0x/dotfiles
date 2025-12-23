@@ -17,6 +17,8 @@
     ripgrep
     statix
     starship
+    zsh-autosuggestions
+    zsh-completions
     tailscale
     tealdeer
     tmux
