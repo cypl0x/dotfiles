@@ -13,12 +13,28 @@ _: {
 
     # Security headers and hardening
     appendHttpConfig = ''
-      # Security headers
-      add_header X-Frame-Options "SAMEORIGIN" always;
+      # Core Security Headers
+      add_header X-Frame-Options "DENY" always;
       add_header X-Content-Type-Options "nosniff" always;
       add_header X-XSS-Protection "1; mode=block" always;
       add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';" always;
+
+      # Strict Transport Security (HSTS)
+      # Enforce HTTPS for 1 year including subdomains
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
+      # Content Security Policy
+      # Allows inline scripts/styles (for service worker registration), restricts everything else
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;" always;
+
+      # Permissions Policy (formerly Feature-Policy)
+      # Disable unnecessary browser features
+      add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), display-capture=(), document-domain=(), encrypted-media=(), fullscreen=(self), midi=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), xr-spatial-tracking=()" always;
+
+      # Cross-Origin Policies
+      add_header Cross-Origin-Embedder-Policy "require-corp" always;
+      add_header Cross-Origin-Opener-Policy "same-origin" always;
+      add_header Cross-Origin-Resource-Policy "same-origin" always;
 
       # Buffer sizes and timeouts
       client_body_buffer_size 10K;

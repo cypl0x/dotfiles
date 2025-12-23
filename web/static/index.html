@@ -3,11 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Wolfhard Prell - Personal Website">
+
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Wolfhard Prell - System Administrator | DevOps Engineer | NixOS Enthusiast">
+    <meta name="description" content="Wolfhard Prell's personal website. Specializing in infrastructure automation, containerization, and reproducible development environments using NixOS, Docker, and modern DevOps practices.">
     <meta name="author" content="Wolfhard Prell">
-    <title>Wolfhard Prell</title>
+    <meta name="keywords" content="NixOS, DevOps, System Administration, Linux, Container, Infrastructure, Automation, Nginx, Tailscale, Tor, GitOps">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfhard.net/">
+    <meta property="og:title" content="Wolfhard Prell - System Administrator | DevOps Engineer">
+    <meta property="og:description" content="Specializing in infrastructure automation, containerization, and reproducible development environments using NixOS and modern DevOps practices.">
+    <meta property="og:image" content="https://wolfhard.net/logo.svg">
+    <meta property="og:site_name" content="Wolfhard Prell">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://wolfhard.net/">
+    <meta property="twitter:title" content="Wolfhard Prell - System Administrator | DevOps Engineer">
+    <meta property="twitter:description" content="Specializing in infrastructure automation, containerization, and reproducible development environments using NixOS and modern DevOps practices.">
+    <meta property="twitter:image" content="https://wolfhard.net/logo.svg">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://wolfhard.net/">
+
+    <title>Wolfhard Prell - System Administrator | DevOps Engineer | NixOS Enthusiast</title>
+
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="alternate icon" href="/favicon.svg" type="image/svg+xml">
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#268bd2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Wolfhard Prell">
+
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml">
+
+    <!-- DNS Prefetch for external domains -->
+    <link rel="dns-prefetch" href="https://github.com">
+
+    <!-- Security -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
+    <!-- Structured Data / JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Wolfhard Prell",
+        "url": "https://wolfhard.net",
+        "sameAs": [
+            "https://github.com/cypl0x",
+            "https://wolfhard.dev",
+            "https://wolfhard.tech"
+        ],
+        "jobTitle": "System Administrator & DevOps Engineer",
+        "description": "Technology enthusiast specializing in infrastructure automation, containerization, and reproducible development environments using NixOS and modern DevOps practices.",
+        "email": "mailto:mail@wolfhard.net",
+        "knowsAbout": [
+            "NixOS",
+            "Linux System Administration",
+            "DevOps",
+            "Container Orchestration",
+            "Nginx",
+            "Infrastructure Automation",
+            "CI/CD",
+            "Tailscale",
+            "Tor",
+            "Git"
+        ],
+        "alumniOf": {
+            "@type": "Organization",
+            "name": "Technology"
+        }
+    }
+    </script>
+
     <style>
         :root {
             /* Solarized Light Theme */
@@ -63,6 +145,10 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
@@ -74,6 +160,8 @@
             justify-content: center;
             padding: 20px;
             transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .container {
@@ -112,15 +200,28 @@
         }
 
         .section {
-            margin: 30px 0;
+            margin: 40px 0;
+            padding: 25px;
+            background: var(--bg-highlight);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-primary);
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 16px var(--shadow-color);
+            border-left-color: var(--accent-secondary);
         }
 
         h2 {
-            font-size: 1.5em;
-            margin-bottom: 15px;
+            font-size: 1.6em;
+            margin-bottom: 20px;
             color: var(--accent-secondary);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: 12px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
 
         p {
@@ -136,20 +237,50 @@
         }
 
         .link-button {
-            display: inline-block;
-            padding: 12px 24px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
             background: var(--accent-primary);
-            color: var(--base3);
+            color: var(--base3) !important;
             text-decoration: none;
-            border-radius: 6px;
-            transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
-            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .link-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .link-button:hover::before {
+            left: 100%;
         }
 
         .link-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px var(--shadow-color);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--shadow-color);
             background: var(--accent-secondary);
+            color: var(--base3) !important;
+        }
+
+        .link-button:visited {
+            color: var(--base3) !important;
+        }
+
+        .link-button:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px var(--shadow-color);
         }
 
         .tech-stack {
@@ -161,33 +292,169 @@
 
         .tech-tag {
             display: inline-block;
-            padding: 6px 12px;
+            padding: 8px 16px;
             background: var(--bg-highlight);
             border-radius: 20px;
             font-size: 0.9em;
             color: var(--text-secondary);
             border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tech-tag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
         }
 
         .contact-info {
-            background: var(--bg-highlight);
-            padding: 20px;
-            border-radius: 8px;
+            background: var(--bg-primary);
+            padding: 25px;
+            border-radius: 12px;
             margin-top: 20px;
-            border: 1px solid var(--border-color);
+            border: 2px solid var(--accent-primary);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: all 0.3s ease;
+        }
+
+        .contact-info:hover {
+            box-shadow: 0 6px 20px var(--shadow-color);
+            border-color: var(--accent-secondary);
         }
 
         .contact-item {
-            margin: 10px 0;
+            margin: 15px 0;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-size: 1.05em;
+        }
+
+        .contact-item strong {
+            color: var(--accent-secondary);
+            min-width: 80px;
         }
 
         .contact-item::before {
             content: "→";
             color: var(--accent-primary);
             font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .contact-item.email::before {
+            content: "✉";
+            font-size: 1.3em;
+        }
+
+        .contact-item.domains::before {
+            content: "🌐";
+            font-size: 1.3em;
+        }
+
+        .domain-links {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .domain-links a {
+            white-space: nowrap;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .domain-links a::before {
+            content: "↗";
+            position: absolute;
+            left: 0;
+            color: var(--accent-primary);
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+
+        .domain-links a:hover::before {
+            transform: translate(2px, -2px);
+        }
+
+        .separator {
+            color: var(--text-muted);
+        }
+
+        /* General link styling */
+        a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            transition: color 0.2s ease, text-shadow 0.2s ease;
+            position: relative;
+        }
+
+        a:hover {
+            color: var(--accent-secondary);
+            text-decoration: none;
+        }
+
+        a:visited {
+            color: var(--violet);
+        }
+
+        a:visited:hover {
+            color: var(--magenta);
+        }
+
+        a:focus {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 3px;
+            border-radius: 2px;
+        }
+
+        a:focus:not(:focus-visible) {
+            outline: none;
+        }
+
+        a:focus-visible {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 3px;
+        }
+
+        /* Underline animation for text links */
+        .contact-info a::after,
+        .domain-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 20px;
+            background-color: var(--accent-secondary);
+            transition: width 0.3s ease;
+        }
+
+        .contact-info a:hover::after,
+        .domain-links a:hover::after {
+            width: calc(100% - 20px);
+        }
+
+        /* Email link special styling */
+        .contact-item.email a {
+            font-weight: 500;
+            padding-left: 20px;
+        }
+
+        .contact-item.email a::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--accent-primary);
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+
+        .contact-item.email a:hover::before {
+            transform: translateX(3px);
         }
 
         .logo-link {
@@ -222,11 +489,27 @@
         ul {
             margin-left: 20px;
             color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        ul li {
+            margin-bottom: 8px;
+            padding-left: 10px;
+            position: relative;
+        }
+
+        ul li::marker {
+            color: var(--accent-primary);
+            font-weight: bold;
         }
 
         @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
             .container {
-                padding: 30px 20px;
+                padding: 30px 15px;
             }
 
             h1 {
@@ -239,6 +522,21 @@
 
             .link-button {
                 text-align: center;
+            }
+
+            .contact-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .domain-links {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .separator {
+                display: none;
             }
         }
     </style>
@@ -272,14 +570,10 @@
                 <div class="tech-stack">
                     <span class="tech-tag">NixOS</span>
                     <span class="tech-tag">Linux</span>
-                    <span class="tech-tag">Docker</span>
-                    <span class="tech-tag">Kubernetes</span>
+                    <span class="tech-tag">Container</span>
                     <span class="tech-tag">Nginx</span>
                     <span class="tech-tag">Git</span>
-                    <span class="tech-tag">Terraform</span>
-                    <span class="tech-tag">Ansible</span>
                     <span class="tech-tag">CI/CD</span>
-                    <span class="tech-tag">Security</span>
                     <span class="tech-tag">Tailscale</span>
                     <span class="tech-tag">Tor</span>
                 </div>
@@ -290,7 +584,7 @@
                 <p>
                     This site is powered by:
                 </p>
-                <ul style="margin-left: 20px; color: #555;">
+                <ul>
                     <li>NixOS with Flakes for declarative configuration</li>
                     <li>Nginx with security hardening</li>
                     <li>Tailscale for secure networking</li>
@@ -302,21 +596,31 @@
             <section class="section">
                 <h2>Contact</h2>
                 <div class="contact-info">
-                    <div class="contact-item">
-                        <strong>Email:</strong> mail@wolfhard.net
+                    <div class="contact-item email">
+                        <strong>Email:</strong>
+                        <a href="mailto:mail@wolfhard.net">mail@wolfhard.net</a>
                     </div>
-                    <div class="contact-item">
-                        <strong>Domains:</strong> wolfhard.net | wolfhard.dev | wolfhard.tech
+                    <div class="contact-item domains">
+                        <strong>Domains:</strong>
+                        <span class="domain-links">
+                            <a href="https://wolfhard.net" target="_blank" rel="noopener noreferrer">wolfhard.net</a>
+                            <span class="separator">|</span>
+                            <a href="https://wolfhard.dev" target="_blank" rel="noopener noreferrer">wolfhard.dev</a>
+                            <span class="separator">|</span>
+                            <a href="https://wolfhard.tech" target="_blank" rel="noopener noreferrer">wolfhard.tech</a>
+                        </span>
                     </div>
                 </div>
             </section>
 
             <div class="links">
-                <a href="https://github.com" class="link-button" target="_blank" rel="noopener noreferrer">
-                    GitHub
+                <a href="https://github.com/cypl0x" class="link-button" target="_blank" rel="noopener noreferrer">
+                    <span>GitHub</span>
+                    <span style="font-size: 1.1em;">→</span>
                 </a>
                 <a href="mailto:mail@wolfhard.net" class="link-button">
-                    Email Me
+                    <span>Email Me</span>
+                    <span style="font-size: 1.1em;">✉</span>
                 </a>
             </div>
         </main>
@@ -330,5 +634,20 @@
             </p>
         </footer>
     </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
