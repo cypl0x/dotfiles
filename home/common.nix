@@ -22,6 +22,23 @@
     # plain files is through 'home.file'.
     file = {
       # ".zshrc".source = ./zshrc;
+
+      # Aider configuration
+      ".aider.conf.yml".text = ''
+        model: ollama/deepseek-coder:1.3b
+
+        # Use local ollama instance
+        # ollama-api-base: http://localhost:11434
+
+        # Editor settings
+        # editor: vim
+
+        # Auto-commit changes
+        auto-commits: false
+
+        # Show diffs before committing
+        show-diffs: true
+      '';
     };
 
     sessionVariables = {

@@ -4,6 +4,7 @@
 
   # Global packages available to all users
   environment.systemPackages = with pkgs; [
+    aider-chat-full
     bat
     cheat
     claude-code
@@ -13,17 +14,19 @@
     git
     gnumake
     navi
+    ollama
     pandoc
     ripgrep
     statix
     starship
-    zsh-autosuggestions
-    zsh-completions
+    tabby
     tailscale
     tealdeer
     tmux
     vim
     xclip
+    zsh-autosuggestions
+    zsh-completions
   ];
 
   # Environment variables

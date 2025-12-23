@@ -628,3 +628,213 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   alias pbpaste='xclip -selection clipboard -o'
   alias open='xdg-open'
 fi
+
+# ============================================================================
+# Ollama Management
+# ============================================================================
+
+# Start Ollama service
+ollama-start() {
+  if pgrep -f "ollama serve" > /dev/null; then
+    echo "Ollama is already running (PID: $(pgrep -f 'ollama serve'))"
+    return 0
+  fi
+
+  echo "Starting Ollama service..."
+  ollama serve > /tmp/ollama.log 2>&1 &
+  sleep 2
+
+  if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+    echo "✓ Ollama started successfully"
+    echo "Available models:"
+    ollama list
+  else
+    echo "✗ Failed to start Ollama. Check logs: tail -f /tmp/ollama.log"
+    return 1
+  fi
+}
+
+# Stop Ollama service
+ollama-stop() {
+  if ! pgrep -f "ollama serve" > /dev/null; then
+    echo "Ollama is not running"
+    return 0
+  fi
+
+  echo "Stopping Ollama service..."
+  killall ollama 2>/dev/null
+  sleep 1
+
+  if ! pgrep -f "ollama serve" > /dev/null; then
+    echo "✓ Ollama stopped successfully"
+  else
+    echo "✗ Failed to stop Ollama"
+    return 1
+  fi
+}
+
+# Restart Ollama service
+ollama-restart() {
+  echo "Restarting Ollama service..."
+  ollama-stop
+  sleep 1
+  ollama-start
+}
+
+# Check Ollama status
+ollama-status() {
+  if pgrep -f "ollama serve" > /dev/null; then
+    local pid=$(pgrep -f "ollama serve")
+    echo "=== Ollama Status ==="
+    echo "Status: Running (PID: $pid)"
+    echo ""
+
+    if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+      echo "API: Responding on http://localhost:11434"
+      echo ""
+      echo "Available models:"
+      ollama list
+    else
+      echo "API: Not responding"
+      echo "Check logs: tail -f /tmp/ollama.log"
+    fi
+  else
+    echo "Ollama is not running"
+    echo "Start with: ollama-start"
+  fi
+}
+
+# View Ollama logs
+ollama-logs() {
+  if [ ! -f /tmp/ollama.log ]; then
+    echo "No log file found at /tmp/ollama.log"
+    return 1
+  fi
+
+  if [ "$1" = "-f" ] || [ "$1" = "--follow" ]; then
+    tail -f /tmp/ollama.log
+  else
+    bat /tmp/ollama.log
+  fi
+}
+
+# Short aliases for Ollama commands
+alias olstart='ollama-start'
+alias olstop='ollama-stop'
+alias olrestart='ollama-restart'
+alias olstatus='ollama-status'
+alias ollogs='ollama-logs'
+
+# ============================================================================
+# Aider (AI Coding Assistant)
+# ============================================================================
+
+# Check if Ollama is running and start Aider
+aider-check() {
+  if ! pgrep -f "ollama serve" > /dev/null; then
+    echo "Ollama is not running. Starting it now..."
+    ollama-start
+    if [ $? -ne 0 ]; then
+      echo "Failed to start Ollama. Cannot start Aider."
+      return 1
+    fi
+  fi
+
+  # Check if API is responding
+  if ! curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+    echo "Ollama API is not responding. Try restarting with: ollama-restart"
+    return 1
+  fi
+
+  return 0
+}
+
+# Start Aider with default config (uses config from ~/.aider.conf.yml)
+ai() {
+  if ! aider-check; then
+    return 1
+  fi
+
+  aider "$@"
+}
+
+# Start Aider with 1.3b model (fast, lower quality)
+ai1() {
+  if ! aider-check; then
+    return 1
+  fi
+
+  echo "Starting Aider with DeepSeek-Coder 1.3B (fast model)..."
+  aider --model ollama/deepseek-coder:1.3b "$@"
+}
+
+# Start Aider with 6.7b model (slower, better quality)
+ai6() {
+  if ! aider-check; then
+    return 1
+  fi
+
+  echo "Starting Aider with DeepSeek-Coder 6.7B (better quality, slower)..."
+  aider --model ollama/deepseek-coder:6.7b "$@"
+}
+
+# Start Aider in architect mode (plan changes before implementing)
+aiarch() {
+  if ! aider-check; then
+    return 1
+  fi
+
+  echo "Starting Aider in architect mode..."
+  aider --architect "$@"
+}
+
+# Start Aider with auto-commit enabled
+aiauto() {
+  if ! aider-check; then
+    return 1
+  fi
+
+  echo "Starting Aider with auto-commit enabled..."
+  aider --auto-commits "$@"
+}
+
+# Start Aider with watch mode (auto-applies changes from chat)
+aiwatch() {
+  if ! aider-check; then
+    return 1
+  fi
+
+  echo "Starting Aider in watch mode..."
+  aider --watch-files "$@"
+}
+
+# Quick Aider help
+aihelp() {
+  cat << 'EOF'
+=== Aider Quick Reference ===
+
+Basic commands:
+  ai              Start Aider with default config
+  ai1             Start with 1.3B model (fast)
+  ai6             Start with 6.7B model (better quality)
+  aiarch          Start in architect mode
+  aiauto          Start with auto-commit enabled
+  aiwatch         Start with file watching enabled
+
+Ollama commands:
+  olstart         Start Ollama service
+  olstop          Stop Ollama service
+  olrestart       Restart Ollama service
+  olstatus        Check Ollama status and list models
+  ollogs          View Ollama logs (add -f to follow)
+
+Examples:
+  ai                          # Start Aider in current directory
+  ai file1.py file2.py        # Start Aider with specific files
+  ai1 --message "fix bug"     # Quick fix with fast model
+  ai6 --architect             # Plan changes with better model
+  ollama-logs -f              # Follow Ollama logs in real-time
+
+Config file: ~/.aider.conf.yml
+EOF
+}
