@@ -25,7 +25,8 @@
 if [[ "$LC_TERMINAL" = "ShellFish" ]]; then
   # Unalias pbcopy/pbpaste if they exist as aliases (e.g., from aliases.sh)
   # so we can define them as functions for ShellFish
-  unalias pbcopy pbpaste 2>/dev/null || true
+  unalias pbcopy 2>/dev/null || true
+  unalias pbpaste 2>/dev/null || true
 
   ios_printURIComponent() {
     awk 'BEGIN {while (y++ < 125) z[sprintf("%c", y)] = y
