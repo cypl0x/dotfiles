@@ -138,7 +138,7 @@ ITEM
         </ul>
 
         <div class="footer">
-            <p>Generated from <a href="https://github.com/wolfhardprell/dotfiles">wolfhardprell/dotfiles</a></p>
+            <p>Generated from <a href="https://github.com/cypl0x/dotfiles">cypl0x/dotfiles</a></p>
             <p>© 2025 Wolfhard Prell</p>
         </div>
     </div>

@@ -545,10 +545,10 @@ Dotfiles (Recommended)</h3>
 <ol type="1">
 <li><p>Edit files in <code>web/static/</code>:</p>
 <div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> /root/dotfiles/web/static/index.html</span></code></pre></div></li>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> ~/dotfiles/web/static/index.html</span></code></pre></div></li>
 <li><p>Rebuild system:</p>
 <div class="sourceCode" id="cb7"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span>  <span class="co"># or: nixos-rebuild switch --flake /root/dotfiles#homelab</span></span></code></pre></div></li>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span>  <span class="co"># or: nixos-rebuild switch --flake ~/dotfiles#homelab</span></span></code></pre></div></li>
 <li><p>Changes are automatically deployed</p></li>
 </ol>
 <h3 id="method-2-direct-edit-temporary">Method 2: Direct Edit
@@ -564,7 +564,7 @@ Always edit in <code>web/static/</code> for permanent changes.</p>
 <ol type="1">
 <li><p>Create new HTML file in <code>web/static/</code>:</p>
 <div class="sourceCode" id="cb9"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> /root/dotfiles/web/static/about.html</span></code></pre></div></li>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> ~/dotfiles/web/static/about.html</span></code></pre></div></li>
 <li><p>Add to nginx.nix <code>environment.etc</code>:</p>
 <div class="sourceCode" id="cb10"><pre
 class="sourceCode nix"><code class="sourceCode nix"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>environment<span class="op">.</span>etc<span class="op">.</span><span class="st">&quot;nginx/www/about.html&quot;</span> = <span class="op">{</span></span>
@@ -583,8 +583,8 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href=
 <ol type="1">
 <li><p>Create CSS file:</p>
 <div class="sourceCode" id="cb12"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /root/dotfiles/web/static/css</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> /root/dotfiles/web/static/css/style.css</span></code></pre></div></li>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/dotfiles/web/static/css</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> ~/dotfiles/web/static/css/style.css</span></code></pre></div></li>
 <li><p>Add to nginx.nix:</p>
 <div class="sourceCode" id="cb13"><pre
 class="sourceCode nix"><code class="sourceCode nix"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>environment<span class="op">.</span>etc<span class="op">.</span><span class="st">&quot;nginx/www/css/style.css&quot;</span> = <span class="op">{</span></span>
@@ -874,7 +874,7 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb44-1"><a href=
 <h2 id="backup">Backup</h2>
 <p>Website content is stored in git:</p>
 <div class="sourceCode" id="cb45"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /root/dotfiles</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/dotfiles</span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add web/</span>
 <span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">&quot;Update website content&quot;</span></span>
 <span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code></pre></div>
@@ -891,7 +891,7 @@ Generator</a></li>
         </div>
 
         <div class="footer">
-            <p>Generated from <a href="https://github.com/wolfhardprell/dotfiles">wolfhardprell/dotfiles</a></p>
+            <p>Generated from <a href="https://github.com/cypl0x/dotfiles">cypl0x/dotfiles</a></p>
             <p>© 2025 Wolfhard Prell</p>
         </div>
     </div>
