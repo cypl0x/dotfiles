@@ -1,51 +1,4 @@
 { pkgs, ... }: {
-  imports = [
-    ./hardware-configuration.nix
-    ./vultr.nix
-    ./users.nix
-    ./nginx.nix
-  ];
-
-  # Allow unfree packages (e.g., claude-code)
-  nixpkgs.config.allowUnfree = true;
-
-  # Global packages available to all users
-  environment.systemPackages = with pkgs; [
-    bat
-    cheat
-    claude-code
-    emacs
-    eza  # Modern replacement for ls (formerly exa)
-    fzf
-    git
-    navi
-    ripgrep
-    tailscale
-    tealdeer
-    tmux
-    vim
-  ];
-
-  # Environment variables
-  environment.sessionVariables = {
-    PAGER = "bat";
-    BAT_PAGER = "less -R";
-  };
-
-  # Git configuration
-  programs.git = {
-    enable = true;
-    config = {
-      user = {
-        name = "Wolfhard Prell";
-        email = "mail@wolfhard.net";
-      };
-      init = {
-        defaultBranch = "main";
-      };
-    };
-  };
-
   # Zsh configuration
   programs.zsh = {
     enable = true;
@@ -59,19 +12,23 @@
     };
 
     interactiveShellInit = ''
+      # Initialize Starship prompt
+      eval "$(${pkgs.starship}/bin/starship init zsh)"
+      export STARSHIP_CONFIG=/etc/dotfiles/starship.toml
+
       # Source ShellFish integration
       if [ -f /etc/dotfiles/shellfishrc ]; then
         source /etc/dotfiles/shellfishrc
       fi
 
       # Source shell aliases and functions
-      if [ -f /etc/dotfiles/shell-aliases.sh ]; then
-        source /etc/dotfiles/shell-aliases.sh
+      if [ -f /etc/dotfiles/zsh-aliases.sh ]; then
+        source /etc/dotfiles/zsh-aliases.sh
       fi
 
       # Source shell completions
-      if [ -f /etc/dotfiles/shell-completions.sh ]; then
-        source /etc/dotfiles/shell-completions.sh
+      if [ -f /etc/dotfiles/zsh-completions.sh ]; then
+        source /etc/dotfiles/zsh-completions.sh
       fi
 
       # FZF configuration
@@ -229,66 +186,8 @@
   };
 
   # Install dotfiles to /etc/dotfiles
-  environment.etc."dotfiles/shellfishrc".source = ../../home/shellfishrc;
-  environment.etc."dotfiles/shell-aliases.sh".source = ../../home/shell-aliases.sh;
-  environment.etc."dotfiles/shell-completions.sh".source = ../../home/shell-completions.sh;
-
-  boot.tmp.cleanOnBoot = true;
-  zramSwap.enable = true;
-  networking.hostName = "homelab";
-  networking.domain = "";
-
-  # SSH with ShellFish Support
-  services.openssh = {
-    enable = true;
-    settings = {
-      # Allow LC_TERMINAL for ShellFish
-      AcceptEnv = [ "LANG" "LC_*" ];
-
-      # Security Hardening
-      PermitRootLogin = "prohibit-password";
-      PasswordAuthentication = false;
-    };
-  };
-
-  # Tailscale Exit Node
-  boot.kernel.sysctl = {
-    "net.ipv4.ip_forward" = 1;
-    "net.ipv6.conf.all.forwarding" = 1;
-  };
-
-  services.tailscale = {
-    enable = true;
-    useRoutingFeatures = "both";
-  };
-
-  # Tor Relay (non-exit)
-  services.tor = {
-    enable = true;
-    relay = {
-      enable = true;
-      role = "relay";
-    };
-    settings = {
-      Nickname = "cypl0x";
-      ContactInfo = "tor-relay@homelab";
-      ORPort = 9001;
-      ControlPort = 9051;
-      # Bandwidth limits (adjust as needed)
-      # RelayBandwidthRate = "1 MBytes";
-      # RelayBandwidthBurst = "2 MBytes";
-      # Explicitly reject exit traffic
-      ExitPolicy = "reject *:*";
-    };
-  };
-
-  # Open firewall for Tor relay
-  networking.firewall.allowedTCPPorts = [ 9001 ];
-
-  users.users.root = {
-    shell = pkgs.zsh;
-    openssh.authorizedKeys.keys = [''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDHOc2Af91XVXmUxuCiKeELkM6b+zVK1ob9ciicNcyIdew4MdSkA1M4GkZQ5TRigqCV8245DHTzgQcHD5/+WCv4X6NC7nihxFDpGXt1ywnjtwoZH8U0c2BdhU7pAmHMJCeiZaBkuaEVdTtR/7NBLtFHeDx+rnGB9Ghp4As2tJi+Ds1GBqHBww7kCmGxxku5uqLal6QIGb8M9TfcXzWObOj6sZQPpOsUHwuDVB7TGFNItworFLO0QgRzndGhjMF/cDxktbDPfq4Bsf3fk8G/r/t920syGswToZwNTIeTgw4qOQTpwu6g0NgnqRFtSLU2xmFSRvtKaR1pf7lbQu79wNNqEs/Fu03QwmVfuhWfK+R+DQw4e3m3K6hwv4EfVspe72jAoQPSWU+d++CEutVeLb3CLNPCEWID34YcDyQxSH5dr0++XE1qRz05WMyzt9PkDV4RU8Wf4awIJA7lEnvF/2tZU1AIOqo8JKWja6JawN0OkWohTlDfiHs2pz9pFQgy4VXxI543SeehVB0tPNFTb5Si4jX8n4X9+834wqlVFwFqFZL+3ZGmxpXvMVwMFr28unzq7/bS+p2Cj5dwNUtmt9Ac+7D38db0/yCj1rBOfmMOfOhuYw4HYcBp65z2c6ZHMI4FeWp9ApHl3Fn519pixhnZNw2igFitnHoBnomUNmbeNQ== homelab'' ];
-  };
-
-  system.stateVersion = "23.11";
+  environment.etc."dotfiles/shellfishrc".source = ../../home/shell/shellfishrc;
+  environment.etc."dotfiles/zsh-aliases.sh".source = ../../home/shell/zsh/aliases.sh;
+  environment.etc."dotfiles/zsh-completions.sh".source = ../../home/shell/zsh/completions.sh;
+  environment.etc."dotfiles/starship.toml".source = ../../home/shell/starship.toml;
 }

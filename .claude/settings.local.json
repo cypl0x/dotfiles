@@ -9,7 +9,9 @@
       "Bash(journalctl:*)",
       "Bash(ss:*)",
       "Bash(systemctl list-units:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

@@ -6,7 +6,57 @@
     <meta name="description" content="Wolfhard Prell - Personal Website">
     <meta name="author" content="Wolfhard Prell">
     <title>Wolfhard Prell</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/favicon.svg" type="image/svg+xml">
     <style>
+        :root {
+            /* Solarized Light Theme */
+            --base03: #002b36;
+            --base02: #073642;
+            --base01: #586e75;
+            --base00: #657b83;
+            --base0: #839496;
+            --base1: #93a1a1;
+            --base2: #eee8d5;
+            --base3: #fdf6e3;
+            --yellow: #b58900;
+            --orange: #cb4b16;
+            --red: #dc322f;
+            --magenta: #d33682;
+            --violet: #6c71c4;
+            --blue: #268bd2;
+            --cyan: #2aa198;
+            --green: #859900;
+
+            /* Light theme assignments */
+            --bg-primary: var(--base3);
+            --bg-secondary: var(--base2);
+            --bg-highlight: var(--base2);
+            --text-primary: var(--base00);
+            --text-secondary: var(--base01);
+            --text-muted: var(--base1);
+            --accent-primary: var(--blue);
+            --accent-secondary: var(--cyan);
+            --border-color: var(--base2);
+            --shadow-color: rgba(0, 43, 54, 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* Dark theme assignments */
+                --bg-primary: var(--base03);
+                --bg-secondary: var(--base02);
+                --bg-highlight: var(--base02);
+                --text-primary: var(--base0);
+                --text-secondary: var(--base1);
+                --text-muted: var(--base01);
+                --accent-primary: var(--blue);
+                --accent-secondary: var(--cyan);
+                --border-color: var(--base02);
+                --shadow-color: rgba(0, 0, 0, 0.5);
+            }
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -16,22 +66,24 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--text-primary);
+            background: var(--bg-secondary);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container {
             max-width: 800px;
-            background: white;
+            background: var(--bg-primary);
             border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px var(--shadow-color);
             padding: 60px;
             animation: fadeIn 0.6s ease-in;
+            border: 1px solid var(--border-color);
         }
 
         @keyframes fadeIn {
@@ -48,13 +100,13 @@
         h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
-            color: #667eea;
+            color: var(--accent-primary);
             font-weight: 700;
         }
 
         .subtitle {
             font-size: 1.2em;
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 30px;
             font-weight: 300;
         }
@@ -66,14 +118,14 @@
         h2 {
             font-size: 1.5em;
             margin-bottom: 15px;
-            color: #764ba2;
-            border-bottom: 2px solid #f0f0f0;
+            color: var(--accent-secondary);
+            border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
         }
 
         p {
             margin-bottom: 15px;
-            color: #555;
+            color: var(--text-primary);
         }
 
         .links {
@@ -86,17 +138,18 @@
         .link-button {
             display: inline-block;
             padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: var(--accent-primary);
+            color: var(--base3);
             text-decoration: none;
             border-radius: 6px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
             font-weight: 500;
         }
 
         .link-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 15px var(--shadow-color);
+            background: var(--accent-secondary);
         }
 
         .tech-stack {
@@ -109,17 +162,19 @@
         .tech-tag {
             display: inline-block;
             padding: 6px 12px;
-            background: #f0f0f0;
+            background: var(--bg-highlight);
             border-radius: 20px;
             font-size: 0.9em;
-            color: #555;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
         }
 
         .contact-info {
-            background: #f8f9fa;
+            background: var(--bg-highlight);
             padding: 20px;
             border-radius: 8px;
             margin-top: 20px;
+            border: 1px solid var(--border-color);
         }
 
         .contact-item {
@@ -131,17 +186,42 @@
 
         .contact-item::before {
             content: "→";
-            color: #667eea;
+            color: var(--accent-primary);
             font-weight: bold;
+        }
+
+        .logo-link {
+            display: block;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 30px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .logo-link:hover {
+            transform: scale(1.1);
+            opacity: 0.8;
+        }
+
+        .logo {
+            display: block;
+            width: 100%;
+            height: 100%;
+            animation: fadeIn 0.8s ease-in;
         }
 
         footer {
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid var(--border-color);
             text-align: center;
-            color: #999;
+            color: var(--text-muted);
             font-size: 0.9em;
+        }
+
+        ul {
+            margin-left: 20px;
+            color: var(--text-primary);
         }
 
         @media (max-width: 600px) {
@@ -166,6 +246,9 @@
 <body>
     <div class="container">
         <header>
+            <a href="/" class="logo-link" title="Home">
+                <img src="logo.svg" alt="Wolfhard Prell Logo" class="logo">
+            </a>
             <h1>Wolfhard Prell</h1>
             <p class="subtitle">System Administrator | DevOps Engineer | NixOS Enthusiast</p>
         </header>

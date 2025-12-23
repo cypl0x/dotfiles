@@ -1,0 +1,35 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .primary { stroke: #268bd2; fill: none; stroke-width: 1.5; stroke-linecap: round; }
+      .accent { stroke: #2aa198; fill: none; stroke-width: 1; }
+      .fill { fill: #2aa198; }
+    </style>
+  </defs>
+
+  <!-- Simplified for small size -->
+  <g transform="translate(16, 16)">
+    <!-- Snowflake spokes -->
+    <line x1="0" y1="-12" x2="0" y2="-8" class="primary"/>
+    <line x1="0" y1="8" x2="0" y2="12" class="primary"/>
+    <line x1="-10" y1="-6" x2="-7" y2="-4" class="primary"/>
+    <line x1="7" y1="4" x2="10" y2="6" class="primary"/>
+    <line x1="-10" y1="6" x2="-7" y2="4" class="primary"/>
+    <line x1="7" y1="-4" x2="10" y2="-6" class="primary"/>
+
+    <!-- Gear teeth -->
+    <line x1="0" y1="-6" x2="0" y2="-8" class="accent"/>
+    <line x1="4.2" y1="-4.2" x2="5.7" y2="-5.7" class="accent"/>
+    <line x1="6" y1="0" x2="8" y2="0" class="accent"/>
+    <line x1="4.2" y1="4.2" x2="5.7" y2="5.7" class="accent"/>
+    <line x1="0" y1="6" x2="0" y2="8" class="accent"/>
+    <line x1="-4.2" y1="4.2" x2="-5.7" y2="5.7" class="accent"/>
+    <line x1="-6" y1="0" x2="-8" y2="0" class="accent"/>
+    <line x1="-4.2" y1="-4.2" x2="-5.7" y2="-5.7" class="accent"/>
+
+    <!-- Onion center -->
+    <circle r="4" class="primary" stroke-width="1"/>
+    <circle r="2" class="accent" stroke-width="0.5"/>
+    <circle r="1" class="fill"/>
+  </g>
+</svg>
