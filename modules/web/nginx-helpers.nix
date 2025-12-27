@@ -79,7 +79,13 @@
       tryFiles = "$uri $uri/ =404";
 
       extraConfig =
-        (lib.optionalString enableCaching (staticAssetCache {inherit useStrictCSP;}))
+        # Add security headers to main location block
+        (
+          if useStrictCSP
+          then securityHeadersStrict
+          else securityHeadersPermissive
+        )
+        + (lib.optionalString enableCaching (staticAssetCache {inherit useStrictCSP;}))
         + (lib.optionalString enableHtmlCache (htmlCache {inherit useStrictCSP;}))
         + denyHiddenFiles
         + extraLocationConfig;

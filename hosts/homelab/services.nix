@@ -30,7 +30,7 @@ in {
       root = "${docs}";
       enableCaching = true;
       enableHtmlCache = true;
-      useStrictCSP = true; # Documentation can use strict CSP
+      useStrictCSP = false; # Need permissive CSP for inline styles in docs-template.html
     })
     # Default catch-all server (returns 444 - close connection)
     # Catches requests to unknown domains
@@ -88,6 +88,20 @@ in {
 
     "nginx/www/sitemap.xml" = {
       source = ../../web/static/sitemap.xml;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
+
+    "nginx/www/sw.js" = {
+      source = ../../web/static/sw.js;
+      mode = "0644";
+      user = "nginx";
+      group = "nginx";
+    };
+
+    "nginx/www/manifest.json" = {
+      source = ../../web/static/manifest.json;
       mode = "0644";
       user = "nginx";
       group = "nginx";
