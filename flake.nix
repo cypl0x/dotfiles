@@ -95,6 +95,18 @@
           fd -e nix -x alejandra --check {}
           touch $out
         '';
+
+      shellcheck =
+        pkgs.runCommand "shellcheck-check" {
+          nativeBuildInputs = [pkgs.shellcheck pkgs.fd];
+          src = ./.;
+        } ''
+          cp -r $src source
+          cd source
+          # Exclude zsh files as shellcheck doesn't support zsh
+          fd -e sh --exclude 'home/shell/zsh' -x shellcheck {}
+          touch $out
+        '';
     };
 
     devShells.${system}.default = pkgs.mkShell {
@@ -104,6 +116,7 @@
         deadnix
         statix
         fd
+        shellcheck
       ];
     };
   };

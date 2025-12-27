@@ -107,7 +107,7 @@ fmt-check: ## Check if nix files are formatted
 # ============================================================================
 
 .PHONY: lint
-lint: lint-statix lint-deadnix ## Run all linting checks (statix + deadnix)
+lint: lint-statix lint-deadnix lint-shellcheck ## Run all linting checks (statix + deadnix + shellcheck)
 
 .PHONY: lint-statix
 lint-statix: ## Check for anti-patterns with statix
@@ -118,6 +118,11 @@ lint-statix: ## Check for anti-patterns with statix
 lint-deadnix: ## Check for unused code with deadnix
 	@echo "${GREEN}Running deadnix linter...${RESET}"
 	deadnix --fail .
+
+.PHONY: lint-shellcheck
+lint-shellcheck: ## Check shell scripts with shellcheck
+	@echo "${GREEN}Running shellcheck linter...${RESET}"
+	fd -e sh --exclude 'home/shell/zsh' -x shellcheck {}
 
 .PHONY: lint-fix
 lint-fix: ## Auto-fix issues where possible

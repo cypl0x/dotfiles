@@ -33,6 +33,9 @@ jobs:
       - name: Run deadnix linter
         run: nix develop -c make lint-deadnix
 
+      - name: Run shellcheck linter
+        run: nix develop -c make lint-shellcheck
+
       - name: Run flake checks
         run: nix flake check --all-systems
 

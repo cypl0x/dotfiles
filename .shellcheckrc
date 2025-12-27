@@ -1,0 +1,14 @@
+# ShellCheck configuration for dotfiles repository
+
+# Default shell dialect (bash is most compatible)
+shell=bash
+
+# Set minimum severity level to warning (ignore style suggestions)
+# Options: error, warning, info, style
+severity=warning
+
+# Disable specific warnings that are acceptable in dotfiles context
+# SC2148: Tips depend on target shell and yours is unknown (files without shebang)
+# SC2250: Prefer braces around variable references (style preference)
+# SC2292: Prefer [[ ]] over [ ] (style preference)
+disable=SC2148,SC2250,SC2292
