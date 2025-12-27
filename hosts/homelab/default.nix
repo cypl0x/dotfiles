@@ -8,6 +8,7 @@ _: {
     ../../modules/system/shell.nix
     ../../modules/system/security.nix
     ../../modules/system/monitoring.nix
+    ../../modules/system/assertions.nix
 
     # Service modules
     ../../modules/services/nginx.nix
@@ -43,5 +44,8 @@ _: {
   time.timeZone = "UTC";
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
-  system.stateVersion = "23.11";
+  # This value determines the NixOS release from which the default
+  # settings for stateful data, like file locations and database versions
+  # on your system were taken. Before changing, review the release notes.
+  system.stateVersion = "24.11";
 }

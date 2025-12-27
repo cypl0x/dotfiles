@@ -24,8 +24,9 @@ _: {
       add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
 
       # Content Security Policy
-      # Allows inline scripts/styles (for service worker registration), restricts everything else
-      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;" always;
+      # Strict CSP without unsafe-inline for better security
+      # If you need inline scripts/styles, override this in your virtualhost configuration
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;" always;
 
       # Permissions Policy (formerly Feature-Policy)
       # Disable unnecessary browser features

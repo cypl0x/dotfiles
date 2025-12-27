@@ -15,7 +15,7 @@ _: {
       # RelayBandwidthRate = "1 MBytes";
       # RelayBandwidthBurst = "2 MBytes";
       # Explicitly reject exit traffic
-      ExitPolicy = "reject *:*";
+      ExitPolicy = ["reject *:*"];
     };
   };
 

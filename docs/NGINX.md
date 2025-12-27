@@ -509,20 +509,70 @@ services.nginx = {
 
 ### Nginx Won't Start
 
+**Symptoms**: Service fails to start, systemd shows failed status
+
+**Diagnosis**:
 ```bash
-# Check nginx config
+# Check nginx configuration syntax
 sudo nginx -t
 
-# Check journal
-journalctl -u nginx -n 50
+# View detailed error logs
+journalctl -u nginx -n 50 --no-pager
 
-# Check permissions
-ls -la /var/www/wolfhard
-ls -la /etc/nginx/www
+# Check if nginx process is running
+ps aux | grep nginx
+
+# Check for port conflicts
+sudo ss -tulpn | grep ':80\|:443'
 ```
+
+**Common Causes**:
+
+1. **Configuration Syntax Error**
+   ```bash
+   # Error message will show file and line number
+   sudo nginx -t
+   # Fix the error in your nix configuration and rebuild
+   ```
+
+2. **Port Already in Use**
+   ```bash
+   # Find what's using the port
+   sudo lsof -i :80
+   sudo lsof -i :443
+
+   # Stop conflicting service
+   sudo systemctl stop <conflicting-service>
+   ```
+
+3. **Missing SSL Certificates**
+   ```bash
+   # Check if certificates exist
+   ls -la /var/lib/acme/wolfhard.net/
+
+   # Force certificate generation
+   sudo systemctl start acme-wolfhard.net.service
+
+   # Then restart nginx
+   sudo systemctl restart nginx
+   ```
+
+4. **Permission Issues**
+   ```bash
+   # Check permissions on web root
+   ls -la /var/www/wolfhard
+   ls -la /etc/nginx/www
+
+   # Fix ownership
+   sudo chown -R nginx:nginx /var/www
+   sudo chown -R nginx:nginx /etc/nginx/www
+   ```
 
 ### Page Not Found (404)
 
+**Symptoms**: Website shows 404 error, nginx is running
+
+**Diagnosis**:
 ```bash
 # Check if files exist
 ls -la /var/www/wolfhard/
@@ -530,32 +580,305 @@ ls -la /var/www/wolfhard/
 # Check nginx error log
 tail -f /var/log/nginx/wolfhard.net.error.log
 
-# Verify symlink
+# Verify symlink is correct
 readlink /var/www/wolfhard
+# Should output: /etc/nginx/www
+
+# Check if www-setup service ran
+systemctl status nginx-www-setup.service
 ```
 
-### Permission Denied
+**Solutions**:
 
+1. **Broken Symlink**
+   ```bash
+   # Restart the setup service
+   sudo systemctl restart nginx-www-setup.service
+
+   # Or manually recreate
+   sudo ln -sf /etc/nginx/www /var/www/wolfhard
+   ```
+
+2. **Missing Files**
+   ```bash
+   # Rebuild system to deploy files
+   make switch
+
+   # Verify files are in /etc/nginx/www
+   ls -la /etc/nginx/www/
+   ```
+
+3. **Wrong Document Root**
+   ```bash
+   # Check nginx configuration
+   sudo nginx -T | grep "root"
+
+   # Should show: root /var/www/wolfhard;
+   ```
+
+### HTTPS Not Working / Certificate Errors
+
+**Symptoms**: SSL certificate errors, connection not secure warnings
+
+**Diagnosis**:
 ```bash
-# Check nginx user
+# Check certificate status
+sudo systemctl status acme-wolfhard.net.service
+
+# View certificate details
+sudo openssl x509 -in /var/lib/acme/wolfhard.net/cert.pem -noout -dates -subject
+
+# Check ACME logs
+sudo journalctl -u acme-wolfhard.net.service -n 100
+
+# Test SSL connection
+openssl s_client -connect wolfhard.net:443 -servername wolfhard.net
+```
+
+**Common Issues**:
+
+1. **DNS Not Configured**
+   ```bash
+   # Verify DNS points to your server
+   dig wolfhard.net +short
+   # Must return your server's IP
+
+   # Check from external DNS
+   dig @8.8.8.8 wolfhard.net +short
+   ```
+
+2. **Port 80 Not Accessible**
+   ```bash
+   # ACME needs port 80 for HTTP-01 challenge
+   # Test from external machine:
+   curl -I http://YOUR_SERVER_IP
+
+   # Check firewall
+   sudo iptables -L -n | grep 80
+
+   # Verify nginx is listening
+   sudo ss -tulpn | grep :80
+   ```
+
+3. **Certificate Expired**
+   ```bash
+   # Check expiry date
+   sudo openssl x509 -in /var/lib/acme/wolfhard.net/cert.pem -noout -enddate
+
+   # Force renewal
+   sudo systemctl start acme-wolfhard.net.service
+
+   # Check renewal timer is active
+   sudo systemctl list-timers | grep acme
+   ```
+
+4. **Rate Limited by Let's Encrypt**
+   ```bash
+   # Check logs for rate limit errors
+   sudo journalctl -u acme-wolfhard.net.service | grep -i "rate"
+
+   # Use staging server for testing (in nginx.nix):
+   # security.acme.defaults.server = "https://acme-staging-v02.api.letsencrypt.org/directory";
+   ```
+
+### HTTP Not Redirecting to HTTPS
+
+**Symptoms**: HTTP URLs don't redirect to HTTPS
+
+**Diagnosis**:
+```bash
+# Test redirect
+curl -I http://wolfhard.net
+# Should show: Location: https://wolfhard.net/
+
+# Check nginx config
+sudo nginx -T | grep -A 5 "server_name wolfhard.net"
+```
+
+**Solution**:
+```bash
+# Verify forceSSL is enabled in configuration
+# Should be in hosts/homelab/services.nix:
+# forceSSL = true;
+
+# Rebuild if changed
+make switch
+```
+
+### Performance Issues / Slow Response
+
+**Symptoms**: Website loads slowly, high latency
+
+**Diagnosis**:
+```bash
+# Check nginx access logs for slow requests
+tail -f /var/log/nginx/wolfhard.net.access.log
+
+# Monitor system resources
+htop
+
+# Check nginx worker processes
 ps aux | grep nginx
 
-# Fix permissions
-sudo chown -R nginx:nginx /var/www
+# Test response time
+time curl -I https://wolfhard.net
 
-# Check SELinux (if enabled)
-sudo setenforce 0  # temporary
+# Check for errors
+sudo journalctl -u nginx --since "1 hour ago" | grep -i error
 ```
 
-### Port 8080 Already in Use
+**Solutions**:
 
+1. **Insufficient Resources**
+   ```bash
+   # Check memory and CPU
+   free -h
+   top
+
+   # May need to increase server resources
+   ```
+
+2. **Too Many Connections**
+   ```bash
+   # Check current connections
+   sudo ss -s
+
+   # Increase worker connections in nginx config if needed
+   ```
+
+3. **Slow DNS Resolution**
+   ```bash
+   # Test DNS speed
+   time dig wolfhard.net
+
+   # Consider using resolver caching
+   ```
+
+### Static Files Not Updating
+
+**Symptoms**: Changes to HTML/CSS/JS don't appear
+
+**Diagnosis**:
 ```bash
-# Find process using port
-sudo lsof -i :8080
+# Check if files are updated in /etc/nginx/www
+ls -la /etc/nginx/www/
+cat /etc/nginx/www/index.html
 
-# Or use ss
-sudo ss -tulpn | grep 8080
+# Check browser cache
+# Use Ctrl+Shift+R for hard refresh
+
+# Check nginx caching headers
+curl -I https://wolfhard.net/index.html | grep -i cache
 ```
+
+**Solutions**:
+
+1. **Files Not Deployed**
+   ```bash
+   # Rebuild to update files
+   make switch
+
+   # Verify files updated
+   ls -la /etc/nginx/www/
+   ```
+
+2. **Browser Cache**
+   ```bash
+   # Clear browser cache or use incognito mode
+   # Or add cache-busting query strings:
+   # <link href="/style.css?v=2">
+   ```
+
+3. **CDN/Proxy Cache**
+   ```bash
+   # If using Cloudflare or similar, purge cache
+   # Check cache-control headers are correct
+   ```
+
+### "Connection Refused" Errors
+
+**Symptoms**: Can't connect to website at all
+
+**Diagnosis**:
+```bash
+# Check if nginx is running
+sudo systemctl status nginx
+
+# Check if ports are listening
+sudo ss -tulpn | grep nginx
+
+# Check firewall
+sudo iptables -L -n -v | grep -E '80|443'
+
+# Test locally
+curl -I http://localhost
+
+# Test from external machine
+curl -I http://YOUR_SERVER_IP
+```
+
+**Solutions**:
+
+1. **Nginx Not Running**
+   ```bash
+   sudo systemctl start nginx
+   sudo systemctl enable nginx
+   ```
+
+2. **Firewall Blocking**
+   ```bash
+   # Verify ports are open
+   sudo iptables -L -n -v
+
+   # Configuration should have:
+   # networking.firewall.allowedTCPPorts = [ 80 443 ];
+
+   # Rebuild if changed
+   make switch
+   ```
+
+3. **External Firewall** (cloud provider, router)
+   ```bash
+   # Check with your hosting provider
+   # Ensure security groups allow ports 80/443
+   ```
+
+### Mixed Content Warnings
+
+**Symptoms**: HTTPS page loading HTTP resources
+
+**Diagnosis**:
+```bash
+# Check browser console for mixed content warnings
+# Review HTML for http:// URLs in:
+# - <img src="http://...">
+# - <script src="http://...">
+# - <link href="http://...">
+```
+
+**Solutions**:
+```bash
+# Use relative URLs: src="/images/logo.png"
+# Or use protocol-relative: src="//example.com/image.png"
+# Or use HTTPS: src="https://example.com/image.png"
+
+# CSP will also block mixed content if configured correctly
+```
+
+### Troubleshooting Checklist
+
+When things go wrong, run through this checklist:
+
+- [ ] Nginx configuration valid: `sudo nginx -t`
+- [ ] Nginx service running: `sudo systemctl status nginx`
+- [ ] Files exist: `ls -la /var/www/wolfhard/`
+- [ ] Symlink correct: `readlink /var/www/wolfhard`
+- [ ] DNS resolves: `dig wolfhard.net`
+- [ ] Firewall allows traffic: `sudo iptables -L -n`
+- [ ] Ports listening: `sudo ss -tulpn | grep nginx`
+- [ ] Certificates valid: `sudo openssl x509 -in /var/lib/acme/wolfhard.net/cert.pem -noout -dates`
+- [ ] Logs checked: `sudo journalctl -u nginx -n 50`
+- [ ] System resources OK: `free -h && df -h`
 
 ## Monitoring
 

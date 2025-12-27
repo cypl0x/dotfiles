@@ -36,6 +36,26 @@
           }
         ];
       };
+
+      # VM configuration for testing
+      homelab-vm = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./hosts/homelab-vm
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users = {
+                cypl0x = import ./home/cypl0x.nix;
+                wap = import ./home/wap.nix;
+                root = import ./home/root.nix;
+              };
+            };
+          }
+        ];
+      };
     };
 
     # Formatting

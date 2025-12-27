@@ -140,6 +140,18 @@ vm: ## Build and run a VM of the configuration
 	$(NIXOS_REBUILD) build-vm --flake $(FLAKE)#$(HOST)
 	@echo "${GREEN}VM built. Run: ${YELLOW}./result/bin/run-$(HOST)-vm${RESET}"
 
+.PHONY: vm-test
+vm-test: ## Build and run test VM (homelab-vm configuration)
+	@echo "${GREEN}Building test VM configuration...${RESET}"
+	$(NIXOS_REBUILD) build-vm --flake $(FLAKE)#homelab-vm
+	@echo "${GREEN}Test VM built successfully!${RESET}"
+	@echo "${GREEN}Access via:${RESET}"
+	@echo "  ${YELLOW}./result/bin/run-homelab-vm-vm${RESET}"
+	@echo "${GREEN}Web server will be available at:${RESET}"
+	@echo "  ${YELLOW}http://localhost:8080${RESET} (from host machine)"
+	@echo "${GREEN}SSH access:${RESET}"
+	@echo "  ${YELLOW}ssh -p 2222 cypl0x@localhost${RESET}"
+
 .PHONY: repl
 repl: ## Start Nix REPL with flake context
 	$(NIX) repl --file flake.nix

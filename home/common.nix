@@ -7,7 +7,8 @@
     # This value determines the Home Manager release that your configuration is
     # compatible with. This helps avoid breakage when a new Home Manager release
     # introduces backwards incompatible changes.
-    stateVersion = "23.11"; # Please read the comment before changing.
+    # Review release notes before changing: https://github.com/nix-community/home-manager/releases
+    stateVersion = "24.11";
 
     # The home.packages option allows you to install Nix packages into your
     # environment.
@@ -82,7 +83,6 @@
       oh-my-zsh = {
         enable = true;
         plugins = ["git" "fzf" "tmux"];
-        theme = "robbyrussell"; # Overridden by starship anyway
       };
 
       initContent = ''
