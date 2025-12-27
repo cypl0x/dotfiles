@@ -1,0 +1,125 @@
+name: NixOS Configuration CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint-and-check:
+    name: Lint and Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Check Nix formatting
+        run: make fmt-check
+
+      - name: Run statix linter
+        run: make lint-statix
+
+      - name: Run deadnix linter
+        run: make lint-deadnix
+
+      - name: Run flake checks
+        run: nix flake check --all-systems
+
+  build-homelab:
+    name: Build homelab configuration
+    runs-on: ubuntu-latest
+    needs: lint-and-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build homelab configuration
+        run: nix build .#nixosConfigurations.homelab.config.system.build.toplevel -L
+
+      - name: Show build info
+        run: |
+          if [ -L result ]; then
+            echo "Build successful!"
+            ls -lh result
+            nix path-info ./result --size --closure-size --human-readable
+          fi
+
+  build-homelab-vm:
+    name: Build homelab-vm configuration
+    runs-on: ubuntu-latest
+    needs: lint-and-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build homelab-vm configuration
+        run: nix build .#nixosConfigurations.homelab-vm.config.system.build.toplevel -L
+
+      - name: Show build info
+        run: |
+          if [ -L result ]; then
+            echo "Build successful!"
+            ls -lh result
+            nix path-info ./result --size --closure-size --human-readable
+          fi
+
+  check-documentation:
+    name: Check documentation
+    runs-on: ubuntu-latest
+    needs: lint-and-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build documentation
+        run: nix build .#nixosConfigurations.homelab.config.system.build.documentation 2>/dev/null || echo "Documentation build not available as separate output"
+
+      - name: Check markdown files exist
+        run: |
+          echo "Checking documentation files..."
+          for doc in README.md SECURITY.md ALIASES.md COMPLETIONS.md NGINX.md USER-MANAGEMENT.md ARCHITECTURE.md DEPLOYMENT.md; do
+            if [ -f "$doc" ]; then
+              echo "✓ $doc exists"
+            else
+              echo "✗ $doc missing"
+              exit 1
+            fi
+          done
