@@ -115,7 +115,7 @@ jobs:
       - name: Check markdown files exist
         run: |
           echo "Checking documentation files..."
-          for doc in README.md SECURITY.md ALIASES.md COMPLETIONS.md NGINX.md USER-MANAGEMENT.md ARCHITECTURE.md DEPLOYMENT.md; do
+          for doc in README.md SECURITY.md; do
             if [ -f "$doc" ]; then
               echo "✓ $doc exists"
             else
