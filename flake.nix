@@ -86,6 +86,24 @@
           }
         ];
       };
+
+      # ThinkPad laptop configuration
+      thinkpad = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./hosts/thinkpad
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users = {
+                wap = import ./home/wap.nix;
+              };
+            };
+          }
+        ];
+      };
     };
 
     # Formatting with treefmt
