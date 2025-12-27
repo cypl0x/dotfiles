@@ -7,15 +7,45 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
     nixpkgs,
     home-manager,
+    treefmt-nix,
     ...
   }: let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
+
+    # treefmt configuration
+    treefmtEval = treefmt-nix.lib.evalModule pkgs {
+      projectRootFile = "flake.nix";
+      programs = {
+        alejandra.enable = true;
+        shellcheck = {
+          enable = true;
+        };
+        shfmt = {
+          enable = true;
+          indent_size = 2;
+        };
+      };
+      settings.formatter = {
+        shellcheck = {
+          includes = ["*.sh"];
+          excludes = ["home/shell/zsh/*"];
+        };
+        shfmt = {
+          includes = ["*.sh"];
+          excludes = ["home/shell/zsh/*"];
+        };
+      };
+    };
   in {
     nixosConfigurations = {
       homelab = nixpkgs.lib.nixosSystem {
@@ -58,11 +88,14 @@
       };
     };
 
-    # Formatting
-    formatter.${system} = pkgs.alejandra;
+    # Formatting with treefmt
+    formatter.${system} = treefmtEval.config.build.wrapper;
 
     # Checks and lints
     checks.${system} = {
+      # treefmt check
+      formatting = treefmtEval.config.build.check;
+
       statix =
         pkgs.runCommand "statix-check" {
           nativeBuildInputs = [pkgs.statix];
@@ -85,17 +118,6 @@
           touch $out
         '';
 
-      formatting =
-        pkgs.runCommand "formatting-check" {
-          nativeBuildInputs = [pkgs.alejandra pkgs.fd];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
-          fd -e nix -x alejandra --check {}
-          touch $out
-        '';
-
       shellcheck =
         pkgs.runCommand "shellcheck-check" {
           nativeBuildInputs = [pkgs.shellcheck pkgs.fd];
@@ -110,14 +132,19 @@
     };
 
     devShells.${system}.default = pkgs.mkShell {
-      packages = with pkgs; [
-        gnumake
-        alejandra
-        deadnix
-        statix
-        fd
-        shellcheck
-      ];
+      packages =
+        [
+          treefmtEval.config.build.wrapper
+        ]
+        ++ (with pkgs; [
+          gnumake
+          alejandra
+          deadnix
+          statix
+          fd
+          shellcheck
+          shfmt
+        ]);
     };
   };
 }

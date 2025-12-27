@@ -24,7 +24,7 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Check Nix formatting
+      - name: Check formatting with treefmt
         run: nix develop -c make fmt-check
 
       - name: Run statix linter

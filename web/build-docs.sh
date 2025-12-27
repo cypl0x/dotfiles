@@ -20,12 +20,12 @@ mkdir -p "$DOCS_OUT"
 
 # Copy static assets if they exist
 if [ -d "$SCRIPT_DIR/static" ]; then
-    cp "$SCRIPT_DIR/static/favicon.svg" "$DOCS_OUT/" 2>/dev/null || true
-    cp "$SCRIPT_DIR/static/logo.svg" "$DOCS_OUT/" 2>/dev/null || true
+  cp "$SCRIPT_DIR/static/favicon.svg" "$DOCS_OUT/" 2>/dev/null || true
+  cp "$SCRIPT_DIR/static/logo.svg" "$DOCS_OUT/" 2>/dev/null || true
 fi
 
 # Create index page with list of all docs
-cat > "$DOCS_OUT/index.html" <<'EOF'
+cat >"$DOCS_OUT/index.html" <<'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -124,26 +124,26 @@ EOF
 
 # Generate index entries for each markdown file
 for md_file in "$DOCS_SRC"/*.md; do
-    if [ -f "$md_file" ]; then
-        filename=$(basename "$md_file" .md)
-        html_file="$filename.html"
+  if [ -f "$md_file" ]; then
+    filename=$(basename "$md_file" .md)
+    html_file="$filename.html"
 
-        # Get the first heading from the markdown file as title
-        title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
+    # Get the first heading from the markdown file as title
+    title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
 
-        # Get the second line as description if it exists
-        description=$(sed -n '2p' "$md_file" | sed 's/^[#> ]*//' || echo "")
+    # Get the second line as description if it exists
+    description=$(sed -n '2p' "$md_file" | sed 's/^[#> ]*//' || echo "")
 
-        cat >> "$DOCS_OUT/index.html" <<EOF
+    cat >>"$DOCS_OUT/index.html" <<EOF
             <li class="doc-item">
                 <a href="$html_file">$title</a>
                 <div class="description">$description</div>
             </li>
 EOF
-    fi
+  fi
 done
 
-cat >> "$DOCS_OUT/index.html" <<'EOF'
+cat >>"$DOCS_OUT/index.html" <<'EOF'
         </ul>
 
         <div class="footer">
@@ -157,26 +157,26 @@ EOF
 
 # Convert each markdown file to HTML using pandoc
 for md_file in "$DOCS_SRC"/*.md; do
-    if [ -f "$md_file" ]; then
-        filename=$(basename "$md_file" .md)
-        html_file="$DOCS_OUT/$filename.html"
+  if [ -f "$md_file" ]; then
+    filename=$(basename "$md_file" .md)
+    html_file="$DOCS_OUT/$filename.html"
 
-        echo "Converting $filename.md -> $filename.html"
+    echo "Converting $filename.md -> $filename.html"
 
-        # Get title from first heading
-        title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
+    # Get title from first heading
+    title=$(grep -m 1 "^# " "$md_file" | sed 's/^# //' || echo "$filename")
 
-        pandoc "$md_file" \
-            --from markdown \
-            --to html5 \
-            --standalone \
-            --template="$TEMPLATE" \
-            --metadata title="$title" \
-            --metadata pagetitle="$title - Documentation" \
-            --toc \
-            --toc-depth=3 \
-            --output="$html_file"
-    fi
+    pandoc "$md_file" \
+      --from markdown \
+      --to html5 \
+      --standalone \
+      --template="$TEMPLATE" \
+      --metadata title="$title" \
+      --metadata pagetitle="$title - Documentation" \
+      --toc \
+      --toc-depth=3 \
+      --output="$html_file"
+  fi
 done
 
 echo "✓ Documentation build complete!"

@@ -93,14 +93,19 @@ show: ## Show flake outputs
 	$(NIX) flake show
 
 .PHONY: fmt
-fmt: ## Format nix files with alejandra
-	@echo "${GREEN}Formatting Nix files with alejandra...${RESET}"
+fmt: ## Format all files with treefmt
+	@echo "${GREEN}Formatting all files with treefmt...${RESET}"
 	$(NIX) fmt
 
 .PHONY: fmt-check
-fmt-check: ## Check if nix files are formatted
-	@echo "${GREEN}Checking Nix file formatting...${RESET}"
-	fd -e nix -x alejandra --check {}
+fmt-check: ## Check if all files are formatted with treefmt
+	@echo "${GREEN}Checking file formatting with treefmt...${RESET}"
+	$(NIX) fmt -- --fail-on-change
+
+.PHONY: fmt-nix
+fmt-nix: ## Format only Nix files with alejandra
+	@echo "${GREEN}Formatting Nix files with alejandra...${RESET}"
+	fd -e nix -x alejandra {}
 
 # ============================================================================
 # Linting & Quality Checks
