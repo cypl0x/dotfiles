@@ -11,13 +11,13 @@ alias ls='eza --icons --group-directories-first'
 alias l='eza --icons --group-directories-first'
 alias ll='eza -l --icons --group-directories-first --git'
 alias la='eza -la --icons --group-directories-first --git'
-alias lt='eza -T --icons --group-directories-first'  # Tree view
-alias l.='eza -la --icons | grep "^\."'  # Hidden files only
+alias lt='eza -T --icons --group-directories-first' # Tree view
+alias l.='eza -la --icons | grep "^\."'             # Hidden files only
 
 # Long format variations
 alias lla='eza -la --icons --group-directories-first --git --header'
-alias llt='eza -l --icons --group-directories-first --git --sort=modified'  # Sort by time
-alias lls='eza -l --icons --group-directories-first --git --sort=size'      # Sort by size
+alias llt='eza -l --icons --group-directories-first --git --sort=modified' # Sort by time
+alias lls='eza -l --icons --group-directories-first --git --sort=size'     # Sort by size
 
 # Tree views
 alias lt1='eza -T --icons --group-directories-first --level=1'
@@ -32,8 +32,8 @@ alias lg='eza -la --icons --group-directories-first --git --git-ignore'
 # ============================================================================
 
 alias cat='bat --style=auto'
-alias catp='bat --style=plain'  # Plain cat without decorations
-alias catl='bat --style=numbers'  # With line numbers
+alias catp='bat --style=plain'   # Plain cat without decorations
+alias catl='bat --style=numbers' # With line numbers
 
 # ============================================================================
 # Navigation Aliases
@@ -45,7 +45,7 @@ alias ....='cd ../../..'
 alias .....='cd ../../../..'
 
 alias ~='cd ~'
-alias -- -='cd -'  # Go to previous directory
+alias -- -='cd -' # Go to previous directory
 
 # Quick directory shortcuts
 alias dl='cd ~/Downloads'
@@ -56,22 +56,22 @@ alias dt='cd ~/Desktop'
 # File Operations
 # ============================================================================
 
-alias cp='cp -iv'  # Interactive, verbose
-alias mv='mv -iv'  # Interactive, verbose
-alias rm='rm -Iv'  # Interactive, verbose (prompt if >3 files)
-alias mkdir='mkdir -pv'  # Create parent dirs, verbose
+alias cp='cp -iv'       # Interactive, verbose
+alias mv='mv -iv'       # Interactive, verbose
+alias rm='rm -Iv'       # Interactive, verbose (prompt if >3 files)
+alias mkdir='mkdir -pv' # Create parent dirs, verbose
 
 # Safe alternatives
-alias rmi='rm -i'  # Always prompt
-alias cpi='cp -i'  # Always prompt
-alias mvi='mv -i'  # Always prompt
+alias rmi='rm -i' # Always prompt
+alias cpi='cp -i' # Always prompt
+alias mvi='mv -i' # Always prompt
 
 # ============================================================================
 # Search & Find
 # ============================================================================
 
 alias rg='rg --smart-case --hidden'
-alias rga='rg --smart-case --hidden --no-ignore'  # Search all files including ignored
+alias rga='rg --smart-case --hidden --no-ignore' # Search all files including ignored
 
 # Find large files
 alias findlarge='find . -type f -size +100M -exec ls -lh {} \; 2>/dev/null'
@@ -102,20 +102,20 @@ alias gstp='git stash pop'
 # System Monitoring
 # ============================================================================
 
-alias df='df -h'  # Human readable
-alias du='du -h'  # Human readable
-alias free='free -h'  # Human readable
+alias df='df -h'     # Human readable
+alias du='du -h'     # Human readable
+alias free='free -h' # Human readable
 
 # Process management
-alias psg='ps aux | grep -v grep | grep -i -e VSZ -e'  # Grep processes
-alias topcpu='ps aux | sort -nrk 3,3 | head -n 10'  # Top CPU processes
-alias topmem='ps aux | sort -nrk 4,4 | head -n 10'  # Top memory processes
+alias psg='ps aux | grep -v grep | grep -i -e VSZ -e' # Grep processes
+alias topcpu='ps aux | sort -nrk 3,3 | head -n 10'    # Top CPU processes
+alias topmem='ps aux | sort -nrk 4,4 | head -n 10'    # Top memory processes
 
 # ============================================================================
 # Network
 # ============================================================================
 
-alias ports='netstat -tulanp'  # Show listening ports
+alias ports='netstat -tulanp' # Show listening ports
 alias listening='lsof -i -P | grep LISTEN'
 
 # Get public IP
@@ -136,20 +136,20 @@ alias tat='tmux attach -t'
 alias tls='tmux ls'
 alias tnew='tmux new -s'
 alias tkill='tmux kill-session -t'
-alias tka='tmux kill-session -a'  # Kill all sessions except current
-alias tkall='tmux kill-server'    # Kill all sessions including server
+alias tka='tmux kill-session -a' # Kill all sessions except current
+alias tkall='tmux kill-server'   # Kill all sessions including server
 
 # Tmux window/pane management
 alias tw='tmux new-window'
-alias twn='tmux new-window -n'    # New window with name
+alias twn='tmux new-window -n' # New window with name
 alias ts='tmux split-window'
-alias tsh='tmux split-window -h'  # Horizontal split
-alias tsv='tmux split-window -v'  # Vertical split
+alias tsh='tmux split-window -h' # Horizontal split
+alias tsv='tmux split-window -v' # Vertical split
 
 # Tmux session management
 alias trs='tmux rename-session'
 alias tds='tmux detach'
-alias tss='tmux switch-client -t'  # Switch session
+alias tss='tmux switch-client -t' # Switch session
 
 # Quick tmux launcher - attach to existing or create new
 t() {
@@ -179,7 +179,7 @@ tlist() {
   fi
 
   echo "=== Tmux Sessions ==="
-  tmux list-sessions -F "#{session_name}: #{session_windows} windows, created #{session_created_string}, attached: #{session_attached}" | \
+  tmux list-sessions -F "#{session_name}: #{session_windows} windows, created #{session_created_string}, attached: #{session_attached}" |
     while IFS= read -r line; do
       echo "  $line"
     done
@@ -309,7 +309,7 @@ tsave() {
   local session_name=$(tmux display-message -p '#S')
   local save_file="$HOME/.tmux-session-$session_name.txt"
 
-  tmux list-windows -F "#{window_index} #{window_name} #{pane_current_path}" > "$save_file"
+  tmux list-windows -F "#{window_index} #{window_name} #{pane_current_path}" >"$save_file"
   echo "Session layout saved to: $save_file"
 }
 
@@ -345,25 +345,25 @@ tsm() {
   choice=$(echo -e "New session\nAttach to session\nKill session\nList sessions" | fzf --height 40% --reverse)
 
   case "$choice" in
-    "New session")
-      echo -n "Session name: "
-      read session_name
-      tnew "$session_name"
-      ;;
-    "Attach to session")
-      tswitch
-      ;;
-    "Kill session")
-      local session
-      session=$(tmux list-sessions -F "#{session_name}" | fzf --height 40% --reverse)
-      if [ -n "$session" ]; then
-        tmux kill-session -t "$session"
-        echo "Killed session: $session"
-      fi
-      ;;
-    "List sessions")
-      tlist
-      ;;
+  "New session")
+    echo -n "Session name: "
+    read session_name
+    tnew "$session_name"
+    ;;
+  "Attach to session")
+    tswitch
+    ;;
+  "Kill session")
+    local session
+    session=$(tmux list-sessions -F "#{session_name}" | fzf --height 40% --reverse)
+    if [ -n "$session" ]; then
+      tmux kill-session -t "$session"
+      echo "Killed session: $session"
+    fi
+    ;;
+  "List sessions")
+    tlist
+    ;;
   esac
 }
 
@@ -389,19 +389,19 @@ extract() {
   fi
 
   case "$1" in
-    *.tar.bz2)   tar xjf "$1"     ;;
-    *.tar.gz)    tar xzf "$1"     ;;
-    *.tar.xz)    tar xJf "$1"     ;;
-    *.bz2)       bunzip2 "$1"     ;;
-    *.rar)       unrar x "$1"     ;;
-    *.gz)        gunzip "$1"      ;;
-    *.tar)       tar xf "$1"      ;;
-    *.tbz2)      tar xjf "$1"     ;;
-    *.tgz)       tar xzf "$1"     ;;
-    *.zip)       unzip "$1"       ;;
-    *.Z)         uncompress "$1"  ;;
-    *.7z)        7z x "$1"        ;;
-    *)           echo "Error: '$1' cannot be extracted via extract()" ;;
+  *.tar.bz2) tar xjf "$1" ;;
+  *.tar.gz) tar xzf "$1" ;;
+  *.tar.xz) tar xJf "$1" ;;
+  *.bz2) bunzip2 "$1" ;;
+  *.rar) unrar x "$1" ;;
+  *.gz) gunzip "$1" ;;
+  *.tar) tar xf "$1" ;;
+  *.tbz2) tar xjf "$1" ;;
+  *.tgz) tar xzf "$1" ;;
+  *.zip) unzip "$1" ;;
+  *.Z) uncompress "$1" ;;
+  *.7z) 7z x "$1" ;;
+  *) echo "Error: '$1' cannot be extracted via extract()" ;;
   esac
 }
 
@@ -500,7 +500,7 @@ note() {
   if [ -z "$1" ]; then
     bat "$note_file"
   else
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >> "$note_file"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >>"$note_file"
     echo "Note added: $*"
   fi
 }
@@ -578,7 +578,8 @@ json() {
 # Generate random password
 genpass() {
   local length=${1:-20}
-  LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c "$length"; echo
+  LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom | head -c "$length"
+  echo
 }
 
 # Generate UUID
@@ -608,13 +609,13 @@ alias reload='exec $SHELL -l'
 # ============================================================================
 
 # Add color to common commands if not already aliased
-if command -v grep &> /dev/null; then
+if command -v grep &>/dev/null; then
   alias grep='grep --color=auto'
   alias egrep='egrep --color=auto'
   alias fgrep='fgrep --color=auto'
 fi
 
-if command -v diff &> /dev/null; then
+if command -v diff &>/dev/null; then
   alias diff='diff --color=auto'
 fi
 
@@ -623,7 +624,7 @@ fi
 # ============================================================================
 
 # Linux-specific
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+if [[ $OSTYPE == "linux-gnu"* ]]; then
   # Use functions instead of aliases so ShellFish can override them
   pbcopy() { xclip -selection clipboard "$@"; }
   pbpaste() { xclip -selection clipboard -o "$@"; }
@@ -636,16 +637,16 @@ fi
 
 # Start Ollama service
 ollama-start() {
-  if pgrep -f "ollama serve" > /dev/null; then
+  if pgrep -f "ollama serve" >/dev/null; then
     echo "Ollama is already running (PID: $(pgrep -f 'ollama serve'))"
     return 0
   fi
 
   echo "Starting Ollama service..."
-  ollama serve > /tmp/ollama.log 2>&1 &
+  ollama serve >/tmp/ollama.log 2>&1 &
   sleep 2
 
-  if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+  if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
     echo "✓ Ollama started successfully"
     echo "Available models:"
     ollama list
@@ -657,7 +658,7 @@ ollama-start() {
 
 # Stop Ollama service
 ollama-stop() {
-  if ! pgrep -f "ollama serve" > /dev/null; then
+  if ! pgrep -f "ollama serve" >/dev/null; then
     echo "Ollama is not running"
     return 0
   fi
@@ -666,7 +667,7 @@ ollama-stop() {
   killall ollama 2>/dev/null
   sleep 1
 
-  if ! pgrep -f "ollama serve" > /dev/null; then
+  if ! pgrep -f "ollama serve" >/dev/null; then
     echo "✓ Ollama stopped successfully"
   else
     echo "✗ Failed to stop Ollama"
@@ -684,13 +685,13 @@ ollama-restart() {
 
 # Check Ollama status
 ollama-status() {
-  if pgrep -f "ollama serve" > /dev/null; then
+  if pgrep -f "ollama serve" >/dev/null; then
     local pid=$(pgrep -f "ollama serve")
     echo "=== Ollama Status ==="
     echo "Status: Running (PID: $pid)"
     echo ""
 
-    if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+    if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
       echo "API: Responding on http://localhost:11434"
       echo ""
       echo "Available models:"
@@ -732,7 +733,7 @@ alias ollogs='ollama-logs'
 
 # Check if Ollama is running and start Aider
 aider-check() {
-  if ! pgrep -f "ollama serve" > /dev/null; then
+  if ! pgrep -f "ollama serve" >/dev/null; then
     echo "Ollama is not running. Starting it now..."
     ollama-start
     if [ $? -ne 0 ]; then
@@ -742,7 +743,7 @@ aider-check() {
   fi
 
   # Check if API is responding
-  if ! curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+  if ! curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
     echo "Ollama API is not responding. Try restarting with: ollama-restart"
     return 1
   fi
@@ -811,7 +812,7 @@ aiwatch() {
 
 # Quick Aider help
 aihelp() {
-  cat << 'EOF'
+  cat <<'EOF'
 === Aider Quick Reference ===
 
 Basic commands:

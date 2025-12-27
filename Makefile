@@ -127,7 +127,7 @@ lint-deadnix: ## Check for unused code with deadnix
 .PHONY: lint-shellcheck
 lint-shellcheck: ## Check shell scripts with shellcheck
 	@echo "${GREEN}Running shellcheck linter...${RESET}"
-	fd -e sh --exclude 'home/shell/zsh' -x shellcheck {}
+	fd -e sh --exclude 'home/shell/zsh/completions.sh' -x shellcheck {}
 
 .PHONY: lint-fix
 lint-fix: ## Auto-fix issues where possible

@@ -38,11 +38,11 @@
       settings.formatter = {
         shellcheck = {
           includes = ["*.sh"];
-          excludes = ["home/shell/zsh/*"];
+          excludes = ["home/shell/zsh/completions.sh"];
         };
         shfmt = {
           includes = ["*.sh"];
-          excludes = ["home/shell/zsh/*"];
+          excludes = ["home/shell/zsh/completions.sh"];
         };
       };
     };
@@ -125,8 +125,8 @@
         } ''
           cp -r $src source
           cd source
-          # Exclude zsh files as shellcheck doesn't support zsh
-          fd -e sh --exclude 'home/shell/zsh' -x shellcheck {}
+          # Exclude completions.sh as it uses zsh-specific syntax (shellcheck doesn't support zsh)
+          fd -e sh --exclude 'home/shell/zsh/completions.sh' -x shellcheck {}
           touch $out
         '';
     };
