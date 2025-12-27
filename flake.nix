@@ -94,7 +94,15 @@
     # Checks and lints
     checks.${system} = {
       # treefmt check
-      formatting = treefmtEval.config.build.check;
+      formatting =
+        pkgs.runCommand "treefmt-check" {
+          nativeBuildInputs = [treefmtEval.config.build.wrapper];
+          src = ./.;
+        } ''
+          cd $src
+          treefmt --no-cache --fail-on-change
+          touch $out
+        '';
 
       statix =
         pkgs.runCommand "statix-check" {
