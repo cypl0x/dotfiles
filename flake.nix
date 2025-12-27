@@ -103,6 +103,7 @@
         alejandra
         deadnix
         statix
+        fd
       ];
     };
   };

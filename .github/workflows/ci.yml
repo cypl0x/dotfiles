@@ -25,13 +25,13 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Check Nix formatting
-        run: make fmt-check
+        run: nix develop -c make fmt-check
 
       - name: Run statix linter
-        run: make lint-statix
+        run: nix develop -c make lint-statix
 
       - name: Run deadnix linter
-        run: make lint-deadnix
+        run: nix develop -c make lint-deadnix
 
       - name: Run flake checks
         run: nix flake check --all-systems
