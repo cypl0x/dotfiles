@@ -5,20 +5,6 @@ _: {
   services.fail2ban = {
     enable = true;
 
-    # Maximum number of retries before banning
-    maxretry = 3;
-
-    # Ban duration (10 minutes default)
-    bantime = "10m";
-
-    # Default ban action: iptables with email notification
-    # Available actions: iptables, iptables-allports, iptables-multiport
-    banaction = "iptables-multiport";
-    banaction-allports = "iptables-allports";
-
-    # Time window for counting retries
-    findtime = "10m";
-
     # Ignore localhost and private networks
     ignoreIP = [
       "127.0.0.1/8"
@@ -28,94 +14,115 @@ _: {
       # "10.0.0.0/8"
     ];
 
-    # Hardened jail configurations
+    # Global defaults
+    maxretry = 3;
+    bantime = "10m";
+    bantime-increment = {
+      enable = true;
+      multipliers = "1 2 4 8 16 32 64";
+      maxtime = "48h";
+    };
+
+    # Hardened jail configurations using the new submodule API
     jails = {
       # SSH Protection - Most critical service
-      sshd = ''
-        enabled = true
-        port = ssh
-        filter = sshd
-        logpath = /var/log/auth.log
-        maxretry = 3
-        findtime = 10m
-        bantime = 1h
-        # Increase ban time exponentially for repeat offenders
-        bantime.increment = true
-        bantime.multipliers = 1 2 4 8 16 32 64
-        bantime.maxtime = 48h
-      '';
+      sshd = {
+        settings = {
+          enabled = true;
+          port = "ssh";
+          filter = "sshd";
+          logpath = "/var/log/auth.log";
+          maxretry = 3;
+          findtime = "10m";
+          bantime = "1h";
+        };
+      };
 
       # Nginx - HTTP Authentication Failures
-      nginx-http-auth = ''
-        enabled = true
-        port = http,https
-        filter = nginx-http-auth
-        logpath = /var/log/nginx/error.log
-        maxretry = 3
-        findtime = 10m
-        bantime = 1h
-      '';
+      nginx-http-auth = {
+        settings = {
+          enabled = true;
+          port = "http,https";
+          filter = "nginx-http-auth";
+          logpath = "/var/log/nginx/error.log";
+          maxretry = 3;
+          findtime = "10m";
+          bantime = "1h";
+        };
+      };
 
       # Nginx - Limit request floods
-      nginx-limit-req = ''
-        enabled = true
-        port = http,https
-        filter = nginx-limit-req
-        logpath = /var/log/nginx/error.log
-        maxretry = 5
-        findtime = 5m
-        bantime = 30m
-      '';
+      nginx-limit-req = {
+        settings = {
+          enabled = true;
+          port = "http,https";
+          filter = "nginx-limit-req";
+          logpath = "/var/log/nginx/error.log";
+          maxretry = 5;
+          findtime = "5m";
+          bantime = "30m";
+        };
+      };
 
       # Nginx - Block known bad bots and scanners
-      nginx-botsearch = ''
-        enabled = true
-        port = http,https
-        filter = nginx-botsearch
-        logpath = /var/log/nginx/access.log
-        maxretry = 2
-        findtime = 10m
-        bantime = 24h
-      '';
+      nginx-botsearch = {
+        settings = {
+          enabled = true;
+          port = "http,https";
+          filter = "nginx-botsearch";
+          logpath = "/var/log/nginx/access.log";
+          maxretry = 2;
+          findtime = "10m";
+          bantime = "24h";
+        };
+      };
 
       # Nginx - Bad request protection (400 errors)
-      nginx-bad-request = ''
-        enabled = true
-        port = http,https
-        filter = nginx-bad-request
-        logpath = /var/log/nginx/access.log
-        maxretry = 10
-        findtime = 5m
-        bantime = 1h
-      '';
+      nginx-bad-request = {
+        settings = {
+          enabled = true;
+          port = "http,https";
+          filter = "nginx-bad-request";
+          logpath = "/var/log/nginx/access.log";
+          maxretry = 10;
+          findtime = "5m";
+          bantime = "1h";
+        };
+      };
 
       # Nginx - Block 404 spam
-      nginx-noscript = ''
-        enabled = true
-        port = http,https
-        filter = nginx-noscript
-        logpath = /var/log/nginx/access.log
-        maxretry = 6
-        findtime = 10m
-        bantime = 6h
-      '';
+      nginx-noscript = {
+        settings = {
+          enabled = true;
+          port = "http,https";
+          filter = "nginx-noscript";
+          logpath = "/var/log/nginx/access.log";
+          maxretry = 6;
+          findtime = "10m";
+          bantime = "6h";
+        };
+      };
 
       # Nginx - Proxy attack protection
-      nginx-noproxy = ''
-        enabled = true
-        port = http,https
-        filter = nginx-noproxy
-        logpath = /var/log/nginx/access.log
-        maxretry = 2
-        findtime = 10m
-        bantime = 12h
-      '';
+      nginx-noproxy = {
+        settings = {
+          enabled = true;
+          port = "http,https";
+          filter = "nginx-noproxy";
+          logpath = "/var/log/nginx/access.log";
+          maxretry = 2;
+          findtime = "10m";
+          bantime = "12h";
+        };
+      };
     };
 
     # Custom filters for enhanced protection
     daemonSettings = {
-      # Database backend and logging
+      # Global defaults
       DEFAULT = {
+        banaction = "iptables-multiport";
+        banaction_allports = "iptables-allports";
         dbpurgeage = "1d";
         loglevel = "INFO";
         logtarget = "SYSTEMD-JOURNAL";
