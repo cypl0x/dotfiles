@@ -14,6 +14,7 @@ _: {
     ../../modules/services/nginx.nix
     ../../modules/services/tailscale.nix
     ../../modules/services/tor.nix
+    ../../modules/services/fail2ban.nix
 
     # User configuration
     ../../modules/users/root.nix
