@@ -17,18 +17,17 @@
     ./thinkpad-packages.nix
   ];
 
-  # Bootloader configuration and LUKS encryption
+  # Bootloader configuration
   boot = {
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };
-    initrd.luks.devices."luks-2367f432-b059-480c-820a-12f84d964582".device = "/dev/disk/by-uuid/2367f432-b059-480c-820a-12f84d964582";
   };
 
   # Network configuration
   networking = {
-    hostName = "nixos";
+    hostName = "thinkpad";
     networkmanager.enable = true;
   };
 

@@ -14,7 +14,10 @@
     initrd = {
       availableKernelModules = ["xhci_pci" "ahci" "usb_storage" "sd_mod" "rtsx_pci_sdmmc"];
       kernelModules = [];
-      luks.devices."luks-43b140b6-ce81-4836-9f64-286f5ad8b210".device = "/dev/disk/by-uuid/43b140b6-ce81-4836-9f64-286f5ad8b210";
+      luks.devices = {
+        "luks-43b140b6-ce81-4836-9f64-286f5ad8b210".device = "/dev/disk/by-uuid/43b140b6-ce81-4836-9f64-286f5ad8b210";
+        "luks-2367f432-b059-480c-820a-12f84d964582".device = "/dev/disk/by-uuid/2367f432-b059-480c-820a-12f84d964582";
+      };
     };
     kernelModules = [];
     extraModulePackages = [];

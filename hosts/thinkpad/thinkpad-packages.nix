@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  datapass,
+  ...
+}: {
   # ThinkPad-specific packages not included in base system
 
   environment.systemPackages = with pkgs; [
@@ -27,5 +31,18 @@
 
     # Process viewer
     procs
+
+    # Password manager
+    datapass.packages.${pkgs.system}.default
+
+    # X11 tools for Emacs and window management
+    xdotool
+    kdotool
+    xorg.xprop
+    xorg.xwininfo
+    dotool
+
+    # Calculator
+    bc
   ];
 }

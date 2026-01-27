@@ -3,20 +3,29 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.11";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+    home-manager-stable = {
+      url = "github:nix-community/home-manager/release-25.11";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
     };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    datapass.url = "github:cypl0x/datapass";
   };
 
   outputs = {
     nixpkgs,
+    nixpkgs-stable,
     home-manager,
+    home-manager-stable,
     treefmt-nix,
+    datapass,
     ...
   }: let
     system = "x86_64-linux";
@@ -87,12 +96,13 @@
         ];
       };
 
-      # ThinkPad laptop configuration
-      thinkpad = nixpkgs.lib.nixosSystem {
+      # ThinkPad laptop configuration (using stable 25.11)
+      thinkpad = nixpkgs-stable.lib.nixosSystem {
         inherit system;
+        specialArgs = {inherit datapass;};
         modules = [
           ./hosts/thinkpad
-          home-manager.nixosModules.home-manager
+          home-manager-stable.nixosModules.home-manager
           {
             home-manager = {
               useGlobalPkgs = true;
