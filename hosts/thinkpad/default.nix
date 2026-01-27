@@ -11,6 +11,8 @@
     ../../modules/system/desktop.nix
 
     # User configuration
+    ../../modules/users/root.nix
+    ../../modules/users/cypl0x.nix
     ../../modules/users/wap.nix
 
     # Host-specific configuration
@@ -44,6 +46,9 @@
 
     # Fingerprint authentication
     fprintd.tod.enable = true;
+
+    # OpenSSH AcceptEnv (NixOS 25.11 stable uses string format)
+    openssh.settings.AcceptEnv = "LANG LC_*";
   };
 
   # This value determines the NixOS release from which the default

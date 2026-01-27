@@ -45,6 +45,10 @@ _: {
   time.timeZone = "UTC";
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
+  # OpenSSH AcceptEnv (NixOS unstable uses list format)
+  # Allow LC_TERMINAL for ShellFish
+  services.openssh.settings.AcceptEnv = ["LANG" "LC_*"];
+
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. Before changing, review the release notes.

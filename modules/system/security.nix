@@ -3,9 +3,6 @@ _: {
   services.openssh = {
     enable = true;
     settings = {
-      # Allow LC_TERMINAL for ShellFish
-      AcceptEnv = "LANG LC_*";
-
       # Security Hardening
       PermitRootLogin = "prohibit-password";
       PasswordAuthentication = false;
