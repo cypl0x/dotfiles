@@ -42,6 +42,11 @@
   security.rtkit.enable = true;
   xdg.portal.enable = true;
 
+  # Font configuration
+  fonts.packages = with pkgs; [
+    cascadia-code
+  ];
+
   # Desktop-specific packages
   environment.systemPackages = with pkgs; [
     # KDE applications

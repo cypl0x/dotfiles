@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   users.users.wap = {
     isNormalUser = true;
-    description = "Work Account";
+    description = "Wolfhard Prell";
     extraGroups = ["networkmanager" "wheel"];
     shell = pkgs.zsh;
     openssh.authorizedKeys.keyFiles = [
