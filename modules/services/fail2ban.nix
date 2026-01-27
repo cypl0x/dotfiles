@@ -117,56 +117,62 @@ _: {
       };
     };
 
-    # Custom filters for enhanced protection
+    # Daemon settings for fail2ban
     daemonSettings = {
       # Global defaults
       DEFAULT = {
         banaction = "iptables-multiport";
         banaction_allports = "iptables-allports";
-        dbpurgeage = "1d";
-        loglevel = "INFO";
-        logtarget = "SYSTEMD-JOURNAL";
       };
+    };
+  };
 
-      # Custom nginx filter for bad requests
-      "nginx-bad-request" = {
-        INCLUDES.before = "common.conf";
-        Definition = {
-          failregex = ''^<HOST> - .* "(GET|POST|HEAD).*HTTP.*" (400|444|403|405) .*$'';
-          ignoreregex = "";
-        };
-      };
+  # Custom fail2ban filters
+  environment.etc = {
+    "fail2ban/filter.d/nginx-bad-request.local" = {
+      text = ''
+        [INCLUDES]
+        before = common.conf
 
-      # Custom nginx filter for bot searches
-      "nginx-botsearch" = {
-        INCLUDES.before = "common.conf";
-        Definition = {
-          failregex = [
-            ''<HOST>.*"(GET|POST).*(\.php|\.asp|\.exe|\.pl|cgi-bin|wp-admin|wp-login|phpmyadmin|administrator|xmlrpc).*$''
-            ''<HOST>.*"(GET|POST).*(etc/passwd|proc/self|shadow|boot\.ini).*$''
-            ''<HOST>.*"(GET|POST).*(eval\(|union.*select|concat.*\().*$''
-          ];
-          ignoreregex = "";
-        };
-      };
+        [Definition]
+        failregex = ^<HOST> - .* "(GET|POST|HEAD).*HTTP.*" (400|444|403|405) .*$
+        ignoreregex =
+      '';
+    };
 
-      # Custom nginx filter for script kiddie attacks
-      "nginx-noscript" = {
-        INCLUDES.before = "common.conf";
-        Definition = {
-          failregex = ''^<HOST> - .* "(GET|POST|HEAD).*(\.php|\.asp|\.aspx|\.ashx).*" 404 .*$'';
-          ignoreregex = "";
-        };
-      };
+    "fail2ban/filter.d/nginx-botsearch.local" = {
+      text = ''
+        [INCLUDES]
+        before = common.conf
 
-      # Custom nginx filter for proxy attempts
-      "nginx-noproxy" = {
-        INCLUDES.before = "common.conf";
-        Definition = {
-          failregex = ''^<HOST> - .* "(GET|POST|CONNECT) (http://|https://).*" 404 .*$'';
-          ignoreregex = "";
-        };
-      };
+        [Definition]
+        failregex = <HOST>.*"(GET|POST).*(\.php|\.asp|\.exe|\.pl|cgi-bin|wp-admin|wp-login|phpmyadmin|administrator|xmlrpc).*$
+                    <HOST>.*"(GET|POST).*(etc/passwd|proc/self|shadow|boot\.ini).*$
+                    <HOST>.*"(GET|POST).*(eval\(|union.*select|concat.*\().*$
+        ignoreregex =
+      '';
+    };
+
+    "fail2ban/filter.d/nginx-noscript.local" = {
+      text = ''
+        [INCLUDES]
+        before = common.conf
+
+        [Definition]
+        failregex = ^<HOST> - .* "(GET|POST|HEAD).*(\.php|\.asp|\.aspx|\.ashx).*" 404 .*$
+        ignoreregex =
+      '';
+    };
+
+    "fail2ban/filter.d/nginx-noproxy.local" = {
+      text = ''
+        [INCLUDES]
+        before = common.conf
+
+        [Definition]
+        failregex = ^<HOST> - .* "(GET|POST|CONNECT) (http://|https://).*" 404 .*$
+        ignoreregex =
+      '';
     };
   };
 
