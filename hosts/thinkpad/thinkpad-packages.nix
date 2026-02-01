@@ -44,5 +44,11 @@
 
     # Calculator
     bc
+
+    # GitHub CLI tool
+    gh
+
+    # node(js) npm, npx, etc.
+    nodejs_24
   ];
 }
