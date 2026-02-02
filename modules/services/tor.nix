@@ -12,8 +12,8 @@ _: {
       ORPort = 9001;
       ControlPort = 9051;
       # Bandwidth limits (adjust as needed)
-      RelayBandwidthRate = "75 KBytes";
-      RelayBandwidthBurst = "150 KBytes";
+      RelayBandwidthRate = "200 KBytes";
+      RelayBandwidthBurst = "400 KBytes";
       # Explicitly reject exit traffic
       ExitPolicy = ["reject *:*"];
     };
