@@ -37,7 +37,7 @@
 
     # X11 tools for Emacs and window management
     xdotool
-    kdotool
+    # kdotool  # Disabled: fails to compile in nixpkgs unstable (Rust compatibility issue)
     xorg.xprop
     xorg.xwininfo
     dotool

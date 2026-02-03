@@ -47,8 +47,8 @@
     # Fingerprint authentication
     fprintd.tod.enable = true;
 
-    # OpenSSH AcceptEnv (NixOS 25.11 stable uses string format)
-    openssh.settings.AcceptEnv = "LANG LC_*";
+    # OpenSSH AcceptEnv (nixpkgs unstable uses list format)
+    openssh.settings.AcceptEnv = ["LANG" "LC_*"];
   };
 
   # This value determines the NixOS release from which the default

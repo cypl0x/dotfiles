@@ -96,13 +96,13 @@
         ];
       };
 
-      # ThinkPad laptop configuration (using stable 25.11)
-      thinkpad = nixpkgs-stable.lib.nixosSystem {
+      # ThinkPad laptop configuration (using unstable)
+      thinkpad = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = {inherit datapass;};
         modules = [
           ./hosts/thinkpad
-          home-manager-stable.nixosModules.home-manager
+          home-manager.nixosModules.home-manager
           {
             home-manager = {
               useGlobalPkgs = true;
