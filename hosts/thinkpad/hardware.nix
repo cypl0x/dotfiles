@@ -21,7 +21,13 @@
     };
     kernelModules = [];
     extraModulePackages = [];
+    kernelParams = [ "cfg80211.ieee80211_regdom=DE" ];
+    extraModprobeConfig = ''
+      options cfg80211 ieee80211_regdom=DE
+    '';
   };
+
+  hardware.wirelessRegulatoryDatabase = true;
 
   fileSystems = {
     "/" = {
