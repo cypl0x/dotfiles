@@ -42,6 +42,9 @@
     xorg.xwininfo
     dotool
 
+    # Webcam tools
+    v4l-utils
+
     # Calculator
     bc
 

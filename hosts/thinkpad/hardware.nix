@@ -19,7 +19,7 @@
         "luks-2367f432-b059-480c-820a-12f84d964582".device = "/dev/disk/by-uuid/2367f432-b059-480c-820a-12f84d964582";
       };
     };
-    kernelModules = [];
+    kernelModules = ["uvcvideo"];
     extraModulePackages = [];
     kernelParams = [ "cfg80211.ieee80211_regdom=DE" ];
     extraModprobeConfig = ''
