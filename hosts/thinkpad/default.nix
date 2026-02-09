@@ -14,6 +14,7 @@
     ../../modules/users/root.nix
     ../../modules/users/cypl0x.nix
     ../../modules/users/wap.nix
+    ../../modules/users/proxy.nix
 
     # Host-specific configuration
     ./thinkpad-packages.nix

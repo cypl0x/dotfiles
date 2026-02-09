@@ -104,6 +104,7 @@
                 cypl0x = import ./home/cypl0x.nix;
                 wap = import ./home/wap.nix;
                 root = import ./home/root.nix;
+                proxy = import ./home/proxy.nix;
               };
             };
           }
