@@ -7,30 +7,28 @@ A flake-based NixOS configuration repository for the `homelab` system.
 ```
 dotfiles/
 ├── flake.nix                      # Main flake configuration
-├── hosts/
-│   └── homelab/
-│       ├── configuration.nix      # System configuration
-│       ├── hardware-configuration.nix
-│       ├── vultr.nix              # Vultr-specific settings
-│       ├── users.nix              # User management
-│       └── nginx.nix              # Nginx web server
-├── home/
-│   ├── shellfishrc                # ShellFish iOS integration
-│   ├── shell-aliases.sh           # 100+ aliases and functions
-│   └── shell-completions.sh       # Auto-loading completions
-├── web/
-│   ├── static/                    # Static website content
-│   │   ├── index.html
-│   │   └── 404.html
-│   ├── docs.nix                   # Nix derivation for building docs
-│   ├── docs-template.html         # Pandoc HTML template
-│   └── build-docs.sh              # Manual docs build script
-├── docs/                          # Markdown documentation
-│   ├── NGINX.md
-│   ├── USER-MANAGEMENT.md
-│   ├── ALIASES.md
-│   └── COMPLETIONS.md
-└── modules/                       # Custom NixOS modules (future use)
+├── Makefile                       # Management commands (switch, update, etc.)
+├── hosts/                         # Host-specific configurations
+│   ├── homelab/                   # Primary production server
+│   │   ├── default.nix            # Main system entry point
+│   │   ├── hardware.nix           # Hardware-specific settings
+│   │   └── services.nix           # Host-specific services (Nginx vhosts)
+│   ├── homelab-vm/                # Testing VM configuration
+│   └── thinkpad/                  # Laptop configuration
+├── modules/                       # Reusable NixOS modules
+│   ├── system/                    # Base system (packages, shell, security)
+│   ├── services/                  # Shared services (Nginx, Tailscale, Tor)
+│   ├── users/                     # System user definitions
+│   └── web/                       # Web & documentation helpers
+├── home/                          # Home Manager user configurations
+│   ├── shell/                     # Zsh, aliases, completions, starship, tmux
+│   ├── common.nix                 # Shared user settings
+│   └── cypl0x.nix                 # User-specific overrides
+├── web/                           # Documentation site source
+│   ├── static/                    # Static assets (icons, manifests)
+│   ├── docs.nix                   # Nix derivation to build docs with Pandoc
+│   └── build-docs.sh              # Manual build script
+└── docs/                          # Documentation content (Markdown)
 ```
 
 ## Features
@@ -392,7 +390,7 @@ nrs  # (alias for nixos-rebuild switch)
 
 ### Example 2: Adding a New Package
 
-1. Edit `hosts/homelab/configuration.nix`
+1. Edit `modules/system/packages.nix` (or host-specific configuration)
 2. Add package to `environment.systemPackages`
 3. Rebuild:
 
@@ -496,7 +494,7 @@ navi
 cd ~/dotfiles
 
 # Make changes to configuration files
-vim hosts/homelab/configuration.nix
+vim hosts/homelab/default.nix
 
 # Test the changes
 nrbs  # build without switching
@@ -670,7 +668,7 @@ For information on managing users and passwords in NixOS, see [User Management G
 Quick example:
 
 ```nix
-# Edit hosts/homelab/users.nix and uncomment user definitions
+# Edit modules/users/cypl0x.nix and update user settings
 # Then rebuild and set passwords:
 sudo nixos-rebuild switch --flake .#homelab
 sudo passwd alice
