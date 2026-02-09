@@ -6,10 +6,14 @@
   # ThinkPad-specific packages not included in base system
 
   environment.systemPackages = with pkgs; [
+    # Browsers
+    vivaldi
+
     # Privacy and VPN
     protonvpn-gui
 
-    # Email bridge tools
+    # Email
+    fastmail-desktop
     hydroxide
 
     # LaTeX full suite
