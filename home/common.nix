@@ -1,4 +1,4 @@
-{config, ...}: {
+{config, pkgs, ...}: {
   # Home Manager needs a bit of information about you and the paths it should manage.
   home = {
     # username is set by the importing module
@@ -38,10 +38,15 @@
         # Show diffs before committing
         show-diffs: true
       '';
+
+      ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
+      ".config/bat/themes/doom-vibrant.tmTheme".source = ./bat/themes/doom-vibrant.tmTheme;
     };
 
     sessionVariables = {
       EDITOR = "vim";
+      COLORTERM = "truecolor";
+      BAT_THEME = "Doom Vibrant";
     };
   };
 
@@ -65,6 +70,10 @@
       keyMode = "vi";
       # Use the existing tmux.conf
       extraConfig = builtins.readFile ./shell/tmux.conf;
+      plugins = with pkgs.tmuxPlugins; [
+        extrakto
+        fzf-tmux-url
+      ];
     };
 
     starship = {
@@ -79,6 +88,11 @@
       enableCompletion = true;
       autosuggestion.enable = true;
       syntaxHighlighting.enable = true;
+
+      # Disable OMZ tmux plugin auto-start — we manage tmux manually via aliases
+      envExtra = ''
+        ZSH_TMUX_AUTOSTART=false
+      '';
 
       oh-my-zsh = {
         enable = true;
@@ -164,6 +178,30 @@
         nixlint() {
           statix check "$DOTFILES_DIR"
         }
+
+        # Desktop notifications for long-running commands (>= 5s)
+        __cmd_start_time=0
+        __cmd_last=()
+        preexec() {
+          __cmd_start_time=$EPOCHSECONDS
+          __cmd_last=("$@")
+        }
+        precmd() {
+          local __cmd_exit_code=$?
+          if (( __cmd_start_time > 0 )); then
+            local elapsed=$((EPOCHSECONDS - __cmd_start_time))
+            if (( elapsed >= 5 )); then
+              local title="Command finished"
+              local body="''${__cmd_last[1]:-command} (''${elapsed}s)"
+              if (( __cmd_exit_code != 0 )); then
+                title="Command failed ($__cmd_exit_code)"
+              fi
+              command -v notify-send >/dev/null 2>&1 && notify-send "$title" "$body"
+            fi
+          fi
+          __cmd_start_time=0
+          __cmd_last=()
+        }
       '';
     };
 
@@ -172,5 +210,14 @@
       enableZshIntegration = true;
       tmux.enableShellIntegration = true;
     };
+
+    emacs = {
+      enable = true;
+      extraPackages = epkgs: [
+        epkgs.vterm
+      ];
+    };
+
+
   };
 }
