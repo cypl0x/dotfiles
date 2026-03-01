@@ -37,7 +37,26 @@
   };
 
   # Nix settings
-  nix.settings.experimental-features = ["nix-command" "flakes"];
+  nix = {
+    settings = {
+      experimental-features = ["nix-command" "flakes"];
+      trusted-users = ["root" "@wheel"];
+    };
+
+    # Offload heavy builds to the Hetzner server
+    distributedBuilds = true;
+    buildMachines = [
+      {
+        hostName = "65.109.108.233";
+        systems = ["x86_64-linux"];
+        protocol = "ssh";
+        sshUser = "root";
+        maxJobs = 8;
+        speedFactor = 2;
+        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
+      }
+    ];
+  };
 
   # Enable nix-ld for running unpatched dynamic binaries (e.g. Android SDK)
   programs.nix-ld.enable = true;
