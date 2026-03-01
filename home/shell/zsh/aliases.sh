@@ -588,6 +588,16 @@ uuid() {
 }
 
 # ============================================================================
+# Emacs / Emacsclient Aliases
+# ============================================================================
+
+alias em='emacsclient -t'            # Open in terminal (current terminal)
+alias emc='emacsclient -c'           # Open in new GUI frame
+alias emn='emacsclient -n'           # Open in existing frame, don't wait
+alias emd='emacs --daemon'           # Start Emacs daemon
+alias emk='emacsclient -e "(kill-emacs)"' # Kill Emacs daemon
+
+# ============================================================================
 # Misc Aliases
 # ============================================================================
 
