@@ -14,7 +14,6 @@ _: {
     ../../modules/services/nginx.nix
     ../../modules/services/tailscale.nix
     ../../modules/services/tor.nix
-    ../../modules/services/fail2ban.nix
 
     ../../modules/users/root.nix
     ../../modules/users/cypl0x.nix
