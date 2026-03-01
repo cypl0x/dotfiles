@@ -42,6 +42,10 @@ _: {
   networking.domain = "";
 
   # System settings
+  # 200 GB/month ÷ (30 days × 86400 s) ≈ 80 KB/s sustained rate
+  torRelay.bandwidthRate = 80;
+  torRelay.bandwidthBurst = 200;
+
   time.timeZone = "UTC";
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
