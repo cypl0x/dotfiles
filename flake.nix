@@ -123,7 +123,9 @@
           nativeBuildInputs = [treefmtEval.config.build.wrapper];
           src = ./.;
         } ''
-          cd $src
+          cp -r $src source
+          chmod -R u+w source
+          cd source
           treefmt --no-cache --fail-on-change
           touch $out
         '';
