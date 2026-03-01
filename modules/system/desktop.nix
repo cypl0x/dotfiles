@@ -8,8 +8,9 @@
       enable = true;
       # Configure keymap in X11
       xkb = {
-        layout = "us";
+        layout = "de";
         variant = "";
+          options = "caps:escape";
       };
     };
 
@@ -52,6 +53,8 @@
     # KDE applications
     kdePackages.kate
     kdePackages.kmail
+    kdePackages.kdeconnect-kde
+    kdePackages.ktorrent
 
     # Browsers
     firefox
