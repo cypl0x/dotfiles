@@ -1,7 +1,7 @@
 # Starship prompt configuration
 # Optimized for ShellFish iOS portrait mode
 # Documentation: https://starship.rs/config/
-# Color scheme: Solarized Light
+# Color scheme: Doom Vibrant (based on doom-vibrant theme)
 
 # Compact spacing for mobile
 add_newline = true
@@ -14,9 +14,9 @@ command_timeout = 500
 format = """
 $os\
 $username\
-[@](bold #657b83)\
+[@](bold #484854)\
 $hostname\
-[:](bold #657b83)\
+[:](bold #484854)\
 $directory\
 $git_branch\
 $git_status\
@@ -28,53 +28,55 @@ $character"""
 continuation_prompt = "❯ "
 
 [character]
-success_symbol = "[❯](bold #859900)"
-error_symbol = "[❯](bold #dc322f)"
-vicmd_symbol = "[❮](bold #859900)"
+success_symbol = "[❯](bold #7bc275)"
+error_symbol = "[❯](bold #ff665c)"
+vicmd_symbol = "[❮](bold #7bc275)"
 
 [os]
 disabled = false
 format = "[$symbol ]($style)"
+style = "bold #51afef"
 
 [os.symbols]
-NixOS = ""
-Alpine = ""
-Amazon = ""
-Android = ""
-Arch = ""
-CentOS = ""
-Debian = ""
-Fedora = ""
-FreeBSD = ""
-Gentoo = ""
-Linux = ""
-Macos = ""
-Manjaro = ""
-openSUSE = ""
-Raspbian = ""
-RedHatEnterprise = ""
-Redhat = ""
-Ubuntu = ""
-Unknown = ""
-Windows = ""
+NixOS = "󱄅"
+Alpine = ""
+Amazon = ""
+Android = ""
+Arch = "󰣇"
+CentOS = "󱄚"
+Debian = "󰣚"
+Fedora = ""
+FreeBSD = ""
+Gentoo = ""
+Linux = ""
+Macos = ""
+Manjaro = ""
+openSUSE = ""
+Raspbian = ""
+RedHatEnterprise = ""
+Redhat = "󱄛"
+Ubuntu = "󰕈"
+Unknown = ""
+Windows = ""
 
 [username]
 show_always = true
-style_user = "bold #b58900"
-style_root = "bold #dc322f"
+style_user = "bold #51afef"
+style_root = "bold #ff665c"
 format = "[$user]($style)"
 
 [hostname]
 ssh_only = false
-format = "[$hostname](bold #268bd2)"
+format = "[$hostname](bold #51afef)"
 disabled = false
 trim_at = "."
 
 [directory]
 truncation_length = 2
 truncate_to_repo = true
-style = "bold #2aa198"
+style = "bold #5cEfFF"
 read_only = "󰌾"
+read_only_style = "bold #ff665c"
 format = "[$path]($style)[$read_only]($read_only_style) "
 truncation_symbol = "…/"
 home_symbol = "~"
@@ -87,13 +89,13 @@ home_symbol = "~"
 
 [git_branch]
 symbol = ""
-style = "bold #6c71c4"
+style = "bold #C57BDB"
 format = "[$symbol$branch]($style) "
 truncation_length = 20
 truncation_symbol = "…"
 
 [git_status]
-style = "bold #dc322f"
+style = "bold #ff665c"
 format = "([$all_status$ahead_behind]($style))"
 conflicted = "="
 ahead = "⇡$count"
@@ -108,52 +110,61 @@ deleted = "✘$count"
 
 [git_state]
 format = '[$state]($style) '
-cherry_pick = "[PICK](bold #dc322f)"
-rebase = "[REBASE](bold #b58900)"
-merge = "[MERGE](bold #b58900)"
+cherry_pick = "[PICK](bold #ff665c)"
+rebase = "[REBASE](bold #FCCE7B)"
+merge = "[MERGE](bold #FCCE7B)"
 
 [cmd_duration]
 min_time = 1000
-format = "[$duration](bold #b58900) "
+format = "[$duration](bold #e69055) "
 show_milliseconds = false
+style = "bold #e69055"
 
 # Language and tool modules (compact)
 [nodejs]
 symbol = ""
 format = "[$symbol$version]($style) "
 detect_extensions = ["js", "mjs", "cjs", "ts"]
+style = "bold #7bc275"
 
 [python]
 symbol = ""
 format = '[$symbol$version]($style) '
 pyenv_version_name = false
+style = "bold #FCCE7B"
 
 [rust]
 symbol = ""
 format = "[$symbol$version]($style) "
+style = "bold #e69055"
 
 [golang]
 symbol = ""
 format = "[$symbol$version]($style) "
+style = "bold #51afef"
 
 [docker_context]
 symbol = ""
 format = "[$symbol$context]($style) "
 only_with_files = true
+style = "bold #5cEfFF"
 
 [package]
 symbol = "📦"
 format = "[$symbol$version]($style) "
+style = "bold #a991f1"
 
 [terraform]
 symbol = "󱁢"
 format = "[$symbol$version]($style) "
+style = "bold #C57BDB"
 
 [nix_shell]
 symbol = ""
 format = '[$symbol$state]($style) '
-impure_msg = '[!](bold #dc322f)'
-pure_msg = '[✓](bold #859900)'
+style = "bold #51afef"
+impure_msg = '[!](bold #ff665c)'
+pure_msg = '[✓](bold #7bc275)'
 
 # Cloud providers
 [aws]
@@ -177,15 +188,15 @@ format = "[$symbol$percentage]($style) "
 
 [[battery.display]]
 threshold = 15
-style = "bold #dc322f"
+style = "bold #ff665c"
 
 [[battery.display]]
 threshold = 30
-style = "bold #b58900"
+style = "bold #FCCE7B"
 
 [[battery.display]]
 threshold = 100
-style = "bold #859900"
+style = "bold #7bc275"
 
 # Time
 [time]
@@ -193,6 +204,7 @@ disabled = true
 format = '🕙[\[ $time \]]($style) '
 time_format = "%T"
 utc_time_offset = "local"
+style = "bold #FCCE7B"
 
 # Memory usage
 [memory_usage]
@@ -200,6 +212,7 @@ disabled = true
 threshold = 75
 format = "via $symbol[${ram_pct}]($style) "
 symbol = "󰍛 "
+style = "bold #e69055"
 
 # Status
 [status]
@@ -210,3 +223,4 @@ not_executable_symbol = "🚫"
 not_found_symbol = "🔍"
 sigint_symbol = "🧱"
 signal_symbol = "⚡"
+style = "bold #ff665c"
