@@ -33,6 +33,7 @@
     enabledCollectors = [
       "systemd"
       "processes"
+      "mdadm"
     ];
     port = 9100;
     # Only listen on localhost for security

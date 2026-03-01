@@ -12,6 +12,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     datapass.url = "github:cypl0x/datapass";
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -19,6 +23,7 @@
     home-manager,
     treefmt-nix,
     datapass,
+    disko,
     ...
   }: let
     system = "x86_64-linux";
@@ -105,6 +110,27 @@
                 wap = import ./home/wap.nix;
                 root = import ./home/root.nix;
                 proxy = import ./home/proxy.nix;
+              };
+            };
+          }
+        ];
+      };
+
+      # Hetzner Dedicated AX41-NVMe (Finnland, HEL1)
+      inari = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./hosts/inari
+          disko.nixosModules.disko
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users = {
+                cypl0x = import ./home/cypl0x.nix;
+                wap = import ./home/wap.nix;
+                root = import ./home/root.nix;
               };
             };
           }

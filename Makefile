@@ -172,6 +172,17 @@ debug: ## Show detected make variables
 	@echo "${YELLOW}Target Host:${RESET}   $(HOST)"
 	@echo "${YELLOW}Flake Path:${RESET}    $(FLAKE)"
 
+
+# ============================================================================
+# Deploy
+# ============================================================================
+
+deploy-inari:
+	nixos-rebuild switch --flake .#inari --target-host root@65.109.108.233 --use-remote-sudo
+
+deploy-homelab:
+	nixos-rebuild switch --flake .#homelab --target-host root@136.244.80.181 --use-remote-sudo
+
 # ============================================================================
 # Help
 # ============================================================================

@@ -134,5 +134,7 @@
 
     wezterm
     ghostty
+
+    nil # nix lsp server
   ];
 }
