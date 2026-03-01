@@ -16,6 +16,7 @@
     ../../modules/users/cypl0x.nix
     ../../modules/users/wap.nix
     ../../modules/users/proxy.nix
+    ../../modules/services/openclaw.nix
 
     # Host-specific configuration
     ./thinkpad-packages.nix
