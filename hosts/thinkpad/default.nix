@@ -51,7 +51,7 @@
         systems = ["x86_64-linux"];
         protocol = "ssh";
         sshUser = "root";
-        sshKey = "/home/wap/.ssh/id_ed25519";
+        sshKey = "/home/wap/.ssh/id_rsa";
         maxJobs = 8;
         speedFactor = 2;
         supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
