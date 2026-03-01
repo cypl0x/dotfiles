@@ -4,14 +4,14 @@
 
   # Global packages available to all users
   environment.systemPackages = with pkgs; [
-    aider-chat-full
+    # aider-chat-full
     alejandra # Nix code formatter
     bat
     cheat
     claude-code
     deadnix # Find unused Nix code
-    emacs
     eza # Modern replacement for ls (formerly exa)
+    felix-fm # Tui file manager with vim-like key mapping
     fd # Fast file finder (used in Makefile)
     fzf
     git
@@ -27,6 +27,7 @@
     tealdeer
     tmux
     vim
+    wl-clipboard
     xclip
     zsh-autosuggestions
     zsh-completions
@@ -36,7 +37,7 @@
   environment.sessionVariables = {
     PAGER = "bat";
     BAT_PAGER = "less -R";
-    BAT_THEME = "Solarized (light)";
+    BAT_THEME = "onehalfdark";
   };
 
   # Git is configured per-user in home-manager (see home/common.nix)
