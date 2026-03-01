@@ -10,17 +10,26 @@
     export _JAVA_AWT_WM_NONREPARENTING=1
     export MOZ_USE_XINPUT2=1
 
+    # Ensure XDG_RUNTIME_DIR is set — SDDM xsessions don't inherit it from PAM
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+
     exec emacs
   '';
 
-  # SDDM xsession desktop entry — shows up alongside "Plasma" at login
-  exwmSession = pkgs.writeTextDir "share/xsessions/exwm.desktop" ''
+  # SDDM xsession desktop entry — shows up alongside "Plasma" at login.
+  # services.displayManager.sessionPackages requires passthru.providedSessions.
+  exwmSession = pkgs.runCommand "exwm-session" {
+    passthru.providedSessions = ["exwm"];
+  } ''
+    mkdir -p "$out/share/xsessions"
+    cat > "$out/share/xsessions/exwm.desktop" <<EOF
     [Desktop Entry]
     Name=EXWM
     Comment=Emacs X Window Manager
     Exec=${exwmStartScript}
-    Type=Application
+    Type=XSession
     DesktopNames=EXWM
+    EOF
   '';
 in {
   # Register EXWM as a selectable session in SDDM (Plasma remains available)
@@ -29,7 +38,6 @@ in {
   # Companion packages for a comfortable EXWM environment
   environment.systemPackages = with pkgs; [
     picom # Compositor: transparency, shadows, vsync
-    dunst # Notification daemon
     feh # Wallpaper setter
     brightnessctl # Screen brightness keys
     playerctl # Media keys (play/pause/next/prev)
