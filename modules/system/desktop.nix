@@ -53,8 +53,21 @@
     # KDE applications
     kdePackages.kate
     kdePackages.kmail
+    kdePackages.kmail-account-wizard
+    kdePackages.kdepim-addons
+    kdePackages.merkuro
     kdePackages.kdeconnect-kde
     kdePackages.ktorrent
+    kdePackages.plasma-systemmonitor
+    kdePackages.akregator
+    kdePackages.marble
+    kdePackages.tokodon
+    kdePackages.plasmatube
+    kdePackages.kaddressbook
+    kdePackages.arianna
+    kdePackages.kasts
+
+    kmymoney
 
     # Browsers
     firefox
