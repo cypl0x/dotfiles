@@ -57,14 +57,9 @@ _: {
         type = "mdadm";
         level = 1;
         content = {
-          type = "luks";
-          name = "cryptroot";
-          settings.allowDiscards = true;
-          content = {
-            type = "filesystem";
-            format = "ext4";
-            mountpoint = "/";
-          };
+          type = "filesystem";
+          format = "ext4";
+          mountpoint = "/";
         };
       };
     };
