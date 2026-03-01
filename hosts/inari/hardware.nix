@@ -1,14 +1,9 @@
-{modulesPath, ...}: {
-  imports = [
-    (modulesPath + "/installer/scan/not-detected.nix")
-  ];
-
+_: {
   boot = {
     loader.grub = {
       enable = true;
       efiSupport = false;
       efiInstallAsRemovable = false;
-      # disko fügt die EF02-Partitionen automatisch hinzu
     };
 
     initrd = {
@@ -30,6 +25,12 @@
           authorizedKeys = [(builtins.readFile ../../modules/ssh-keys/homelab.pub)];
           hostKeys = ["/etc/secrets/initrd/ssh_host_ed25519_key"];
         };
+      };
+      luks.devices."cryptroot" = {
+        device = "/dev/md/root";
+        keyFile = "/boot/luks-keyfile";
+        allowDiscards = true;
+        bypassWorkqueues = true;
       };
     };
 
