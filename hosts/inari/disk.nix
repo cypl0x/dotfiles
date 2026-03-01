@@ -1,26 +1,28 @@
-_: {
+{lib, ...}: {
   disko.devices = {
     disk = {
       nvme0 = {
         type = "disk";
-        device = "/dev/nvme0n1";
+        device = lib.mkDefault "/dev/nvme0n1";
         content = {
           type = "gpt";
           partitions = {
-            ESP = {
-              size = "512M";
-              type = "EF00";
+            bios = {
+              size = "1M";
+              type = "EF02";
+            };
+            boot-raid = {
+              size = "1G";
               content = {
-                type = "filesystem";
-                format = "vfat";
-                mountpoint = "/boot";
+                type = "mdraid";
+                name = "boot";
               };
             };
-            raid = {
+            root-raid = {
               size = "100%";
               content = {
                 type = "mdraid";
-                name = "raid1";
+                name = "root";
               };
             };
           };
@@ -28,24 +30,26 @@ _: {
       };
       nvme1 = {
         type = "disk";
-        device = "/dev/nvme1n1";
+        device = lib.mkDefault "/dev/nvme1n1";
         content = {
           type = "gpt";
           partitions = {
-            ESP = {
-              size = "512M";
-              type = "EF00";
+            bios = {
+              size = "1M";
+              type = "EF02";
+            };
+            boot-raid = {
+              size = "1G";
               content = {
-                type = "filesystem";
-                format = "vfat";
-                mountpoint = "/boot/efi";
+                type = "mdraid";
+                name = "boot";
               };
             };
-            raid = {
+            root-raid = {
               size = "100%";
               content = {
                 type = "mdraid";
-                name = "raid1";
+                name = "root";
               };
             };
           };
@@ -53,13 +57,34 @@ _: {
       };
     };
     mdadm = {
-      raid1 = {
+      boot = {
         type = "mdadm";
         level = 1;
+        metadata = "1.0";
         content = {
           type = "filesystem";
           format = "ext4";
-          mountpoint = "/";
+          mountpoint = "/boot";
+          mountOptions = ["noatime"];
+        };
+      };
+      root = {
+        type = "mdadm";
+        level = 1;
+        content = {
+          type = "luks";
+          name = "cryptroot";
+          passwordFile = "/tmp/disk-password";
+          settings = {
+            allowDiscards = true;
+            bypassWorkqueues = true;
+          };
+          content = {
+            type = "filesystem";
+            format = "ext4";
+            mountpoint = "/";
+            mountOptions = ["noatime"];
+          };
         };
       };
     };

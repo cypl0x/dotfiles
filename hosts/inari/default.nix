@@ -23,12 +23,34 @@ _: {
   boot.tmp.cleanOnBoot = true;
   zramSwap.enable = true;
 
-  networking.hostName = "inari";
-  networking.domain = "";
+  networking = {
+    hostName = "inari";
+    domain = "";
+    useDHCP = false;
+    useNetworkd = true;
+    enableIPv6 = true;
+    nameservers = [
+      "185.12.64.1"
+      "2a01:4ff:ff00::add:2"
+    ];
+  };
+
+  systemd.network = {
+    enable = true;
+    networks."10-wan" = {
+      matchConfig.Type = "ether";
+      networkConfig = {
+        DHCP = "ipv4";
+        IPv6AcceptRA = false;
+      };
+      dhcpV4Config = {
+        UseDNS = false;
+      };
+    };
+  };
 
   time.timeZone = "UTC";
   nix.settings.experimental-features = ["nix-command" "flakes"];
-
   services.openssh.settings.AcceptEnv = ["LANG" "LC_*"];
 
   system.stateVersion = "24.11";
