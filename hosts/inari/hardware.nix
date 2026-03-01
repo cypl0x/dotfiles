@@ -1,8 +1,4 @@
-{modulesPath, ...}: {
-  # imports = [
-  #   (modulesPath + "/profiles/hardened.nix")
-  # ];
-
+_: {
   boot = {
     loader.grub = {
       enable = true;
@@ -21,6 +17,10 @@
       ];
     };
 
+    kernelParams = [
+      "ip=65.109.108.233::65.109.108.193:255.255.255.192:inari:eth0:none"
+    ];
+
     initrd = {
       availableKernelModules = [
         "xhci_pci"
@@ -29,9 +29,9 @@
         "usb_storage"
         "usbhid"
         "sd_mod"
+        "r8169"
       ];
       kernelModules = ["dm-snapshot" "raid1" "md-mod"];
-
       network = {
         enable = true;
         ssh = {
