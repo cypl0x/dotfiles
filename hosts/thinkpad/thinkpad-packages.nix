@@ -72,6 +72,9 @@
     # node(js) npm, npx, etc.
     nodejs_24
 
+    # Nextcloud desktop sync client
+    nextcloud-client
+
     # Telegram Desktop Client
     telegram-desktop
 
@@ -133,8 +136,10 @@
     rofi-screenshot
 
     wezterm
-    ghostty
 
     nil # nix lsp server
+
+    dart
+    flutter
   ];
 }
