@@ -5,6 +5,9 @@ _: {
       efiSupport = true;
       efiInstallAsRemovable = true;
       device = "nodev";
+      extraConfig = ''
+        search --no-floppy --label --set=drive1 disk-nvme0-ESP
+      '';
       mirroredBoots = [
         {
           devices = ["nodev"];
