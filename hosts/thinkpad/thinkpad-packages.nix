@@ -141,5 +141,7 @@
 
     dart
     flutter
+
+    beeper
   ];
 }
