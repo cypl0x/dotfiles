@@ -9,6 +9,7 @@
     ../../modules/system/security.nix
     ../../modules/system/locale.nix
     ../../modules/system/desktop.nix
+    ../../modules/system/exwm.nix
 
     # User configuration
     ../../modules/users/root.nix
@@ -37,6 +38,9 @@
   # Nix settings
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
+  # Enable nix-ld for running unpatched dynamic binaries (e.g. Android SDK)
+  programs.nix-ld.enable = true;
+
   # ThinkPad-specific hardware support
   services = {
     # iOS device management
@@ -50,6 +54,10 @@
 
     # OpenSSH AcceptEnv (nixpkgs unstable uses list format)
     openssh.settings.AcceptEnv = ["LANG" "LC_*"];
+
+    # In order to get AnyType login key visible
+    # https://github.com/anyproto/anytype-ts/issues/729#issuecomment-2799841750
+    # gnome.gnome-keyring.enable = true;
   };
 
   # This value determines the NixOS release from which the default
