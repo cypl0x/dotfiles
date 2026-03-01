@@ -18,19 +18,20 @@
 
   # SDDM xsession desktop entry — shows up alongside "Plasma" at login.
   # services.displayManager.sessionPackages requires passthru.providedSessions.
-  exwmSession = pkgs.runCommand "exwm-session" {
-    passthru.providedSessions = ["exwm"];
-  } ''
-    mkdir -p "$out/share/xsessions"
-    cat > "$out/share/xsessions/exwm.desktop" <<EOF
-    [Desktop Entry]
-    Name=EXWM
-    Comment=Emacs X Window Manager
-    Exec=${exwmStartScript}
-    Type=XSession
-    DesktopNames=EXWM
-    EOF
-  '';
+  exwmSession =
+    pkgs.runCommand "exwm-session" {
+      passthru.providedSessions = ["exwm"];
+    } ''
+      mkdir -p "$out/share/xsessions"
+      cat > "$out/share/xsessions/exwm.desktop" <<EOF
+      [Desktop Entry]
+      Name=EXWM
+      Comment=Emacs X Window Manager
+      Exec=${exwmStartScript}
+      Type=XSession
+      DesktopNames=EXWM
+      EOF
+    '';
 in {
   # Register EXWM as a selectable session in SDDM (Plasma remains available)
   services.displayManager.sessionPackages = [exwmSession];

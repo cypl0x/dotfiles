@@ -21,7 +21,7 @@
     };
     kernelModules = ["uvcvideo"];
     extraModulePackages = [];
-    kernelParams = [ "cfg80211.ieee80211_regdom=DE" ];
+    kernelParams = ["cfg80211.ieee80211_regdom=DE"];
     extraModprobeConfig = ''
       options cfg80211 ieee80211_regdom=DE
     '';

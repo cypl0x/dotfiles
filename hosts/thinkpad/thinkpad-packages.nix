@@ -4,11 +4,11 @@
   ...
 }: {
   # ThinkPad-specific packages not included in base system
-  
+
   programs._1password.enable = true;
   programs._1password-gui = {
     enable = true;
-    polkitPolicyOwners = [ "wap" "cypl0x" ];
+    polkitPolicyOwners = ["wap" "cypl0x"];
   };
 
   environment.systemPackages = with pkgs; [
@@ -134,6 +134,5 @@
 
     wezterm
     ghostty
-
   ];
 }

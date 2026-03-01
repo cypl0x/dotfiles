@@ -10,7 +10,7 @@
       xkb = {
         layout = "de";
         variant = "";
-          options = "caps:escape";
+        options = "caps:escape";
       };
     };
 
