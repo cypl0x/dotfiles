@@ -26,12 +26,6 @@ _: {
           hostKeys = ["/etc/secrets/initrd/ssh_host_ed25519_key"];
         };
       };
-      luks.devices."cryptroot" = {
-        device = "/dev/md/root";
-        keyFile = "/boot/luks-keyfile";
-        allowDiscards = true;
-        bypassWorkqueues = true;
-      };
     };
 
     kernelModules = ["kvm-amd"];
