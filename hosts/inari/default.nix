@@ -3,6 +3,7 @@ _: {
     ./hardware.nix
     ./disk.nix
     ./services.nix
+    ./nextcloud.nix
 
     ../../modules/system/packages.nix
     ../../modules/system/shell.nix
@@ -18,6 +19,8 @@ _: {
     ../../modules/users/root.nix
     ../../modules/users/cypl0x.nix
     ../../modules/users/wap.nix
+    ../../modules/users/proxy.nix
+    ../../modules/users/fabian.nix
   ];
 
   boot.tmp.cleanOnBoot = true;
@@ -48,6 +51,8 @@ _: {
       };
     };
   };
+
+  torRelay.nickname = "inari";
 
   time.timeZone = "UTC";
   nix.settings.experimental-features = ["nix-command" "flakes"];
