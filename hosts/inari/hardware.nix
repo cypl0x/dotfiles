@@ -1,7 +1,7 @@
 {modulesPath, ...}: {
-  imports = [
-    (modulesPath + "/profiles/hardened.nix")
-  ];
+  # imports = [
+  #   (modulesPath + "/profiles/hardened.nix")
+  # ];
 
   boot = {
     loader.grub = {
