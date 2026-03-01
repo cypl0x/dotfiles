@@ -6,6 +6,7 @@
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
   '';
 
   # Strict CSP without unsafe-inline (recommended for static sites)
@@ -110,6 +111,8 @@
     tlds ? ["net" "dev" "tech"],
     subdomain ? null,
     root,
+    enableACME ? true,
+    forceSSL ? true,
     enableCaching ? true,
     enableHtmlCache ? false,
     useStrictCSP ? true,
@@ -129,7 +132,7 @@
       domain = mkDomain tld;
     in
       lib.nameValuePair domain (mkVirtualHost {
-        inherit domain root enableCaching enableHtmlCache useStrictCSP extraConfig;
+        inherit domain root enableACME forceSSL enableCaching enableHtmlCache useStrictCSP extraConfig;
         serverAliases =
           if subdomain == null
           then [
