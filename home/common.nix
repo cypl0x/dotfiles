@@ -50,7 +50,7 @@
     sessionVariables = {
       EDITOR = "vim";
       COLORTERM = "truecolor";
-      BAT_THEME = "Doom Vibrant";
+      BAT_THEME = "Solarized (light)";
     };
   };
 
