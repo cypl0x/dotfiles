@@ -1,0 +1,1 @@
+OpenClaw soul documentation placeholder.

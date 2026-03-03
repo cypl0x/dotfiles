@@ -12,6 +12,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     datapass.url = "github:cypl0x/datapass";
+    nix-openclaw.url = "github:openclaw/nix-openclaw";
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -23,6 +24,7 @@
     home-manager,
     treefmt-nix,
     datapass,
+    nix-openclaw,
     disko,
     ...
   }: let
@@ -64,6 +66,7 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
+              backupFileExtension = "bak";
               users = {
                 cypl0x = import ./home/cypl0x.nix;
                 wap = import ./home/wap.nix;
@@ -121,6 +124,7 @@
         inherit system;
         modules = [
           ./hosts/inari
+          {nixpkgs.overlays = [nix-openclaw.overlays.default];}
           disko.nixosModules.disko
           home-manager.nixosModules.home-manager
           {
@@ -131,7 +135,7 @@
                 cypl0x = import ./home/cypl0x.nix;
                 wap = import ./home/wap.nix;
                 root = import ./home/root.nix;
-                proxy = import ./home/proxy.nix;
+                proxy = {imports = [./home/proxy.nix nix-openclaw.homeManagerModules.openclaw];};
                 fabian = import ./home/fabian.nix;
               };
             };
