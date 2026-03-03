@@ -136,12 +136,16 @@
     rofi-screenshot
 
     wezterm
+    ghostty
+    kitty
+    alacritty
 
     nil # nix lsp server
 
     dart
     flutter
 
-    beeper
+    # multi messenger meta messenger (WhatsApp, Telegram, Signal, Discord, etc.) 
+    beeper 
   ];
 }
