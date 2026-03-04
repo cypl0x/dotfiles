@@ -103,6 +103,7 @@
         specialArgs = {inherit datapass;};
         modules = [
           ./hosts/thinkpad
+          {nixpkgs.overlays = [nix-openclaw.overlays.default];}
           home-manager.nixosModules.home-manager
           {
             home-manager = {
@@ -112,7 +113,7 @@
                 cypl0x = import ./home/cypl0x.nix;
                 wap = import ./home/wap.nix;
                 root = import ./home/root.nix;
-                proxy = import ./home/proxy.nix;
+                proxy = {imports = [./home/proxy.nix nix-openclaw.homeManagerModules.openclaw];};
               };
             };
           }
