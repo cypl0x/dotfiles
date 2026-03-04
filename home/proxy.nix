@@ -1,10 +1,19 @@
-_: {
+{pkgs, ...}: {
   imports = [./common.nix];
 
-  home.username = "proxy";
+  home = {
+    username = "proxy";
 
-  home.sessionVariables = {
-    OLLAMA_API_KEY = "ollama-local";
+    sessionVariables = {
+      OLLAMA_API_KEY = "ollama-local";
+      DISPLAY = ":1";
+    };
+
+    packages = [
+      # GUI tools used by OpenClaw in the shared Xvfb/VNC session
+      pkgs.firefox
+      pkgs.scrot
+    ];
   };
 
   systemd.user.services.openclaw-gateway = {

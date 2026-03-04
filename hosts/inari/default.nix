@@ -4,6 +4,7 @@ _: {
     ./disk.nix
     ./services.nix
     ./nextcloud.nix
+    ./gui-proxy.nix
 
     ../../modules/system/packages.nix
     ../../modules/system/shell.nix
