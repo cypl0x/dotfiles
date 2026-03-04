@@ -132,6 +132,7 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
+              backupFileExtension = "bak";
               users = {
                 cypl0x = import ./home/cypl0x.nix;
                 wap = import ./home/wap.nix;

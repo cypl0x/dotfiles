@@ -6,7 +6,7 @@
     x11vnc
     openbox
     xorg-server
-    xorg.xsetroot
+    xsetroot
     xdotool
     scrot
   ];
