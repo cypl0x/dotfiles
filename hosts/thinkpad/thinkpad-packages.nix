@@ -145,7 +145,7 @@
     dart
     flutter
 
-    # multi messenger meta messenger (WhatsApp, Telegram, Signal, Discord, etc.) 
-    beeper 
+    # multi messenger meta messenger (WhatsApp, Telegram, Signal, Discord, etc.)
+    beeper
   ];
 }
