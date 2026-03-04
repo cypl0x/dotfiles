@@ -5,6 +5,8 @@
   environment.systemPackages = with pkgs; [
     x11vnc
     openbox
+    sxhkd
+    rofi
     xorg-server
     xsetroot
     xdotool
@@ -56,6 +58,24 @@
         RestartSec = "2s";
         Environment = ["HOME=/home/proxy"];
         ExecStart = "${pkgs.x11vnc}/bin/x11vnc -display :1 -forever -shared -localhost -nopw";
+      };
+    };
+
+    proxy-sxhkd = {
+      description = "Hotkeys for proxy X session (:1)";
+      wantedBy = ["multi-user.target"];
+      after = ["proxy-xvfb.service" "proxy-openbox.service" "home-manager-proxy.service"];
+      requires = ["proxy-xvfb.service" "proxy-openbox.service"];
+      serviceConfig = {
+        User = "proxy";
+        Group = "users";
+        Restart = "always";
+        RestartSec = "2s";
+        Environment = [
+          "HOME=/home/proxy"
+          "DISPLAY=:1"
+        ];
+        ExecStart = "${pkgs.sxhkd}/bin/sxhkd -c /home/proxy/.config/sxhkd/sxhkdrc";
       };
     };
   };

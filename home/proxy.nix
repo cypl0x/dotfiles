@@ -16,6 +16,15 @@
     ];
   };
 
+  home.file.".config/sxhkd/sxhkdrc".text = ''
+    # Launch app launcher in VNC/X session
+    super + space
+      rofi -show drun
+
+    alt + space
+      rofi -show drun
+  '';
+
   systemd.user.services.openclaw-gateway = {
     Service.Environment = "OLLAMA_API_KEY=ollama-local";
   };
