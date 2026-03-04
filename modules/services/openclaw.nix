@@ -14,6 +14,7 @@ _: {
       Environment = [
         "HOME=/home/proxy"
         "PATH=/home/proxy/.npm-global/bin:/run/current-system/sw/bin"
+        "OLLAMA_API_KEY=ollama-local"
       ];
     };
   };
