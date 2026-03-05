@@ -6,6 +6,7 @@
     shell = pkgs.zsh;
     openssh.authorizedKeys.keyFiles = [
       ../ssh-keys/homelab.pub
+      ../ssh-keys/fabian.pub
     ];
   };
 
