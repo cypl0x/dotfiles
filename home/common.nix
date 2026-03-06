@@ -48,7 +48,7 @@
     };
 
     sessionVariables = {
-      EDITOR = "vim";
+      EDITOR = "emacsclient -nw -a ''";
       COLORTERM = "truecolor";
       BAT_THEME = "Solarized (light)";
     };
