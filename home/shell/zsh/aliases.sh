@@ -118,6 +118,15 @@ alias topmem='ps aux | sort -nrk 4,4 | head -n 10'    # Top memory processes
 alias ports='netstat -tulanp' # Show listening ports
 alias listening='lsof -i -P | grep LISTEN'
 
+# Use kitty ssh when running inside Kitty, otherwise fallback to system ssh
+ssh() {
+  if [ -n "$KITTY_WINDOW_ID" ] && command -v kitten >/dev/null 2>&1; then
+    command kitten ssh "$@"
+  else
+    command ssh "$@"
+  fi
+}
+
 # Get public IP
 alias myip='curl -s ifconfig.me'
 alias myip4='curl -s -4 ifconfig.me'
