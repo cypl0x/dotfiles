@@ -13,6 +13,7 @@ _: {
     ../../modules/system/assertions.nix
 
     ../../modules/services/nginx.nix
+    ../../modules/services/mosh.nix
     ../../modules/services/tailscale.nix
     ../../modules/services/tor.nix
 
