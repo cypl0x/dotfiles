@@ -5,6 +5,7 @@ _: {
     ./services.nix
     ./nextcloud.nix
     ./gui-proxy.nix
+    ./gui-fabian.nix
 
     ../../modules/system/packages.nix
     ../../modules/system/shell.nix

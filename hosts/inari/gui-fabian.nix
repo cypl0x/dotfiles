@@ -2,7 +2,7 @@
   mkXfceVnc = import ./gui-vnc-xfce-common.nix {inherit pkgs;};
 in
   mkXfceVnc {
-    user = "proxy";
-    display = 1;
-    port = 5901;
+    user = "fabian";
+    display = 2;
+    port = 5902;
   }
