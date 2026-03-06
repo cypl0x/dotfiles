@@ -2,6 +2,17 @@
   programs.kitty = {
     enable = true;
     settings = {
+      # Tab bar layout (tmux-like)
+      tab_bar_edge = "bottom";
+      tab_bar_style = "powerline";
+      tab_bar_background = "#242730";
+      active_tab_foreground = "#1c1f24";
+      active_tab_background = "#51afef";
+      inactive_tab_foreground = "#bbc2cf";
+      inactive_tab_background = "#242730";
+      tab_title_template = " {index}:{title} ";
+      active_tab_title_template = " {index}:{title} ";
+
       # Doom Vibrant theme (Henrik Lissner)
       foreground = "#bbc2cf";
       background = "#242730";
@@ -13,11 +24,6 @@
 
       active_border_color = "#46D9FF";
       inactive_border_color = "#484854";
-
-      active_tab_foreground = "#242730";
-      active_tab_background = "#DFDFDF";
-      inactive_tab_foreground = "#484854";
-      inactive_tab_background = "#5D656B";
 
       color0 = "#2a2e38";
       color8 = "#484854";
