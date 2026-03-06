@@ -17,7 +17,6 @@ _: {
     ../../modules/services/mosh.nix
     ../../modules/services/tailscale.nix
     ../../modules/services/tor.nix
-    ../../modules/services/openclaw.nix
 
     ../../modules/users/root.nix
     ../../modules/users/cypl0x.nix
