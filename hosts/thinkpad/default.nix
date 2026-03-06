@@ -40,6 +40,13 @@
     settings = {
       experimental-features = ["nix-command" "flakes"];
       trusted-users = ["root" "@wheel"];
+      substituters = [
+        "https://cache.nixos.org"
+        "https://cypl0x.cachix.org"
+      ];
+      trusted-public-keys = [
+        "cypl0x.cachix.org-1:WMLmCcn2gTAZyWZDD6N2rghvpPn0rU9Gr5Cc2OTEdow="
+      ];
     };
 
     # Offload heavy builds to the Hetzner server
@@ -78,6 +85,13 @@
     # In order to get AnyType login key visible
     # https://github.com/anyproto/anytype-ts/issues/729#issuecomment-2799841750
     # gnome.gnome-keyring.enable = true;
+  };
+
+  # Push local builds to Cachix
+  services.cachix-watch-store = {
+    enable = true;
+    cacheName = "cypl0x";
+    cachixTokenFile = "/etc/cachix/cypl0x.token";
   };
 
   # This value determines the NixOS release from which the default

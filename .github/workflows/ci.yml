@@ -24,6 +24,12 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: cypl0x
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
       - name: Check formatting with treefmt
         run: nix develop -c make fmt-check
 
@@ -56,6 +62,12 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: cypl0x
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
       - name: Build thinkpad configuration
         run: nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L
 
@@ -84,6 +96,12 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: cypl0x
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
       - name: Build inari configuration
         run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L
 
@@ -111,6 +129,12 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: cypl0x
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build documentation
         run: nix build .#nixosConfigurations.thinkpad.config.system.build.documentation 2>/dev/null || echo "Documentation build not available as separate output"

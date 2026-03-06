@@ -58,8 +58,24 @@ _: {
   torRelay.nickname = "inari";
 
   time.timeZone = "UTC";
-  nix.settings.experimental-features = ["nix-command" "flakes"];
+  nix.settings = {
+    experimental-features = ["nix-command" "flakes"];
+    substituters = [
+      "https://cache.nixos.org"
+      "https://cypl0x.cachix.org"
+    ];
+    trusted-public-keys = [
+      "cypl0x.cachix.org-1:WMLmCcn2gTAZyWZDD6N2rghvpPn0rU9Gr5Cc2OTEdow="
+    ];
+  };
   services.openssh.settings.AcceptEnv = ["LANG" "LC_*"];
 
   system.stateVersion = "24.11";
+
+  # Push local builds to Cachix
+  services.cachix-watch-store = {
+    enable = true;
+    cacheName = "cypl0x";
+    cachixTokenFile = "/etc/cachix/cypl0x.token";
+  };
 }
