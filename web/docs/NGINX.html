@@ -482,8 +482,10 @@ redirected to HTTPS</li>
 </ul>
 <h2 id="directory-structure">Directory Structure</h2>
 <pre><code>dotfiles/
-├── hosts/homelab/
-│   └── nginx.nix              # Nginx configuration module
+├── hosts/inari/
+│   └── services.nix           # Nginx virtual hosts + site content
+├── modules/services/
+│   └── nginx.nix              # Base nginx configuration
 └── web/
     └── static/
         ├── index.html         # Homepage
@@ -495,7 +497,7 @@ redirected to HTTPS</li>
 /var/www/wolfhard -&gt; /etc/nginx/www  # Symlink</code></pre>
 <h2 id="configuration-files">Configuration Files</h2>
 <h3 id="main-configuration">Main Configuration</h3>
-<p>Located at: <code>hosts/homelab/nginx.nix</code></p>
+<p>Located at: <code>modules/services/nginx.nix</code> (base config) and <code>hosts/inari/services.nix</code> (virtual hosts + content)</p>
 <p>Key sections: - Recommended Nginx settings enabled - Security headers
 in <code>appendHttpConfig</code> - Virtual host definitions - Firewall
 rules - Static file deployment</p>
@@ -548,7 +550,7 @@ Dotfiles (Recommended)</h3>
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> ~/dotfiles/web/static/index.html</span></code></pre></div></li>
 <li><p>Rebuild system:</p>
 <div class="sourceCode" id="cb7"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span>  <span class="co"># or: nixos-rebuild switch --flake ~/dotfiles#homelab</span></span></code></pre></div></li>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nrs</span>  <span class="co"># or: nixos-rebuild switch --flake ~/dotfiles#inari</span></span></code></pre></div></li>
 <li><p>Changes are automatically deployed</p></li>
 </ol>
 <h3 id="method-2-direct-edit-temporary">Method 2: Direct Edit

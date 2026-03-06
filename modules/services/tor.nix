@@ -31,7 +31,7 @@
       };
       settings = {
         Nickname = config.torRelay.nickname;
-        ContactInfo = "tor-relay@homelab";
+        ContactInfo = "tor-relay@${config.networking.hostName}";
         ORPort = 9001;
         ControlPort = 9051;
         RelayBandwidthRate = config.torRelay.bandwidthRate;

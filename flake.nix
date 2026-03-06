@@ -57,46 +57,6 @@
     };
   in {
     nixosConfigurations = {
-      homelab = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [
-          ./hosts/homelab
-          home-manager.nixosModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              backupFileExtension = "bak";
-              users = {
-                cypl0x = import ./home/cypl0x.nix;
-                wap = import ./home/wap.nix;
-                root = import ./home/root.nix;
-              };
-            };
-          }
-        ];
-      };
-
-      # VM configuration for testing
-      homelab-vm = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [
-          ./hosts/homelab-vm
-          home-manager.nixosModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              users = {
-                cypl0x = import ./home/cypl0x.nix;
-                wap = import ./home/wap.nix;
-                root = import ./home/root.nix;
-              };
-            };
-          }
-        ];
-      };
-
       # ThinkPad laptop configuration (using unstable)
       thinkpad = nixpkgs.lib.nixosSystem {
         inherit system;

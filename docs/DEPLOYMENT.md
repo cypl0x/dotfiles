@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers initial deployment, updates, and maintenance of the NixOS homelab configuration.
+This guide covers initial deployment, updates, and maintenance of the NixOS inari configuration.
 
 ## Prerequisites
 
@@ -58,26 +58,26 @@ mv hardware-configuration.nix hardware-configuration.nix.backup
 git clone https://github.com/yourusername/dotfiles.git .
 
 # Copy hardware configuration
-cp hardware-configuration.nix.backup hosts/homelab/hardware.nix
+cp hardware-configuration.nix.backup hosts/inari/hardware.nix
 ```
 
 ### 3. Configure SSH Keys
 
 ```bash
 # Generate SSH keys for each user (do this on your local machine)
-ssh-keygen -t ed25519 -C "cypl0x@homelab" -f ~/.ssh/id_ed25519_homelab
+ssh-keygen -t ed25519 -C "cypl0x@inari" -f ~/.ssh/id_ed25519_inari
 
 # Copy public key content
-cat ~/.ssh/id_ed25519_homelab.pub
+cat ~/.ssh/id_ed25519_inari.pub
 
-# Add to ssh-keys/homelab.pub in the repository
+# Add to modules/ssh-keys/homelab.pub in the repository
 ```
 
 ### 4. Initial Build and Installation
 
 ```bash
 # From /mnt/etc/nixos
-nixos-install --flake .#homelab
+nixos-install --flake .#inari
 
 # Set root password when prompted
 # Reboot
@@ -241,12 +241,12 @@ git checkout flake.lock
 
 ```bash
 # Build on local machine and deploy to remote
-nixos-rebuild switch --flake .#homelab \
-  --target-host cypl0x@homelab.example.com \
+nixos-rebuild switch --flake .#inari \
+  --target-host cypl0x@inari.example.com \
   --build-host localhost
 
 # Or use the Makefile with remote host
-HOST=homelab make switch
+HOST=inari make switch
 ```
 
 ### SSH Configuration
@@ -254,10 +254,10 @@ HOST=homelab make switch
 Add to your local `~/.ssh/config`:
 
 ```
-Host homelab
+Host inari
     HostName YOUR_SERVER_IP
     User cypl0x
-    IdentityFile ~/.ssh/id_ed25519_homelab
+    IdentityFile ~/.ssh/id_ed25519_inari
     ForwardAgent yes
 ```
 
@@ -290,7 +290,7 @@ sudo journalctl -u nginx -f
 # Access Netdata dashboard
 # http://localhost:19999 (when on the server)
 # Or via SSH tunnel:
-ssh -L 19999:localhost:19999 cypl0x@homelab
+ssh -L 19999:localhost:19999 cypl0x@inari
 
 # Then open http://localhost:19999 in your browser
 ```
@@ -322,7 +322,7 @@ make fmt-check
 statix check
 
 # Verbose build output
-nixos-rebuild switch --flake .#homelab --show-trace
+nixos-rebuild switch --flake .#inari --show-trace
 ```
 
 ### Service Won't Start

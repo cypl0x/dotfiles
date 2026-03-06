@@ -14,9 +14,9 @@ RESET  := \033[0m
 
 # Detect hostname to select the correct configuration
 DETECTED_HOST := $(shell hostname)
-# Try to match detected hostname with flake outputs, otherwise default to 'homelab'
+# Try to match detected hostname with flake outputs, otherwise default to 'inari'
 # (This is a simple heuristic; set HOST explicitly if needed: make switch HOST=myserver)
-HOST ?= $(shell if grep -q "$(DETECTED_HOST)" flake.nix; then echo "$(DETECTED_HOST)"; else echo "homelab"; fi)
+HOST ?= $(shell if grep -q "$(DETECTED_HOST)" flake.nix; then echo "$(DETECTED_HOST)"; else echo "inari"; fi)
 
 .PHONY: all
 all: help
@@ -150,18 +150,6 @@ vm: ## Build and run a VM of the configuration
 	$(NIXOS_REBUILD) build-vm --flake $(FLAKE)#$(HOST)
 	@echo "${GREEN}VM built. Run: ${YELLOW}./result/bin/run-$(HOST)-vm${RESET}"
 
-.PHONY: vm-test
-vm-test: ## Build and run test VM (homelab-vm configuration)
-	@echo "${GREEN}Building test VM configuration...${RESET}"
-	$(NIXOS_REBUILD) build-vm --flake $(FLAKE)#homelab-vm
-	@echo "${GREEN}Test VM built successfully!${RESET}"
-	@echo "${GREEN}Access via:${RESET}"
-	@echo "  ${YELLOW}./result/bin/run-homelab-vm-vm${RESET}"
-	@echo "${GREEN}Web server will be available at:${RESET}"
-	@echo "  ${YELLOW}http://localhost:8080${RESET} (from host machine)"
-	@echo "${GREEN}SSH access:${RESET}"
-	@echo "  ${YELLOW}ssh -p 2222 cypl0x@localhost${RESET}"
-
 .PHONY: repl
 repl: ## Start Nix REPL with flake context
 	$(NIX) repl --file flake.nix
@@ -180,8 +168,6 @@ debug: ## Show detected make variables
 deploy-inari:
 	nixos-rebuild switch --flake .#inari --target-host root@65.109.108.233 --use-remote-sudo
 
-deploy-homelab:
-	nixos-rebuild switch --flake .#homelab --target-host root@136.244.80.181 --use-remote-sudo
 
 # ============================================================================
 # Help

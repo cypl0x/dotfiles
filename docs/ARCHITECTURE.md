@@ -4,7 +4,7 @@ This document describes the architecture and organization of the NixOS dotfiles 
 
 ## Overview
 
-This is a NixOS flake-based configuration for a homelab server providing:
+This is a NixOS flake-based configuration for the inari server providing:
 - Static website hosting across multiple domains
 - Documentation hosting
 - Monitoring and system management
@@ -20,10 +20,13 @@ dotfiles/
 ├── Makefile                 # Build and deployment shortcuts
 │
 ├── hosts/                   # Host-specific configurations
-│   └── homelab/
-│       ├── default.nix      # Main host configuration
-│       ├── hardware.nix     # Hardware-specific settings
-│       └── services.nix     # Host-specific services (nginx virtualhosts)
+│   ├── inari/
+│   │   ├── default.nix      # Main host configuration
+│   │   ├── hardware.nix     # Hardware-specific settings
+│   │   └── services.nix     # Host-specific services (nginx virtualhosts)
+│   └── thinkpad/
+│       ├── default.nix      # Laptop configuration
+│       └── hardware.nix     # Hardware-specific settings
 │
 ├── modules/                 # Reusable NixOS modules
 │   ├── system/              # System-level modules
@@ -134,14 +137,14 @@ Each user imports `common.nix` and overrides as needed:
 ```
 flake.nix
     │
-    ├─→ nixosConfigurations.homelab
+    ├─→ nixosConfigurations.inari
     │       │
-    │       ├─→ hosts/homelab/default.nix
+    │       ├─→ hosts/inari/default.nix
     │       │       │
     │       │       ├─→ System Modules (modules/system/*)
     │       │       ├─→ Service Modules (modules/services/*)
     │       │       ├─→ User Modules (modules/users/*)
-    │       │       └─→ hosts/homelab/services.nix
+    │       │       └─→ hosts/inari/services.nix
     │       │
     │       └─→ home-manager.nixosModules.home-manager
     │               │
@@ -157,7 +160,7 @@ flake.nix
 ```
 modules/services/nginx.nix (base config + security headers)
     │
-    └─→ hosts/homelab/services.nix
+    └─→ hosts/inari/services.nix
             │
             ├─→ imports modules/web/nginx-helpers.nix
             │
@@ -256,7 +259,7 @@ Applied globally via `modules/services/nginx.nix`:
 ### Adding a New Service
 
 1. Create module in `modules/services/newservice.nix`
-2. Import in `hosts/homelab/default.nix`
+2. Import in `hosts/inari/default.nix`
 3. Configure service-specific settings
 4. Add firewall rules if needed
 5. Add assertions for validation
@@ -278,15 +281,15 @@ Example:
 
 1. Create user module in `modules/users/newuser.nix`
 2. Create home config in `home/newuser.nix`
-3. Import both in `hosts/homelab/default.nix` and `flake.nix`
-4. Add SSH key to `ssh-keys/`
+3. Import both in `hosts/inari/default.nix` and `flake.nix`
+4. Add SSH key to `modules/ssh-keys/`
 
 ### Adding a New Domain
 
 Using the nginx helpers:
 
 ```nix
-# In hosts/homelab/services.nix
+# In hosts/inari/services.nix
 services.nginx.virtualHosts =
   nginxHelpers.mkMultiDomainVirtualHosts {
     name = "newdomain";
@@ -309,7 +312,7 @@ make vm         # Test in virtual machine
 ### Remote Deployment
 
 ```bash
-nixos-rebuild switch --flake .#homelab \
+nixos-rebuild switch --flake .#inari \
   --target-host user@host \
   --build-host localhost
 ```

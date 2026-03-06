@@ -20,10 +20,10 @@ Generate separate SSH key pairs for each user account, especially for root acces
 
 ```bash
 # Generate a separate key for root access
-ssh-keygen -t ed25519 -C "root@homelab" -f ~/.ssh/id_ed25519_root
+ssh-keygen -t ed25519 -C "root@inari" -f ~/.ssh/id_ed25519_root
 
 # Generate a separate key for the wap user
-ssh-keygen -t ed25519 -C "wap@homelab" -f ~/.ssh/id_ed25519_wap
+ssh-keygen -t ed25519 -C "wap@inari" -f ~/.ssh/id_ed25519_wap
 
 # Keep your existing key for the cypl0x user
 ```
@@ -96,7 +96,7 @@ sudo iptables -L -v -n
 sudo systemctl status firewall
 
 # View NixOS firewall configuration
-sudo nix eval --raw .#nixosConfigurations.homelab.config.networking.firewall.allowedTCPPorts
+sudo nix eval --raw .#nixosConfigurations.inari.config.networking.firewall.allowedTCPPorts
 ```
 
 ### Adding Custom Firewall Rules
@@ -104,7 +104,7 @@ sudo nix eval --raw .#nixosConfigurations.homelab.config.networking.firewall.all
 To add custom firewall rules, edit the relevant service module or add them to your host configuration:
 
 ```nix
-# In hosts/homelab/default.nix
+# In hosts/inari/default.nix
 networking.firewall = {
   allowedTCPPorts = [ 8080 ];  # Example: Allow port 8080
   allowedUDPPorts = [ 51820 ]; # Example: Allow UDP port 51820

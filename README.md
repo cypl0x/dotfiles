@@ -1,6 +1,6 @@
 # NixOS Dotfiles Configuration
 
-A flake-based NixOS configuration repository for the `homelab` system.
+A flake-based NixOS configuration repository for the `inari` server and the `thinkpad` laptop.
 
 ## Repository Structure
 
@@ -8,12 +8,14 @@ A flake-based NixOS configuration repository for the `homelab` system.
 dotfiles/
 ├── flake.nix                      # Main flake configuration
 ├── hosts/
-│   └── homelab/
-│       ├── configuration.nix      # System configuration
-│       ├── hardware-configuration.nix
-│       ├── vultr.nix              # Vultr-specific settings
-│       ├── users.nix              # User management
-│       └── nginx.nix              # Nginx web server
+│   ├── inari/
+│   │   ├── default.nix            # System configuration
+│   │   ├── hardware.nix
+│   │   ├── services.nix           # Host-specific services
+│   │   └── nextcloud.nix          # Nextcloud site config
+│   └── thinkpad/
+│       ├── default.nix            # Laptop configuration
+│       └── hardware.nix
 ├── home/
 │   ├── shellfishrc                # ShellFish iOS integration
 │   ├── shell-aliases.sh           # 100+ aliases and functions
@@ -88,11 +90,11 @@ nix flake check
 
 ```bash
 # Rebuild using the flake
-sudo nixos-rebuild switch --flake ~/dotfiles#homelab
+sudo nixos-rebuild switch --flake ~/dotfiles#inari
 
 # Or if you're in the dotfiles directory
 cd ~/dotfiles
-sudo nixos-rebuild switch --flake .#homelab
+sudo nixos-rebuild switch --flake .#inari
 ```
 
 ### Step 5: Update Boot Loader (Optional)
@@ -118,16 +120,16 @@ systemctl status
 
 ```bash
 # Rebuild and switch to new configuration
-sudo nixos-rebuild switch --flake ~/dotfiles#homelab
+sudo nixos-rebuild switch --flake ~/dotfiles#inari
 
 # Rebuild and switch, showing detailed build logs
-sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace
+sudo nixos-rebuild switch --flake ~/dotfiles#inari --show-trace
 
 # Build but don't activate (test configuration)
-sudo nixos-rebuild build --flake ~/dotfiles#homelab
+sudo nixos-rebuild build --flake ~/dotfiles#inari
 
 # Rebuild and activate on next boot (safer for remote systems)
-sudo nixos-rebuild boot --flake ~/dotfiles#homelab
+sudo nixos-rebuild boot --flake ~/dotfiles#inari
 ```
 
 ### Updating the System
@@ -139,7 +141,7 @@ nix flake update
 
 # Update and rebuild in one go
 cd ~/dotfiles
-nix flake update && sudo nixos-rebuild switch --flake .#homelab
+nix flake update && sudo nixos-rebuild switch --flake .#inari
 
 # Update only specific input
 nix flake lock --update-input nixpkgs
@@ -151,7 +153,7 @@ nix flake lock --update-input nixpkgs
 # Update flake.lock and rebuild
 cd ~/dotfiles
 nix flake update
-sudo nixos-rebuild switch --flake .#homelab
+sudo nixos-rebuild switch --flake .#inari
 
 # Clean up old generations to free space
 sudo nix-collect-garbage --delete-older-than 30d
@@ -202,15 +204,15 @@ Add these to your shell configuration for easier NixOS management. They're alrea
 
 ```bash
 # Quick rebuild from dotfiles
-alias nrs='sudo nixos-rebuild switch --flake ~/dotfiles#homelab'
-alias nrb='sudo nixos-rebuild boot --flake ~/dotfiles#homelab'
-alias nrt='sudo nixos-rebuild test --flake ~/dotfiles#homelab'
+alias nrs='sudo nixos-rebuild switch --flake ~/dotfiles#inari'
+alias nrb='sudo nixos-rebuild boot --flake ~/dotfiles#inari'
+alias nrt='sudo nixos-rebuild test --flake ~/dotfiles#inari'
 
 # Rebuild with verbose output
-alias nrsv='sudo nixos-rebuild switch --flake ~/dotfiles#homelab --show-trace'
+alias nrsv='sudo nixos-rebuild switch --flake ~/dotfiles#inari --show-trace'
 
 # Build without switching (test configuration)
-alias nrbs='sudo nixos-rebuild build --flake ~/dotfiles#homelab'
+alias nrbs='sudo nixos-rebuild build --flake ~/dotfiles#inari'
 ```
 
 ### Update & Upgrade Functions
@@ -220,7 +222,7 @@ alias nrbs='sudo nixos-rebuild build --flake ~/dotfiles#homelab'
 nixup() {
   cd ~/dotfiles
   nix flake update
-  sudo nixos-rebuild switch --flake .#homelab
+  sudo nixos-rebuild switch --flake .#inari
 }
 
 # Update specific input
@@ -232,7 +234,7 @@ nixup-input() {
   fi
   cd ~/dotfiles
   nix flake lock --update-input "$1"
-  sudo nixos-rebuild switch --flake .#homelab
+  sudo nixos-rebuild switch --flake .#inari
 }
 ```
 
@@ -392,20 +394,20 @@ nrs  # (alias for nixos-rebuild switch)
 
 ### Example 2: Adding a New Package
 
-1. Edit `hosts/homelab/configuration.nix`
+1. Edit `hosts/inari/default.nix`
 2. Add package to `environment.systemPackages`
 3. Rebuild:
 
 ```bash
 cd ~/dotfiles
-nrs  # or: sudo nixos-rebuild switch --flake .#homelab
+nrs  # or: sudo nixos-rebuild switch --flake .#inari
 ```
 
 ### Example 3: Testing Configuration Before Applying
 
 ```bash
 # Build configuration without activating
-nrbs  # or: sudo nixos-rebuild build --flake ~/dotfiles#homelab
+nrbs  # or: sudo nixos-rebuild build --flake ~/dotfiles#inari
 
 # If build succeeds, then switch
 nrs
@@ -441,7 +443,7 @@ nixclean-all
 # Search for a package
 nixsearch python3
 
-# Add it to configuration.nix, then rebuild
+# Add it to the host configuration, then rebuild
 nrs
 ```
 
@@ -496,7 +498,7 @@ navi
 cd ~/dotfiles
 
 # Make changes to configuration files
-vim hosts/homelab/configuration.nix
+vim hosts/inari/default.nix
 
 # Test the changes
 nrbs  # build without switching
@@ -520,7 +522,7 @@ cd ~/dotfiles
 nix flake check
 
 # Build with detailed error messages
-sudo nixos-rebuild switch --flake .#homelab --show-trace
+sudo nixos-rebuild switch --flake .#inari --show-trace
 ```
 
 ### System won't boot after update
@@ -630,7 +632,7 @@ The `docs.*` subdomains serve automatically compiled HTML documentation from the
 
 **How it works**:
 1. Write markdown files in `docs/` directory
-2. Run `sudo nixos-rebuild switch --flake .#homelab`
+2. Run `sudo nixos-rebuild switch --flake .#inari`
 3. Documentation is automatically compiled to HTML and deployed to `docs.wolfhard.net`
 
 **Manual build** (for testing):
@@ -670,9 +672,9 @@ For information on managing users and passwords in NixOS, see [User Management G
 Quick example:
 
 ```nix
-# Edit hosts/homelab/users.nix and uncomment user definitions
+# Edit modules/users/*.nix and enable user definitions
 # Then rebuild and set passwords:
-sudo nixos-rebuild switch --flake .#homelab
+sudo nixos-rebuild switch --flake .#inari
 sudo passwd alice
 sudo passwd bob
 ```

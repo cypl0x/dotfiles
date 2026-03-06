@@ -52,8 +52,10 @@ All three domains serve the same content:
 
 ```
 dotfiles/
-├── hosts/homelab/
-│   └── nginx.nix              # Nginx configuration module
+├── hosts/inari/
+│   └── services.nix           # Nginx virtual hosts + site content
+├── modules/services/
+│   └── nginx.nix              # Base nginx configuration
 └── web/
     └── static/
         ├── index.html         # Homepage
@@ -72,7 +74,7 @@ Deployed to:
 
 ### Main Configuration
 
-Located at: `hosts/homelab/nginx.nix`
+Located at: `modules/services/nginx.nix` (base config) and `hosts/inari/services.nix` (virtual hosts + content)
 
 Key sections:
 - Recommended Nginx settings enabled
@@ -144,7 +146,7 @@ sudo systemctl status nginx
 
 2. Rebuild system:
    ```bash
-   nrs  # or: nixos-rebuild switch --flake ~/dotfiles#homelab
+   nrs  # or: nixos-rebuild switch --flake ~/dotfiles#inari
    ```
 
 3. Changes are automatically deployed
@@ -167,7 +169,7 @@ sudo vim /etc/nginx/www/index.html
    vim ~/dotfiles/web/static/about.html
    ```
 
-2. Add to nginx.nix `environment.etc`:
+2. Add to `hosts/inari/services.nix` `environment.etc`:
    ```nix
    environment.etc."nginx/www/about.html" = {
      source = ../../web/static/about.html;
@@ -194,7 +196,7 @@ sudo vim /etc/nginx/www/index.html
    vim ~/dotfiles/web/static/css/style.css
    ```
 
-2. Add to nginx.nix:
+2. Add to `hosts/inari/services.nix`:
    ```nix
    environment.etc."nginx/www/css/style.css" = {
      source = ../../web/static/css/style.css;
@@ -698,7 +700,7 @@ sudo nginx -T | grep -A 5 "server_name wolfhard.net"
 **Solution**:
 ```bash
 # Verify forceSSL is enabled in configuration
-# Should be in hosts/homelab/services.nix:
+# Should be in hosts/inari/services.nix:
 # forceSSL = true;
 
 # Rebuild if changed

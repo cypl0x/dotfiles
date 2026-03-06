@@ -614,7 +614,7 @@ class="sourceCode nix"><code class="sourceCode nix"><span id="cb21-1"><a href="#
 <span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="op">]</span>;</span></code></pre></div>
 <h2 id="example-add-two-users-to-your-dotfiles">Example: Add Two Users
 to Your Dotfiles</h2>
-<p>Create a new module: <code>hosts/homelab/users.nix</code></p>
+<p>Create a new module: <code>modules/users/custom.nix</code></p>
 <div class="sourceCode" id="cb22"><pre
 class="sourceCode nix"><code class="sourceCode nix"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="op">{</span> <span class="va">pkgs</span><span class="op">,</span> <span class="op">...</span> <span class="op">}</span>: <span class="op">{</span></span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Enable sudo without password for wheel group (optional)</span></span>
@@ -636,16 +636,16 @@ class="sourceCode nix"><code class="sourceCode nix"><span id="cb22-1"><a href="#
 <span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Password will be set manually with: sudo passwd bob</span></span>
 <span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span>
 <span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<p>Import in <code>configuration.nix</code>:</p>
+<p>Import in <code>hosts/inari/default.nix</code> (or your host):</p>
 <div class="sourceCode" id="cb23"><pre
 class="sourceCode nix"><code class="sourceCode nix"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>imports = <span class="op">[</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./hardware-configuration.nix</span></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./vultr.nix</span></span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./users.nix</span>  <span class="co"># Add this line</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./hardware.nix</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="ss">./services.nix</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="ss">../../modules/users/custom.nix</span>  <span class="co"># Add this line</span></span>
 <span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="op">]</span>;</span></code></pre></div>
 <p>Rebuild and set passwords:</p>
 <div class="sourceCode" id="cb24"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nixos-rebuild switch <span class="at">--flake</span> .#homelab</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nixos-rebuild switch <span class="at">--flake</span> .#inari</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd alice</span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> passwd bob</span></code></pre></div>
 <h2 id="handling-ssh-keys">Handling SSH Keys</h2>

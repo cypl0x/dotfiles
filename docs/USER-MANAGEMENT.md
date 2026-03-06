@@ -335,7 +335,7 @@ extraGroups = [
 
 ## Example: Add Two Users to Your Dotfiles
 
-Create a new module: `hosts/homelab/users.nix`
+Create a new module: `modules/users/custom.nix`
 
 ```nix
 { pkgs, ... }: {
@@ -360,20 +360,20 @@ Create a new module: `hosts/homelab/users.nix`
 }
 ```
 
-Import in `configuration.nix`:
+Import in `hosts/inari/default.nix` (or your host):
 
 ```nix
 imports = [
-  ./hardware-configuration.nix
-  ./vultr.nix
-  ./users.nix  # Add this line
+  ./hardware.nix
+  ./services.nix
+  ../../modules/users/custom.nix  # Add this line
 ];
 ```
 
 Rebuild and set passwords:
 
 ```bash
-sudo nixos-rebuild switch --flake .#homelab
+sudo nixos-rebuild switch --flake .#inari
 sudo passwd alice
 sudo passwd bob
 ```
