@@ -163,6 +163,11 @@
           statix check "$DOTFILES_DIR" && sudo nixos-rebuild switch --flake "$DOTFILES_DIR#$(hostname)"
         }
 
+        # Local-only rebuild (ignore distributed builders)
+        nrsl() {
+          statix check "$DOTFILES_DIR" && sudo nixos-rebuild switch --flake "$DOTFILES_DIR#$(hostname)" --option builders ""
+        }
+
         nrb() {
           statix check "$DOTFILES_DIR" && sudo nixos-rebuild boot --flake "$DOTFILES_DIR#$(hostname)"
         }
