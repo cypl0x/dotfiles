@@ -168,6 +168,15 @@
           statix check "$DOTFILES_DIR" && sudo nixos-rebuild switch --flake "$DOTFILES_DIR#$(hostname)" --option builders ""
         }
 
+        # Remote rebuild/deploy to inari
+        nrsi() {
+          cd "$DOTFILES_DIR"
+          nixos-rebuild switch \
+            --flake ".#inari" \
+            --build-host root@65.109.108.233 \
+            --target-host root@65.109.108.233
+        }
+
         nrb() {
           statix check "$DOTFILES_DIR" && sudo nixos-rebuild boot --flake "$DOTFILES_DIR#$(hostname)"
         }
