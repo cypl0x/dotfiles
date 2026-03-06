@@ -68,6 +68,9 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
+              sharedModules = [
+                ./home/kitty-thinkpad.nix
+              ];
               users = {
                 cypl0x = import ./home/cypl0x.nix;
                 wap = import ./home/wap.nix;
