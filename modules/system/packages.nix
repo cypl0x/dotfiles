@@ -8,6 +8,9 @@
     alejandra # Nix code formatter
     bat
     cheat
+    # AI
+    gemini-cli
+    codex # OpenAI ChatGPT
     claude-code
     deadnix # Find unused Nix code
     eza # Modern replacement for ls (formerly exa)

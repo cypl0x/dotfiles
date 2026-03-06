@@ -102,9 +102,6 @@
     chromium
     google-chrome
 
-    # AI
-    gemini-cli
-
     # vim mode for Firefox
     tridactyl-native
 
