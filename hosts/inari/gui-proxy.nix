@@ -2,15 +2,22 @@
   # GUI stack for proxy user, shared between OpenClaw and VNC.
   # Display :1 is local-only (no TCP listener) and exported over SSH tunnel via x11vnc.
 
+  # Enable full GNOME desktop stack (inari-only via this host module).
+  services.xserver.enable = true;
+  services.desktopManager.gnome.enable = true;
+
   environment.systemPackages = with pkgs; [
     x11vnc
-    openbox
     sxhkd
     rofi
     xorg-server
     xsetroot
     xdotool
     scrot
+    gnome-session
+    gnome-shell
+    gnome-terminal
+    nautilus
   ];
 
   systemd.services = {
@@ -28,11 +35,11 @@
       };
     };
 
-    proxy-openbox = {
-      description = "Openbox session on :1 for proxy";
+    proxy-gnome = {
+      description = "GNOME session on :1 for proxy";
       wantedBy = ["multi-user.target"];
-      after = ["proxy-xvfb.service"];
-      requires = ["proxy-xvfb.service"];
+      after = ["proxy-xvfb.service" "dbus.service"];
+      requires = ["proxy-xvfb.service" "dbus.service"];
       serviceConfig = {
         User = "proxy";
         Group = "users";
@@ -41,16 +48,19 @@
         Environment = [
           "HOME=/home/proxy"
           "DISPLAY=:1"
+          "XDG_SESSION_TYPE=x11"
+          "XDG_CURRENT_DESKTOP=GNOME"
+          "DESKTOP_SESSION=gnome"
         ];
-        ExecStart = "${pkgs.openbox}/bin/openbox";
+        ExecStart = "${pkgs.dbus}/bin/dbus-run-session ${pkgs.gnome-session}/bin/gnome-session";
       };
     };
 
     proxy-x11vnc = {
       description = "x11vnc bridge for proxy display :1 (localhost only)";
       wantedBy = ["multi-user.target"];
-      after = ["proxy-xvfb.service" "proxy-openbox.service"];
-      requires = ["proxy-xvfb.service" "proxy-openbox.service"];
+      after = ["proxy-xvfb.service" "proxy-gnome.service"];
+      requires = ["proxy-xvfb.service" "proxy-gnome.service"];
       serviceConfig = {
         User = "proxy";
         Group = "users";
@@ -64,8 +74,8 @@
     proxy-sxhkd = {
       description = "Hotkeys for proxy X session (:1)";
       wantedBy = ["multi-user.target"];
-      after = ["proxy-xvfb.service" "proxy-openbox.service" "home-manager-proxy.service"];
-      requires = ["proxy-xvfb.service" "proxy-openbox.service"];
+      after = ["proxy-xvfb.service" "proxy-gnome.service" "home-manager-proxy.service"];
+      requires = ["proxy-xvfb.service" "proxy-gnome.service"];
       serviceConfig = {
         User = "proxy";
         Group = "users";
