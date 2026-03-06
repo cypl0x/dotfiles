@@ -32,6 +32,7 @@ alias lg='eza -la --icons --group-directories-first --git --git-ignore'
 # ============================================================================
 
 alias cat='bat --style=auto'
+alias ccat='command cat'
 alias catp='bat --style=plain'   # Plain cat without decorations
 alias catl='bat --style=numbers' # With line numbers
 

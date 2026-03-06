@@ -12,6 +12,7 @@ _: {
       inactive_tab_background = "#242730";
       tab_title_template = " {index}:{title} ";
       active_tab_title_template = " {index}:{title} ";
+      startup_layout = "splits";
 
       # Doom Vibrant theme (Henrik Lissner)
       foreground = "#bbc2cf";
@@ -48,6 +49,9 @@ _: {
 
       color7 = "#DFDFDF";
       color15 = "#bbc2cf";
+
+      # Enable kitty remote control (kitty @ ...)
+      allow_remote_control = "yes";
     };
 
     # Doom-like leader emulation (Ctrl+Space) using kitty multi-key shortcuts.
