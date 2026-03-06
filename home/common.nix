@@ -50,7 +50,7 @@
     sessionVariables = {
       EDITOR = "emacsclient -nw -a ''";
       COLORTERM = "truecolor";
-      BAT_THEME = "Solarized (light)";
+      BAT_THEME = "Doom Vibrant";
     };
   };
 

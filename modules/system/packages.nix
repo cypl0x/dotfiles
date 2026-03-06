@@ -40,7 +40,7 @@
   environment.sessionVariables = {
     PAGER = "bat";
     BAT_PAGER = "less -R";
-    BAT_THEME = "Solarized (light)";
+    BAT_THEME = "Doom Vibrant";
   };
 
   # Git is configured per-user in home-manager (see home/common.nix)
