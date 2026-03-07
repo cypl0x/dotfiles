@@ -1,5 +1,8 @@
-_: {
-  imports = [./common.nix];
+{...}: {
+  imports = [
+    ./common.nix
+    ./doom.nix
+  ];
 
   home.username = "cypl0x";
 

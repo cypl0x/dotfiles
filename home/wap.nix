@@ -1,5 +1,8 @@
 {lib, ...}: {
-  imports = [./common.nix];
+  imports = [
+    ./common.nix
+    ./doom.nix
+  ];
 
   home.username = "wap";
 
