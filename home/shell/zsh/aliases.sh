@@ -607,6 +607,11 @@ alias emn='emacsclient -n'                # Open in existing frame, don't wait
 alias emd='emacs --daemon'                # Start Emacs daemon
 alias emk='emacsclient -e "(kill-emacs)"' # Kill Emacs daemon
 
+# Doom Emacs helpers (using the 'e' wrapper script)
+alias et='e -t'
+alias m='e --eval "(progn (magit-status) (delete-other-windows))"'
+alias mt='m -t'
+
 # ============================================================================
 # Misc Aliases
 # ============================================================================
