@@ -58,4 +58,6 @@
   # Git is configured per-user in home-manager (see home/common.nix)
   # This ensures each user can have their own git identity
   programs.git.enable = true;
+
+  virtualisation.docker.enable = true;
 }
