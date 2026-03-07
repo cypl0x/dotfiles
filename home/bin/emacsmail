@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# emacsmail — mailto: URI handler, opens mu4e compose via Emacs daemon
+
+urldecode() {
+    local s="${1//+/ }"
+    printf '%b' "${s//%/\\x}"
+}
+
+elisp_str() {
+    # Escape a value for use inside an elisp double-quoted string literal
+    local s="$1"
+    s="${s//\\/\\\\}"    # \ → \\
+    s="${s//\"/\\\"}"    # " → \"
+    s="${s//$'\n'/\\n}"  # newline → \n
+    printf '%s' "$s"
+}
+
+usage() {
+    cat <<'EOF'
+Usage: emacsmail [mailto:URI]
+       emacsmail -h|--help
+
+Open a mu4e compose buffer via the running Emacs daemon.
+
+URI fields parsed: to, subject, body, cc, bcc
+
+Example:
+  emacsmail "mailto:user@example.com?subject=Hello&body=Hi%20there"
+EOF
+}
+
+case "${1-}" in
+    "" | -h | --help)
+        usage
+        exit 0
+        ;;
+esac
+
+# Strip the URI scheme prefix (mailto:, MAILTO:, etc.)
+remainder="${1#*:}"
+
+# Split into address and query string on first '?'
+if [[ "$remainder" == *"?"* ]]; then
+    addr_raw="${remainder%%\?*}"
+    query="${remainder#*\?}"
+else
+    addr_raw="$remainder"
+    query=""
+fi
+
+to="$(urldecode "$addr_raw")"
+subject=""
+body=""
+cc=""
+bcc=""
+
+if [[ -n "$query" ]]; then
+    IFS='&' read -ra pairs <<< "$query"
+    for pair in "${pairs[@]}"; do
+        key="${pair%%=*}"
+        val="$(urldecode "${pair#*=}")"
+        case "${key,,}" in
+            subject) subject="$val" ;;
+            body) body="$val" ;;
+            cc) cc="$val" ;;
+            bcc) bcc="$val" ;;
+        esac
+    done
+fi
+
+to_e="$(elisp_str "$to")"
+subj_e="$(elisp_str "$subject")"
+body_e="$(elisp_str "$body")"
+
+cc_header=""
+bcc_header=""
+[ -n "$cc" ] && cc_header="(message-add-header \"Cc: $(elisp_str "$cc")\")"
+[ -n "$bcc" ] && bcc_header="(message-add-header \"Bcc: $(elisp_str "$bcc")\")"
+
+elisp="$(
+    cat <<EOF
+(progn
+  (if (fboundp 'mu4e-compose-new)
+    (let ((contact (when (not (string-empty-p "${to_e}"))
+                     (make-instance 'mu4e-contact :email "${to_e}"))))
+      (mu4e-compose-new contact "${subj_e}" "${body_e}")
+      ${cc_header}
+      ${bcc_header})
+    (progn
+      (mu4e)
+      (mu4e~compose-mail "${to_e}" "${subj_e}"))))
+EOF
+)"
+
+if ! emacsclient --no-wait --eval "$elisp" 2>/dev/null; then
+    echo "emacsmail: Emacs server not running. Start Emacs or set ALTERNATE_EDITOR." >&2
+    exit 1
+fi

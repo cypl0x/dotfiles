@@ -33,6 +33,23 @@
           executable = true;
         };
 
+        ".local/bin/emacsmail" = {
+          source = ./bin/emacsmail;
+          executable = true;
+        };
+
+        ".local/share/applications/emacsmail.desktop".text = ''
+          [Desktop Entry]
+          Name=Emacs Mail
+          GenericName=Email Client
+          Comment=Compose mail in mu4e via Emacs daemon
+          Exec=emacsmail %u
+          Terminal=false
+          Type=Application
+          Categories=Network;Email;
+          MimeType=x-scheme-handler/mailto;
+        '';
+
         # Aider configuration
         ".aider.conf.yml".text = ''
           model: ollama/deepseek-coder:1.3b
@@ -79,6 +96,12 @@
     sessionPath = [
       "$HOME/.local/bin"
     ];
+
+    activation = {
+      setMailtoHandler = lib.hm.dag.entryAfter ["writeBoundary"] ''
+        $DRY_RUN_CMD ${pkgs.xdg-utils}/bin/xdg-mime default emacsmail.desktop x-scheme-handler/mailto || true
+      '';
+    };
   };
 
   # Let Home Manager install and manage itself.
