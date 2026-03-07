@@ -1,11 +1,4 @@
-{
-  pkgs,
-  lib,
-  ...
-}: let
-  # Build documentation from markdown
-  docs = import ../../web/docs.nix {inherit pkgs;};
-
+{lib, ...}: let
   # Import nginx helper functions
   nginxHelpers = import ../../modules/web/nginx-helpers.nix {inherit lib;};
 in {
@@ -23,18 +16,6 @@ in {
       forceSSL = true;
       enableCaching = true;
       useStrictCSP = false; # Using permissive CSP for service worker support
-    })
-    # docs.wolfhard.{net,dev,tech} — DNS migrated to inari
-    // (nginxHelpers.mkMultiDomainVirtualHosts {
-      name = "wolfhard";
-      subdomain = "docs";
-      tlds = ["net" "dev" "tech"];
-      root = "${docs}";
-      enableACME = true;
-      forceSSL = true;
-      enableCaching = true;
-      enableHtmlCache = true;
-      useStrictCSP = false; # Need permissive CSP for inline styles in docs-template.html
     })
     # Default catch-all server (returns 444 - close connection)
     # Catches requests to unknown domains

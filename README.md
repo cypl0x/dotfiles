@@ -21,17 +21,9 @@ dotfiles/
 │   ├── shell-aliases.sh           # 100+ aliases and functions
 │   └── shell-completions.sh       # Auto-loading completions
 ├── web/
-│   ├── static/                    # Static website content
-│   │   ├── index.html
-│   │   └── 404.html
-│   ├── docs.nix                   # Nix derivation for building docs
-│   ├── docs-template.html         # Pandoc HTML template
-│   └── build-docs.sh              # Manual docs build script
-├── docs/                          # Markdown documentation
-│   ├── NGINX.md
-│   ├── USER-MANAGEMENT.md
-│   ├── ALIASES.md
-│   └── COMPLETIONS.md
+│   └── static/                    # Static website content
+│       ├── index.html
+│       └── 404.html
 └── modules/                       # Custom NixOS modules (future use)
 ```
 
@@ -49,7 +41,6 @@ dotfiles/
 - **Tor relay** (non-exit) named "cypl0x"
 - **SSH hardening** with ShellFish iOS support
 - **Nginx web server** with HTTPS and multiple domains
-- **Auto-generated documentation site** at docs.wolfhard.net (from markdown)
 - **Development tools**: vim, emacs, ripgrep, bat, fzf
 
 ## Migrating from Global NixOS Config to Dotfiles Flake
@@ -557,7 +548,7 @@ nix flake lock --update-input nixpkgs
 
 ## Shell Aliases & Functions
 
-This configuration includes 100+ helpful aliases and functions. See the complete reference: [Shell Aliases Guide](docs/ALIASES.md)
+This configuration includes 100+ helpful aliases and functions.
 
 **Quick highlights:**
 
@@ -587,11 +578,9 @@ genpass 32             # Generate password
 serve 8000             # Start HTTP server
 ```
 
-See [ALIASES.md](docs/ALIASES.md) for complete reference.
-
 ## Shell Completions
 
-Smart tab completions for 40+ CLI tools are automatically loaded when the tools are installed. See [Completions Guide](docs/COMPLETIONS.md).
+Smart tab completions for 40+ CLI tools are automatically loaded when the tools are installed.
 
 **Currently active:**
 - tailscale, nix, git, fzf, tmux, bat, eza, ripgrep
@@ -607,15 +596,12 @@ git checkout <TAB>  # Complete branches
 nix shell nixpkgs#<TAB>  # Complete packages
 ```
 
-See [COMPLETIONS.md](docs/COMPLETIONS.md) for full list and documentation.
-
 ## Nginx Web Server
 
 Hardened Nginx configuration with HTTPS via Let's Encrypt.
 
 **Domains**:
 - **Main sites**: wolfhard.net, wolfhard.dev, wolfhard.tech (+ www subdomains)
-- **Documentation**: docs.wolfhard.net, docs.wolfhard.dev, docs.wolfhard.tech
 
 **Features**:
 - **HTTPS with Let's Encrypt** (automatic certificate management)
@@ -624,25 +610,6 @@ Hardened Nginx configuration with HTTPS via Let's Encrypt.
 - **Static asset caching** (1 year for images/fonts/css/js)
 - **TLS 1.2/1.3** with modern cipher suites
 - Custom error pages, Gzip compression
-- **Auto-generated documentation site** from markdown files
-
-**Documentation Subdomain**:
-
-The `docs.*` subdomains serve automatically compiled HTML documentation from the markdown files in the `docs/` directory. The documentation is built during system rebuild using Pandoc.
-
-**How it works**:
-1. Write markdown files in `docs/` directory
-2. Run `sudo nixos-rebuild switch --flake .#inari`
-3. Documentation is automatically compiled to HTML and deployed to `docs.wolfhard.net`
-
-**Manual build** (for testing):
-```bash
-# Build docs locally with pandoc
-nix-shell -p pandoc --run "./web/build-docs.sh"
-
-# View generated docs
-ls -la web/docs/
-```
 
 **Quick start**:
 
@@ -663,11 +630,7 @@ nrs  # Rebuild to deploy changes
 
 **Note**: DNS must point to your server before first rebuild for SSL certificates to work.
 
-See [NGINX.md](docs/NGINX.md) for complete documentation and HTTPS setup guide.
-
 ## User Management
-
-For information on managing users and passwords in NixOS, see [User Management Guide](docs/USER-MANAGEMENT.md).
 
 Quick example:
 
@@ -681,10 +644,6 @@ sudo passwd bob
 
 ## Additional Resources
 
-- [Shell Aliases & Functions](docs/ALIASES.md) - Complete reference for 100+ aliases and functions
-- [Shell Completions](docs/COMPLETIONS.md) - Tab completions for 40+ CLI tools
-- [Nginx Web Server](docs/NGINX.md) - Static web server setup and management
-- [User Management Guide](docs/USER-MANAGEMENT.md) - Comprehensive guide to users and passwords
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/)
 - [Nix Flakes](https://nixos.wiki/wiki/Flakes)
 - [Home Manager](https://github.com/nix-community/home-manager) (for user-level dotfiles)
