@@ -2,45 +2,51 @@
   # Allow unfree packages (e.g., claude-code)
   nixpkgs.config.allowUnfree = true;
 
-  # Global packages available to all users
-  environment.systemPackages = with pkgs; [
-    # aider-chat-full
-    alejandra # Nix code formatter
-    bat
-    cheat
-    # AI
-    gemini-cli
-    codex # OpenAI ChatGPT
-    claude-code
-    deadnix # Find unused Nix code
-    eza # Modern replacement for ls (formerly exa)
-    felix-fm # Tui file manager with vim-like key mapping
-    fd # Fast file finder (used in Makefile)
-    fzf
-    git
-    gnumake
-    navi
-    ollama
-    pandoc
-    ripgrep
-    statix # Nix linter
-    starship
-    tabby
-    tailscale
-    tealdeer
-    tmux
-    vim
-    wl-clipboard
-    xclip
-    zsh-autosuggestions
-    zsh-completions
-  ];
+  environment = {
+    # Global packages available to all users
+    systemPackages = with pkgs; [
+      # aider-chat-full
+      alejandra # Nix code formatter
+      bat
+      cheat
+      # AI
+      gemini-cli
+      codex # OpenAI ChatGPT
+      claude-code
+      deadnix # Find unused Nix code
+      eza # Modern replacement for ls (formerly exa)
+      felix-fm # Tui file manager with vim-like key mapping
+      fd # Fast file finder (used in Makefile)
+      fzf
+      git
+      gnumake
+      navi
+      ollama
+      pandoc
+      ripgrep
+      statix # Nix linter
+      starship
+      tabby
+      tailscale
+      tealdeer
+      tmux
+      vim
+      wl-clipboard
+      xclip
+      zsh-autosuggestions
+      zsh-completions
+    ];
 
-  # Environment variables
-  environment.sessionVariables = {
-    PAGER = "bat";
-    BAT_PAGER = "less -R";
-    BAT_THEME = "Doom Vibrant";
+    # Environment variables
+    sessionVariables = {
+      PAGER = "bat";
+      BAT_PAGER = "less -R";
+      BAT_THEME = "Doom Vibrant";
+    };
+
+    variables = {
+      EDITOR = "emacsclient -nw -a ''";
+    };
   };
 
   # Git is configured per-user in home-manager (see home/common.nix)
