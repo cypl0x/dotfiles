@@ -68,7 +68,6 @@
         '';
 
         ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
-        ".config/bat/themes/doom-vibrant.tmTheme".source = ./bat/themes/doom-vibrant.tmTheme;
         ".config/devilspie2/default.lua".text = ''
           if get_window_type() == "WINDOW_TYPE_DOCK" then return end
           if get_window_type() == "WINDOW_TYPE_NOTIFICATION" then return end
@@ -107,6 +106,16 @@
   # Let Home Manager install and manage itself.
   programs = {
     home-manager.enable = true;
+
+    bat = {
+      enable = true;
+      themes = {
+        "Doom Vibrant" = {
+          src = ./bat/themes;
+          file = "doom-vibrant.tmTheme";
+        };
+      };
+    };
 
     git = {
       enable = true;
