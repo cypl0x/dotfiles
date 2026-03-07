@@ -88,16 +88,8 @@
     # _1password-cli
 
     # Notion
-    notion-app-enhanced
     anytype
-    appflowy
     planify
-    rambox
-    ferdium
-    franz
-    todoist-electron
-    obsidian
-    logseq
 
     # opera
     chromium
@@ -116,12 +108,11 @@
     # mu # mue doesn't contain mu4e
     # Fix it with:
     # (pkgs.mu.override { emacs = pkgs.emacs; })
+    # TODO move to home manager (common.nix?) to enable on all hosts and user
     mu
     mu.mu4e
     isync
     offlineimap
-
-
 
     wezterm
     ghostty
