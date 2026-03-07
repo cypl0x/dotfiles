@@ -18,6 +18,7 @@
     ../../modules/users/proxy.nix
 
     # Host-specific configuration
+    ./pantheon.nix
     ./thinkpad-packages.nix
   ];
 
