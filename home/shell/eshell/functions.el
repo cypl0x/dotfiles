@@ -57,7 +57,7 @@
   "nixos-rebuild switch to inari (remote build + deploy)."
   (eshell-command
    (concat "nixos-rebuild switch"
-           " --flake " +eshell-dotfiles-dir "#inari"
+           " --flake " +eshell-dotfiles-dir "\#inari"
            " --build-host root@65.109.108.233"
            " --target-host root@65.109.108.233")))
 

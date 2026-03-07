@@ -75,12 +75,12 @@ alias gstp git stash pop $*
 # ============================================================================
 # NixOS rebuilds
 # ============================================================================
-alias nrs sudo nixos-rebuild switch --flake ~/dotfiles#thinkpad $*
-alias nrsl sudo nixos-rebuild switch --flake ~/dotfiles#thinkpad --option builders "" $*
-alias nrsi nixos-rebuild switch --flake ~/dotfiles#inari --build-host root@65.109.108.233 --target-host root@65.109.108.233 $*
-alias nrb sudo nixos-rebuild boot --flake ~/dotfiles#thinkpad $*
-alias nrt sudo nixos-rebuild test --flake ~/dotfiles#thinkpad $*
-alias nrsv sudo nixos-rebuild switch --flake ~/dotfiles#thinkpad --show-trace $*
+alias nrs sudo nixos-rebuild switch --flake ~/dotfiles\#thinkpad $*
+alias nrsl sudo nixos-rebuild switch --flake ~/dotfiles\#thinkpad --option builders "" $*
+alias nrsi nixos-rebuild switch --flake ~/dotfiles\#inari --build-host root@65.109.108.233 --target-host root@65.109.108.233 $*
+alias nrb sudo nixos-rebuild boot --flake ~/dotfiles\#thinkpad $*
+alias nrt sudo nixos-rebuild test --flake ~/dotfiles\#thinkpad $*
+alias nrsv sudo nixos-rebuild switch --flake ~/dotfiles\#thinkpad --show-trace $*
 alias nixlint statix check ~/dotfiles $*
 alias nixshow nix flake show ~/dotfiles $*
 
