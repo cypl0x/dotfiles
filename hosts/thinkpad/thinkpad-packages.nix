@@ -17,8 +17,6 @@
     # Browsers
     vivaldi
 
-    gnome-boxes
-
     # Privacy and VPN
     protonvpn-gui
 
