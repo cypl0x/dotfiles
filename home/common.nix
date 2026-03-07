@@ -26,36 +26,41 @@
     # plain files is through 'home.file'.
     file =
       {
-      # ".zshrc".source = ./zshrc;
+        # ".zshrc".source = ./zshrc;
 
-      # Aider configuration
-      ".aider.conf.yml".text = ''
-        model: ollama/deepseek-coder:1.3b
+        ".local/bin/e" = {
+          source = ./bin/e;
+          executable = true;
+        };
 
-        # Use local ollama instance
-        # ollama-api-base: http://localhost:11434
+        # Aider configuration
+        ".aider.conf.yml".text = ''
+          model: ollama/deepseek-coder:1.3b
 
-        # Editor settings
-        # editor: vim
+          # Use local ollama instance
+          # ollama-api-base: http://localhost:11434
 
-        # Auto-commit changes
-        auto-commits: false
+          # Editor settings
+          # editor: vim
 
-        # Show diffs before committing
-        show-diffs: true
-      '';
+          # Auto-commit changes
+          auto-commits: false
 
-      ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
-      ".config/bat/themes/doom-vibrant.tmTheme".source = ./bat/themes/doom-vibrant.tmTheme;
-      ".config/devilspie2/default.lua".text = ''
-        if get_window_type() == "WINDOW_TYPE_DOCK" then return end
-        if get_window_type() == "WINDOW_TYPE_NOTIFICATION" then return end
-        if get_window_type() == "WINDOW_TYPE_DESKTOP" then return end
-        if get_window_type() == "WINDOW_TYPE_DIALOG" then return end
-        if get_window_type() == "WINDOW_TYPE_SPLASH" then return end
+          # Show diffs before committing
+          show-diffs: true
+        '';
 
-        maximize()
-      '';
+        ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
+        ".config/bat/themes/doom-vibrant.tmTheme".source = ./bat/themes/doom-vibrant.tmTheme;
+        ".config/devilspie2/default.lua".text = ''
+          if get_window_type() == "WINDOW_TYPE_DOCK" then return end
+          if get_window_type() == "WINDOW_TYPE_NOTIFICATION" then return end
+          if get_window_type() == "WINDOW_TYPE_DESKTOP" then return end
+          if get_window_type() == "WINDOW_TYPE_DIALOG" then return end
+          if get_window_type() == "WINDOW_TYPE_SPLASH" then return end
+
+          maximize()
+        '';
       }
       // lib.optionalAttrs (config.home.username != "proxy") {
         ".config/sxhkd/sxhkdrc".text = ''
@@ -70,6 +75,10 @@
       COLORTERM = "truecolor";
       BAT_THEME = "Doom Vibrant";
     };
+
+    sessionPath = [
+      "$HOME/.local/bin"
+    ];
   };
 
   # Let Home Manager install and manage itself.
@@ -110,6 +119,12 @@
       enableCompletion = true;
       autosuggestion.enable = true;
       syntaxHighlighting.enable = true;
+
+      shellAliases = {
+        et = "e -t";
+        m = ''e --eval "(progn (magit-status) (delete-other-windows))"'';
+        mt = "m -t";
+      };
 
       # Disable OMZ tmux plugin auto-start — we manage tmux manually via aliases
       envExtra = ''
