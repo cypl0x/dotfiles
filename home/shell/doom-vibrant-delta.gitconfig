@@ -1,0 +1,79 @@
+# doom-vibrant theme for delta
+# Adapted from the doom-emacs doom-vibrant Emacs theme.
+# Author: adapted for delta by cypl0x
+#
+# Usage in ~/.gitconfig or programs.git.extraConfig in NixOS:
+#
+#   [delta]
+#       features = doom-vibrant
+#
+# Or in your NixOS flake dotfiles, e.g. home-manager:
+#
+#   programs.git = {
+#     delta = {
+#       enable = true;
+#       options = {
+#         features = "doom-vibrant";
+#       };
+#     };
+#     extraConfig = builtins.readFile ./doom-vibrant-delta.gitconfig;
+#   };
+
+[delta "doom-vibrant"]
+    dark = true
+
+    # Syntax highlighting theme — closest built-in match to doom-vibrant
+    syntax-theme = base16
+
+    # File header
+    file-style                  = "#51afef" bold
+    file-decoration-style       = "#51afef" overline
+    file-added-label            = [+]
+    file-copied-label           = [C]
+    file-modified-label         = [~]
+    file-removed-label          = [-]
+    file-renamed-label          = [→]
+
+    # Commit / hunk headers
+    commit-decoration-style     = "#FCCE7B" box
+    hunk-header-style           = syntax bold italic
+    hunk-header-decoration-style = "#484854" ul
+
+    # Added lines  (doom-vibrant: green #7bc275, bg #2c3636 / #35463d)
+    plus-style                  = syntax "#2c3636"
+    plus-emph-style             = syntax bold "#35463d"
+    plus-non-emph-style         = syntax "#2c3636"
+
+    # Removed lines (doom-vibrant: red #ff665c, bg #392d32 / #4f3337)
+    minus-style                 = normal "#392d32"
+    minus-emph-style            = normal bold "#4f3337"
+    minus-non-emph-style        = normal "#392d32"
+
+    # Line numbers
+    line-numbers                = true
+    line-numbers-left-format    = "{nm:>4}┊"
+    line-numbers-right-format   = "{np:>4}┊ "
+    line-numbers-left-style     = "#ff665c"
+    line-numbers-right-style    = "#7bc275"
+    line-numbers-minus-style    = "#ff665c" bold
+    line-numbers-plus-style     = "#7bc275" bold
+    line-numbers-zero-style     = "#484854" italic
+
+    # Unchanged / zero lines
+    zero-style                  = syntax
+
+    # Whitespace errors
+    whitespace-error-style      = "#ff665c" reverse
+
+    # Blame
+    blame-format                = "{author:<18} ({commit:>7}) ┊{timestamp:^16}┊ "
+    blame-code-style            = syntax
+    blame-palette               = "#242730" "#23272e" "#1f2329"
+
+    # Merge conflicts
+    merge-conflict-begin-symbol = ▼
+    merge-conflict-end-symbol   = ▲
+    merge-conflict-ours-diff-header-style      = "#51afef" bold
+    merge-conflict-theirs-diff-header-style    = "#C57BDB" bold
+    merge-conflict-ours-diff-header-decoration-style   = "#51afef" box
+    merge-conflict-theirs-diff-header-decoration-style = "#C57BDB" box

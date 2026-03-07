@@ -127,13 +127,30 @@
       };
     };
 
+    delta = {
+      enable = true;
+      # config can be found in programs.git.settings.delta
+    };
+
     git = {
       enable = true;
+      includes = [
+        { path = ./shell/doom-vibrant-delta.gitconfig; }
+      ];
       settings = {
         user.name = "Wolfhard Prell"; # Can be overridden in user specific files
         user.email = "mail@wolfhard.net";
         init.defaultBranch = "main";
         pull.rebase = true;
+        core.pager = "delta";
+        interactive.diffFilter = "delta --color-only";
+        merge.conflictStyle = "diff3";
+        delta = {
+          navigate = true;
+          features = "doom-vibrant";
+          syntax-theme = "Doom Vibrant";
+          line-numbers = true;
+        };
       };
     };
 
@@ -308,6 +325,7 @@
       enable = true;
       extraPackages = epkgs: [
         epkgs.vterm
+        epkgs.eat
       ];
     };
   };
