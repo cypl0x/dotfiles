@@ -107,6 +107,16 @@
   programs = {
     home-manager.enable = true;
 
+    gh = {
+      enable = true;
+      extensions = [
+        pkgs.gh-notify
+        pkgs.gh-dash
+        pkgs.gh-poi
+        pkgs.gh-actions-cache
+      ];
+    };
+
     bat = {
       enable = true;
       themes = {
