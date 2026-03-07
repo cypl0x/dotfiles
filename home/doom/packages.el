@@ -8,6 +8,12 @@
 (package! rainbow-delimiters)
 
 ;; ---------------------------------------------------------------------------
+;; Save the state of the folding in org-mode
+;; ---------------------------------------------------------------------------
+
+(package! savefold)
+
+;; ---------------------------------------------------------------------------
 ;; EXWM — X11 window manager
 ;; Loaded only in EXWM sessions (guarded in config.el).
 ;; ---------------------------------------------------------------------------
@@ -29,6 +35,7 @@
 
 (package! claude-code)
 (package! chatgpt-shell)
+(package! codex-cli)         ;; OpenAI Codex CLI
 (package! ollama-buddy)
 (package! copilot)
 (package! agent-shell)
@@ -102,5 +109,5 @@
 ;; ---------------------------------------------------------------------------
 
 ;; (package! kdeconnect)        ;; KDE Connect — not needed in EXWM sessions
-;; (package! codex-cli)         ;; OpenAI Codex CLI
 ;; (package! magithub)          ;; superseded by forge
+

@@ -28,6 +28,18 @@
 (setq org-directory "~/notes/")
 
 ;; ---------------------------------------------------------------------------
+;; Keep the folding state
+;; ---------------------------------------------------------------------------
+
+(use-package! savefold
+  :init
+  (setq savefold-backends '(outline org markdown))
+  (setq savefold-directory (locate-user-emacs-file "savefold"))  ;; default
+
+  :config
+  (savefold-mode 1))
+
+;; ---------------------------------------------------------------------------
 ;; Editor
 ;; ---------------------------------------------------------------------------
 

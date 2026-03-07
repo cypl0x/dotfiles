@@ -396,7 +396,10 @@
 (use-package! spookfox
   :config
   (require 'spookfox-tabs)
-  (spookfox-start-server)
+  (condition-case err
+      (spookfox-start-server)
+    (error (message "spookfox: server already running or port in use: %s"
+                    (error-message-string err))))
 
   (defun +exwm/firefox-switch-tab ()
     "Switch Firefox tab via spookfox, then focus the Firefox window."

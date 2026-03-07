@@ -24,14 +24,15 @@
   "Path to the NixOS dotfiles repository.")
 
 (defun +eshell--nixos-rebuild (&rest args)
-  "Run nixos-rebuild with statix check first. ARGS are passed to nixos-rebuild."
-  (let ((host (system-name))
-        (dotfiles +eshell-dotfiles-dir))
-    (eshell-command
-     (concat "statix check " dotfiles
-             " && sudo nixos-rebuild "
-             (mapconcat #'identity args " ")
-             " --flake " dotfiles "#" host))))
+  "Run nixos-rebuild with statix check first."
+  (let* ((dotfiles (expand-file-name +eshell-dotfiles-dir))
+         (host (system-name))
+         (flake (concat dotfiles "#" host))
+         (cmd (concat "statix check " dotfiles
+                      " && sudo nixos-rebuild "
+                      (mapconcat #'identity args " ")
+                      " --flake " flake)))
+    (compile cmd)))
 
 (defun eshell/nrs (&rest _)
   "nixos-rebuild switch."
