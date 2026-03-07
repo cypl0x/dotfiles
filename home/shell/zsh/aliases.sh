@@ -860,3 +860,18 @@ Examples:
 Config file: ~/.aider.conf.yml
 EOF
 }
+
+# Delta (git pager) shortcuts
+alias gdd='GIT_PAGER=delta git diff' # git diff with delta
+alias gdn='git --no-pager diff'      # git diff without pager
+
+# Toggle delta on/off for current session
+delta_toggle() {
+  if [ "$GIT_PAGER" = "delta" ]; then
+    unset GIT_PAGER
+    echo "Delta disabled for this session"
+  else
+    export GIT_PAGER=delta
+    echo "Delta enabled for this session"
+  fi
+}
