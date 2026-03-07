@@ -121,19 +121,7 @@
     isync
     offlineimap
 
-    # application launcher
-    rofi
-    rofimoji
-    rofi-vpn
-    rofi-top
-    rofi-calc
-    rofi-file-browser
-    rofi-systemd
-    rofi-bluetooth
-    rofi-power-menu
-    rofi-pulse-select
-    rofi-network-manager
-    rofi-screenshot
+
 
     wezterm
     ghostty
