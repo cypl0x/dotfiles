@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }: {
@@ -23,7 +24,8 @@
 
     # Home Manager is pretty good at managing dotfiles. The primary way to manage
     # plain files is through 'home.file'.
-    file = {
+    file =
+      {
       # ".zshrc".source = ./zshrc;
 
       # Aider configuration
@@ -54,7 +56,14 @@
 
         maximize()
       '';
-    };
+      }
+      // lib.optionalAttrs (config.home.username != "proxy") {
+        ".config/sxhkd/sxhkdrc".text = ''
+          # Universal application launcher (Doom Emacs + Consult)
+          super + space
+            emacsclient --no-wait -e "(app-launcher)"
+        '';
+      };
 
     sessionVariables = {
       VISUAL = "emacsclient -c -a ''";
@@ -246,43 +255,67 @@
     };
   };
 
-  systemd.user.services.devilspie2 = {
-    Unit = {
-      Description = "Devilspie2 window rules";
-      ConditionEnvironment = "XDG_SESSION_TYPE=x11";
-      After = ["graphical-session.target"];
-      PartOf = ["graphical-session.target"];
-    };
-    Service = {
-      ExecStart = "${pkgs.devilspie2}/bin/devilspie2";
-      Restart = "on-failure";
-    };
-    Install = {
-      WantedBy = ["graphical-session.target"];
-    };
-  };
+  systemd = {
+    user = {
+      services = {
+        # Run sxhkd as a user service (X11 only)
+        sxhkd = {
+          Unit = {
+            Description = "Simple X hotkey daemon";
+            ConditionEnvironment = "XDG_SESSION_TYPE=x11";
+            After = ["graphical-session.target"];
+            PartOf = ["graphical-session.target"];
+          };
+          Service = {
+            ExecStart = "${pkgs.sxhkd}/bin/sxhkd -c %h/.config/sxhkd/sxhkdrc";
+            Restart = "on-failure";
+            RestartSec = 1;
+          };
+          Install = {
+            WantedBy = ["graphical-session.target"];
+          };
+        };
 
-  systemd.user.targets = {
-    "gnome-session@pantheon" = {
-      Unit.Description = "GNOME Session (Pantheon)";
-    };
-    "gnome-session-x11@pantheon" = {
-      Unit = {
-        Description = "GNOME Session (X11) (session: pantheon)";
-        After = ["gnome-session-pre.target"];
-        Wants = [
-          "gnome-session@pantheon.target"
-          "gnome-session-x11-services.target"
-          "gnome-session-x11-services-ready.target"
-        ];
-        BindsTo = ["gnome-session@pantheon.target"];
+        devilspie2 = {
+          Unit = {
+            Description = "Devilspie2 window rules";
+            ConditionEnvironment = "XDG_SESSION_TYPE=x11";
+            After = ["graphical-session.target"];
+            PartOf = ["graphical-session.target"];
+          };
+          Service = {
+            ExecStart = "${pkgs.devilspie2}/bin/devilspie2";
+            Restart = "on-failure";
+          };
+          Install = {
+            WantedBy = ["graphical-session.target"];
+          };
+        };
       };
-    };
-    "gnome-session-x11-services" = {
-      Unit.Description = "GNOME Session X11 Services";
-    };
-    "gnome-session-x11-services-ready" = {
-      Unit.Description = "GNOME Session X11 Services Ready";
+
+      targets = {
+        "gnome-session@pantheon" = {
+          Unit.Description = "GNOME Session (Pantheon)";
+        };
+        "gnome-session-x11@pantheon" = {
+          Unit = {
+            Description = "GNOME Session (X11) (session: pantheon)";
+            After = ["gnome-session-pre.target"];
+            Wants = [
+              "gnome-session@pantheon.target"
+              "gnome-session-x11-services.target"
+              "gnome-session-x11-services-ready.target"
+            ];
+            BindsTo = ["gnome-session@pantheon.target"];
+          };
+        };
+        "gnome-session-x11-services" = {
+          Unit.Description = "GNOME Session X11 Services";
+        };
+        "gnome-session-x11-services-ready" = {
+          Unit.Description = "GNOME Session X11 Services Ready";
+        };
+      };
     };
   };
 }

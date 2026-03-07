@@ -27,6 +27,7 @@
       ripgrep
       statix # Nix linter
       starship
+      sxhkd
       tabby
       tailscale
       tealdeer

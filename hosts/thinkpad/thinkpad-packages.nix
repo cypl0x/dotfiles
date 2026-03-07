@@ -55,6 +55,7 @@
     xprop
     xwininfo
     dotool
+    wmctrl
 
     # Webcam tools
     v4l-utils
