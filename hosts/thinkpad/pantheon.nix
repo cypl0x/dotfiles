@@ -3,18 +3,21 @@
   pkgs,
   ...
 }: let
-  pantheonWaylandSession = pkgs.runCommand "pantheon-wayland-session" {} ''
-    mkdir -p "$out/share/wayland-sessions"
-    cat > "$out/share/wayland-sessions/pantheon-wayland.desktop" <<EOF
-    [Desktop Entry]
-    Name=Pantheon
-    Comment=Pantheon on Wayland
-    Exec=${pkgs.gnome-session}/bin/gnome-session --session=pantheon-wayland
-    TryExec=${pkgs.pantheon.wingpanel}/bin/io.elementary.wingpanel
-    Type=Application
-    DesktopNames=Pantheon
-    EOF
-  '';
+  pantheonWaylandSession =
+    pkgs.runCommand "pantheon-wayland-session" {
+      passthru.providedSessions = ["pantheon-wayland"];
+    } ''
+      mkdir -p "$out/share/wayland-sessions"
+      cat > "$out/share/wayland-sessions/pantheon-wayland.desktop" <<EOF
+      [Desktop Entry]
+      Name=Pantheon
+      Comment=Pantheon on Wayland
+      Exec=${pkgs.gnome-session}/bin/gnome-session --session=pantheon-wayland
+      TryExec=${pkgs.pantheon.wingpanel}/bin/io.elementary.wingpanel
+      Type=Application
+      DesktopNames=Pantheon
+      EOF
+    '';
 in {
   # Pantheon desktop (Elementary OS) alongside Plasma and EXWM via SDDM.
   services = {
