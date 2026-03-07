@@ -24,7 +24,7 @@
       glow # cli to preview markdown files
       bc # Calculator
       gh # GitHub CLI tool
-      tig  # Git Tui
+      tig # Git Tui
       navi
       ollama
       pandoc
