@@ -50,14 +50,9 @@
         if get_window_type() == "WINDOW_TYPE_NOTIFICATION" then return end
         if get_window_type() == "WINDOW_TYPE_DESKTOP" then return end
         if get_window_type() == "WINDOW_TYPE_DIALOG" then return end
+        if get_window_type() == "WINDOW_TYPE_SPLASH" then return end
 
-        if get_application_name() == "Firefox" then
-            set_window_geometry(60, 93, 1748, 892)
-            return
-        end
-
-        undecorate_window()
-        set_window_geometry(60, 93, 1800, 892)
+        maximize()
       '';
     };
 
