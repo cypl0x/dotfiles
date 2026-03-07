@@ -1,4 +1,15 @@
 {pkgs, ...}: let
+  # Install eat's terminfo entries system-wide so that programs running inside
+  # an eat terminal (including over SSH) can resolve the eat-* TERM types.
+  # eat.el auto-sets eat-term-terminfo-directory to this same store path at
+  # load time, but having entries in the system terminfo DB is needed for
+  # processes that inherit TERM=eat-* without the eat-managed TERMINFO var.
+  eatTerminfo = pkgs.runCommand "eat-terminfo" {} ''
+    mkdir -p "$out/share/terminfo"
+    cp -r "${pkgs.emacsPackages.eat}"/share/emacs/site-lisp/elpa/eat-*/terminfo/. \
+      "$out/share/terminfo/"
+  '';
+
   # Startup script sourcing the user profile so the home-manager Emacs
   # wrapper (with vterm, etc.) is found in PATH rather than the bare system Emacs.
   exwmStartScript = pkgs.writeShellScript "start-exwm" ''
@@ -37,15 +48,17 @@ in {
   services.displayManager.sessionPackages = [exwmSession];
 
   # Companion packages for a comfortable EXWM environment
-  environment.systemPackages = with pkgs; [
-    picom # Compositor: transparency, shadows, vsync
-    feh # Wallpaper setter
-    brightnessctl # Screen brightness keys
-    playerctl # Media keys (play/pause/next/prev)
-    flameshot # Screenshot tool
-    networkmanagerapplet # Network Manager tray icon
-    pasystray # PipeWire/PulseAudio volume tray
-    xss-lock # Lock screen on suspend / idle
-    i3lock # Screen locker called by xss-lock
-  ];
+  environment.systemPackages =
+    [eatTerminfo]
+    ++ (with pkgs; [
+      picom # Compositor: transparency, shadows, vsync
+      feh # Wallpaper setter
+      brightnessctl # Screen brightness keys
+      playerctl # Media keys (play/pause/next/prev)
+      flameshot # Screenshot tool
+      networkmanagerapplet # Network Manager tray icon
+      pasystray # PipeWire/PulseAudio volume tray
+      xss-lock # Lock screen on suspend / idle
+      i3lock # Screen locker called by xss-lock
+    ]);
 }
