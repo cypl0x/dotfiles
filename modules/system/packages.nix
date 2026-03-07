@@ -21,6 +21,7 @@
       fzf
       git
       gnumake
+      glow # cli to preview markdown files
       navi
       ollama
       pandoc
