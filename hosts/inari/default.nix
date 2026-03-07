@@ -1,4 +1,4 @@
-_: {
+{lib, ...}: {
   imports = [
     ./hardware.nix
     ./disk.nix
@@ -68,6 +68,14 @@ _: {
     ];
   };
   services.openssh.settings.AcceptEnv = ["LANG" "LC_*"];
+
+  virtualisation.libvirtd.enable = true;
+
+  users.users.root.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
+  users.users.wap.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
+  users.users.cypl0x.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
+  users.users.proxy.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
+  users.users.fabian.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
 
   system.stateVersion = "24.11";
 
