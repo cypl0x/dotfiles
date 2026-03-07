@@ -45,6 +45,20 @@
 
       ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
       ".config/bat/themes/doom-vibrant.tmTheme".source = ./bat/themes/doom-vibrant.tmTheme;
+      ".config/devilspie2/default.lua".text = ''
+        if get_window_type() == "WINDOW_TYPE_DOCK" then return end
+        if get_window_type() == "WINDOW_TYPE_NOTIFICATION" then return end
+        if get_window_type() == "WINDOW_TYPE_DESKTOP" then return end
+        if get_window_type() == "WINDOW_TYPE_DIALOG" then return end
+
+        if get_application_name() == "Firefox" then
+            set_window_geometry(60, 93, 1748, 892)
+            return
+        end
+
+        undecorate_window()
+        set_window_geometry(60, 93, 1800, 892)
+      '';
     };
 
     sessionVariables = {
@@ -234,6 +248,46 @@
       extraPackages = epkgs: [
         epkgs.vterm
       ];
+    };
+  };
+
+  systemd.user.services.devilspie2 = {
+    Unit = {
+      Description = "Devilspie2 window rules";
+      ConditionEnvironment = "XDG_SESSION_TYPE=x11";
+      After = ["graphical-session.target"];
+      PartOf = ["graphical-session.target"];
+    };
+    Service = {
+      ExecStart = "${pkgs.devilspie2}/bin/devilspie2";
+      Restart = "on-failure";
+    };
+    Install = {
+      WantedBy = ["graphical-session.target"];
+    };
+  };
+
+  systemd.user.targets = {
+    "gnome-session@pantheon" = {
+      Unit.Description = "GNOME Session (Pantheon)";
+    };
+    "gnome-session-x11@pantheon" = {
+      Unit = {
+        Description = "GNOME Session (X11) (session: pantheon)";
+        After = ["gnome-session-pre.target"];
+        Wants = [
+          "gnome-session@pantheon.target"
+          "gnome-session-x11-services.target"
+          "gnome-session-x11-services-ready.target"
+        ];
+        BindsTo = ["gnome-session@pantheon.target"];
+      };
+    };
+    "gnome-session-x11-services" = {
+      Unit.Description = "GNOME Session X11 Services";
+    };
+    "gnome-session-x11-services-ready" = {
+      Unit.Description = "GNOME Session X11 Services Ready";
     };
   };
 }

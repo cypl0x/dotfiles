@@ -3,6 +3,21 @@
   pkgs,
   ...
 }: let
+  pantheonX11Session =
+    pkgs.runCommand "pantheon-x11-session" {
+      passthru.providedSessions = ["pantheon-x11"];
+    } ''
+      mkdir -p "$out/share/xsessions"
+      cat > "$out/share/xsessions/pantheon-x11.desktop" <<EOF
+      [Desktop Entry]
+      Name=Pantheon (X11)
+      Comment=Pantheon on X11
+      Exec=${pkgs.gnome-session}/bin/gnome-session --session=pantheon
+      TryExec=${pkgs.pantheon.wingpanel}/bin/io.elementary.wingpanel
+      Type=Application
+      DesktopNames=Pantheon
+      EOF
+    '';
   pantheonWaylandSession =
     pkgs.runCommand "pantheon-wayland-session" {
       passthru.providedSessions = ["pantheon-wayland"];
@@ -28,10 +43,10 @@ in {
     # Expose Pantheon session to SDDM (services.displayManager.*)
     displayManager.sessionPackages = lib.mkAfter [
       pkgs.pantheon.elementary-session-settings
+      pantheonX11Session
       pantheonWaylandSession
     ];
   };
 
-  # Don't let Pantheon become the default session.
-  services.displayManager.defaultSession = lib.mkForce "plasma";
+  services.displayManager.defaultSession = "pantheon-x11";
 }
