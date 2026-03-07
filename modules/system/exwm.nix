@@ -59,6 +59,11 @@ in {
       networkmanagerapplet # Network Manager tray icon
       pasystray # PipeWire/PulseAudio volume tray
       xss-lock # Lock screen on suspend / idle
-      i3lock # Screen locker called by xss-lock
+      xsecurelock # Screen locker called by xss-lock
+      cbatticon
+      blueman
+      udiskie
+      redshift
+      flameshot
     ]);
 }
