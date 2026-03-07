@@ -135,7 +135,7 @@
     git = {
       enable = true;
       includes = [
-        { path = ./shell/doom-vibrant-delta.gitconfig; }
+        {path = ./shell/doom-vibrant-delta.gitconfig;}
       ];
       settings = {
         user.name = "Wolfhard Prell"; # Can be overridden in user specific files
