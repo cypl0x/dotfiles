@@ -411,5 +411,8 @@
          :desc "Describe X window" "x" #'+exwm/describe-current-x-window
          :desc "Toggle input mode" "i" #'+exwm/toggle-input-mode)))
 
+(after! exwm-mff
+  (exwm-mff-mode 1))
+
 (provide 'exwm)
 ;;; exwm.el ends here

@@ -86,6 +86,9 @@
         '';
       };
 
+    ".config/emacs/eshell/alias".source = ./shell/eshell/alias;
+    ".config/doom/eshell/functions.el".source = ./shell/eshell/functions.el;
+
     sessionVariables = {
       VISUAL = "emacsclient -c -a ''";
       COLORTERM = "truecolor";
