@@ -165,6 +165,7 @@ debug: ## Show detected make variables
 # Deploy
 # ============================================================================
 
+.PHONY: deploy-inari
 deploy-inari:
 	nixos-rebuild switch --flake .#inari --target-host root@65.109.108.233 --use-remote-sudo
 
