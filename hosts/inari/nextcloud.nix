@@ -10,6 +10,9 @@
     enable = true;
     hostName = "nextcloud.wolfhard.net";
     https = true;
+
+    # Keep upgrades explicit: migrate 32 -> 33 after the service completes the
+    # in-app major upgrade path and then bump this package in a dedicated commit.
     package = pkgs.nextcloud32;
 
     # Use local PostgreSQL (recommended over SQLite for production)
