@@ -69,6 +69,19 @@
   # Enable nix-ld for running unpatched dynamic binaries (e.g. Android SDK)
   programs.nix-ld.enable = true;
 
+  # Allow passwordless nixos-rebuild switch for wap on this host only
+  security.sudo.extraRules = [
+    {
+      users = ["wap"];
+      commands = [
+        {
+          command = "/run/current-system/sw/bin/nixos-rebuild switch *";
+          options = ["NOPASSWD"];
+        }
+      ];
+    }
+  ];
+
   # ThinkPad-specific hardware support
   services = {
     # iOS device management
