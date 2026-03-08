@@ -67,7 +67,11 @@
         src = ./.;
       } ''
         cp -r $src source
-        ${if writable then "chmod -R u+w source" else ""}
+        ${
+          if writable
+          then "chmod -R u+w source"
+          else ""
+        }
         cd source
         ${script}
         touch $out
@@ -114,16 +118,18 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bak";
-              users = hmBaseUsers // {
-                proxy = {
-                  imports = [
-                    ./home/proxy.nix
-                    ./home/proxy-openclaw.nix
-                    nix-openclaw.homeManagerModules.openclaw
-                  ];
+              users =
+                hmBaseUsers
+                // {
+                  proxy = {
+                    imports = [
+                      ./home/proxy.nix
+                      ./home/proxy-openclaw.nix
+                      nix-openclaw.homeManagerModules.openclaw
+                    ];
+                  };
+                  fabian = import ./home/fabian.nix;
                 };
-                fabian = import ./home/fabian.nix;
-              };
             };
           }
         ];
