@@ -125,5 +125,7 @@
 
     # multi messenger meta messenger (WhatsApp, Telegram, Signal, Discord, etc.)
     beeper
+
+    cherry-studio
   ];
 }
