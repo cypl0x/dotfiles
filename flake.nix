@@ -72,6 +72,13 @@
         ${script}
         touch $out
       '';
+
+    hmBaseUsers = {
+      cypl0x = import ./home/cypl0x.nix;
+      wap = import ./home/wap.nix;
+      root = import ./home/root.nix;
+      proxy = import ./home/proxy.nix;
+    };
   in {
     nixosConfigurations = {
       # ThinkPad laptop configuration (using unstable)
@@ -88,12 +95,7 @@
               sharedModules = [
                 ./home/kitty-thinkpad.nix
               ];
-              users = {
-                cypl0x = import ./home/cypl0x.nix;
-                wap = import ./home/wap.nix;
-                root = import ./home/root.nix;
-                proxy = import ./home/proxy.nix;
-              };
+              users = hmBaseUsers;
             };
           }
         ];
@@ -112,10 +114,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bak";
-              users = {
-                cypl0x = import ./home/cypl0x.nix;
-                wap = import ./home/wap.nix;
-                root = import ./home/root.nix;
+              users = hmBaseUsers // {
                 proxy = {
                   imports = [
                     ./home/proxy.nix
