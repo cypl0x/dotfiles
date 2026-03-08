@@ -14,7 +14,6 @@
       codex # OpenAI ChatGPT
       claude-code
       deadnix # Find unused Nix code
-      devilspie2 # resize and position x11 windows
       eza # Modern replacement for ls (formerly exa)
       felix-fm # Tui file manager with vim-like key mapping
       fd # Fast file finder (used in Makefile)
