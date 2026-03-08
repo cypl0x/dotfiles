@@ -293,7 +293,8 @@
              ("Navigator" (exwm-workspace-move-window 2 id))
              ("Beeper"    (exwm-workspace-move-window 3 id))
              ("1Password" (exwm-workspace-move-window 4 id))
-             ("1password" (exwm-workspace-move-window 4 id))))))))
+             ("1password" (exwm-workspace-move-window 4 id))
+             ("Remmina"   (exwm-workspace-move-window 5 id))))))))
 
   (add-hook 'exwm-manage-finish-hook #'+exwm/manage-float-dialogs)
   (add-hook 'exwm-manage-finish-hook #'+exwm/manage-char-mode)

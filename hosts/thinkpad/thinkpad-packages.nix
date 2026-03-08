@@ -119,6 +119,7 @@
 
     nil # nix lsp server
 
+    # TODO move to own flutter.nix file
     dart
     flutter
 
