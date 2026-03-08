@@ -63,6 +63,61 @@
         (princ (concat "  " file "\n")))
       (kill-emacs 1))))
 
+(defconst dotfiles-elisp-lambda-deny-list
+  '(add-hook add-hook! advice-add run-at-time run-with-timer run-with-idle-timer))
+
+(defconst dotfiles-elisp-lambda-deny-list-strict
+  '(define-key global-set-key local-set-key))
+
+(defun dotfiles-elisp--lambda-form-p (form)
+  (and (consp form) (eq (car form) 'lambda)))
+
+(defun dotfiles-elisp--forms-with-lambda (form)
+  (let (hits)
+    (dolist (arg (cdr form))
+      (when (dotfiles-elisp--lambda-form-p arg)
+        (push arg hits)))
+    hits))
+
+(defun dotfiles-elisp--check-no-anon (file deny-list)
+  (let (violations)
+    (with-temp-buffer
+      (insert-file-contents file)
+      (emacs-lisp-mode)
+      (goto-char (point-min))
+      (condition-case _err
+          (while t
+            (let ((start (point))
+                  (form (read (current-buffer))))
+              (when (and (consp form)
+                         (symbolp (car form))
+                         (memq (car form) deny-list)
+                         (dotfiles-elisp--forms-with-lambda form))
+                (push (list (line-number-at-pos start) (car form)) violations))))
+        (end-of-file nil)))
+    violations))
+
+(defun dotfiles-elisp-lint-no-anon (files &optional strict)
+  "Lint for anonymous lambdas in sensitive forms.
+
+Use STRICT to also flag anonymous lambdas in keybindings
+(define-key/global-set-key/local-set-key)."
+  (let* ((deny-list (append dotfiles-elisp-lambda-deny-list
+                            (when strict dotfiles-elisp-lambda-deny-list-strict)))
+         (failed nil))
+    (dolist (file files)
+      (let ((violations (dotfiles-elisp--check-no-anon file deny-list)))
+        (when violations
+          (push (cons file violations) failed))))
+    (when failed
+      (princ "Elisp lint failed (anonymous lambdas in sensitive forms):\n")
+      (dolist (entry (nreverse failed))
+        (let ((file (car entry))
+              (violations (cdr entry)))
+          (dolist (violation (nreverse violations))
+            (princ (format "  %s:%d (%s)\n" file (nth 0 violation) (nth 1 violation))))))
+      (kill-emacs 1))))
+
 (defun dotfiles-elisp--main ()
   (let* ((args command-line-args-left)
          (args (if (and args (string= (car args) "--")) (cdr args) args))
@@ -72,8 +127,10 @@
       ("format" (dotfiles-elisp-format files t))
       ("format-check" (dotfiles-elisp-format files nil))
       ("lint" (dotfiles-elisp-lint files))
+      ("lint-no-anon" (dotfiles-elisp-lint-no-anon files nil))
+      ("lint-no-anon-strict" (dotfiles-elisp-lint-no-anon files t))
       (_
-       (princ "Usage: emacs --batch -Q -l scripts/elisp-qa.el -- <format|format-check|lint> [files...]\n")
+       (princ "Usage: emacs --batch -Q -l home/bin/elisp-qa.el -- <format|format-check|lint|lint-no-anon|lint-no-anon-strict> [files...]\n")
        (kill-emacs 2)))))
 
 (dotfiles-elisp--main)

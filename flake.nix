@@ -187,6 +187,17 @@
           ./home/bin/elisp-qa lint
           touch $out
         '';
+
+      elisp-no-anon =
+        pkgs.runCommand "elisp-no-anon-check" {
+          nativeBuildInputs = [pkgs.emacs pkgs.zsh];
+          src = ./.;
+        } ''
+          cp -r $src source
+          cd source
+          ./home/bin/elisp-qa lint-no-anon
+          touch $out
+        '';
     };
 
     devShells.${system}.default = pkgs.mkShell {

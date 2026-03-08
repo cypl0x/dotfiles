@@ -112,7 +112,7 @@ fmt-nix: ## Format only Nix files with alejandra
 # ============================================================================
 
 .PHONY: lint
-lint: lint-statix lint-deadnix lint-shellcheck lint-elisp ## Run all linting checks (statix + deadnix + shellcheck + elisp)
+lint: lint-statix lint-deadnix lint-shellcheck lint-elisp lint-elisp-no-anon ## Run all linting checks (statix + deadnix + shellcheck + elisp)
 
 .PHONY: lint-statix
 lint-statix: ## Check for anti-patterns with statix
@@ -133,6 +133,16 @@ lint-shellcheck: ## Check shell scripts with shellcheck
 lint-elisp: ## Lint Emacs Lisp files (parens check)
 	@echo "${GREEN}Running Emacs Lisp lint...${RESET}"
 	./home/bin/elisp-qa lint
+
+.PHONY: lint-elisp-no-anon
+lint-elisp-no-anon: ## Lint Emacs Lisp files for anonymous lambdas in sensitive forms
+	@echo "${GREEN}Running Emacs Lisp anonymous-lambda lint...${RESET}"
+	./home/bin/elisp-qa lint-no-anon
+
+.PHONY: lint-elisp-no-anon-strict
+lint-elisp-no-anon-strict: ## Lint Emacs Lisp anonymous lambdas (strict: includes keybindings)
+	@echo "${GREEN}Running strict Emacs Lisp anonymous-lambda lint...${RESET}"
+	./home/bin/elisp-qa lint-no-anon-strict
 
 .PHONY: elisp-format
 elisp-format: ## Format Emacs Lisp files
