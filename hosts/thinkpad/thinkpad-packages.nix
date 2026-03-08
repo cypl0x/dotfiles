@@ -58,15 +58,6 @@
     # Webcam tools
     v4l-utils
 
-    # Calculator
-    bc
-
-    # GitHub CLI tool
-    gh
-
-    # Git Tui
-    tig
-
     # Git GUI
     #gitbutler # turbo-unwrapped broken
 
