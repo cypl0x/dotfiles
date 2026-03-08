@@ -132,7 +132,7 @@
     "X11 WM_CLASS values that should open as floating windows.")
 
   (defvar +exwm-char-mode-classes
-    '("kitty"
+    '(;; "kitty"
       "Alacritty"
       "XTerm"
       "URxvt"
