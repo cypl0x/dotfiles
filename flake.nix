@@ -168,7 +168,7 @@
 
       elisp-format =
         pkgs.runCommand "elisp-format-check" {
-          nativeBuildInputs = [pkgs.emacs pkgs.zsh];
+          nativeBuildInputs = [pkgs.emacs];
           src = ./.;
         } ''
           cp -r $src source
@@ -179,7 +179,7 @@
 
       elisp-lint =
         pkgs.runCommand "elisp-lint-check" {
-          nativeBuildInputs = [pkgs.emacs pkgs.zsh];
+          nativeBuildInputs = [pkgs.emacs];
           src = ./.;
         } ''
           cp -r $src source
@@ -190,7 +190,7 @@
 
       elisp-no-anon =
         pkgs.runCommand "elisp-no-anon-check" {
-          nativeBuildInputs = [pkgs.emacs pkgs.zsh];
+          nativeBuildInputs = [pkgs.emacs];
           src = ./.;
         } ''
           cp -r $src source
