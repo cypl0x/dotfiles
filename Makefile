@@ -112,7 +112,7 @@ fmt-nix: ## Format only Nix files with alejandra
 # ============================================================================
 
 .PHONY: lint
-lint: lint-statix lint-deadnix lint-shellcheck ## Run all linting checks (statix + deadnix + shellcheck)
+lint: lint-statix lint-deadnix lint-shellcheck lint-elisp ## Run all linting checks (statix + deadnix + shellcheck + elisp)
 
 .PHONY: lint-statix
 lint-statix: ## Check for anti-patterns with statix
@@ -128,6 +128,21 @@ lint-deadnix: ## Check for unused code with deadnix
 lint-shellcheck: ## Check shell scripts with shellcheck
 	@echo "${GREEN}Running shellcheck linter...${RESET}"
 	fd -e sh --exclude 'home/shell/zsh/completions.sh' -x shellcheck {}
+
+.PHONY: lint-elisp
+lint-elisp: ## Lint Emacs Lisp files (parens check)
+	@echo "${GREEN}Running Emacs Lisp lint...${RESET}"
+	./home/bin/elisp-qa lint
+
+.PHONY: elisp-format
+elisp-format: ## Format Emacs Lisp files
+	@echo "${GREEN}Formatting Emacs Lisp files...${RESET}"
+	./home/bin/elisp-qa format
+
+.PHONY: elisp-format-check
+elisp-format-check: ## Check Emacs Lisp formatting
+	@echo "${GREEN}Checking Emacs Lisp formatting...${RESET}"
+	./home/bin/elisp-qa format-check
 
 .PHONY: lint-fix
 lint-fix: ## Auto-fix issues where possible

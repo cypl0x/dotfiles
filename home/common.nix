@@ -38,6 +38,15 @@
           executable = true;
         };
 
+        ".local/bin/elisp-qa.el" = {
+          source = ./bin/elisp-qa.el;
+        };
+
+        ".local/bin/elisp-qa" = {
+          source = ./bin/elisp-qa;
+          executable = true;
+        };
+
         ".local/share/applications/emacsmail.desktop".text = ''
           [Desktop Entry]
           Name=Emacs Mail

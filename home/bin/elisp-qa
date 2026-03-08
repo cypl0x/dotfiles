@@ -1,0 +1,7 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+script_dir=${0:A:h}
+elisp_file="${script_dir}/elisp-qa.el"
+
+emacs --batch -Q -l "${elisp_file}" -- "$@"

@@ -165,6 +165,28 @@
           fd -e sh --exclude 'home/shell/zsh/completions.sh' -x shellcheck {}
           touch $out
         '';
+
+      elisp-format =
+        pkgs.runCommand "elisp-format-check" {
+          nativeBuildInputs = [pkgs.emacs pkgs.zsh];
+          src = ./.;
+        } ''
+          cp -r $src source
+          cd source
+          ./home/bin/elisp-qa format-check
+          touch $out
+        '';
+
+      elisp-lint =
+        pkgs.runCommand "elisp-lint-check" {
+          nativeBuildInputs = [pkgs.emacs pkgs.zsh];
+          src = ./.;
+        } ''
+          cp -r $src source
+          cd source
+          ./home/bin/elisp-qa lint
+          touch $out
+        '';
     };
 
     devShells.${system}.default = pkgs.mkShell {
@@ -180,6 +202,7 @@
           fd
           shellcheck
           shfmt
+          emacs
         ]);
     };
   };
