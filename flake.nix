@@ -198,6 +198,17 @@
           ./home/bin/elisp-qa lint-no-anon
           touch $out
         '';
+
+      markdownlint =
+        pkgs.runCommand "markdownlint-check" {
+          nativeBuildInputs = [pkgs.markdownlint-cli pkgs.fd];
+          src = ./.;
+        } ''
+          cp -r $src source
+          cd source
+          fd -e md -x markdownlint {}
+          touch $out
+        '';
     };
 
     devShells.${system}.default = pkgs.mkShell {
@@ -214,6 +225,7 @@
           shellcheck
           shfmt
           emacs
+          markdownlint-cli
         ]);
     };
   };
