@@ -55,6 +55,23 @@
         };
       };
     };
+
+    mkRepoCheck = {
+      name,
+      nativeBuildInputs,
+      script,
+      writable ? false,
+    }:
+      pkgs.runCommand name {
+        inherit nativeBuildInputs;
+        src = ./.;
+      } ''
+        cp -r $src source
+        ${if writable then "chmod -R u+w source" else ""}
+        cd source
+        ${script}
+        touch $out
+      '';
   in {
     nixosConfigurations = {
       # ThinkPad laptop configuration (using unstable)
@@ -119,96 +136,71 @@
 
     # Checks and lints
     checks.${system} = {
-      # treefmt check
-      formatting =
-        pkgs.runCommand "treefmt-check" {
-          nativeBuildInputs = [treefmtEval.config.build.wrapper];
-          src = ./.;
-        } ''
-          cp -r $src source
-          chmod -R u+w source
-          cd source
+      formatting = mkRepoCheck {
+        name = "treefmt-check";
+        nativeBuildInputs = [treefmtEval.config.build.wrapper];
+        writable = true;
+        script = ''
           treefmt --no-cache --fail-on-change
-          touch $out
         '';
+      };
 
-      statix =
-        pkgs.runCommand "statix-check" {
-          nativeBuildInputs = [pkgs.statix];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
+      statix = mkRepoCheck {
+        name = "statix-check";
+        nativeBuildInputs = [pkgs.statix];
+        script = ''
           statix check
-          touch $out
         '';
+      };
 
-      deadnix =
-        pkgs.runCommand "deadnix-check" {
-          nativeBuildInputs = [pkgs.deadnix];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
+      deadnix = mkRepoCheck {
+        name = "deadnix-check";
+        nativeBuildInputs = [pkgs.deadnix];
+        script = ''
           deadnix --fail
-          touch $out
         '';
+      };
 
-      shellcheck =
-        pkgs.runCommand "shellcheck-check" {
-          nativeBuildInputs = [pkgs.shellcheck pkgs.fd];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
+      shellcheck = mkRepoCheck {
+        name = "shellcheck-check";
+        nativeBuildInputs = [pkgs.shellcheck pkgs.fd];
+        script = ''
           # Exclude completions.sh as it uses zsh-specific syntax (shellcheck doesn't support zsh)
           fd -e sh --exclude 'home/shell/zsh/completions.sh' -x shellcheck {}
-          touch $out
         '';
+      };
 
-      elisp-format =
-        pkgs.runCommand "elisp-format-check" {
-          nativeBuildInputs = [pkgs.emacs];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
+      elisp-format = mkRepoCheck {
+        name = "elisp-format-check";
+        nativeBuildInputs = [pkgs.emacs];
+        script = ''
           ./home/bin/elisp-qa format-check
-          touch $out
         '';
+      };
 
-      elisp-lint =
-        pkgs.runCommand "elisp-lint-check" {
-          nativeBuildInputs = [pkgs.emacs];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
+      elisp-lint = mkRepoCheck {
+        name = "elisp-lint-check";
+        nativeBuildInputs = [pkgs.emacs];
+        script = ''
           ./home/bin/elisp-qa lint
-          touch $out
         '';
+      };
 
-      elisp-no-anon =
-        pkgs.runCommand "elisp-no-anon-check" {
-          nativeBuildInputs = [pkgs.emacs];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
+      elisp-no-anon = mkRepoCheck {
+        name = "elisp-no-anon-check";
+        nativeBuildInputs = [pkgs.emacs];
+        script = ''
           ./home/bin/elisp-qa lint-no-anon
-          touch $out
         '';
+      };
 
-      markdownlint =
-        pkgs.runCommand "markdownlint-check" {
-          nativeBuildInputs = [pkgs.markdownlint-cli pkgs.fd];
-          src = ./.;
-        } ''
-          cp -r $src source
-          cd source
+      markdownlint = mkRepoCheck {
+        name = "markdownlint-check";
+        nativeBuildInputs = [pkgs.markdownlint-cli pkgs.fd];
+        script = ''
           fd -e md -x markdownlint {}
-          touch $out
         '';
+      };
     };
 
     devShells.${system}.default = pkgs.mkShell {
