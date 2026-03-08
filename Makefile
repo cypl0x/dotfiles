@@ -14,9 +14,8 @@ RESET  := \033[0m
 
 # Detect hostname to select the correct configuration
 DETECTED_HOST := $(shell hostname)
-# Try to match detected hostname with flake outputs, otherwise default to 'inari'
-# (This is a simple heuristic; set HOST explicitly if needed: make switch HOST=myserver)
-HOST ?= $(shell if grep -q "$(DETECTED_HOST)" flake.nix; then echo "$(DETECTED_HOST)"; else echo "inari"; fi)
+# Default to detected hostname; override with HOST=... when needed.
+HOST ?= $(DETECTED_HOST)
 
 .PHONY: all
 all: help
