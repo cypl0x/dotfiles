@@ -14,6 +14,14 @@
 (package! savefold)
 
 ;; ---------------------------------------------------------------------------
+;; Kill ring
+;; ---------------------------------------------------------------------------
+
+(package! kill-file-path)
+;; (package! clipetty)
+;; (package! clipmon)
+
+;; ---------------------------------------------------------------------------
 ;; EXWM — X11 window manager
 ;; Loaded only in EXWM sessions (guarded in config.el).
 ;; ---------------------------------------------------------------------------
@@ -103,6 +111,12 @@
 (package! elisp-autofmt)
 (package! package-lint)
 (package! elsa)
+
+;; ---------------------------------------------------------------------------
+;; Language Server (LSP)
+;; ---------------------------------------------------------------------------
+
+(package! eglot-ltex :recipe (:host github :repo "emacs-languagetool/eglot-ltex"))
 
 ;; ---------------------------------------------------------------------------
 ;; Disabled / under evaluation

@@ -48,7 +48,51 @@
 
 ;; Persist kill ring across restarts.
 (after! savehist
-  (add-to-list 'savehist-additional-variables 'kill-ring))
+  ;; Persist a very large kill-ring history across restarts.
+  (setq savehist-length most-positive-fixnum)
+  (add-to-list 'savehist-additional-variables 'kill-ring)
+  (savehist-mode 1))
+
+;; Kill-ring / clipboard UX
+(setq save-interprogram-paste-before-kill t
+      yank-pop-change-selection t
+      kill-do-not-save-duplicates t)
+
+(after! consult
+  (map! "M-y" #'consult-yank-pop
+        :leader
+        "y" #'consult-yank-pop))
+
+(after! vertico
+  (map! :map vertico-map
+        "C-j" #'vertico-next
+        "C-k" #'vertico-previous
+        "C-h" #'vertico-directory-up
+        "C-l" #'vertico-insert))
+
+(defun +vertico-preview-candidate ()
+  "Show the current Vertico candidate in a read-only buffer."
+  (interactive)
+  (let* ((cand (when (fboundp 'vertico--candidate)
+                 (vertico--candidate)))
+         (text (if (stringp cand) (substring-no-properties cand) "")))
+    (with-current-buffer (get-buffer-create "*Kill Ring Preview*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert text)
+        (goto-char (point-min))
+        (view-mode 1))
+      (display-buffer (current-buffer)))))
+
+(after! vertico
+  (map! :map vertico-map
+        "C-c C-o" #'+vertico-preview-candidate))
+
+;; Wrap long candidates in the minibuffer (useful for consult-yank-pop).
+(add-hook 'minibuffer-setup-hook
+          (lambda ()
+            (setq truncate-lines nil
+                  word-wrap t)))
 
 ;; Buffer cycling on German keyboard layout (ö/ä instead of [/]).
 (map! "M-ö" #'previous-buffer
@@ -86,6 +130,20 @@
 (with-eval-after-load 'eshell
   (load! "eshell/functions"))
 
+;; ---------------------------------------------------------------------------
+;; Language Server (LSP)
+;; ---------------------------------------------------------------------------
+
+(use-package! eglot-ltex
+  :ensure t
+  :hook (text-mode . (lambda ()
+                       (require 'eglot-ltex)
+                       (eglot-ensure)))
+  :init
+  ;; (setq eglot-ltex-server-path "path/to/ltex-ls-XX.X.X/"
+  ;;       eglot-ltex-communication-channel 'stdio))
+                                        ; 'stdio or 'tcp
+)
 ;; ---------------------------------------------------------------------------
 ;; Universal app launcher (local lisp file)
 ;; ---------------------------------------------------------------------------

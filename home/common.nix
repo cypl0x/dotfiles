@@ -234,7 +234,6 @@
             WantedBy = ["graphical-session.target"];
           };
         };
-
       };
 
       targets = {
