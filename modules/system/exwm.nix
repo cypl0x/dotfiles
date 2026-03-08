@@ -64,6 +64,5 @@ in {
       blueman
       udiskie
       redshift
-      flameshot
     ]);
 }
