@@ -29,6 +29,7 @@ in {
     ../../modules/system/packages.nix
     ../../modules/system/shell.nix
     ../../modules/system/security.nix
+    ../../modules/system/nix-common.nix
     ../../modules/system/locale.nix
     ../../modules/system/desktop.nix
     ../../modules/system/exwm.nix
@@ -61,15 +62,7 @@ in {
   # Nix settings
   nix = {
     settings = {
-      experimental-features = ["nix-command" "flakes"];
       trusted-users = ["root" "@wheel"];
-      substituters = [
-        "https://cache.nixos.org"
-        "https://cypl0x.cachix.org"
-      ];
-      trusted-public-keys = [
-        "cypl0x.cachix.org-1:WMLmCcn2gTAZyWZDD6N2rghvpPn0rU9Gr5Cc2OTEdow="
-      ];
     };
 
     # Offload heavy builds to the Hetzner server
@@ -122,9 +115,6 @@ in {
 
     # Fingerprint authentication
     fprintd.tod.enable = true;
-
-    # OpenSSH AcceptEnv (nixpkgs unstable uses list format)
-    openssh.settings.AcceptEnv = ["LANG" "LC_*"];
 
     # In order to get AnyType login key visible
     # https://github.com/anyproto/anytype-ts/issues/729#issuecomment-2799841750
