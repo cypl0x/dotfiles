@@ -50,6 +50,11 @@
           MimeType=x-scheme-handler/mailto;
         '';
 
+        ".local/bin/sudo-askpass" = {
+          source = ./bin/sudo-askpass;
+          executable = true;
+        };
+
         # Aider configuration
         ".aider.conf.yml".text = ''
           model: ollama/deepseek-coder:1.3b

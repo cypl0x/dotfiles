@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+b64="$(
+  emacsclient --eval \
+    '(base64-encode-string (read-passwd "sudo password: ") t)' \
+  | sed 's/^"//; s/"$//'
+)"
+
+printf '%s' "$b64" | base64 -d
