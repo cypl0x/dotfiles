@@ -73,16 +73,6 @@
         '';
 
         ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
-        ".config/devilspie2/default.lua".text = ''
-          if get_window_type() == "WINDOW_TYPE_DOCK" then return end
-          if get_window_type() == "WINDOW_TYPE_NOTIFICATION" then return end
-          if get_window_type() == "WINDOW_TYPE_DESKTOP" then return end
-          if get_window_type() == "WINDOW_TYPE_DIALOG" then return end
-          if get_window_type() == "WINDOW_TYPE_SPLASH" then return end
-
-          maximize()
-        '';
-
         ".config/emacs/eshell/alias".source = ./shell/eshell/alias;
         ".config/doom/eshell/functions.el".source = ./shell/eshell/functions.el;
       }
@@ -216,6 +206,7 @@
 
     emacs = {
       enable = true;
+      package = pkgs.emacs-gtk;
       extraPackages = epkgs: [
         epkgs.vterm
         epkgs.eat
@@ -244,21 +235,6 @@
           };
         };
 
-        devilspie2 = {
-          Unit = {
-            Description = "Devilspie2 window rules";
-            ConditionEnvironment = "XDG_SESSION_TYPE=x11";
-            After = ["graphical-session.target"];
-            PartOf = ["graphical-session.target"];
-          };
-          Service = {
-            ExecStart = "${pkgs.devilspie2}/bin/devilspie2";
-            Restart = "on-failure";
-          };
-          Install = {
-            WantedBy = ["graphical-session.target"];
-          };
-        };
       };
 
       targets = {
