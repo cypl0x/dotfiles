@@ -61,6 +61,7 @@
   virtualisation.libvirtd.enable = true;
 
   # Work around libvirt unit using /usr/bin/sh (missing on NixOS)
+  # Remove after upstream libvirt/nixpkgs ships a fixed unit.
   systemd.services.virt-secret-init-encryption.serviceConfig.ExecStart = lib.mkForce [
     "${pkgs.bash}/bin/sh -c 'umask 0077 && (dd if=/dev/random status=none bs=32 count=1 | systemd-creds encrypt --name=secrets-encryption-key - /var/lib/libvirt/secrets/secrets-encryption-key)'"
   ];
