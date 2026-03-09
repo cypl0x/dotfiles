@@ -1,6 +1,7 @@
 _: {
   nix.settings = {
     experimental-features = ["nix-command" "flakes"];
+    builders-use-substitutes = true;
     substituters = [
       "https://cache.nixos.org"
       "https://cypl0x.cachix.org"

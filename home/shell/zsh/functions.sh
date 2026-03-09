@@ -62,6 +62,7 @@ nrsi() {
   cd "$DOTFILES_DIR"
   nixos-rebuild switch \
     --flake ".#inari" \
+    --use-substitutes \
     --build-host root@65.109.108.233 \
     --target-host root@65.109.108.233
 }
