@@ -1,6 +1,16 @@
-_: {
+{pkgs, ...}: {
   services.home-assistant = {
     enable = true;
+    extraComponents = [
+      "tailscale"
+    ];
+    customComponents = with pkgs.home-assistant-custom-components; [
+      localtuya
+      tuya_local
+      adaptive_lighting
+      scheduler
+    ];
+
     config = {
       default_config = {};
 
