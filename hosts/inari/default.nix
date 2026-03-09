@@ -4,6 +4,7 @@
     ./disk.nix
     ./services.nix
     ./nextcloud.nix
+    ./home-assistant.nix
     ./gui-proxy.nix
     ./gui-fabian.nix
 
