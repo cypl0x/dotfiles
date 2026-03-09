@@ -33,6 +33,7 @@ in {
     ../../modules/system/locale.nix
     ../../modules/system/desktop.nix
     ../../modules/system/exwm.nix
+    ../../modules/services/tailscale.nix
 
     # User configuration
     ../../modules/users/root.nix
@@ -79,6 +80,13 @@ in {
         supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
       }
     ];
+  };
+
+  # Tailscale subnet router for the friend's LAN where Tuya devices live.
+  # The advertised route must be approved in the Tailscale admin console.
+  services.tailscale = {
+    useRoutingFeatures = "server";
+    extraSetFlags = ["--advertise-routes=192.168.2.0/24"];
   };
 
   # Enable nix-ld for running unpatched dynamic binaries (e.g. Android SDK)

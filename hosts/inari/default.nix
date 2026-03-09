@@ -62,6 +62,12 @@
 
   torRelay.nickname = "inari";
 
+  # Accept subnet routes advertised by other Tailscale nodes (thinkpad).
+  services.tailscale = {
+    useRoutingFeatures = "client";
+    extraSetFlags = ["--accept-routes=true"];
+  };
+
   time.timeZone = "UTC";
   virtualisation.libvirtd.enable = true;
 
