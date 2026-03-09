@@ -1,4 +1,4 @@
-{lib, ...}: {
+{lib, pkgs, ...}: {
   imports = [
     ./hardware.nix
     ./disk.nix
@@ -59,6 +59,11 @@
 
   time.timeZone = "UTC";
   virtualisation.libvirtd.enable = true;
+
+  # Work around libvirt unit using /usr/bin/sh (missing on NixOS)
+  systemd.services.virt-secret-init-encryption.serviceConfig.ExecStart = lib.mkForce [
+    "${pkgs.bash}/bin/sh -c 'umask 0077 && (dd if=/dev/random status=none bs=32 count=1 | systemd-creds encrypt --name=secrets-encryption-key - /var/lib/libvirt/secrets/secrets-encryption-key)'"
+  ];
 
   users.users = {
     root.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
