@@ -11,6 +11,7 @@
     ./home-assistant.nix
     ./adguard-home.nix
     ./linkwarden.nix
+    ./n8n.nix
     ./gui-proxy.nix
     ./gui-fabian.nix
 
