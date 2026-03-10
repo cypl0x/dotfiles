@@ -118,5 +118,11 @@
     beeper
 
     cherry-studio
+
+    super-productivity
+    readest
+    varia
+
+    # home-assistant # https://github.com/cassidyjames/butler
   ];
 }
