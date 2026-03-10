@@ -9,6 +9,7 @@
     ./services.nix
     ./nextcloud.nix
     ./home-assistant.nix
+    ./adguard-home.nix
     ./gui-proxy.nix
     ./gui-fabian.nix
 

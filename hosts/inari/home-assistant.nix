@@ -1,8 +1,19 @@
 {pkgs, ...}: {
   services.home-assistant = {
     enable = true;
+    # Discovery-focused core integrations without the huge all-components closure.
     extraComponents = [
       "tailscale"
+      "tuya"
+      "adguard"
+      "ssdp"
+      "zeroconf"
+      "upnp"
+      "dhcp"
+      "homekit_controller"
+      "onvif"
+      "dlna_dmr"
+      "dlna_dms"
     ];
     customComponents = with pkgs.home-assistant-custom-components; [
       localtuya
