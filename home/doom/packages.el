@@ -58,17 +58,19 @@
 ;; Git / Version control
 ;; ---------------------------------------------------------------------------
 
-(package! magit-delta)         ;; delta pager integration for magit
-(package! blamer)              ;; inline git blame
-(package! git-link)            ;; copy GitHub/GitLab permalink
-(package! github-browse-file)  ;; open file on GitHub
-(package! git-undo)
-(package! embark-vc)
-(package! gh)
-(package! gh-notify)
-(package! my-repo-pins)
-(package! consult-ghq)
-(package! consult-ls-git)
+(package! magit-delta)         ;; delta pager — syntax-highlighted diffs
+(package! difftastic)          ;; structural, syntax-aware diffs (via difft binary)
+(package! blamer)              ;; GitLens-style inline blame overlay
+(package! git-link)            ;; stable commit-hash permalink URLs
+(package! github-browse-file)  ;; open file on GitHub in browser
+(package! git-undo)            ;; undo git operations
+(package! embark-vc)           ;; embark actions for VC / Magit candidates
+(package! gh)                  ;; GitHub API client (Elisp)
+(package! gh-notify)           ;; GitHub notifications in Emacs
+(package! my-repo-pins)        ;; pin / bookmark repositories
+(package! consult-ghq)         ;; consult source for GHQ-managed repos
+(package! consult-ls-git)      ;; consult source for tracked files & commits
+(package! consult-gh)          ;; interactive GitHub CLI interface (uses gh binary)
 
 ;; Less commonly used git tools — enable as needed:
 ;; (package! github-explorer)
