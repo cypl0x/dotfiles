@@ -123,6 +123,8 @@
     readest
     varia
 
+    zed-editor
+
     # home-assistant # https://github.com/cassidyjames/butler
   ];
 }

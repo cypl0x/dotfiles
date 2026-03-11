@@ -42,7 +42,7 @@ in {
     ../../modules/users/proxy.nix
 
     # Host-specific configuration
-    ./pantheon.nix
+    ./gnome.nix
     ./thinkpad-packages.nix
   ];
 
@@ -123,10 +123,6 @@ in {
 
     # Fingerprint authentication
     fprintd.tod.enable = true;
-
-    # In order to get AnyType login key visible
-    # https://github.com/anyproto/anytype-ts/issues/729#issuecomment-2799841750
-    # gnome.gnome-keyring.enable = true;
 
     # Push local builds to Cachix
     cachix-watch-store = {

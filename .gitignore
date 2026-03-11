@@ -2,6 +2,7 @@ result
 .direnv
 .envrc
 .aider*
+.sentry-native/
 
 # ShellFish secrets
 home/shell/.shellfishrc.secrets

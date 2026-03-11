@@ -13,6 +13,7 @@
       gemini-cli
       codex # OpenAI ChatGPT
       claude-code
+      opencode
       deadnix # Find unused Nix code
       eza # Modern replacement for ls (formerly exa)
       felix-fm # Tui file manager with vim-like key mapping
