@@ -9,6 +9,7 @@ _: {
     trusted-public-keys = [
       "cypl0x.cachix.org-1:WMLmCcn2gTAZyWZDD6N2rghvpPn0rU9Gr5Cc2OTEdow="
     ];
+    download-buffer-size = 524288000; # B instead of  32 MB
   };
 
   services.openssh.settings.AcceptEnv = ["LANG" "LC_*"];
