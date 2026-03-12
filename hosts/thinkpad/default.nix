@@ -54,6 +54,8 @@ in {
     };
   };
 
+  boot.kernelPackages = pkgs.linuxPackages_6_18;
+
   # Network configuration
   networking = {
     hostName = "thinkpad";
