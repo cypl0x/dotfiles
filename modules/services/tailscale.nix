@@ -5,7 +5,7 @@ _: {
     openFirewall = true;
   };
 
-# Required for subnet router - without this the firewall drops
-# packets that don't match the expected reverse path
-networking.firewall.checkReversePath = "loose";
+  # Required for subnet router - without this the firewall drops
+  # packets that don't match the expected reverse path
+  networking.firewall.checkReversePath = "loose";
 }
