@@ -107,6 +107,8 @@
       gnome-firmware # Firmware update GUI wrapping fwupd
       bottles # Wine prefix manager — run Windows applications
       resources # Modern system resource and process monitor (GTK4)
+      pika-backup # Simple backups based on borg
+      wike # Wikipedia reading tool
 
       # ── Fonts for broad Unicode and emoji coverage ────────────────────────
       noto-fonts # Wide Unicode script coverage
