@@ -12,6 +12,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     datapass.url = "github:cypl0x/datapass";
+    blog = {
+      url = "github:cypl0x/blog";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-openclaw.url = "github:openclaw/nix-openclaw";
     disko = {
       url = "github:nix-community/disko";
@@ -24,6 +28,7 @@
     home-manager,
     treefmt-nix,
     datapass,
+    blog,
     nix-openclaw,
     disko,
     ...
@@ -108,6 +113,7 @@
       # Hetzner Dedicated AX41-NVMe (Finnland, HEL1)
       inari = nixpkgs.lib.nixosSystem {
         inherit system;
+        specialArgs = {inherit blog;};
         modules = [
           ./hosts/inari
           {nixpkgs.overlays = [nix-openclaw.overlays.default];}

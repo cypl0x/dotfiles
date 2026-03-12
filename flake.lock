@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "blog": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1773337816,
+        "narHash": "sha256-S0g1zd35Dqwwu0Ke3q/y87EnIHEpiIIzYkpYujZrbO8=",
+        "owner": "cypl0x",
+        "repo": "blog",
+        "rev": "cd141fc24404fd2ee409aaaaa94a6f30a9eecb19",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cypl0x",
+        "repo": "blog",
+        "type": "github"
+      }
+    },
     "crane": {
       "locked": {
         "lastModified": 1769287525,
@@ -301,6 +321,7 @@
     },
     "root": {
       "inputs": {
+        "blog": "blog",
         "datapass": "datapass",
         "disko": "disko",
         "home-manager": "home-manager",
