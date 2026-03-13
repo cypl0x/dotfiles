@@ -21,9 +21,13 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    authentik-nix = {
+      url = "github:nix-community/authentik-nix/7e4730351fb6df479c46a1bf7e23d46a0b0c5d46";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {
+  outputs = inputs @ {
     nixpkgs,
     home-manager,
     treefmt-nix,
@@ -115,6 +119,7 @@
         inherit system;
         specialArgs = {inherit blog;};
         modules = [
+          inputs."authentik-nix".nixosModules.default
           ./hosts/inari
           {nixpkgs.overlays = [nix-openclaw.overlays.default];}
           disko.nixosModules.disko

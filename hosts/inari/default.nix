@@ -10,6 +10,7 @@
     ./nextcloud.nix
     ./home-assistant.nix
     ./adguard-home.nix
+    ./authentik.nix
     ./blog.nix
     ./linkwarden.nix
     ./n8n.nix
