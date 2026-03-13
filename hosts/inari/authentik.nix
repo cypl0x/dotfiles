@@ -1,4 +1,4 @@
-_: {
+{ pkgs, ... }: {
   services = {
     redis.servers.authentik = {
       enable = true;
@@ -37,11 +37,11 @@ _: {
       enableACME = true;
       forceSSL = true;
       locations."/" = {
-        proxyPass = "http://127.0.0.1:9000";
+        proxyPass = "https://127.0.0.1:9443";
         proxyWebsockets = true;
       };
       locations."/outpost.goauthentik.io/" = {
-        proxyPass = "http://127.0.0.1:9000/outpost.goauthentik.io/";
+        proxyPass = "https://127.0.0.1:9443/outpost.goauthentik.io/";
         proxyWebsockets = true;
       };
     };
@@ -50,6 +50,9 @@ _: {
   systemd.services = {
     # Keep the Authentik web server internal-only.
     authentik.environment.AUTHENTIK_LISTEN__HTTP = "127.0.0.1:9000";
+    authentik.environment.AUTHENTIK_BLUEPRINTS_DIR = "${pkgs.authentik.src}/blueprints";
+    authentik-worker.environment.AUTHENTIK_BLUEPRINTS_DIR = "${pkgs.authentik.src}/blueprints";
+    authentik-migrate.environment.AUTHENTIK_BLUEPRINTS_DIR = "${pkgs.authentik.src}/blueprints";
 
     # Keep LDAP internal-only for local consumers.
     authentik-ldap.environment.AUTHENTIK_LISTEN__LDAP = "127.0.0.1:389";
