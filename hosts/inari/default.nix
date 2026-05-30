@@ -15,6 +15,7 @@
     ./linkwarden.nix
     ./n8n.nix
     ./paperless.nix
+    ./appvibe.nix
     ./gui-proxy.nix
     ./gui-fabian.nix
 
