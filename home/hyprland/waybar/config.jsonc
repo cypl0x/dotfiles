@@ -1,0 +1,209 @@
+// waybar — bottom bar, Doom Vibrant theme
+// Mirrors the tmux/wezterm status-bar aesthetic: left=session/workspace,
+// centre=window title, right=system stats + clock.
+{
+    "layer": "top",
+    "position": "bottom",
+    "height": 32,
+    "spacing": 4,
+    "exclusive": true,
+    "passthrough": false,
+    "gtk-layer-shell": true,
+
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/submap"
+    ],
+    "modules-center": [
+        "hyprland/window"
+    ],
+    "modules-right": [
+        "mpris",
+        "pulseaudio",
+        "bluetooth",
+        "network",
+        "cpu",
+        "memory",
+        "temperature",
+        "battery",
+        "clock",
+        "tray"
+    ],
+
+    // ── Left modules ──────────────────────────────────────────────────────────
+
+    "hyprland/workspaces": {
+        "format": "{id}",
+        "format-icons": {
+            "1": "󰊠",
+            "2": "󰋜",
+            "3": "",
+            "4": "",
+            "5": "󰍡",
+            "urgent": "",
+            "active": "󰮯",
+            "default": "󰊠"
+        },
+        "on-click": "activate",
+        "on-scroll-up": "hyprctl dispatch workspace e-1",
+        "on-scroll-down": "hyprctl dispatch workspace e+1",
+        "persistent-workspaces": {
+            "*": 10
+        },
+        "sort-by-number": true
+    },
+
+    "hyprland/submap": {
+        "format": " {}",
+        "max-length": 16,
+        "tooltip": false
+    },
+
+    // ── Centre module ─────────────────────────────────────────────────────────
+
+    "hyprland/window": {
+        "format": "{}",
+        "max-length": 60,
+        "separate-outputs": true,
+        "rewrite": {
+            "(.*) — Mozilla Firefox": "󰈹 $1",
+            "(.*) — Vivaldi": "󰀩 $1",
+            "(.*)Emacs(.*)": " $1$2",
+            "(.*) - Visual Studio Code": "󰨞 $1",
+            "(.*) - zed": "󱃖 $1",
+            "(.*) — Dolphin": " $1",
+            "(.*)": "$1"
+        }
+    },
+
+    // ── Right modules ─────────────────────────────────────────────────────────
+
+    "mpris": {
+        "format": "{player_icon} {dynamic}",
+        "format-paused": "{status_icon} {dynamic}",
+        "format-stopped": "",
+        "dynamic-len": 30,
+        "dynamic-order": ["title", "artist"],
+        "player-icons": {
+            "default":  "󰐊",
+            "spotify":  "",
+            "firefox":  "󰈹",
+            "mpv":      "󰐊",
+            "vlc":      "󰕼"
+        },
+        "status-icons": {
+            "paused":  "󰏤",
+            "playing": "󰐊",
+            "stopped": "󰓛"
+        },
+        "on-click": "playerctl play-pause",
+        "on-click-right": "playerctl next",
+        "on-scroll-up": "playerctl volume 0.05+",
+        "on-scroll-down": "playerctl volume 0.05-"
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-bluetooth": "󰂯 {volume}%",
+        "format-bluetooth-muted": "󰂲",
+        "format-muted": "󰖁",
+        "format-icons": {
+            "headphone": "󰋋",
+            "hands-free": "󱡒",
+            "headset": "󰋎",
+            "phone": "",
+            "portable": "",
+            "car": "󰄋",
+            "default": ["󰕿", "󰖀", "󰕾"]
+        },
+        "scroll-step": 2,
+        "on-click": "pavucontrol",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "tooltip-format": "{desc} — {volume}%"
+    },
+
+    "bluetooth": {
+        "format": "󰂯",
+        "format-disabled": "󰂲",
+        "format-off": "󰂲",
+        "format-connected": "󰂱 {device_alias}",
+        "format-connected-battery": "󰂱 {device_alias} {device_battery_percentage}%",
+        "on-click": "blueman-manager",
+        "tooltip-format": "{controller_alias}\n{num_connections} connected",
+        "tooltip-format-connected": "{controller_alias}\n{device_enumerate}",
+        "tooltip-format-enumerate-connected": "{device_alias}"
+    },
+
+    "network": {
+        "format-wifi": "󰤨 {signalStrength}%",
+        "format-ethernet": "󰈀",
+        "format-linked": "󰈂 (no IP)",
+        "format-disconnected": "󰤭",
+        "format-alt": "󰤨 {ifname}: {ipaddr}/{cidr}",
+        "on-click": "nm-connection-editor",
+        "on-click-right": "nm-applet",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ifname}: {ipaddr}",
+        "tooltip-format-ethernet": "{ifname}: {ipaddr}/{cidr}",
+        "tooltip-format-disconnected": "Disconnected"
+    },
+
+    "cpu": {
+        "format": "󰻠 {usage}%",
+        "interval": 3,
+        "on-click": "wezterm -e btop",
+        "tooltip-format": "CPU: {usage}%\nLoad: {load}"
+    },
+
+    "memory": {
+        "format": "󰍛 {percentage}%",
+        "interval": 5,
+        "on-click": "wezterm -e btop",
+        "tooltip-format": "RAM {used:0.1f}G / {total:0.1f}G\nSwap {swapUsed:0.1f}G / {swapTotal:0.1f}G"
+    },
+
+    "temperature": {
+        "thermal-zone": 0,
+        "critical-threshold": 80,
+        "format": "󰔏 {temperatureC}°C",
+        "format-critical": "󰸁 {temperatureC}°C",
+        "interval": 5
+    },
+
+    "battery": {
+        "states": {
+            "good": 95,
+            "warning": 25,
+            "critical": 10
+        },
+        "format": "{icon} {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-plugged": "󰚥 {capacity}%",
+        "format-alt": "{icon} {time}",
+        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+        "tooltip-format": "{timeTo}\nCycles: {cycles}"
+    },
+
+    "clock": {
+        "format": "󰃮 {:%Y-%m-%d %H:%M}",
+        "format-alt": "󰃮 {:%H:%M}",
+        "interval": 30,
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+        "calendar": {
+            "mode": "month",
+            "weeks-pos": "right",
+            "on-scroll": 1,
+            "format": {
+                "months":   "<span color='##51afef'><b>{}</b></span>",
+                "days":     "<span color='##bbc2cf'>{}</span>",
+                "weeks":    "<span color='##62686E'><b>W{}</b></span>",
+                "weekdays": "<span color='##FCCE7B'><b>{}</b></span>",
+                "today":    "<span color='##7bc275'><b><u>{}</u></b></span>"
+            }
+        }
+    },
+
+    "tray": {
+        "icon-size": 18,
+        "spacing": 8
+    }
+}
