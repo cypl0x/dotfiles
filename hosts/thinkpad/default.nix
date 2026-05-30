@@ -43,6 +43,7 @@ in {
 
     # Host-specific configuration
     ./gnome.nix
+    ./hyprland.nix
     ./thinkpad-packages.nix
   ];
 
