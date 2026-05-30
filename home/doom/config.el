@@ -297,19 +297,23 @@
   (setq eat-term-name "xterm-256color"))
 
 (with-eval-after-load 'eshell
-  (load! "eshell/functions"))
+  (load! "lisp/functions"))
 
 ;; ---------------------------------------------------------------------------
 ;; Language Server (LSP)
 ;; ---------------------------------------------------------------------------
 
 (use-package! eglot-ltex
-  :ensure t
+  ;; :ensure t
   :hook (text-mode . (lambda ()
                        (require 'eglot-ltex)
                        (eglot-ensure)))
   :init
-  ;; (setq eglot-ltex-server-path "path/to/ltex-ls-XX.X.X/"
+  (setq eglot-ltex-server-path "nix shell nixpkgs\\##ltex-ls --command ltex-ls"
+        ;; eglot-ltex-communication-channel 'stdio)
+        ;; nix shell spawns a new environment that could probably provide some issues with stdio
+        eglot-ltex-communication-channel 'tcp) 
+        ;; (setq eglot-ltex-server-path "path/to/ltex-ls-XX.X.X/"
   ;;       eglot-ltex-communication-channel 'stdio))
                                         ; 'stdio or 'tcp
 )
@@ -328,13 +332,10 @@
           (string= (getenv "XDG_CURRENT_DESKTOP") "EXWM"))
   (load! "exwm"))
 
+(after! doom-modeline
+  (setq doom-modeline-window-number t))
+
 ;; ---------------------------------------------------------------------------
 ;; Private config path override
 ;; SPC f p opens the dotfiles source instead of the read-only Nix store symlink.
 ;; ~/.config/doom/ is managed by home-manager; edits belong in ~/dotfiles/home/doom/.
-;; ---------------------------------------------------------------------------
-
-(defun doom/find-file-in-private-config ()
-  "Browse the Doom config source in the dotfiles repository."
-  (interactive)
-  (doom-project-find-file (expand-file-name "~/dotfiles/home/doom/")))
