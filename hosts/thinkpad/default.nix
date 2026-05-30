@@ -67,21 +67,6 @@ in {
     settings = {
       trusted-users = ["root" "@wheel"];
     };
-
-    # Offload heavy builds to the Hetzner server
-    distributedBuilds = true;
-    buildMachines = [
-      {
-        hostName = "65.109.108.233";
-        systems = ["x86_64-linux"];
-        protocol = "ssh";
-        sshUser = "root";
-        sshKey = "/home/wap/.ssh/id_rsa";
-        maxJobs = 8;
-        speedFactor = 2;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-    ];
   };
 
   # Tailscale subnet router for the friend's LAN where Tuya devices live.
