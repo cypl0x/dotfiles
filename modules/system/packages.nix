@@ -32,7 +32,7 @@
       statix # Nix linter
       starship
       sxhkd
-      tabby
+      # tabby # disabled 2026-06-04: nixpkgs unstable's rustc rejects vendored metrics-0.22.3 (rust-lang/rust#141402). Re-enable once nixpkgs ships a fix.
       tailscale
       tealdeer
       tmux

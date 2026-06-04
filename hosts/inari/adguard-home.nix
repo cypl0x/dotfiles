@@ -1,4 +1,14 @@
 {config, ...}: {
+  # With useNetworkd + resolved disabled, networking.nameservers never reaches
+  # /etc/resolv.conf. Host DNS still works via nss_dns fallback to 127.0.0.1
+  # (AdGuard), but the Nix build sandbox copies an empty resolv.conf and can't
+  # reach AdGuard from its namespace -- FOD fetches fail with "Could not resolve
+  # host". Write nameservers explicitly: AdGuard first for host filtering,
+  # Hetzner upstreams as fallback for the sandbox.
+  networking.resolvconf.extraConfig = ''
+    name_servers="127.0.0.1 185.12.64.1 2a01:4ff:ff00::add:2"
+  '';
+
   services = {
     # AdGuard Home should own DNS on :53 for Tailscale clients.
     # Disable systemd-resolved stub listener to avoid port conflicts.

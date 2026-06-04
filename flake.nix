@@ -22,7 +22,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     authentik-nix = {
-      url = "github:nix-community/authentik-nix/7e4730351fb6df479c46a1bf7e23d46a0b0c5d46";
+      url = "github:nix-community/authentik-nix/bf3c780157449d75ac8dfc184963d57d23f59e8c";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

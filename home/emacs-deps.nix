@@ -9,8 +9,8 @@
 
     # LSP servers (tools/lsp +eglot module)
     rust-analyzer # lang/rust +lsp
-    nodePackages.typescript-language-server # lang/javascript +lsp
-    nodePackages.bash-language-server # lang/sh +lsp
+    typescript-language-server # lang/javascript +lsp
+    bash-language-server # lang/sh +lsp
     copilot-language-server
     ltex-ls # LanguageTool language server
     ltex-ls-plus # LanguageTool language server (plus)
