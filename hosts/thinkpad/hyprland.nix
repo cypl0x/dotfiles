@@ -37,7 +37,21 @@
     waybar
 
     # Notifications
-    mako
+    # Drop mako's D-Bus activation file so it is NOT auto-started as
+    # org.freedesktop.Notifications under KDE/GNOME — there Plasma's native
+    # notification server must own that name (mako winning the activation race
+    # made popups render in mako's top-right style instead of Plasma-native).
+    # Under Hyprland, exec-once launches mako explicitly (see hyprland.conf),
+    # so on-demand D-Bus activation is unneeded. The shipped systemd user unit
+    # is left as-is: NixOS never enables package-provided user units, so it
+    # stays inert and is not an activation vector.
+    (mako.overrideAttrs (old: {
+      postInstall =
+        (old.postInstall or "")
+        + ''
+          rm -f "$out/share/dbus-1/services/fr.emersion.mako.service"
+        '';
+    }))
     libnotify # notify-send
 
     # Application launcher (Wayland-native build required under Hyprland)
