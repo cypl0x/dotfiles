@@ -71,7 +71,7 @@
     telegram-desktop
 
     # Bitwarden Password Manager
-    bitwarden-desktop
+    # bitwarden-desktop  # removed: pins EOL electron_39 (39.8.10)
     bitwarden-cli
     # _1password-gui
     # _1password-cli
