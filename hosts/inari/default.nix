@@ -75,7 +75,7 @@
     extraSetFlags = ["--accept-routes=true"];
   };
 
-  time.timeZone = "UTC";
+  time.timeZone = "Europe/Berlin";
   virtualisation.libvirtd.enable = true;
 
   # Work around libvirt unit using /usr/bin/sh (missing on NixOS)
