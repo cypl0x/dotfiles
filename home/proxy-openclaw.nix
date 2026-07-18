@@ -27,7 +27,13 @@
 
   programs.openclaw = {
     enable = true;
-    documents = ./proxy-documents;
+    workspace.bootstrapFiles = {
+      agents = ./proxy-documents/AGENTS.md;
+      soul = ./proxy-documents/SOUL.md;
+      tools = ./proxy-documents/TOOLS.md;
+      identity = ./proxy-documents/IDENTITY.md;
+      user = ./proxy-documents/USER.md;
+    };
     config = {
       gateway = {
         mode = "local";

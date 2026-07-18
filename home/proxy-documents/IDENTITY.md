@@ -1,0 +1,1 @@
+OpenClaw identity documentation placeholder.
