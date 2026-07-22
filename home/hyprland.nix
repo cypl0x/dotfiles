@@ -52,6 +52,10 @@ in {
       source = ./hyprland/scripts/run-or-raise.sh;
       executable = true;
     };
+    ".config/hypr/scripts/set-wallpaper.sh" = {
+      source = ./hyprland/scripts/set-wallpaper.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source  = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source     = ./hyprland/waybar/style.css;
     ".config/mako/config".source          = ./hyprland/mako.conf;
