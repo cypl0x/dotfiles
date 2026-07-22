@@ -18,6 +18,12 @@
     # From-source cgo build (see modules/pkgs/wacli.nix); pair with `wacli auth`.
     (callPackage ../../modules/pkgs/wacli.nix {})
 
+    # mcp-nixos — MCP server exposing NixOS/nixpkgs/home-manager option &
+    # package search to Claude Code. Already in nixpkgs, so no extra flake
+    # input needed. Wired as a stdio server in ~/.claude.json (command:
+    # "mcp-nixos"), replacing the old broken HTTP config.
+    mcp-nixos
+
     # Browsers
     vivaldi
 
