@@ -8,9 +8,9 @@ if [ -r /sys/class/power_supply/BAT0/capacity ]; then
   cap=$(cat /sys/class/power_supply/BAT0/capacity)
   st=$(cat /sys/class/power_supply/BAT0/status 2>/dev/null || echo "")
   case "$st" in
-    Charging) icon="󰂄" ;;
-    Full) icon="󰁹" ;;
-    *) icon="󱊣" ;;
+  Charging) icon="󰂄" ;;
+  Full) icon="󰁹" ;;
+  *) icon="󱊣" ;;
   esac
   bat="$icon ${cap}%   "
 fi

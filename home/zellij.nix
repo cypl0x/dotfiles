@@ -1,4 +1,4 @@
-{...}: {
+_: {
   # Zellij — Doom Vibrant theme + sensible defaults.
   #
   # NOTE on "vertical tabs": zellij has no vertical tab bar. Its tab bar is a

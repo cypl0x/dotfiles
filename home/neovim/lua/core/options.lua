@@ -33,6 +33,6 @@ opt.signcolumn = "yes"
 opt.clipboard = "unnamedplus"
 opt.undofile = true
 opt.mouse = "a"
-opt.completeopt = {"menu", "menuone", "noselect"}
+opt.completeopt = { "menu", "menuone", "noselect" }
 
 vim.cmd.colorscheme("doom-vibrant")

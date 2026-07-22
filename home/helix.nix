@@ -1,4 +1,4 @@
-{...}: {
+_: {
   # Helix — themed to Doom Vibrant, with an hlissner/Doom-Emacs-flavoured
   # Space leader. Helix's built-in Space menu is already Doom-like (Space f =
   # files, Space b = buffers, Space / = global search, Space s = symbols), so we
@@ -36,36 +36,35 @@
       };
 
       keys.normal = {
-        # Doom SPC w — window management (Helix calls these Ctrl-w by default)
-        space.w = {
-          v = "vsplit";
-          s = "hsplit";
-          h = "jump_view_left";
-          j = "jump_view_down";
-          k = "jump_view_up";
-          l = "jump_view_right";
-          q = "wclose";
-          o = "wonly";
-          w = "rotate_view";
+        # Doom Space leader: w = windows, b = buffers, c = code.
+        space = {
+          w = {
+            v = "vsplit";
+            s = "hsplit";
+            h = "jump_view_left";
+            j = "jump_view_down";
+            k = "jump_view_up";
+            l = "jump_view_right";
+            q = "wclose";
+            o = "wonly";
+            w = "rotate_view";
+          };
+          b = {
+            b = "buffer_picker";
+            d = ":buffer-close";
+            n = "goto_next_buffer";
+            p = "goto_previous_buffer";
+          };
+          c = {
+            a = "code_action";
+            r = "rename_symbol";
+            f = ":format";
+            d = "goto_definition";
+            D = "goto_declaration";
+            i = "goto_implementation";
+          };
         };
-        # Doom SPC b — buffers
-        space.b = {
-          b = "buffer_picker";
-          d = ":buffer-close";
-          n = "goto_next_buffer";
-          p = "goto_previous_buffer";
-        };
-        # Doom SPC c — code
-        space.c = {
-          a = "code_action";
-          r = "rename_symbol";
-          f = ":format";
-          d = "goto_definition";
-          D = "goto_declaration";
-          i = "goto_implementation";
-        };
-        # Doom-style: gd/gr already default; add K hover is default.
-        # Quick window nav without the leader (vim-ish)
+        # Quick window nav without the leader (vim-ish); gd/gr/K are Helix defaults.
         "C-h" = "jump_view_left";
         "C-j" = "jump_view_down";
         "C-k" = "jump_view_up";
@@ -94,7 +93,7 @@
       "ui.background" = {bg = base;};
       "ui.text" = fg;
       "ui.text.focus" = {
-        fg = fg;
+        inherit fg;
         modifiers = ["bold"];
       };
       "ui.cursor" = {
@@ -109,15 +108,15 @@
         fg = yellow;
         modifiers = ["bold"];
       };
-      "ui.cursorline.primary" = {bg = bg;};
+      "ui.cursorline.primary" = {inherit bg;};
       "ui.linenr" = grey;
       "ui.linenr.selected" = {
-        fg = fg;
+        inherit fg;
         modifiers = ["bold"];
       };
       "ui.statusline" = {
-        fg = fg;
-        bg = bg;
+        inherit fg;
+        inherit bg;
       };
       "ui.statusline.inactive" = {
         fg = grey;
@@ -139,23 +138,23 @@
         modifiers = ["bold"];
       };
       "ui.popup" = {
-        fg = fg;
-        bg = bg;
+        inherit fg;
+        inherit bg;
       };
       "ui.window" = border;
       "ui.help" = {
-        fg = fg;
-        bg = bg;
+        inherit fg;
+        inherit bg;
       };
       "ui.menu" = {
-        fg = fg;
-        bg = bg;
+        inherit fg;
+        inherit bg;
       };
       "ui.menu.selected" = {
         fg = base;
         bg = blue;
       };
-      "ui.virtual.ruler" = {bg = bg;};
+      "ui.virtual.ruler" = {inherit bg;};
       "ui.virtual.whitespace" = grey;
       "ui.virtual.indent-guide" = border;
       "ui.virtual.inlay-hint" = grey;
