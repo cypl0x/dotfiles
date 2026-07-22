@@ -1,7 +1,9 @@
 ;; ══════════════════════════════════════════════════════════════════════════
 ;;  Doom Vibrant "nerdy" system overlay — a conky-style desktop panel.
-;;  Anchored to the right edge, painted *behind* windows (stacking "bg"), so it
-;;  reads like a terminal HUD glued to the wallpaper. All metrics are polled
+;;  Anchored to the right edge, painted *behind* windows (stacking "bottom"),
+;;  so it reads like a terminal HUD glued to the wallpaper. "bg" would put it
+;;  on the same layer-shell level as hyprpaper, which maps its surface later
+;;  during startup and covers the panel. All metrics are polled
 ;;  from /proc, /sys and coreutils — no external daemons.
 ;; ══════════════════════════════════════════════════════════════════════════
 
@@ -21,11 +23,13 @@
 (defpoll TZBERLIN  :interval "10s" `TZDIR=/etc/zoneinfo TZ='Europe/Berlin' date +'%H:%M'`)
 (defpoll TZJAKARTA :interval "10s" `TZDIR=/etc/zoneinfo TZ='Asia/Jakarta' date +'%H:%M'`)
 
-(defpoll CPU    :interval "2s"  `top -bn1 | awk -F',' '/Cpu\\(s\\)/{for(i=1;i<=NF;i++) if($i ~ /id/){gsub(/[^0-9.]/,"",$i); printf "%.0f", 100-$i}}'`)
-(defpoll MEMP   :interval "3s"  `free | awk '/Mem:/{printf "%.0f", $3/$2*100}'`)
+;; :initial "0" — progress bars choke on the empty string the polls report
+;; before their first run ("Failed to turn `` into a value of type f64").
+(defpoll CPU    :interval "2s"  :initial "0" `top -bn1 | awk -F',' '/Cpu\\(s\\)/{for(i=1;i<=NF;i++) if($i ~ /id/){gsub(/[^0-9.]/,"",$i); printf "%.0f", 100-$i}}'`)
+(defpoll MEMP   :interval "3s"  :initial "0" `free | awk '/Mem:/{printf "%.0f", $3/$2*100}'`)
 (defpoll MEMT   :interval "3s"  `free -h --si | awk '/Mem:/{print $3" / "$2}'`)
-(defpoll SWAPP  :interval "5s"  `free | awk '/Swap:/{if($2>0) printf "%.0f", $3/$2*100; else print 0}'`)
-(defpoll DISK   :interval "30s" `df -h / | awk 'NR==2{gsub(/%/,"",$5); print $5}'`)
+(defpoll SWAPP  :interval "5s"  :initial "0" `free | awk '/Swap:/{if($2>0) printf "%.0f", $3/$2*100; else print 0}'`)
+(defpoll DISK   :interval "30s" :initial "0" `df -h / | awk 'NR==2{gsub(/%/,"",$5); print $5}'`)
 (defpoll DISKT  :interval "30s" `df -h / | awk 'NR==2{print $3" / "$2}'`)
 (defpoll TEMP   :interval "5s"  `for z in /sys/class/thermal/thermal_zone*/temp; do awk '{printf "%.0f", $1/1000; exit}' "$z"; break; done`)
 (defpoll BAT    :interval "10s" `cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo "--"`)
@@ -100,7 +104,7 @@
   :monitor 0
   :geometry (geometry :x "18px" :y "0px" :width "300px" :height "94%"
                       :anchor "right center")
-  :stacking "bg"
+  :stacking "bottom"
   :focusable false
   :exclusive false
   (sys))
