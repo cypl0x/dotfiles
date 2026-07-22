@@ -64,10 +64,6 @@ in {
       source = ./hyprland/scripts/window-switcher.sh;
       executable = true;
     };
-    ".config/hypr/scripts/notification-click.sh" = {
-      source = ./hyprland/scripts/notification-click.sh;
-      executable = true;
-    };
     ".config/hypr/scripts/doom-buffer-switcher.sh" = {
       source = ./hyprland/scripts/doom-buffer-switcher.sh;
       executable = true;
@@ -90,7 +86,8 @@ in {
     };
     ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
-    ".config/mako/config".source = ./hyprland/mako.conf;
+    ".config/swaync/config.json".source = ./hyprland/swaync/config.json;
+    ".config/swaync/style.css".source = ./hyprland/swaync/style.css;
     ".config/rofi/doom-vibrant.rasi".source = ./hyprland/rofi/doom-vibrant.rasi;
   };
 
@@ -105,7 +102,7 @@ in {
     CLUTTER_BACKEND = "wayland";
   };
 
-  # hypridle, hyprpaper, swayosd, waybar, and mako are all started via
+  # hypridle, hyprpaper, swayosd, waybar, and swaync are all started via
   # exec-once in hyprland.conf — no separate systemd services needed.
   # Systemd services scoped to graphical-session.target would fire in KDE/GNOME
   # too, where ext-idle-notifier-v1 and hyprpaper's socket don't exist.

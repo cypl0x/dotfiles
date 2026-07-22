@@ -1,0 +1,137 @@
+/* ══════════════════════════════════════════════════════════════════════════
+ *  SwayNotificationCenter — Doom Vibrant (Henrik Lissner) theme.
+ *  Palette: bg #1c1f24 / surface #242730 / fg #bbc2cf / blue #51afef /
+ *  magenta #c57bdb / red #ff665c / green #7bc275 / yellow #fcce7b.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+* {
+  font-family: "Maple Mono NF", "JetBrainsMono Nerd Font", monospace;
+  font-size: 13px;
+}
+
+/* ── Toasts (individual popup notifications) ─────────────────────────────── */
+.notification {
+  border-radius: 12px;
+  margin: 6px 10px;
+  padding: 0;
+  background: transparent;
+}
+
+.notification-row {
+  outline: none;
+}
+
+.notification-content {
+  background: #242730;
+  border: 1px solid rgba(72, 72, 84, 0.6);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 0;
+  color: #bbc2cf;
+}
+
+.notification.critical .notification-content {
+  border-color: #ff665c;
+}
+
+.notification .summary {
+  color: #51afef;
+  font-weight: bold;
+}
+
+.notification .body {
+  color: #bbc2cf;
+}
+
+.notification .time {
+  color: #62686e;
+}
+
+/* Close button */
+.close-button {
+  background: transparent;
+  color: #62686e;
+  border: none;
+  border-radius: 8px;
+  margin: 4px;
+  padding: 2px 6px;
+}
+.close-button:hover {
+  background: #ff665c;
+  color: #1c1f24;
+}
+
+/* Action buttons */
+.notification-action {
+  color: #bbc2cf;
+  background: #1c1f24;
+  border: 1px solid rgba(72, 72, 84, 0.6);
+  border-radius: 8px;
+  margin: 6px 4px 2px 4px;
+}
+.notification-action:hover {
+  background: #51afef;
+  color: #1c1f24;
+}
+
+/* ── Control center (the slide-out panel) ───────────────────────────────── */
+.control-center {
+  background: rgba(28, 31, 36, 0.96);
+  border: 1px solid rgba(81, 175, 239, 0.5);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.control-center .notification-content {
+  background: #21242b;
+}
+
+.widget-title {
+  color: #bbc2cf;
+  font-size: 15px;
+  font-weight: bold;
+  margin: 4px 8px 10px 8px;
+}
+.widget-title > button {
+  color: #1c1f24;
+  background: #51afef;
+  border: none;
+  border-radius: 8px;
+  padding: 2px 10px;
+}
+.widget-title > button:hover {
+  background: #c57bdb;
+}
+
+/* Do-Not-Disturb toggle */
+.widget-dnd {
+  color: #bbc2cf;
+  margin: 4px 8px 10px 8px;
+}
+.widget-dnd > switch {
+  background: #242730;
+  border-radius: 12px;
+  border: 1px solid rgba(72, 72, 84, 0.6);
+}
+.widget-dnd > switch:checked {
+  background: #fcce7b;
+}
+.widget-dnd > switch slider {
+  background: #bbc2cf;
+  border-radius: 10px;
+}
+
+/* MPRIS media widget */
+.widget-mpris {
+  color: #bbc2cf;
+  background: #242730;
+  border-radius: 12px;
+  padding: 6px;
+  margin: 4px 8px;
+}
+
+/* Notification group headers */
+.notification-group-headers {
+  color: #c57bdb;
+  font-weight: bold;
+}

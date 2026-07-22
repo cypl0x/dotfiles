@@ -43,6 +43,7 @@ tooltip label {
 #battery,
 #clock,
 #custom-claude,
+#custom-notification,
 #custom-power,
 #tray {
   background: rgba(28, 31, 36, 0.85);
@@ -116,6 +117,7 @@ window#waybar.empty #window {
 #custom-claude          { color: #7bc275; }   /* Doom green  — usage low */
 #custom-claude.warning  { color: #fcce7b; }   /* Doom yellow — >=70% of 5h limit */
 #custom-claude.critical { color: #ff665c; }   /* Doom red    — >=90% of 5h limit */
+#custom-notification    { color: #c57bdb; }   /* Doom magenta — swaync */
 
 /* resources group = cpu | mem | temp inside one pill */
 #resources {
