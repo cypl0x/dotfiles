@@ -74,6 +74,11 @@
 
   # ThinkPad-specific hardware support
   services = {
+    # Keyboard backlight to max on boot/resume
+    udev.extraRules = ''
+      ACTION=="add", SUBSYSTEM=="leds", KERNEL=="tpacpi::kbd_backlight", RUN+="${pkgs.bash}/bin/sh -c 'cat /sys/class/leds/%k/max_brightness > /sys/class/leds/%k/brightness'"
+    '';
+
     # iOS device management
     usbmuxd = {
       enable = true;
