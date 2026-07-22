@@ -1,4 +1,4 @@
-{lib, ...}: {
+{pkgs, ...}: {
   # Application launchers — keyboard-first, Doom-vibrant.
   #
   # rofi stays the primary launcher on SUPER+Space (configured in
@@ -17,7 +17,13 @@
   programs.anyrun = {
     enable = true;
     config = {
-      plugins = null; # use the packaged default plugin set
+      # anyrun shows nothing without plugins — wire the useful .so's shipped
+      # in the anyrun package: app launcher, calculator, shell commands.
+      plugins = [
+        "${pkgs.anyrun}/lib/libapplications.so"
+        "${pkgs.anyrun}/lib/librink.so"
+        "${pkgs.anyrun}/lib/libshell.so"
+      ];
       width.fraction = 0.3;
       hideIcons = false;
       closeOnClick = true;
