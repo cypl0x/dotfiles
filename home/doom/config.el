@@ -63,6 +63,13 @@
         :leader
         "y" #'consult-yank-pop))
 
+;; Completion popup (company, e.g. C-SPC): C-j/C-k wrap around at the ends of
+;; the candidate list. Doom already binds C-j/C-k to company-select-next/
+;; previous; wrap-around is off by default. The minibuffer (vertico) already
+;; wraps via `vertico-cycle', which Doom's vertico module sets to t.
+(after! company
+  (setq company-selection-wrap-around t))
+
 (after! vertico
   (map! :map vertico-map
         "C-j" #'vertico-next
@@ -303,20 +310,66 @@
 ;; Language Server (LSP)
 ;; ---------------------------------------------------------------------------
 
+;; LanguageTool grammar/style checker over eglot. ltex-ls is provided on PATH
+;; by home/emacs-deps.nix (pkgs.ltex-ls). eglot-ltex wants the *prefix*
+;; directory (it runs "<path>/bin/ltex-ls"), so derive it from the on-PATH
+;; binary instead of hard-coding a /nix/store path — reproducible across
+;; ltex-ls version bumps. stdio, not tcp: the binary is a plain child process.
 (use-package! eglot-ltex
-  ;; :ensure t
   :hook (text-mode . (lambda ()
                        (require 'eglot-ltex)
                        (eglot-ensure)))
   :init
-  (setq eglot-ltex-server-path "nix shell nixpkgs\\##ltex-ls --command ltex-ls"
-        ;; eglot-ltex-communication-channel 'stdio)
-        ;; nix shell spawns a new environment that could probably provide some issues with stdio
-        eglot-ltex-communication-channel 'tcp) 
-        ;; (setq eglot-ltex-server-path "path/to/ltex-ls-XX.X.X/"
-  ;;       eglot-ltex-communication-channel 'stdio))
-                                        ; 'stdio or 'tcp
-)
+  (setq eglot-ltex-communication-channel 'stdio
+        eglot-ltex-server-path
+        (when-let ((bin (executable-find "ltex-ls")))
+          ;; …/ltex-ls-16.0.0/bin/ltex-ls -> …/ltex-ls-16.0.0/
+          (file-name-directory (directory-file-name (file-name-directory bin)))))
+  :config
+  ;; Mother tongue helps false-friend detection for a German native writing
+  ;; English; ltex auto-detects the checked language per document otherwise.
+  (setq eglot-ltex-language "en-US"))
+;; ---------------------------------------------------------------------------
+;; Translation
+;;   SPC l t  → go-translate, quick popup (Google/Bing, no key needed)
+;;   SPC l T  → go-translate via DeepL (needs a token, see below)
+;;   SPC l w  → leo.dict.leo.org word lookup (fast DE<->EN, no key)
+;; ---------------------------------------------------------------------------
+
+(use-package! go-translate
+  :defer t
+  :init
+  (map! :leader
+        (:prefix ("l" . "language/translate")
+         :desc "Translate (Google/Bing)" "t" #'gt-do-translate
+         :desc "Translate (DeepL)"       "T" #'+gt-deepl-translate
+         :desc "leo word lookup"         "w" #'leo-translate-word))
+  :config
+  (setq gt-langs '(en de)
+        gt-default-translator
+        (gt-translator
+         :taker   (gt-taker :langs '(en de) :prompt t)
+         :engines (list (gt-google-engine) (gt-bing-engine))
+         :render  (gt-buffer-render)))
+
+  ;; DeepL token: $DEEPL_AUTH_KEY, else ~/.authinfo(.gpg) line like
+  ;;   machine api-free.deepl.com login apikey password <KEY>
+  (setq gt-deepl-token
+        (or (getenv "DEEPL_AUTH_KEY")
+            (auth-source-pick-first-password :host "api-free.deepl.com")
+            (auth-source-pick-first-password :host "api.deepl.com")))
+
+  (defun +gt-deepl-translate ()
+    "Translate the region/word/buffer with DeepL."
+    (interactive)
+    (unless gt-deepl-token
+      (user-error "No DeepL token — set $DEEPL_AUTH_KEY or add api-free.deepl.com to ~/.authinfo"))
+    (gt-start
+     (gt-translator
+      :taker   (gt-taker :langs '(en de) :prompt t)
+      :engines (gt-deepl-engine :key gt-deepl-token)
+      :render  (gt-buffer-render)))))
+
 ;; ---------------------------------------------------------------------------
 ;; Universal app launcher (local lisp file)
 ;; ---------------------------------------------------------------------------

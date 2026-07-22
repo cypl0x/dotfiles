@@ -101,7 +101,11 @@
 ;; Misc utilities
 ;; ---------------------------------------------------------------------------
 
-(package! leo)                 ;; dict.leo.org translation
+(package! leo)                 ;; dict.leo.org translation (word lookup, DE<->EN)
+;; gt: multi-engine translation incl. DeepL. Explicit recipe — the bare name
+;; isn't in Doom's straight recipe repos (doom sync: "Could not find package").
+(package! go-translate
+  :recipe (:host github :repo "lorniu/go-translate"))
 (package! frameshot)           ;; screenshot tool
 (package! monet
   :recipe (:host github :repo "stevemolitor/monet"))
