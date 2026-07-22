@@ -1,0 +1,57 @@
+# Rio terminal — Doom Vibrant theme + Doom-Emacs C-Space leader scheme.
+# Rio has native splits + tabs, so it reproduces the same muxing muscle memory
+# as kitty / wezterm / ghostty (leader Ctrl+Space, w/b/p/t/o, vim hjkl).
+
+[window]
+opacity = 1.0
+padding-x = 6
+padding-y = 6
+
+[fonts]
+size = 13
+
+[cursor]
+shape = "block"
+blinking = false
+
+# ── Doom Vibrant colours (Henrik Lissner) ───────────────────────────────────
+[colors]
+background       = "#242730"
+foreground       = "#bbc2cf"
+cursor           = "#bbc2cf"
+selection-background = "#3d4451"
+selection-foreground = "#bbc2cf"
+
+black   = "#2a2e38"
+red     = "#ff665c"
+green   = "#7bc275"
+yellow  = "#fcce7b"
+blue    = "#51afef"
+magenta = "#c57bdb"
+cyan    = "#5cefff"
+white   = "#dfdfdf"
+
+light-black   = "#484854"
+light-red     = "#ff665c"
+light-green   = "#99bb66"
+light-yellow  = "#ecbe7b"
+light-blue    = "#51afef"
+light-magenta = "#c678dd"
+light-cyan    = "#46d9ff"
+light-white   = "#bbc2cf"
+
+# ── Doom-style C-Space leader bindings ──────────────────────────────────────
+# Rio uses `key = "..."` with `with = "..."` modifiers and a bytes/action.
+# Ctrl+Space is the leader (sent as split/tab actions directly, since Rio has
+# no chorded key-tables — the closest ergonomic mapping keeps hjkl + splits).
+[keyboard]
+bindings = [
+  { key = "h", with = "control | shift", action = "SelectPrevSplitOrTab" },
+  { key = "l", with = "control | shift", action = "SelectNextSplitOrTab" },
+  { key = "d", with = "control | shift", action = "SplitRight" },
+  { key = "s", with = "control | shift", action = "SplitDown" },
+  { key = "w", with = "control | shift", action = "CloseSplitOrTab" },
+  { key = "t", with = "control | shift", action = "CreateTab" },
+  { key = "n", with = "control | shift", action = "SelectNextTab" },
+  { key = "p", with = "control | shift", action = "SelectPrevTab" },
+]

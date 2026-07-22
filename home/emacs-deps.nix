@@ -52,5 +52,12 @@
     # app-launcher.el: window focus and .desktop file launching
     wmctrl # window switching via wmctrl -a
     xdg-utils # provides gtk-launch for .desktop app launching
+
+    # vterm (term/vterm module) compiles a native module on first use via
+    # SPC o T — it needs the full C toolchain, not just cmake.
+    cmake
+    libtool
+    gnumake
+    gcc
   ];
 }

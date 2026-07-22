@@ -23,7 +23,7 @@
       enable = true;
       x11Support = true;
       settings = {
-        animation = "doom"; # PSX DOOM fire effect (the pixel-art vibe)
+        animation = "matrix"; # cmatrix-style digital rain (doom fire looked bad)
         animate = true;
         clock = "%c";
         hide_borders = false;

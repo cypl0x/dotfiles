@@ -40,6 +40,10 @@ in {
       source = ./hyprland/eww/scripts/net.sh;
       executable = true;
     };
+    ".config/hypr/scripts/run-or-raise.sh" = {
+      source = ./hyprland/scripts/run-or-raise.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source  = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source     = ./hyprland/waybar/style.css;
     ".config/mako/config".source          = ./hyprland/mako.conf;

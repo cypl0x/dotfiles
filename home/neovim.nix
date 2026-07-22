@@ -5,6 +5,7 @@
     vimAlias = true;
     withNodeJs = true;
     withPython3 = true;
+    withRuby = false; # adopt the new 26.05 default; silences the eval warning
 
     extraPackages = with pkgs; [
       fd

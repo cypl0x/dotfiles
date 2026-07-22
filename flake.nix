@@ -44,7 +44,10 @@
     treefmtEval = treefmt-nix.lib.evalModule pkgs {
       projectRootFile = "flake.nix";
       programs = {
-        alejandra.enable = true;
+        alejandra.enable = true; # nix formatter
+        deadnix.enable = true; # nix: remove dead code
+        statix.enable = true; # nix: anti-pattern linter
+        stylua.enable = true; # lua formatter (wezterm.lua etc.)
         shellcheck = {
           enable = true;
         };
@@ -105,6 +108,9 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
+              # Move pre-existing unmanaged dotfiles aside instead of aborting
+              # activation when a home.file target already exists on disk.
+              backupFileExtension = "bak";
               sharedModules = [
                 ./home/kitty-thinkpad.nix
                 ./home/terminals.nix

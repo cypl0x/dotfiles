@@ -12,6 +12,7 @@ _: {
   home.file = {
     ".config/ghostty/config".source = ./terminals/ghostty.config;
     ".config/alacritty/alacritty.toml".source = ./terminals/alacritty.toml;
+    ".config/rio/config.toml".source = ./terminals/rio.toml;
     ".warp/themes/doom_vibrant.yaml".source = ./terminals/warp-doom-vibrant.yaml;
   };
 }

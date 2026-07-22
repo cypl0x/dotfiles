@@ -107,6 +107,8 @@
     ghostty
     kitty
     alacritty
+    rio # GPU-accelerated terminal (Rust); Doom Vibrant config in home/terminals
+    warp-terminal # Warp (latest); Doom Vibrant theme in ~/.warp/themes
 
     nil # nix lsp server
 
