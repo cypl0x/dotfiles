@@ -238,8 +238,10 @@
         "format": "{}",
         "return-type": "json",
         "exec": "~/.config/hypr/scripts/waybar-claude.sh",
-        "interval": 300,
-        "on-click": "kitty --hold -e npx -y ccusage@latest blocks --active"
+        "interval": 120,
+        "signal": 8,
+        "on-click": "pkill -RTMIN+8 waybar",
+        "on-click-right": "kitty --hold -e npx -y --prefer-offline ccusage@20.0.18 blocks --active"
     },
 
     // swaync notification center: icon reflects unread / DND state.

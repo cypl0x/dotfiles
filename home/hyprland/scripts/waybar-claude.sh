@@ -16,13 +16,20 @@
 set -euo pipefail
 
 LIMIT=${CLAUDE_5H_TOKEN_LIMIT:-80000000}
+# Pin the version: `ccusage@latest` makes npx re-resolve "latest" against the
+# npm registry on EVERY run, which stalls (or hangs offline) — that was the
+# "waybar doesn't refresh" bug. A pinned version is served straight from the
+# local npx cache, no network. Override with $CCUSAGE_VERSION; bump as needed.
+CCUSAGE="ccusage@${CCUSAGE_VERSION:-20.0.18}"
+
 fallback() { printf '{"text":"","tooltip":"%s","class":"claude"}\n' "$1"; exit 0; }
 command -v npx >/dev/null 2>&1 || fallback "npx not found"
 hum() { numfmt --to=si --format='%.1f' "${1%.*}" 2>/dev/null || echo "${1:-0}"; }
 
-blocks=$(npx -y ccusage@latest blocks --active --token-limit "$LIMIT" --json 2>/dev/null) \
+# --prefer-offline: use the cached package without a registry round-trip.
+blocks=$(npx -y --prefer-offline "$CCUSAGE" blocks --active --token-limit "$LIMIT" --json 2>/dev/null) \
   || fallback "ccusage unavailable"
-daily=$(npx -y ccusage@latest daily --json 2>/dev/null || echo '{}')
+daily=$(npx -y --prefer-offline "$CCUSAGE" daily --json 2>/dev/null || echo '{}')
 
 # totalTokens, % of limit used NOW, minutes left in the 5h block, cost.
 read -r b_tok b_pct b_rem b_cost <<<"$(printf '%s' "$blocks" | jq -r '
