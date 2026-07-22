@@ -113,7 +113,9 @@ window#waybar.empty #window {
 #bluetooth      { color: #51afef; }
 #network        { color: #5cefff; }
 #network.disconnected { color: #ff665c; }
-#custom-claude  { color: #da8548; }   /* Doom orange — Claude usage */
+#custom-claude          { color: #7bc275; }   /* Doom green  — usage low */
+#custom-claude.warning  { color: #fcce7b; }   /* Doom yellow — >=70% of 5h limit */
+#custom-claude.critical { color: #ff665c; }   /* Doom red    — >=90% of 5h limit */
 
 /* resources group = cpu | mem | temp inside one pill */
 #resources {
