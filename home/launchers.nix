@@ -1,4 +1,11 @@
 {pkgs, ...}: {
+  # walker 2.x is a thin GTK client; all data comes from the *elephant* backend
+  # daemon (desktopapplications / runner / calc / clipboard providers). Without
+  # elephant on PATH the client just prints "Please install elephant" and shows
+  # nothing — that was the "walker keybind does nothing" bug. Both daemons are
+  # started from hyprland.conf exec-once (elephant, then walker --gapplication-service).
+  home.packages = [pkgs.elephant];
+
   # Application launchers — keyboard-first, Doom-vibrant.
   #
   # rofi stays the primary launcher on SUPER+Space (configured in

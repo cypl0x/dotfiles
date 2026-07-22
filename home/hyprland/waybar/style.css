@@ -144,6 +144,13 @@ window#waybar.empty #window {
   border-color: rgba(81, 175, 239, 0.4);
 }
 
+/* Secondary Jakarta clock — cyan tint so it reads as "elsewhere" */
+#clock.jakarta {
+  color: #5cefff;
+  background: rgba(92, 239, 255, 0.1);
+  border-color: rgba(92, 239, 255, 0.35);
+}
+
 #custom-power {
   color: #ff665c;
   font-size: 15px;

@@ -15,6 +15,10 @@
 (defpoll CLOCK  :interval "1s"  `date +'%H:%M:%S'`)
 (defpoll DATE   :interval "60s" `date +'%a %d %b %Y'`)
 
+;; world clocks — Berlin (WIB base) + Jakarta (Indonesia)
+(defpoll TZBERLIN  :interval "10s" `TZ='Europe/Berlin' date +'%H:%M'`)
+(defpoll TZJAKARTA :interval "10s" `TZ='Asia/Jakarta' date +'%H:%M'`)
+
 (defpoll CPU    :interval "2s"  `top -bn1 | awk -F',' '/Cpu\\(s\\)/{for(i=1;i<=NF;i++) if($i ~ /id/){gsub(/[^0-9.]/,"",$i); printf "%.0f", 100-$i}}'`)
 (defpoll MEMP   :interval "3s"  `free | awk '/Mem:/{printf "%.0f", $3/$2*100}'`)
 (defpoll MEMT   :interval "3s"  `free -h --si | awk '/Mem:/{print $3" / "$2}'`)
@@ -25,6 +29,7 @@
 (defpoll BAT    :interval "10s" `cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo "--"`)
 (defpoll BATST  :interval "10s" `cat /sys/class/power_supply/BAT0/status 2>/dev/null || echo ""`)
 (defpoll NET    :interval "2s"  `~/.config/eww/scripts/net.sh`)
+(defpoll NETSUM :interval "10s" `~/.config/eww/scripts/net.sh sum`)
 
 ;; ── reusable metric row (icon + label + value + bar) ────────────────────────
 (defwidget metric [icon name value bar]
@@ -57,6 +62,15 @@
       (label :class "time" :text CLOCK)
       (label :class "date" :text DATE))
 
+    ;; world clocks
+    (box :class "world" :orientation "h" :space-evenly true
+      (box :orientation "v" :space-evenly false
+        (label :class "tz-name" :text "󰃰 BERLIN")
+        (label :class "tz-time" :text TZBERLIN))
+      (box :orientation "v" :space-evenly false
+        (label :class "tz-name" :text "󰃰 JAKARTA")
+        (label :class "tz-time" :text TZJAKARTA)))
+
     (rule)
 
     ;; core metrics
@@ -76,7 +90,8 @@
       (label :class "kv-bat"  :text "󱊣 ${BAT}% ${BATST}"))
 
     ;; network
-    (label :class "net" :halign "start" :text NET)))
+    (label :class "net"    :halign "start" :text NET)
+    (label :class "netsum" :halign "start" :text NETSUM)))
 
 ;; ── the desktop window ──────────────────────────────────────────────────────
 (defwindow syspanel

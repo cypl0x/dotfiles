@@ -28,6 +28,7 @@
         "network",
         "group/resources",
         "battery",
+        "clock#jakarta",
         "clock",
         "custom/power",
         "tray"
@@ -198,6 +199,16 @@
         "format-plugged": "󰚥 {capacity}%",
         "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
         "tooltip-format": "{timeTo} — {power}W\nHealth: {health}%   Cycles: {cycles}"
+    },
+
+    // Secondary clock — Jakarta (WIB, Asia/Jakarta). Local machine stays on the
+    // main clock; this pill always shows Indonesia wall-time.
+    "clock#jakarta": {
+        "timezone": "Asia/Jakarta",
+        "format": "󰅐 {:%H:%M} JKT",
+        "format-alt": "󰅐 {:%a %d %b} JKT",
+        "interval": 30,
+        "tooltip-format": "<big>Jakarta (WIB)</big>\n{:%A %d %B %Y — %H:%M}"
     },
 
     "clock": {

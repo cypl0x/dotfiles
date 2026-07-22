@@ -33,6 +33,11 @@ $comment: #62686e;
 .time { color: $green;  font-size: 30px; font-weight: bold; }
 .date { color: $yellow; font-size: 13px; }
 
+// ── world clocks ──────────────────────────────────────────
+.world   { margin-top: 8px; }
+.tz-name { color: $comment; font-size: 10px; font-weight: bold; }
+.tz-time { color: $cyan;    font-size: 16px; font-weight: bold; }
+
 // ── metric rows ───────────────────────────────────────────
 .metric { margin-top: 2px; }
 .m-icon { color: $magenta; margin-right: 10px; font-size: 15px; }
@@ -60,7 +65,8 @@ $comment: #62686e;
 .kvrow  { margin-top: 2px; }
 .kv-temp { color: $red; }
 .kv-bat  { color: $yellow; }
-.net     { color: $green; font-size: 12px; }
+.net     { color: $green;   font-size: 12px; }
+.netsum  { color: $comment; font-size: 11px; margin-top: 1px; }
 
 // ── dividers ──────────────────────────────────────────────
 .rule {
