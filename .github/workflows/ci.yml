@@ -8,6 +8,28 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Detect which host configs a push actually touches, so we don't spend 30+
+  # minutes building a host that didn't change.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      inari: ${{ steps.filter.outputs.inari }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Path filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            inari:
+              - 'hosts/inari/**'
+              - 'home/proxy*.nix'
+              - 'home/fabian.nix'
+              - 'flake.nix'
+              - 'flake.lock'
+
   lint-and-check:
     name: Lint and Check
     runs-on: ubuntu-latest
@@ -95,7 +117,13 @@ jobs:
   build-inari:
     name: Build inari configuration
     runs-on: ubuntu-latest
-    needs: lint-and-check
+    needs: [lint-and-check, changes]
+    # inari is a large server closure (authentik, n8n, homeassistant, openclaw)
+    # that compiles from source and OOM-kills a free runner (exit 143). Only
+    # attempt it when inari-relevant files change, so unrelated (desktop/
+    # thinkpad) pushes still get a green pipeline. Priming cachix from a beefy
+    # machine is the long-term fix for building it here.
+    if: needs.changes.outputs.inari == 'true'
     steps:
       # Building a full NixOS system closure overflows the stock ~14 GB runner
       # disk ("No space left on device"). Reclaim ~25 GB first.
