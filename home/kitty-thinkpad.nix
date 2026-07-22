@@ -20,7 +20,13 @@ _: {
       inactive_tab_background = "#242730";
       tab_title_template = " {index}:{title} ";
       active_tab_title_template = " {index}:{title} ";
-      startup_layout = "splits";
+      # Layouts: "splits" must be enabled (and listed first, so it is the
+      # startup layout) for `launch --location=vsplit/hsplit` to work at all.
+      # Note: "startup_layout" is NOT a kitty option — kitty ignores it and
+      # falls back to the default layout ("fat"), in which the split
+      # keybindings below silently lose their direction. "stack" is kept for
+      # the zoom toggles (toggle_layout stack).
+      enabled_layouts = "splits,stack";
 
       # Doom Vibrant theme (Henrik Lissner)
       foreground = "#bbc2cf";
