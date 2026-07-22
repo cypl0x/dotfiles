@@ -9,7 +9,9 @@ on:
 
 jobs:
   # Detect which host configs a push actually touches, so we don't spend 30+
-  # minutes building a host that didn't change.
+  # minutes building a host that didn't change. Note that eval-level errors in
+  # EVERY host are still caught on EVERY run: `nix flake check` in
+  # lint-and-check evaluates all nixosConfigurations' toplevel derivations.
   changes:
     name: Detect changed paths
     runs-on: ubuntu-latest
@@ -17,25 +19,34 @@ jobs:
       inari: ${{ steps.filter.outputs.inari }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Path filter
-        uses: dorny/paths-filter@v3
+        # paths-filter can't diff a workflow_dispatch run; build-inari's `if`
+        # runs the build unconditionally for manual dispatches instead.
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
             inari:
               - 'hosts/inari/**'
+              - 'modules/**'
               - 'home/proxy*.nix'
               - 'home/fabian.nix'
+              - 'home/cypl0x.nix'
+              - 'home/wap.nix'
+              - 'home/root.nix'
               - 'flake.nix'
               - 'flake.lock'
+              - '.github/workflows/ci.yml'
 
   lint-and-check:
     name: Lint and Check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -43,11 +54,8 @@ jobs:
           extra-conf: |
             experimental-features = nix-command flakes
 
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
       - name: Setup Cachix
-        uses: cachix/cachix-action@v12
+        uses: cachix/cachix-action@v16
         with:
           name: cypl0x
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
@@ -71,11 +79,12 @@ jobs:
     name: Build thinkpad configuration
     runs-on: ubuntu-latest
     needs: lint-and-check
+    timeout-minutes: 90
     steps:
       # Building a full NixOS system closure overflows the stock ~14 GB runner
       # disk ("No space left on device"). Reclaim ~25 GB first.
       - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: true
           android: true
@@ -86,7 +95,7 @@ jobs:
           swap-storage: true
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -94,11 +103,8 @@ jobs:
           extra-conf: |
             experimental-features = nix-command flakes
 
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
       - name: Setup Cachix
-        uses: cachix/cachix-action@v12
+        uses: cachix/cachix-action@v16
         with:
           name: cypl0x
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
@@ -118,19 +124,25 @@ jobs:
     name: Build inari configuration
     runs-on: ubuntu-latest
     needs: [lint-and-check, changes]
-    # inari is a large server closure (authentik, n8n, homeassistant, openclaw)
-    # whose overlay forces a from-source rebuild that OOM-kills a free runner
-    # (exit 143). Only attempt it when inari-relevant files change, AND treat it
-    # as best-effort so the resource limit doesn't red the whole pipeline —
-    # lint/format and the thinkpad build still block on real failures. Long-term
-    # fix: prime cachix from a capable machine so CI just downloads the closure.
-    if: needs.changes.outputs.inari == 'true'
-    continue-on-error: true
+    # inari carries packages that are never on cache.nixos.org (n8n is
+    # "sustainable use"-licensed, authentik/openclaw come from third-party
+    # flakes), so a cache-cold run compiles huge node monorepos from source
+    # and OOM-kills the 16 GB runner (exit 143). Strategy:
+    #   1. Hard-fail on eval errors (cheap, always meaningful).
+    #   2. Dry-run to see what would actually be compiled locally.
+    #   3. If a known-heavy uncached derivation shows up, skip the build with
+    #      a loud warning instead of dying — prime the cypl0x cachix from a
+    #      capable machine (build inari there and `cachix push`), then
+    #      re-run. Every other build failure fails the pipeline for real.
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.inari == 'true'
+    timeout-minutes: 45
     steps:
       # Building a full NixOS system closure overflows the stock ~14 GB runner
-      # disk ("No space left on device"). Reclaim ~25 GB first.
+      # disk ("No space left on device"). Reclaim ~25 GB first, but keep the
+      # 4 GB swap file: it is the only OOM headroom this job has when Nix does
+      # have to compile something locally.
       - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: true
           android: true
@@ -138,10 +150,10 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: true
+          swap-storage: false
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -149,19 +161,54 @@ jobs:
           extra-conf: |
             experimental-features = nix-command flakes
 
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
       - name: Setup Cachix
-        uses: cachix/cachix-action@v12
+        uses: cachix/cachix-action@v16
         with:
           name: cypl0x
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
+      - name: Evaluate inari configuration
+        run: nix eval --raw .#nixosConfigurations.inari.config.system.build.toplevel.drvPath
+
+      - name: Check what would be built locally
+        id: plan
+        run: |
+          set -euo pipefail
+          nix build .#nixosConfigurations.inari.config.system.build.toplevel \
+            --dry-run 2>dry-run.log || { cat dry-run.log; exit 1; }
+          cat dry-run.log
+
+          # Derivations Nix would compile locally (substituted paths are
+          # listed without a .drv suffix, so this grabs only the build list).
+          to_build=$(grep -oE '/nix/store/[a-z0-9]+-[^ ]+\.drv' dry-run.log | sort -u || true)
+          echo "Derivations to build locally:"
+          echo "${to_build:-  (none)}"
+
+          # Heavy packages that are not on cache.nixos.org; compiling any of
+          # them OOMs a free runner. Require a "-<version>" after the name so
+          # trivial wrappers (unit-n8n.service, authentik-manage,
+          # nextcloud-config.php, openclaw-gateway-default, ...) don't
+          # false-positive — only real package builds like n8n-1.65.3.drv or
+          # authentik-2025.6.0.drv should trigger the skip.
+          heavy=$(echo "$to_build" \
+            | grep -E -- '-(n8n|authentik|openclaw|home-assistant|nextcloud|linkwarden|paperless|chromium|electron|webkitgtk)[a-z0-9-]*-[0-9][^/]*\.drv' \
+            || true)
+
+          if [ -n "$heavy" ]; then
+            echo "skip=true" >>"$GITHUB_OUTPUT"
+            heavy_list=$(echo "$heavy" | tr '\n' ' ')
+            echo "::warning title=inari build skipped (uncached heavy derivations)::Building these would OOM the runner: ${heavy_list}. Prime the cypl0x cachix from a capable machine (build inari there and 'cachix push cypl0x ./result'), then re-run this workflow."
+          else
+            echo "skip=false" >>"$GITHUB_OUTPUT"
+          fi
+
       - name: Build inari configuration
-        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L
+        if: steps.plan.outputs.skip != 'true'
+        # --max-jobs 2 caps peak memory; substitution speed is unaffected.
+        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L --max-jobs 2
 
       - name: Show build info
+        if: steps.plan.outputs.skip != 'true'
         run: |
           if [ -L result ]; then
             echo "Build successful!"
@@ -173,27 +220,10 @@ jobs:
     name: Check documentation
     runs-on: ubuntu-latest
     needs: lint-and-check
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          extra-conf: |
-            experimental-features = nix-command flakes
-
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v12
-        with:
-          name: cypl0x
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-
-      - name: Build documentation
-        run: nix build .#nixosConfigurations.thinkpad.config.system.build.documentation 2>/dev/null || echo "Documentation build not available as separate output"
+        uses: actions/checkout@v5
 
       - name: Check markdown files exist
         run: |
