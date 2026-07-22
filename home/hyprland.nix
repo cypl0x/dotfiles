@@ -60,6 +60,10 @@ in {
       source = ./hyprland/scripts/lock-stats.sh;
       executable = true;
     };
+    ".config/hypr/scripts/window-switcher.sh" = {
+      source = ./hyprland/scripts/window-switcher.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
     ".config/mako/config".source = ./hyprland/mako.conf;

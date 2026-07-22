@@ -89,6 +89,10 @@ config.font = wezterm.font_with_fallback({
 config.font_size = 12.0
 config.line_height = 1.08
 
+-- NOTE: wezterm has no vertical (left/right-edge) tab bar. The tab bar can only
+-- sit at the top or bottom (`tab_bar_at_bottom`); there is no upstream option
+-- for a side strip. For a left-edge tab feel, use kitty (`tab_bar_edge left`)
+-- or split into panes. So we keep a tidy bottom bar here.
 config.hide_tab_bar_if_only_one_tab = true
 config.use_fancy_tab_bar = false
 config.show_new_tab_button_in_tab_bar = false

@@ -4,7 +4,9 @@
   # elephant on PATH the client just prints "Please install elephant" and shows
   # nothing — that was the "walker keybind does nothing" bug. Both daemons are
   # started from hyprland.conf exec-once (elephant, then walker --gapplication-service).
-  home.packages = [pkgs.elephant];
+  # elephant: walker's backend (see below). jq: used by the hyprland
+  # window-switcher script.
+  home.packages = [pkgs.elephant pkgs.jq];
 
   # Application launchers — keyboard-first, Doom-vibrant.
   #
