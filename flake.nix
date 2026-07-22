@@ -226,6 +226,39 @@
           fd -e md -x markdownlint {}
         '';
       };
+
+      # Desktop configs — catch the runtime-only breakages that a normal Nix
+      # build never sees (Hyprland rejects an option at load; waybar refuses
+      # GTK-invalid CSS or bad Pango markup). Runs on `nix flake check`.
+      desktop-configs = mkRepoCheck {
+        name = "desktop-configs-check";
+        nativeBuildInputs = [pkgs.hyprland pkgs.jq];
+        script = ''
+          export XDG_RUNTIME_DIR="$TMPDIR" HOME="$TMPDIR"
+
+          echo "→ Hyprland --verify-config"
+          Hyprland --verify-config -c home/hyprland/hyprland.conf 2>&1 | tee hypr.log || true
+          if grep -qiE "config error|invalid dispatcher|does not exist" hypr.log; then
+            echo "✗ Hyprland config has errors"; exit 1
+          fi
+
+          echo "→ waybar config.jsonc is valid JSON"
+          # strip // line comments, then parse with jq
+          sed 's://.*$::' home/hyprland/waybar/config.jsonc | jq empty
+
+          echo "→ waybar: no GTK-invalid 8-digit hex in CSS"
+          if grep -RnE '#[0-9a-fA-F]{8}\b' home/hyprland/waybar/*.css; then
+            echo "✗ GTK CSS cannot parse #RRGGBBAA — use rgba()"; exit 1
+          fi
+
+          echo "→ waybar: no double-hash Pango colours in JSONC"
+          if grep -RnE "color='##" home/hyprland/waybar/config.jsonc; then
+            echo "✗ Pango markup color needs a single # (##51afef → #51afef)"; exit 1
+          fi
+
+          echo "✓ desktop configs OK"
+        '';
+      };
     };
 
     devShells.${system}.default = pkgs.mkShell {

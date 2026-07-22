@@ -45,7 +45,7 @@
   (box :class "panel" :orientation "v" :space-evenly false :spacing 14
     ;; header
     (box :class "header" :orientation "v" :space-evenly false :spacing 2
-      (label :class "host"   :halign "start" :text "󰣇  ${HOST}")
+      (label :class "host"   :halign "start" :text "  ${HOST}")
       (label :class "sub"    :halign "start" :text " ${DISTRO}")
       (label :class "sub"    :halign "start" :text " ${KERNEL}")
       (label :class "sub"    :halign "start" :text "󰅐 ${UPTIME}"))

@@ -1,15 +1,23 @@
 {pkgs, ...}: let
-  # Doom Vibrant wallpaper, generated at build time — a subtle radial vignette
-  # from the lighter Doom base (#2a2e38) down to the darkest (#1c1f24), so it
-  # matches the palette exactly and needs no external asset fetch.
+  # Doom Vibrant wallpaper, generated at build time — a dark "aurora" mesh:
+  # three soft, heavily-blurred colour blobs (Doom blue / magenta / green)
+  # floating over the darkest base, plus a faint vignette. Matches the palette
+  # exactly, no external asset fetch.
   doomWallpaper =
     pkgs.runCommand "doom-vibrant-wallpaper.png" {
       nativeBuildInputs = [pkgs.imagemagick];
     } ''
-      magick -size 3840x2160 \
-        radial-gradient:'#2a2e38'-'#1c1f24' \
-        -gravity center \
-        $out
+      # Render small + heavily blurred (fast), then upscale — a huge blur on a
+      # full-res canvas would make every rebuild crawl.
+      magick -size 640x360 xc:'#1c1f24' \
+        -fill 'rgba(81,175,239,0.55)'   -draw 'circle 130,108 130,250' \
+        -fill 'rgba(197,123,219,0.50)'  -draw 'circle 530,280 530,400' \
+        -fill 'rgba(123,194,117,0.34)'  -draw 'circle 560,75 560,160'  \
+        -fill 'rgba(92,239,255,0.26)'   -draw 'circle 325,325 325,400' \
+        -blur 0x38 \
+        -resize 2560x1440 \
+        \( -size 2560x1440 radial-gradient:none-'#0d0f13cc' \) -compose over -composite \
+        "$out"
     '';
 in {
   # Hyprland home-manager configuration — thinkpad only (added via sharedModules).

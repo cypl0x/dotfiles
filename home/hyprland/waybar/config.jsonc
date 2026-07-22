@@ -1,16 +1,18 @@
-// waybar — bottom bar, Doom Vibrant theme
-// Mirrors the tmux/wezterm status-bar aesthetic: left=session/workspace,
-// centre=window title, right=system stats + clock.
+// waybar — TOP bar, Doom Vibrant. Grouped "pill" layout:
+// left = launcher + workspaces + submap, centre = window, right = system pills.
 {
     "layer": "top",
-    "position": "bottom",
-    "height": 32,
-    "spacing": 4,
+    "position": "top",
+    "height": 38,
+    "spacing": 0,
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-right": 10,
     "exclusive": true,
-    "passthrough": false,
     "gtk-layer-shell": true,
 
     "modules-left": [
+        "custom/logo",
         "hyprland/workspaces",
         "hyprland/submap"
     ],
@@ -19,101 +21,111 @@
     ],
     "modules-right": [
         "mpris",
+        "idle_inhibitor",
+        "backlight",
         "pulseaudio",
         "bluetooth",
         "network",
-        "cpu",
-        "memory",
-        "temperature",
+        "group/resources",
         "battery",
         "clock",
+        "custom/power",
         "tray"
     ],
 
-    // ── Left modules ──────────────────────────────────────────────────────────
+    // ── Left ─────────────────────────────────────────────────────────────────
+
+    "custom/logo": {
+        "format": "",
+        "tooltip-format": "Applications (Super+Space)",
+        "on-click": "rofi -show drun -show-icons -theme ~/.config/rofi/doom-vibrant.rasi",
+        "on-click-right": "wlogout --protocol layer-shell"
+    },
 
     "hyprland/workspaces": {
-        "format": "{id}",
+        "format": "{icon}",
         "format-icons": {
-            "1": "󰊠",
-            "2": "󰋜",
-            "3": "",
-            "4": "",
-            "5": "󰍡",
-            "urgent": "",
+            "1": "󰲠",
+            "2": "󰲢",
+            "3": "󰲤",
+            "4": "󰲦",
+            "5": "󰲨",
+            "6": "󰲪",
             "active": "󰮯",
-            "default": "󰊠"
+            "default": "󰊠",
+            "empty": "󰧞"
         },
         "on-click": "activate",
         "on-scroll-up": "hyprctl dispatch workspace e-1",
         "on-scroll-down": "hyprctl dispatch workspace e+1",
-        "persistent-workspaces": {
-            "*": 10
-        },
+        "persistent-workspaces": { "*": 6 },
         "sort-by-number": true
     },
 
     "hyprland/submap": {
-        "format": " {}",
-        "max-length": 16,
+        "format": "󰌌 {}",
+        "max-length": 18,
         "tooltip": false
     },
 
-    // ── Centre module ─────────────────────────────────────────────────────────
+    // ── Centre ───────────────────────────────────────────────────────────────
 
     "hyprland/window": {
         "format": "{}",
-        "max-length": 60,
+        "max-length": 70,
         "separate-outputs": true,
+        "icon": true,
+        "icon-size": 16,
         "rewrite": {
-            "(.*) — Mozilla Firefox": "󰈹 $1",
-            "(.*) — Vivaldi": "󰀩 $1",
-            "(.*)Emacs(.*)": " $1$2",
-            "(.*) - Visual Studio Code": "󰨞 $1",
-            "(.*) - zed": "󱃖 $1",
-            "(.*) — Dolphin": " $1",
-            "(.*)": "$1"
+            "(.*) — Mozilla Firefox": "󰈹  $1",
+            "(.*) — Vivaldi": "󰖟  $1",
+            "(.*)Emacs(.*)": "  $1$2",
+            "(.*) - Visual Studio Code": "󰨞  $1",
+            "(.*) - zed": "󱃖  $1",
+            "(.*) — Dolphin": "  $1",
+            "(.*)kitty(.*)": "  $1$2",
+            "(.*)": "  $1"
         }
     },
 
-    // ── Right modules ─────────────────────────────────────────────────────────
+    // ── Right: media + toggles ───────────────────────────────────────────────
 
     "mpris": {
         "format": "{player_icon} {dynamic}",
-        "format-paused": "{status_icon} {dynamic}",
+        "format-paused": "{status_icon} <i>{dynamic}</i>",
         "format-stopped": "",
-        "dynamic-len": 30,
+        "dynamic-len": 26,
         "dynamic-order": ["title", "artist"],
-        "player-icons": {
-            "default":  "󰐊",
-            "spotify":  "",
-            "firefox":  "󰈹",
-            "mpv":      "󰐊",
-            "vlc":      "󰕼"
-        },
-        "status-icons": {
-            "paused":  "󰏤",
-            "playing": "󰐊",
-            "stopped": "󰓛"
-        },
+        "player-icons": { "default": "󰐊", "spotify": "", "firefox": "󰈹", "mpv": "󰐊", "vlc": "󰕼" },
+        "status-icons": { "paused": "󰏤", "playing": "󰐊", "stopped": "󰓛" },
         "on-click": "playerctl play-pause",
         "on-click-right": "playerctl next",
         "on-scroll-up": "playerctl volume 0.05+",
         "on-scroll-down": "playerctl volume 0.05-"
     },
 
+    "idle_inhibitor": {
+        "format": "{icon}",
+        "format-icons": { "activated": "󰅶", "deactivated": "󰾪" },
+        "tooltip-format-activated": "Idle inhibited (caffeine on)",
+        "tooltip-format-deactivated": "Idle allowed"
+    },
+
+    "backlight": {
+        "format": "{icon} {percent}%",
+        "format-icons": ["󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠"],
+        "on-scroll-up": "brightnessctl set +5%",
+        "on-scroll-down": "brightnessctl set 5%-",
+        "tooltip": false
+    },
+
     "pulseaudio": {
         "format": "{icon} {volume}%",
         "format-bluetooth": "󰂯 {volume}%",
-        "format-bluetooth-muted": "󰂲",
         "format-muted": "󰖁",
         "format-icons": {
-            "headphone": "󰋋",
-            "hands-free": "󱡒",
-            "headset": "󰋎",
-            "phone": "",
-            "portable": "",
-            "car": "󰄋",
+            "headphone": "󰋋", "hands-free": "󱡒", "headset": "󰋎",
+            "phone": "", "portable": "", "car": "󰄋",
             "default": ["󰕿", "󰖀", "󰕾"]
         },
         "scroll-step": 2,
@@ -126,66 +138,71 @@
         "format": "󰂯",
         "format-disabled": "󰂲",
         "format-off": "󰂲",
-        "format-connected": "󰂱 {device_alias}",
-        "format-connected-battery": "󰂱 {device_alias} {device_battery_percentage}%",
+        "format-connected": "󰂱 {num_connections}",
         "on-click": "blueman-manager",
         "tooltip-format": "{controller_alias}\n{num_connections} connected",
         "tooltip-format-connected": "{controller_alias}\n{device_enumerate}",
-        "tooltip-format-enumerate-connected": "{device_alias}"
+        "tooltip-format-enumerate-connected": "{device_alias}\t{device_battery_percentage}%"
     },
 
     "network": {
-        "format-wifi": "󰤨 {signalStrength}%",
-        "format-ethernet": "󰈀",
-        "format-linked": "󰈂 (no IP)",
+        "format-wifi": "{icon} {signalStrength}%",
+        "format-ethernet": "󰈀 {bandwidthDownBits}",
+        "format-linked": "󰈂",
         "format-disconnected": "󰤭",
-        "format-alt": "󰤨 {ifname}: {ipaddr}/{cidr}",
-        "on-click": "nm-connection-editor",
-        "on-click-right": "nm-applet",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ifname}: {ipaddr}",
-        "tooltip-format-ethernet": "{ifname}: {ipaddr}/{cidr}",
-        "tooltip-format-disconnected": "Disconnected"
+        "format-icons": ["󰤟", "󰤢", "󰤥", "󰤨"],
+        "tooltip-format": "{ifname} — {ipaddr}/{cidr}\n󰇚 {bandwidthDownBits}   󰕒 {bandwidthUpBits}",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ifname} — {ipaddr}\n󰇚 {bandwidthDownBits}   󰕒 {bandwidthUpBits}",
+        "interval": 3,
+        "on-click": "nm-connection-editor"
+    },
+
+    // ── Right: the fancy resources pill (cpu | mem | temp) ───────────────────
+
+    "group/resources": {
+        "orientation": "horizontal",
+        "modules": ["cpu", "memory", "temperature"]
     },
 
     "cpu": {
         "format": "󰻠 {usage}%",
-        "interval": 3,
-        "on-click": "wezterm -e btop",
-        "tooltip-format": "CPU: {usage}%\nLoad: {load}"
+        "interval": 2,
+        "states": { "warning": 70, "critical": 90 },
+        "on-click": "kitty -e btop",
+        "tooltip-format": "CPU {usage}% — load {load}"
     },
 
     "memory": {
         "format": "󰍛 {percentage}%",
-        "interval": 5,
-        "on-click": "wezterm -e btop",
+        "interval": 3,
+        "states": { "warning": 75, "critical": 90 },
+        "on-click": "kitty -e btop",
         "tooltip-format": "RAM {used:0.1f}G / {total:0.1f}G\nSwap {swapUsed:0.1f}G / {swapTotal:0.1f}G"
     },
 
     "temperature": {
         "thermal-zone": 0,
-        "critical-threshold": 80,
-        "format": "󰔏 {temperatureC}°C",
+        "critical-threshold": 82,
+        "format": "{icon} {temperatureC}°C",
         "format-critical": "󰸁 {temperatureC}°C",
-        "interval": 5
+        "format-icons": ["󰜗", "󰔏", "󰸁"],
+        "interval": 3
     },
 
+    // ── Right: battery, clock, power ─────────────────────────────────────────
+
     "battery": {
-        "states": {
-            "good": 95,
-            "warning": 25,
-            "critical": 10
-        },
+        "states": { "good": 95, "warning": 25, "critical": 10 },
         "format": "{icon} {capacity}%",
         "format-charging": "󰂄 {capacity}%",
         "format-plugged": "󰚥 {capacity}%",
-        "format-alt": "{icon} {time}",
-        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
-        "tooltip-format": "{timeTo}\nCycles: {cycles}"
+        "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+        "tooltip-format": "{timeTo} — {power}W\nHealth: {health}%   Cycles: {cycles}"
     },
 
     "clock": {
-        "format": "󰃮 {:%Y-%m-%d %H:%M}",
-        "format-alt": "󰃮 {:%H:%M}",
+        "format": "󰥔 {:%H:%M}",
+        "format-alt": "󰃭 {:%a %d %b}",
         "interval": 30,
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
         "calendar": {
@@ -202,8 +219,14 @@
         }
     },
 
+    "custom/power": {
+        "format": "󰐥",
+        "tooltip-format": "Session (logout / lock / reboot / off)",
+        "on-click": "wlogout --protocol layer-shell"
+    },
+
     "tray": {
-        "icon-size": 18,
-        "spacing": 8
+        "icon-size": 16,
+        "spacing": 10
     }
 }

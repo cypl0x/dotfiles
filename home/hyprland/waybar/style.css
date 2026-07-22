@@ -1,269 +1,162 @@
-/* waybar — Doom Vibrant theme
- * Mirrors tmux status-bar: dark bg, blue accents, same palette everywhere.
+/* waybar — Doom Vibrant, TOP bar, floating "pill" groups.
  *
- * Doom Vibrant palette:
- *   --bg       #242730     --base0    #1c1f24
- *   --bg-alt   #2a2e38     --base4    #3d4451
- *   --border   #484854     --comment  #62686E
- *   --fg       #bbc2cf     --blue     #51afef
- *   --red      #ff665c     --green    #7bc275
- *   --yellow   #FCCE7B     --magenta  #C57BDB
- *   --cyan     #5cEfFF
+ * Palette: bg #242730 base #1c1f24 fg #bbc2cf blue #51afef green #7bc275
+ *          yellow #fcce7b red #ff665c magenta #c57bdb cyan #5cefff grey #62686e
  */
 
 * {
   font-family: "Maple Mono NF", "Cascadia Code NF", monospace;
   font-size: 13px;
+  font-weight: 600;
   min-height: 0;
-  border: none;
-  border-radius: 0;
+  padding: 0;
+  margin: 0;
 }
 
 window#waybar {
-  background-color: rgba(28, 31, 36, 0.92); /* base0 + slight transparency */
-  color: #bbc2cf;
-  border-top: 2px solid #484854;
-  transition: background-color 0.3s ease;
-}
-
-/* Blur passthrough — handled by hyprland layerrule */
-
-/* ── Generic module base ─────────────────────────────────────────────────── */
-
-.modules-left,
-.modules-center,
-.modules-right {
   background: transparent;
+  color: #bbc2cf;
 }
 
+tooltip {
+  background: #1c1f24;
+  border: 1px solid #51afef;
+  border-radius: 10px;
+}
+tooltip label {
+  color: #bbc2cf;
+  padding: 4px;
+}
+
+/* ── Pill container: each module gets a rounded dark chip ─────────────────── */
+#custom-logo,
 #workspaces,
 #submap,
 #window,
 #mpris,
+#idle_inhibitor,
+#backlight,
 #pulseaudio,
 #bluetooth,
 #network,
-#cpu,
-#memory,
-#temperature,
+#resources,
 #battery,
 #clock,
+#custom-power,
 #tray {
-  padding: 0 10px;
-  color: #bbc2cf;
+  background: rgba(28, 31, 36, 0.85);
+  border: 1px solid rgba(72, 72, 84, 0.5);
+  border-radius: 10px;
+  padding: 2px 12px;
+  margin: 2px 4px;
 }
 
-/* ── Workspaces ─────────────────────────────────────────────────────────── */
+/* ── Left ─────────────────────────────────────────────────────────────────── */
+#custom-logo {
+  color: #51afef;
+  font-size: 18px;
+  padding: 2px 14px;
+  background: rgba(81, 175, 239, 0.14);
+  border-color: rgba(81, 175, 239, 0.5);
+}
+#custom-logo:hover {
+  background: rgba(81, 175, 239, 0.28);
+}
 
 #workspaces {
-  background-color: #1c1f24;
-  border-right: 1px solid #484854;
-  padding: 0 4px;
+  padding: 2px 4px;
 }
-
 #workspaces button {
+  color: #62686e;
   padding: 0 6px;
-  color: #62686E;
-  background: transparent;
-  border-radius: 0;
-  transition: all 0.15s ease;
-  min-width: 28px;
+  margin: 0 1px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
-
-#workspaces button:hover {
-  background-color: #2a2e38;
-  color: #bbc2cf;
-  box-shadow: inset 0 -2px #51afef;
-}
-
 #workspaces button.active {
-  background-color: #51afef;
   color: #1c1f24;
-  font-weight: bold;
-  box-shadow: none;
+  background: #51afef;
 }
-
 #workspaces button.urgent {
-  background-color: #ff665c;
   color: #1c1f24;
-  font-weight: bold;
+  background: #ff665c;
 }
-
-#workspaces button.special {
-  background-color: #3d4451;
-  color: #C57BDB;
+#workspaces button:hover {
+  color: #bbc2cf;
+  background: rgba(81, 175, 239, 0.2);
 }
-
-/* ── Submap indicator ────────────────────────────────────────────────────── */
 
 #submap {
-  background-color: #FCCE7B;
   color: #1c1f24;
-  font-weight: bold;
-  border-radius: 4px;
-  padding: 0 8px;
-  margin: 4px 4px;
+  background: #fcce7b;
+  border-color: #fcce7b;
 }
 
-/* ── Window title ────────────────────────────────────────────────────────── */
-
+/* ── Centre ───────────────────────────────────────────────────────────────── */
 #window {
   color: #bbc2cf;
-  font-weight: normal;
-  padding: 0 12px;
+  background: rgba(28, 31, 36, 0.7);
+  font-weight: 500;
+}
+window#waybar.empty #window {
+  background: transparent;
+  border-color: transparent;
 }
 
-#window.empty {
-  color: #62686E;
+/* ── Right ────────────────────────────────────────────────────────────────── */
+#mpris          { color: #c57bdb; }
+#idle_inhibitor { color: #5cefff; }
+#backlight      { color: #fcce7b; }
+#pulseaudio     { color: #7bc275; }
+#pulseaudio.muted { color: #62686e; }
+#bluetooth      { color: #51afef; }
+#network        { color: #5cefff; }
+#network.disconnected { color: #ff665c; }
+
+/* resources group = cpu | mem | temp inside one pill */
+#resources {
+  padding: 2px 6px;
 }
-
-/* ── MPRIS (media player) ────────────────────────────────────────────────── */
-
-#mpris {
-  color: #7bc275;
-  padding: 0 10px;
-}
-
-#mpris.paused {
-  color: #62686E;
-}
-
-#mpris.stopped {
-  color: transparent;
-  min-width: 0;
-  padding: 0;
-}
-
-/* ── Audio ───────────────────────────────────────────────────────────────── */
-
-#pulseaudio {
-  color: #51afef;
-}
-
-#pulseaudio.muted {
-  color: #484854;
-}
-
-#pulseaudio.bluetooth {
-  color: #C57BDB;
-}
-
-/* ── Bluetooth ───────────────────────────────────────────────────────────── */
-
-#bluetooth {
-  color: #C57BDB;
-}
-
-#bluetooth.disabled,
-#bluetooth.off {
-  color: #484854;
-}
-
-/* ── Network ─────────────────────────────────────────────────────────────── */
-
-#network {
-  color: #5cEfFF;
-}
-
-#network.disconnected {
-  color: #ff665c;
-}
-
-/* ── CPU / Memory / Temperature ─────────────────────────────────────────── */
-
-#cpu {
-  color: #bbc2cf;
-}
-
-#cpu.warning {
-  color: #FCCE7B;
-}
-
-#cpu.critical {
-  color: #ff665c;
-}
-
-#memory {
-  color: #bbc2cf;
-}
-
-#memory.warning {
-  color: #FCCE7B;
-}
-
-#memory.critical {
-  color: #ff665c;
-}
-
-#temperature {
-  color: #62686E;
-}
-
-#temperature.critical {
-  color: #ff665c;
-  font-weight: bold;
-}
-
-/* ── Battery ─────────────────────────────────────────────────────────────── */
-
-#battery {
-  color: #7bc275;
-}
-
-#battery.charging,
-#battery.plugged {
-  color: #51afef;
-}
-
-#battery.warning:not(.charging) {
-  color: #FCCE7B;
-}
-
-#battery.critical:not(.charging) {
-  color: #ff665c;
-  font-weight: bold;
-  animation: blink 1s step-start infinite;
-}
-
-@keyframes blink {
-  50% { color: transparent; }
-}
-
-/* ── Clock ───────────────────────────────────────────────────────────────── */
-
-#clock {
-  color: #62686E;
-  background-color: #1c1f24;
-  border-left: 1px solid #484854;
-  padding: 0 12px;
-}
-
-/* ── Tray ────────────────────────────────────────────────────────────────── */
-
-#tray {
-  background-color: #1c1f24;
-  border-left: 1px solid #484854;
+#resources #cpu,
+#resources #memory,
+#resources #temperature {
   padding: 0 8px;
 }
+#cpu         { color: #7bc275; }
+#memory      { color: #51afef; }
+#temperature { color: #c57bdb; }
 
-#tray > .passive {
-  -gtk-icon-effect: dim;
+#cpu.warning, #memory.warning, #temperature.critical { color: #fcce7b; }
+#cpu.critical, #memory.critical { color: #ff665c; }
+
+#battery              { color: #7bc275; }
+#battery.charging     { color: #7bc275; }
+#battery.warning:not(.charging)  { color: #fcce7b; }
+#battery.critical:not(.charging) {
+  color: #ff665c;
+  background: rgba(255, 102, 92, 0.15);
+  border-color: #ff665c;
 }
 
+#clock {
+  color: #bbc2cf;
+  background: rgba(81, 175, 239, 0.12);
+  border-color: rgba(81, 175, 239, 0.4);
+}
+
+#custom-power {
+  color: #ff665c;
+  font-size: 15px;
+}
+#custom-power:hover {
+  background: rgba(255, 102, 92, 0.2);
+}
+
+#tray {
+  padding: 2px 8px;
+}
 #tray > .needs-attention {
   -gtk-icon-effect: highlight;
-  background-color: rgba(255, 102, 92, 0.13); /* #ff665c @ ~13% (GTK has no 8-digit hex) */
-}
-
-/* ── Tooltip ─────────────────────────────────────────────────────────────── */
-
-tooltip {
-  background-color: #1c1f24;
-  border: 1px solid #484854;
-  border-radius: 6px;
-  color: #bbc2cf;
-}
-
-tooltip label {
-  color: #bbc2cf;
+  background-color: rgba(255, 102, 92, 0.13);
+  border-radius: 8px;
 }
