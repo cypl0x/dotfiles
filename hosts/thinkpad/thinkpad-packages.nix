@@ -14,6 +14,10 @@
   environment.systemPackages = with pkgs; [
     mosh
 
+    # wacli — OpenClaw's scriptable WhatsApp CLI (whatsmeow, local SQLite FTS5).
+    # From-source cgo build (see modules/pkgs/wacli.nix); pair with `wacli auth`.
+    (callPackage ../../modules/pkgs/wacli.nix {})
+
     # Browsers
     vivaldi
 
