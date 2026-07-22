@@ -78,6 +78,9 @@
     brightnessctl # backlight
     swayosd # on-screen display for volume/brightness
 
+    # System monitor — modern htop; waybar cpu/memory modules click through to it
+    btop
+
     # Image viewer
     swayimg
 
