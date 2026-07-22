@@ -116,6 +116,7 @@
                 ./home/terminals.nix
                 ./home/launchers.nix
                 ./home/hyprland.nix
+                ./home/gtk.nix
                 ./home/helix.nix
                 ./home/zellij.nix
               ];
