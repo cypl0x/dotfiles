@@ -14,8 +14,13 @@
     config.hyprland.default = ["hyprland" "gtk"];
   };
 
-  # Polkit authentication agent (KDE's ksshaskpass already handles SSH;
-  # kde-polkit-agent handles elevation dialogs in all sessions on this host).
+  # SSH passphrase prompt GUI. Previously provided implicitly by Plasma 6;
+  # set explicitly now that plasma6 is gone. Qt-based, fits the Hyprland/KDE
+  # polkit-agent stack below.
+  programs.ssh.askPassword = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
+
+  # Polkit authentication agent — polkit-kde-agent (launched via exec-once in
+  # hyprland.conf) handles privilege-elevation dialogs.
   security.polkit.enable = true;
 
   # System packages for the full Hyprland ecosystem

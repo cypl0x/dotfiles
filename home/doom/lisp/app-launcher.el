@@ -268,11 +268,7 @@ The command is executed via the native messenger host (cmd=run).
                         (app-launcher--candidate "[buf] " name name 'buffer))
                       (app-launcher--buffer-names)))
     :action ,(lambda (cand)
-               (let* ((name (app-launcher--value cand))
-                      (buf (get-buffer name)))
-                 (if (and buf (with-current-buffer buf (eq major-mode 'exwm-mode)))
-                     (exwm-workspace-switch-to-buffer buf)
-                   (switch-to-buffer name))))))
+               (switch-to-buffer (app-launcher--value cand)))))
 
 (defun app-launcher--source-windows ()
   `(:name "Windows"

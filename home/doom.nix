@@ -12,7 +12,6 @@
     ".config/doom/config.el".source = ./doom/config.el;
     ".config/doom/init.el".source = ./doom/init.el;
     ".config/doom/packages.el".source = ./doom/packages.el;
-    ".config/doom/exwm.el".source = ./doom/exwm.el;
     ".config/doom/lisp/app-launcher.el".source = ./doom/lisp/app-launcher.el;
   };
 }

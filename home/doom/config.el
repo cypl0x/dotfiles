@@ -376,15 +376,6 @@
 
 (load! "lisp/app-launcher")
 
-;; ---------------------------------------------------------------------------
-;; EXWM — only loaded when running as the window manager
-;; SDDM sets DESKTOP_SESSION=exwm when the EXWM session is selected at login.
-;; ---------------------------------------------------------------------------
-
-(when (or (string= (getenv "DESKTOP_SESSION") "exwm")
-          (string= (getenv "XDG_CURRENT_DESKTOP") "EXWM"))
-  (load! "exwm"))
-
 (after! doom-modeline
   (setq doom-modeline-window-number t))
 

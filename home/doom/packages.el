@@ -21,15 +21,6 @@
 ;; (package! clipetty)
 ;; (package! clipmon)
 
-;; ---------------------------------------------------------------------------
-;; EXWM — X11 window manager
-;; Loaded only in EXWM sessions (guarded in config.el).
-;; ---------------------------------------------------------------------------
-
-(package! exwm)
-(package! exwm-mff)            ;; focus-follows-mouse
-;; (package! exwm-firefox-evil) ;; disabled — not used, conflicts with Tridactyl
-
 ;; Spookfox: Emacs <-> Firefox bridge (fuzzy tab switching via Vertico).
 ;; Also requires the browser extension:
 ;;   https://github.com/bitspook/spookfox/releases  (.xpi)
