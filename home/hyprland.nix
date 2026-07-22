@@ -1,4 +1,17 @@
-_: {
+{pkgs, ...}: let
+  # Doom Vibrant wallpaper, generated at build time — a subtle radial vignette
+  # from the lighter Doom base (#2a2e38) down to the darkest (#1c1f24), so it
+  # matches the palette exactly and needs no external asset fetch.
+  doomWallpaper =
+    pkgs.runCommand "doom-vibrant-wallpaper.png" {
+      nativeBuildInputs = [pkgs.imagemagick];
+    } ''
+      magick -size 3840x2160 \
+        radial-gradient:'#2a2e38'-'#1c1f24' \
+        -gravity center \
+        $out
+    '';
+in {
   # Hyprland home-manager configuration — thinkpad only (added via sharedModules).
   # Mirrors the Doom Emacs aesthetic from tmux/wezterm: Doom Vibrant palette,
   # SUPER as leader key, vim hjkl navigation, leader-chord-style submaps.
@@ -20,6 +33,7 @@ _: {
     ".config/hypr/hyprlock.conf".source   = ./hyprland/hyprlock.conf;
     ".config/hypr/hypridle.conf".source   = ./hyprland/hypridle.conf;
     ".config/hypr/hyprpaper.conf".source  = ./hyprland/hyprpaper.conf;
+    ".config/hypr/wallpaper.png".source   = doomWallpaper;
     ".config/waybar/config.jsonc".source  = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source     = ./hyprland/waybar/style.css;
     ".config/mako/config".source          = ./hyprland/mako.conf;

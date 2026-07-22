@@ -1,26 +1,4 @@
-{
-  lib,
-  pkgs,
-  ...
-}: let
-  sddmElementaryTheme = pkgs.stdenvNoCC.mkDerivation {
-    pname = "sddm-elementary-os-theme";
-    version = "git-bfbc671";
-    src = pkgs.fetchFromGitHub {
-      owner = "zayronxio";
-      repo = "sddmElementaryOs";
-      rev = "bfbc67127e440dd1d7757815ac7f7efec3000e6a";
-      hash = "sha256-WRzkfV14AtbLqi+GRGbBl0CAtnbtfvIJ/Ta0q1Mjxjw=";
-    };
-    dontBuild = true;
-    installPhase = ''
-      runHook preInstall
-      mkdir -p "$out/share/sddm/themes/sddmElementaryOs"
-      cp -R ./* "$out/share/sddm/themes/sddmElementaryOs/"
-      runHook postInstall
-    '';
-  };
-in {
+{pkgs, ...}: {
   imports = [
     # Hardware and platform configuration
     ./hardware.nix
@@ -81,9 +59,6 @@ in {
   # Enable nix-ld for running unpatched dynamic binaries (e.g. Android SDK)
   programs.nix-ld.enable = true;
 
-  # Elementary-style SDDM theme (thinkpad only)
-  environment.systemPackages = lib.mkAfter [sddmElementaryTheme];
-
   # Allow passwordless nixos-rebuild switch for wap on this host only
   security.sudo.extraRules = [
     {
@@ -99,11 +74,6 @@ in {
 
   # ThinkPad-specific hardware support
   services = {
-    displayManager.sddm = {
-      theme = "sddmElementaryOs";
-      extraPackages = [sddmElementaryTheme];
-    };
-
     # iOS device management
     usbmuxd = {
       enable = true;

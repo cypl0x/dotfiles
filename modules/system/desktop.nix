@@ -14,10 +14,24 @@
       };
     };
 
-    # Enable the KDE Plasma Desktop Environment
-    displayManager.sddm = {
+    # Ly — minimal animated TTY greeter. Lists every session (Hyprland, EXWM,
+    # KDE Plasma, GNOME) from the wayland-/xsessions desktop files
+    # automatically. x11Support is required so the X11 sessions (EXWM, Plasma
+    # X11) can launch. YubiKey/fingerprint still work — they are PAM-level and
+    # greeter-agnostic.
+    displayManager.ly = {
       enable = true;
-      wayland.enable = true; # required to show Wayland sessions (Hyprland, etc.)
+      x11Support = true;
+      settings = {
+        animation = "doom"; # PSX DOOM fire effect (the pixel-art vibe)
+        animate = true;
+        clock = "%c";
+        hide_borders = false;
+        # Doom Vibrant accent for the input box borders (ly uses terminal
+        # colour indices; 4 = blue → #51afef in most palettes).
+        bg = 0;
+        fg = 4;
+      };
     };
     desktopManager.plasma6.enable = true;
 

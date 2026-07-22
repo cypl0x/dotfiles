@@ -108,6 +108,7 @@
               sharedModules = [
                 ./home/kitty-thinkpad.nix
                 ./home/terminals.nix
+                ./home/launchers.nix
                 ./home/hyprland.nix
               ];
               users = hmBaseUsers;
