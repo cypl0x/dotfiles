@@ -34,6 +34,12 @@ in {
     ".config/hypr/hypridle.conf".source   = ./hyprland/hypridle.conf;
     ".config/hypr/hyprpaper.conf".source  = ./hyprland/hyprpaper.conf;
     ".config/hypr/wallpaper.png".source   = doomWallpaper;
+    ".config/eww/eww.yuck".source         = ./hyprland/eww/eww.yuck;
+    ".config/eww/eww.scss".source         = ./hyprland/eww/eww.scss;
+    ".config/eww/scripts/net.sh" = {
+      source = ./hyprland/eww/scripts/net.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source  = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source     = ./hyprland/waybar/style.css;
     ".config/mako/config".source          = ./hyprland/mako.conf;

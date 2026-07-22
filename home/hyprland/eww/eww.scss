@@ -1,0 +1,70 @@
+// Doom Vibrant palette
+$bg:      rgba(28, 31, 36, 0.86);   // #1c1f24 @ 86%
+$bg-bar:  #2a2e38;
+$fg:      #bbc2cf;
+$blue:    #51afef;
+$green:   #7bc275;
+$yellow:  #fcce7b;
+$red:     #ff665c;
+$magenta: #c57bdb;
+$cyan:    #5cefff;
+$comment: #62686e;
+
+* {
+  all: unset;
+  font-family: "Cascadia Code NF", "JetBrains Mono", monospace;
+  font-size: 13px;
+}
+
+.panel {
+  background-color: $bg;
+  border: 1px solid $blue;
+  border-radius: 12px;
+  padding: 18px 16px;
+  color: $fg;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+}
+
+// ── header ────────────────────────────────────────────────
+.host { color: $blue;    font-size: 20px; font-weight: bold; }
+.sub  { color: $comment; font-size: 12px; }
+
+// ── clock ─────────────────────────────────────────────────
+.time { color: $green;  font-size: 30px; font-weight: bold; }
+.date { color: $yellow; font-size: 13px; }
+
+// ── metric rows ───────────────────────────────────────────
+.metric { margin-top: 2px; }
+.m-icon { color: $magenta; margin-right: 10px; font-size: 15px; }
+.m-name { color: $fg;      font-weight: bold; }
+.m-val  { color: $cyan; }
+
+.m-bar {
+  min-height: 8px;
+  margin-top: 2px;
+
+  trough {
+    background-color: $bg-bar;
+    border-radius: 6px;
+    min-height: 8px;
+  }
+  progress {
+    background-color: $blue;
+    border-radius: 6px;
+  }
+}
+
+.detail { color: $comment; font-size: 11px; }
+
+// ── sensors + net ─────────────────────────────────────────
+.kvrow  { margin-top: 2px; }
+.kv-temp { color: $red; }
+.kv-bat  { color: $yellow; }
+.net     { color: $green; font-size: 12px; }
+
+// ── dividers ──────────────────────────────────────────────
+.rule {
+  background-color: $comment;
+  opacity: 0.35;
+  margin: 2px 0;
+}

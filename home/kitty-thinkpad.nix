@@ -2,8 +2,12 @@ _: {
   programs.kitty = {
     enable = true;
     settings = {
-      # Tab bar layout (tmux-like)
-      tab_bar_edge = "bottom";
+      # Tab bar layout (tmux-like).
+      # Vertical (left-edge) tabs need kitty >= 0.48. Your pinned nixpkgs
+      # still ships 0.47.4, whose parser silently falls back to "bottom" for
+      # unknown edges — so setting "left" is harmless now and auto-activates
+      # vertical tabs the moment nixpkgs bumps kitty to 0.48.
+      tab_bar_edge = "left";
       tab_bar_style = "powerline";
       tab_bar_background = "#242730";
       active_tab_foreground = "#1c1f24";

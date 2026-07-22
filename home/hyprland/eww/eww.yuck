@@ -1,0 +1,89 @@
+;; ══════════════════════════════════════════════════════════════════════════
+;;  Doom Vibrant "nerdy" system overlay — a conky-style desktop panel.
+;;  Anchored to the right edge, painted *behind* windows (stacking "bg"), so it
+;;  reads like a terminal HUD glued to the wallpaper. All metrics are polled
+;;  from /proc, /sys and coreutils — no external daemons.
+;; ══════════════════════════════════════════════════════════════════════════
+
+;; ── data pollers ──────────────────────────────────────────────────────────
+(defpoll HOST   :interval "1h"  `hostname`)
+(defpoll KERNEL :interval "1h"  `uname -r`)
+(defpoll DISTRO :interval "1h"  `. /etc/os-release 2>/dev/null; echo "$PRETTY_NAME"`)
+(defpoll UPTIME :interval "60s" `uptime -p | sed 's/up //'`)
+(defpoll LOAD   :interval "5s"  `cut -d' ' -f1-3 /proc/loadavg`)
+
+(defpoll CLOCK  :interval "1s"  `date +'%H:%M:%S'`)
+(defpoll DATE   :interval "60s" `date +'%a %d %b %Y'`)
+
+(defpoll CPU    :interval "2s"  `top -bn1 | awk -F',' '/Cpu\\(s\\)/{for(i=1;i<=NF;i++) if($i ~ /id/){gsub(/[^0-9.]/,"",$i); printf "%.0f", 100-$i}}'`)
+(defpoll MEMP   :interval "3s"  `free | awk '/Mem:/{printf "%.0f", $3/$2*100}'`)
+(defpoll MEMT   :interval "3s"  `free -h --si | awk '/Mem:/{print $3" / "$2}'`)
+(defpoll SWAPP  :interval "5s"  `free | awk '/Swap:/{if($2>0) printf "%.0f", $3/$2*100; else print 0}'`)
+(defpoll DISK   :interval "30s" `df -h / | awk 'NR==2{gsub(/%/,"",$5); print $5}'`)
+(defpoll DISKT  :interval "30s" `df -h / | awk 'NR==2{print $3" / "$2}'`)
+(defpoll TEMP   :interval "5s"  `for z in /sys/class/thermal/thermal_zone*/temp; do awk '{printf "%.0f", $1/1000; exit}' "$z"; break; done`)
+(defpoll BAT    :interval "10s" `cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo "--"`)
+(defpoll BATST  :interval "10s" `cat /sys/class/power_supply/BAT0/status 2>/dev/null || echo ""`)
+(defpoll NET    :interval "2s"  `~/.config/eww/scripts/net.sh`)
+
+;; ── reusable metric row (icon + label + value + bar) ────────────────────────
+(defwidget metric [icon name value bar]
+  (box :class "metric" :orientation "v" :space-evenly false :spacing 3
+    (box :orientation "h" :space-evenly false
+      (label :class "m-icon" :text icon)
+      (label :class "m-name" :text name)
+      (box :hexpand true :halign "end"
+        (label :class "m-val" :text "${value}%")))
+    (progress :class "m-bar" :value bar :orientation "h")))
+
+;; ── section divider ─────────────────────────────────────────────────────────
+(defwidget rule []
+  (box :class "rule" :height 1))
+
+;; ── panel body ──────────────────────────────────────────────────────────────
+(defwidget sys []
+  (box :class "panel" :orientation "v" :space-evenly false :spacing 14
+    ;; header
+    (box :class "header" :orientation "v" :space-evenly false :spacing 2
+      (label :class "host"   :halign "start" :text "󰣇  ${HOST}")
+      (label :class "sub"    :halign "start" :text " ${DISTRO}")
+      (label :class "sub"    :halign "start" :text " ${KERNEL}")
+      (label :class "sub"    :halign "start" :text "󰅐 ${UPTIME}"))
+
+    (rule)
+
+    ;; clock
+    (box :class "clock" :orientation "v" :space-evenly false
+      (label :class "time" :text CLOCK)
+      (label :class "date" :text DATE))
+
+    (rule)
+
+    ;; core metrics
+    (metric :icon "" :name "CPU"  :value CPU  :bar CPU)
+    (label  :class "detail" :halign "start" :text "  load ${LOAD}")
+    (metric :icon "" :name "MEM"  :value MEMP :bar MEMP)
+    (label  :class "detail" :halign "start" :text "  ${MEMT}")
+    (metric :icon "󰓡" :name "SWAP" :value SWAPP :bar SWAPP)
+    (metric :icon "" :name "DISK" :value DISK :bar DISK)
+    (label  :class "detail" :halign "start" :text "  ${DISKT}")
+
+    (rule)
+
+    ;; sensors row
+    (box :class "kvrow" :orientation "h" :space-evenly true
+      (label :class "kv-temp" :text " ${TEMP}°C")
+      (label :class "kv-bat"  :text "󱊣 ${BAT}% ${BATST}"))
+
+    ;; network
+    (label :class "net" :halign "start" :text NET)))
+
+;; ── the desktop window ──────────────────────────────────────────────────────
+(defwindow syspanel
+  :monitor 0
+  :geometry (geometry :x "18px" :y "0px" :width "300px" :height "94%"
+                      :anchor "right center")
+  :stacking "bg"
+  :focusable false
+  :exclusive false
+  (sys))

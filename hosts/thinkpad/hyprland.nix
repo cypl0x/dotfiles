@@ -81,6 +81,9 @@
     # System monitor — modern htop; waybar cpu/memory modules click through to it
     btop
 
+    # eww — the nerdy conky-style desktop system overlay (home/hyprland/eww)
+    eww
+
     # Image viewer
     swayimg
 
