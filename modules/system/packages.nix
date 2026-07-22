@@ -46,6 +46,11 @@
     # Environment variables
     sessionVariables = {
       PAGER = "bat";
+      # Without this, man falls back to PAGER=bat, which renders man pages
+      # with bat's grid/line-numbers/"STDIN" header. The zsh man() wrapper
+      # (home/shell/zsh/aliases.sh) overrides MANPAGER for pretty bat output
+      # in interactive shells; this is the sane default everywhere else.
+      MANPAGER = "less";
       BAT_PAGER = "less -R";
       BAT_THEME = "Doom Vibrant";
     };

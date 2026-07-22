@@ -543,9 +543,12 @@ filecount() {
   find "${1:-.}" -type f | sed -n 's/..*\.//p' | sort | uniq -c | sort -rn
 }
 
-# Colored man pages using bat
+# Colored man pages using bat.
+# MANROFFOPT=-c makes groff emit classic backspace-overstrike formatting
+# instead of raw ANSI SGR escapes; col -bx can strip overstrikes, but it
+# passes ANSI escapes through, which bat then shows as literal garbage.
 man() {
-  MANPAGER="sh -c 'col -bx | bat -l man -p'" command man "$@"
+  MANROFFOPT="-c" MANPAGER="sh -c 'col -bx | bat -l man -p'" command man "$@"
 }
 
 # ============================================================================
