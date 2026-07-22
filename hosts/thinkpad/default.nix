@@ -24,6 +24,7 @@ in {
   imports = [
     # Hardware and platform configuration
     ./hardware.nix
+    ../../modules/hardware/yubikey.nix
 
     # System modules
     ../../modules/system/packages.nix

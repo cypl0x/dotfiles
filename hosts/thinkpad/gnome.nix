@@ -105,7 +105,7 @@
       shortwave # Internet radio client (GTK4, follows GNOME HIG)
       newsflash # RSS / Atom feed reader (GTK4)
       gnome-firmware # Firmware update GUI wrapping fwupd
-      bottles # Wine prefix manager — run Windows applications
+      # bottles  # removed: transitive python patool-4.0.5 fails its test suite in current nixpkgs (bogus mimetype assertion). Restore via overlay disabling patool checks.
       resources # Modern system resource and process monitor (GTK4)
       pika-backup # Simple backups based on borg
       wike # Wikipedia reading tool

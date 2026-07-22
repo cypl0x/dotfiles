@@ -18,14 +18,14 @@
     vivaldi
 
     # Privacy and VPN
-    protonvpn-gui
+    proton-vpn # renamed from protonvpn-gui
 
     # Email
-    fastmail-desktop
+    # fastmail-desktop  # removed: electron app (electron_41)
     hydroxide
 
     # LaTeX full suite
-    texlive.combined.scheme-full
+    texliveFull # replaces deprecated texlive.combined.scheme-full
 
     # Partitioning tools
     parted
@@ -77,7 +77,7 @@
     # _1password-cli
 
     # Notion
-    anytype
+    # anytype  # removed: electron app (electron_41)
     planify
 
     # opera
@@ -117,9 +117,9 @@
     # multi messenger meta messenger (WhatsApp, Telegram, Signal, Discord, etc.)
     beeper
 
-    cherry-studio
+    # cherry-studio  # removed: pins EOL electron_40 (40.10.5)
 
-    super-productivity
+    # super-productivity  # removed: electron app (electron_41)
     readest
     varia
 

@@ -6,6 +6,10 @@ _: {
   wayland.windowManager.hyprland = {
     enable = true;
 
+    # We write raw hyprlang via extraConfig below, so pin the config format to
+    # hyprlang and silence the 26.05 default-flip-to-lua warning.
+    configType = "hyprlang";
+
     # Raw config — same approach as tmux (builtins.readFile)
     extraConfig = builtins.readFile ./hyprland/hyprland.conf;
   };

@@ -32,6 +32,14 @@
       {
         # ".zshrc".source = ./zshrc;
 
+        # Disable KDE Plasma's Baloo file indexer — it is a persistent CPU/RAM
+        # hog (baloo_file + baloorunner) and the biggest steady-state slowdown
+        # on this machine. No-op on hosts without Plasma.
+        ".config/baloofilerc".text = ''
+          [Basic Settings]
+          Indexing-Enabled=false
+        '';
+
         ".local/bin/e" = {
           source = ./bin/e;
           executable = true;
@@ -124,7 +132,6 @@
         pkgs.gh-notify
         pkgs.gh-dash
         pkgs.gh-poi
-        pkgs.gh-actions-cache
       ];
     };
 
