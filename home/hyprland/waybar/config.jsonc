@@ -113,7 +113,7 @@
     },
 
     "backlight": {
-        "format": "{icon} {percent}%",
+        "format": "{icon} {percent:>3}%",
         "format-icons": ["󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠"],
         "on-scroll-up": "brightnessctl set +5%",
         "on-scroll-down": "brightnessctl set 5%-",
@@ -121,8 +121,8 @@
     },
 
     "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-bluetooth": "󰂯 {volume}%",
+        "format": "{icon} {volume:>3}%",
+        "format-bluetooth": "󰂯 {volume:>3}%",
         "format-muted": "󰖁",
         "format-icons": {
             "headphone": "󰋋", "hands-free": "󱡒", "headset": "󰋎",
@@ -147,7 +147,7 @@
     },
 
     "network": {
-        "format-wifi": "{icon} {signalStrength}%",
+        "format-wifi": "{icon} {signalStrength:>3}%",
         "format-ethernet": "󰈀 {bandwidthDownBits}",
         "format-linked": "󰈂",
         "format-disconnected": "󰤭",
@@ -166,7 +166,7 @@
     },
 
     "cpu": {
-        "format": "󰻠 {usage}%",
+        "format": "󰻠 {usage:>3}%",
         "interval": 2,
         "states": { "warning": 70, "critical": 90 },
         "on-click": "kitty -e btop",
@@ -174,7 +174,7 @@
     },
 
     "memory": {
-        "format": "󰍛 {percentage}%",
+        "format": "󰍛 {percentage:>3}%",
         "interval": 3,
         "states": { "warning": 75, "critical": 90 },
         "on-click": "kitty -e btop",
@@ -184,8 +184,8 @@
     "temperature": {
         "thermal-zone": 0,
         "critical-threshold": 82,
-        "format": "{icon} {temperatureC}°C",
-        "format-critical": "󰸁 {temperatureC}°C",
+        "format": "{icon} {temperatureC:>3}°C",
+        "format-critical": "󰸁 {temperatureC:>3}°C",
         "format-icons": ["󰜗", "󰔏", "󰸁"],
         "interval": 3
     },
@@ -194,9 +194,9 @@
 
     "battery": {
         "states": { "good": 95, "warning": 25, "critical": 10 },
-        "format": "{icon} {capacity}%",
-        "format-charging": "󰂄 {capacity}%",
-        "format-plugged": "󰚥 {capacity}%",
+        "format": "{icon} {capacity:>3}%",
+        "format-charging": "󰂄 {capacity:>3}%",
+        "format-plugged": "󰚥 {capacity:>3}%",
         "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
         "tooltip-format": "{timeTo} — {power}W\nHealth: {health}%   Cycles: {cycles}"
     },

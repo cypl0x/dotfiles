@@ -5,7 +5,7 @@ vim.g.maplocalleader = " "
 
 opt.termguicolors = true
 opt.number = true
-opt.relativenumber = true
+opt.relativenumber = false
 opt.cursorline = true
 opt.wrap = false
 opt.linebreak = true

@@ -38,12 +38,12 @@ in {
   # ── Config files ─────────────────────────────────────────────────────────
 
   home.file = {
-    ".config/hypr/hyprlock.conf".source   = ./hyprland/hyprlock.conf;
-    ".config/hypr/hypridle.conf".source   = ./hyprland/hypridle.conf;
-    ".config/hypr/hyprpaper.conf".source  = ./hyprland/hyprpaper.conf;
-    ".config/hypr/wallpaper.png".source   = doomWallpaper;
-    ".config/eww/eww.yuck".source         = ./hyprland/eww/eww.yuck;
-    ".config/eww/eww.scss".source         = ./hyprland/eww/eww.scss;
+    ".config/hypr/hyprlock.conf".source = ./hyprland/hyprlock.conf;
+    ".config/hypr/hypridle.conf".source = ./hyprland/hypridle.conf;
+    ".config/hypr/hyprpaper.conf".source = ./hyprland/hyprpaper.conf;
+    ".config/hypr/wallpaper.png".source = doomWallpaper;
+    ".config/eww/eww.yuck".source = ./hyprland/eww/eww.yuck;
+    ".config/eww/eww.scss".source = ./hyprland/eww/eww.scss;
     ".config/eww/scripts/net.sh" = {
       source = ./hyprland/eww/scripts/net.sh;
       executable = true;
@@ -56,9 +56,13 @@ in {
       source = ./hyprland/scripts/set-wallpaper.sh;
       executable = true;
     };
-    ".config/waybar/config.jsonc".source  = ./hyprland/waybar/config.jsonc;
-    ".config/waybar/style.css".source     = ./hyprland/waybar/style.css;
-    ".config/mako/config".source          = ./hyprland/mako.conf;
+    ".config/hypr/scripts/lock-stats.sh" = {
+      source = ./hyprland/scripts/lock-stats.sh;
+      executable = true;
+    };
+    ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
+    ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
+    ".config/mako/config".source = ./hyprland/mako.conf;
     ".config/rofi/doom-vibrant.rasi".source = ./hyprland/rofi/doom-vibrant.rasi;
   };
 

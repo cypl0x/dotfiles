@@ -3,6 +3,21 @@
  * Feels like M-x / SPC SPC in Doom Emacs
  */
 
+/* vim-style navigation: Ctrl+j/k move the selection, Ctrl+h/l switch modes.
+ * We clear the default owners of those chords (Ctrl+k = remove-to-eol,
+ * Ctrl+j = accept, Ctrl+h = remove-char-back) so rofi doesn't error on a
+ * duplicate binding. */
+configuration {
+    kb-row-up:           "Up,Control+k,Control+p";
+    kb-row-down:         "Down,Control+j,Control+n";
+    kb-mode-previous:    "Control+h,Control+ISO_Left_Tab";
+    kb-mode-next:        "Control+l,Control+Tab";
+    kb-remove-to-eol:    "";
+    kb-accept-entry:     "Return,KP_Enter";
+    kb-remove-char-back: "BackSpace,Shift+BackSpace";
+    kb-clear-line:       "Control+w";
+}
+
 * {
     /* Doom Vibrant palette */
     bg:       #242730;
@@ -23,7 +38,7 @@
     /* Applied mappings */
     background-color:    transparent;
     text-color:          @fg;
-    font:                "Cascadia Code NF 13";
+    font:                "Maple Mono NF 13";
     border-color:        @border;
     separator-color:     @border;
 }
@@ -59,7 +74,7 @@ inputbar {
 prompt {
     background-color: transparent;
     text-color:       @blue;
-    font:             "Cascadia Code NF Bold 13";
+    font:             "Maple Mono NF Bold 13";
     vertical-align:   0.5;
     padding:          0 4px 0 0;
 }
@@ -167,5 +182,5 @@ message {
 textbox {
     background-color: transparent;
     text-color:       @comment;
-    font:             "Cascadia Code NF 11";
+    font:             "Maple Mono NF 11";
 }

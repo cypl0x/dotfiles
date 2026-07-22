@@ -13,6 +13,7 @@ if ok_which then
     {"<leader>o", group = "open"},
     {"<leader>g", group = "git"},
     {"<leader>c", group = "code"},
+    {"<leader>f", group = "file"},
   })
 end
 
@@ -88,6 +89,36 @@ if ok_treesitter then
     indent = {enable = true},
     ensure_installed = {},
   })
+end
+
+-- org-mode: proper syntax highlighting (incl. injected #+begin_src blocks via
+-- the `org` treesitter grammar) and Doom-style structure editing.
+--   <localleader>' (Space ') → edit the src block in a dedicated buffer
+--                              (Doom's SPC m ' / org-edit-special)
+--   <localleader>oa / oc     → agenda / capture
+local ok_org, orgmode = pcall(require, "orgmode")
+if ok_org then
+  orgmode.setup({
+    org_agenda_files = {"~/Nextcloud/**/*.org"},
+    org_default_notes_file = "~/Nextcloud/notes.org",
+    highlight_latex_and_related = "entities",
+  })
+end
+
+-- oil.nvim — dired for nvim: edit the filesystem as a normal, editable buffer.
+--   -          → open the parent directory (like `dired-jump`)
+--   <leader>fd → open oil (Doom's file/dired entry)
+local ok_oil, oil = pcall(require, "oil")
+if ok_oil then
+  oil.setup({
+    view_options = {show_hidden = true},
+    keymaps = {
+      ["<C-h>"] = false,
+      ["q"] = "actions.close",
+    },
+  })
+  vim.keymap.set("n", "-", "<cmd>Oil<cr>", {desc = "Open parent dir (oil)", silent = true})
+  vim.keymap.set("n", "<leader>fd", "<cmd>Oil<cr>", {desc = "Dired (oil)", silent = true})
 end
 
 local ok_lualine, lualine = pcall(require, "lualine")

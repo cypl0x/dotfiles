@@ -16,7 +16,7 @@ size = 11.0
 normal = { family = "Maple Mono NF", style = "Regular" }
 
 [cursor]
-style = { shape = "Block", blinking = "Off" }
+style = { shape = "Beam", blinking = "Off" }
 
 # ── Doom Vibrant palette (Henrik Lissner) ───────────────────────────────────
 [colors.primary]

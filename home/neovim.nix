@@ -38,6 +38,8 @@
       vim-fugitive
       vim-surround
       vim-repeat
+      orgmode # org-mode: syntax highlight (incl. src blocks), SPC m ' edit special
+      oil-nvim # dired-like: edit the filesystem as a buffer
     ];
   };
 

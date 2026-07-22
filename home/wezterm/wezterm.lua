@@ -5,6 +5,9 @@ local act = wezterm.action
 
 config.automatically_reload_config = true
 
+-- Line (bar) cursor at the shell prompt, matching kitty/rio/ghostty/alacritty.
+config.default_cursor_style = "SteadyBar"
+
 config.color_schemes = {
   ["Doom Vibrant"] = {
     foreground = "#bbc2cf",

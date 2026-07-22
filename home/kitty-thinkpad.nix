@@ -30,6 +30,7 @@ _: {
 
       cursor = "#bbc2cf";
       cursor_text_color = "#242730";
+      cursor_shape = "beam"; # line cursor at the shell prompt
 
       active_border_color = "#46D9FF";
       inactive_border_color = "#484854";
@@ -82,8 +83,11 @@ _: {
 
       # Window key-table equivalents (Ctrl+Space w ...)
       map ctrl+space>w>w focus_visible_window
-      map ctrl+space>w>v launch --location=hsplit --cwd=current
-      map ctrl+space>w>s launch --location=vsplit --cwd=current
+      # vim convention: v = vertical split = side-by-side (kitty "vsplit"),
+      # s = horizontal split = stacked (kitty "hsplit"). These used to be
+      # swapped, so "v" produced a top/bottom split.
+      map ctrl+space>w>v launch --location=vsplit --cwd=current
+      map ctrl+space>w>s launch --location=hsplit --cwd=current
       map ctrl+space>w>c close_window
       map ctrl+space>w>z toggle_layout stack
       map ctrl+space>w>= resize_window reset
@@ -115,8 +119,8 @@ _: {
       # Open key-table equivalents (Ctrl+Space o ...)
       map ctrl+space>o>l select_tab
       map ctrl+space>o>t new_tab
-      map ctrl+space>o>s launch --location=vsplit --cwd=current
-      map ctrl+space>o>v launch --location=hsplit --cwd=current
+      map ctrl+space>o>v launch --location=vsplit --cwd=current
+      map ctrl+space>o>s launch --location=hsplit --cwd=current
     '';
   };
 }

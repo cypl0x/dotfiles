@@ -18,7 +18,7 @@ size = 13
 family = "Maple Mono NF"
 
 [cursor]
-shape = "block"
+shape = "beam"
 blinking = false
 
 # ── Doom Vibrant colours (Henrik Lissner) ───────────────────────────────────

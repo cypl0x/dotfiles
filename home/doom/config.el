@@ -11,7 +11,7 @@
 ;; UI
 ;; ---------------------------------------------------------------------------
 
-(setq doom-font (font-spec :family "Cascadia Code NF" :size 14))
+(setq doom-font (font-spec :family "Maple Mono NF" :size 14))
 (setq doom-theme 'doom-vibrant)
 (setq display-line-numbers-type t)
 
