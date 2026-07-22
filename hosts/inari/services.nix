@@ -112,8 +112,11 @@ in {
       # Create symlink to /etc/nginx/www
       ln -sf /etc/nginx/www /var/www/wolfhard
 
-      # Set permissions
-      chown -R nginx:nginx /var/www
+      # Set permissions. Only touch the wolfhard tree this service owns — a
+      # recursive chown of all of /var/www would recurse into the read-only
+      # klosterpforte bind mount and fail (chown: Read-only file system).
+      chown nginx:nginx /var/www
+      chown -RH nginx:nginx /var/www/wolfhard
     '';
   };
 }
