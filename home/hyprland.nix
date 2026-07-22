@@ -84,6 +84,10 @@ in {
       source = ./hyprland/scripts/firefox-tab-switcher.sh;
       executable = true;
     };
+    ".config/hypr/scripts/claude-notify.sh" = {
+      source = ./hyprland/scripts/claude-notify.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
     ".config/swaync/config.json".source = ./hyprland/swaync/config.json;
