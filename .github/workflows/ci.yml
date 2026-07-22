@@ -50,6 +50,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-check
     steps:
+      # Building a full NixOS system closure overflows the stock ~14 GB runner
+      # disk ("No space left on device"). Reclaim ~25 GB first.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -84,6 +97,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-check
     steps:
+      # Building a full NixOS system closure overflows the stock ~14 GB runner
+      # disk ("No space left on device"). Reclaim ~25 GB first.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
