@@ -23,14 +23,22 @@
       enable = true;
       x11Support = true;
       settings = {
-        animation = "matrix"; # cmatrix-style digital rain (doom fire looked bad)
+        animation = "colormix"; # none | doom | matrix | colormix | gameoflife
         animate = true;
         clock = "%c";
         hide_borders = false;
-        # Doom Vibrant accent for the input box borders (ly uses terminal
-        # colour indices; 4 = blue → #51afef in most palettes).
-        bg = 0;
-        fg = 4;
+
+        # Doom Vibrant colours (0x00RRGGBB). Background left untouched (black)
+        # so only the input fields / text / borders are themed.
+        fg = "0x00bbc2cf"; # text  — Doom foreground
+        border_fg = "0x0051afef"; # box border — Doom blue
+        error_fg = "0x00ff665c"; # errors — Doom red
+
+        # colormix shader → Doom blue → magenta → dark wash. The third colour
+        # keeps ly's high-byte blend weight (0x20) from the default.
+        colormix_col1 = "0x0051afef"; # Doom blue
+        colormix_col2 = "0x00c57bdb"; # Doom magenta
+        colormix_col3 = "0x201c1f24"; # Doom darkest
       };
     };
     desktopManager.plasma6.enable = true;

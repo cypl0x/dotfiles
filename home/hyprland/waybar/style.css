@@ -252,7 +252,7 @@ window#waybar {
 
 #tray > .needs-attention {
   -gtk-icon-effect: highlight;
-  background-color: #ff665c22;
+  background-color: rgba(255, 102, 92, 0.13); /* #ff665c @ ~13% (GTK has no 8-digit hex) */
 }
 
 /* ── Tooltip ─────────────────────────────────────────────────────────────── */

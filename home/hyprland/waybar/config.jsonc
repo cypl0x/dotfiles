@@ -193,11 +193,11 @@
             "weeks-pos": "right",
             "on-scroll": 1,
             "format": {
-                "months":   "<span color='##51afef'><b>{}</b></span>",
-                "days":     "<span color='##bbc2cf'>{}</span>",
-                "weeks":    "<span color='##62686E'><b>W{}</b></span>",
-                "weekdays": "<span color='##FCCE7B'><b>{}</b></span>",
-                "today":    "<span color='##7bc275'><b><u>{}</u></b></span>"
+                "months":   "<span color='#51afef'><b>{}</b></span>",
+                "days":     "<span color='#bbc2cf'>{}</span>",
+                "weeks":    "<span color='#62686E'><b>W{}</b></span>",
+                "weekdays": "<span color='#FCCE7B'><b>{}</b></span>",
+                "today":    "<span color='#7bc275'><b><u>{}</u></b></span>"
             }
         }
     },

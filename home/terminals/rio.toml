@@ -7,6 +7,12 @@ opacity = 1.0
 padding-x = 6
 padding-y = 6
 
+# Rio has no vertical/side tabs. Use a blocky top tab bar (like kitty/wezterm).
+[navigation]
+mode = "TopTab"
+use-current-path = true
+color-automation = []
+
 [fonts]
 size = 13
 family = "Maple Mono NF"
