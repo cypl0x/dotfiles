@@ -6,7 +6,8 @@
   # started from hyprland.conf exec-once (elephant, then walker --gapplication-service).
   # elephant: walker's backend (see below). jq: used by the hyprland
   # window-switcher script.
-  home.packages = [pkgs.elephant pkgs.jq];
+  # brotab (bt): rofi Firefox-tab switcher (home/hyprland/scripts/firefox-tab-switcher.sh).
+  home.packages = [pkgs.elephant pkgs.jq pkgs.brotab];
 
   # Application launchers — keyboard-first, Doom-vibrant.
   #

@@ -84,6 +84,10 @@ in {
       source = ./hyprland/scripts/rofi-run-cmd.sh;
       executable = true;
     };
+    ".config/hypr/scripts/firefox-tab-switcher.sh" = {
+      source = ./hyprland/scripts/firefox-tab-switcher.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
     ".config/mako/config".source = ./hyprland/mako.conf;
