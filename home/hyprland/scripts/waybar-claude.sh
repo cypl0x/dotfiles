@@ -1,61 +1,67 @@
 #!/usr/bin/env bash
-# Waybar custom module: Claude Code usage, token-focused.
+# Waybar custom module: Claude Code 5-hour usage, as a % of the token limit.
 #
 # Uses ccusage (https://github.com/ryoppippi/ccusage) — parses the local
-# ~/.claude usage logs, no network, no API key. The bar shows the current
-# 5-hour rate-limit window's token count; the tooltip adds the % of the window
-# elapsed, today, and the last 7 days. Cost is intentionally de-emphasised
-# (shown only in the tooltip). Long refresh interval (see config.jsonc) because
-# each `npx` startup is not free.
+# ~/.claude logs, no network/key. ccusage groups usage into fixed 5-hour blocks;
+# `--token-limit N` makes it report tokenLimitStatus so we can show "% used".
+#
+# The limit is your plan's 5h token allowance. ccusage cannot read Anthropic's
+# real limit, so it's set here (override with $CLAUDE_5H_TOKEN_LIMIT). Calibrated
+# from a known data point: 42.1M tokens read as ~53% -> ~80M limit.
+#
+# The bar shows CURRENT tokens as a % of that limit (not ccusage's own
+# "percentUsed", which is the *projected* end-of-block figure). Note the reset
+# countdown is ccusage's fixed-block remainder and can differ from Claude's
+# real rolling-window reset.
 set -euo pipefail
 
+LIMIT=${CLAUDE_5H_TOKEN_LIMIT:-80000000}
 fallback() { printf '{"text":"","tooltip":"%s","class":"claude"}\n' "$1"; exit 0; }
 command -v npx >/dev/null 2>&1 || fallback "npx not found"
 hum() { numfmt --to=si --format='%.1f' "${1%.*}" 2>/dev/null || echo "${1:-0}"; }
 
-# --token-limit max makes ccusage compute a limit from the busiest previous 5h
-# block, so tokenLimitStatus.percent is a meaningful "how full is this window".
-blocks=$(npx -y ccusage@latest blocks --active --token-limit max --json 2>/dev/null) \
+blocks=$(npx -y ccusage@latest blocks --active --token-limit "$LIMIT" --json 2>/dev/null) \
   || fallback "ccusage unavailable"
 daily=$(npx -y ccusage@latest daily --json 2>/dev/null || echo '{}')
 
-# Active 5h block: tokens, % of token limit used, cost, minutes left, % of the
-# 5h window elapsed. Token % falls back to time % when no limit is known.
-read -r b_tok b_tokpct b_cost b_rem b_timepct <<<"$(printf '%s' "$blocks" | jq -r '
+# totalTokens, % of limit used NOW, minutes left in the 5h block, cost.
+read -r b_tok b_pct b_rem b_cost <<<"$(printf '%s' "$blocks" | jq -r '
   ( [ .blocks[]? | select(.isActive == true) ] | first ) // ( .blocks[-1]? ) // {} as $b
-  | ( ($b.tokenLimitStatus.limit // 0) as $lim | ($b.totalTokens // 0) as $t
-      | if $lim > 0 then ($t / $lim * 100 | floor)
-        else ($b.tokenLimitStatus.percent // -1 | floor) end ) as $tokpct
-  | ( ($b.startTime // "") as $s | ($b.endTime // "") as $e
-      | if ($s != "" and $e != "")
-        then ( ((now - ($s|fromdateiso8601)) / (($e|fromdateiso8601) - ($s|fromdateiso8601)) * 100)
-               | if . < 0 then 0 elif . > 100 then 100 else . end | floor )
-        else -1 end ) as $timepct
-  | [ ($b.totalTokens // 0),
-      $tokpct,
-      ($b.costUSD // 0),
-      ($b.projection.remainingMinutes // 0),
-      $timepct ] | @tsv')" || fallback "parse error"
+  | ( $b.tokenLimitStatus.limit // 0 ) as $lim
+  | ( $b.totalTokens // 0 ) as $tok
+  | [ $tok,
+      ( if $lim > 0 then ($tok / $lim * 100 | floor) else -1 end ),
+      ( $b.projection.remainingMinutes // 0 | floor ),
+      ( $b.costUSD // 0 ) ] | @tsv')" 2>/dev/null || fallback "parse error"
 
-# Today and last-7-days token totals from the daily report.
+# Fall back to the configured limit if ccusage omitted tokenLimitStatus.
+if [ "${b_pct:-'-1'}" = "-1" ] && [ "${b_tok:-0}" -gt 0 ] 2>/dev/null; then
+  b_pct=$(( b_tok * 100 / LIMIT ))
+fi
+
 read -r today_tok week_tok <<<"$(printf '%s' "$daily" | jq -r '
   ( [ .daily[]? ] ) as $d
   | [ ( $d[-1].totalTokens // 0 ),
       ( $d[-7:] | map(.totalTokens // 0) | add // 0 ) ] | @tsv' 2>/dev/null || echo "0	0")"
 
-# Bar text: token-usage % of the 5h window when known, else the raw token count.
-if [ "${b_tokpct:-'-1'}" != "-1" ] && [ "${b_tokpct:-0}" -ge 0 ] 2>/dev/null; then
-  text="󰧑 ${b_tokpct}%"
-  cls=$([ "${b_tokpct}" -ge 90 ] && echo "claude critical" || { [ "${b_tokpct}" -ge 70 ] && echo "claude warning" || echo "claude"; })
+# reset countdown "Xh Ym"
+rem=${b_rem:-0}
+reset=$(printf '%dh %02dm' $(( rem / 60 )) $(( rem % 60 )))
+
+if [ "${b_pct:-'-1'}" != "-1" ] && [ "${b_pct:-0}" -ge 0 ] 2>/dev/null; then
+  text="󰧑 ${b_pct}%"
+  if   [ "$b_pct" -ge 90 ]; then cls="claude critical"
+  elif [ "$b_pct" -ge 70 ]; then cls="claude warning"
+  else cls="claude"; fi
 else
   text="󰧑 $(hum "$b_tok")"
   cls="claude"
 fi
 
-tip="Claude Code — token usage\n5h window: $(hum "$b_tok") tok"
-[ "${b_tokpct:-'-1'}" != "-1" ] && tip="${tip}  (${b_tokpct}% of limit)"
-[ "${b_timepct:-'-1'}" != "-1" ] && tip="${tip}\nWindow ${b_timepct}% elapsed, ends in ~$(printf '%.0f' "${b_rem:-0}") min"
-tip="${tip}\nToday: $(hum "$today_tok") tok\nLast 7d: $(hum "$week_tok") tok"
-tip="${tip}\n5h cost: \$$(printf '%.2f' "${b_cost:-0}")"
+tip="Claude Code — 5h window"
+[ "${b_pct:-'-1'}" != "-1" ] && tip="${tip}\nUsed: ${b_pct}% of $(hum "$LIMIT") token limit"
+tip="${tip}\nTokens: $(hum "$b_tok")\nResets in ${reset}"
+tip="${tip}\nToday: $(hum "$today_tok") tok · Last 7d: $(hum "$week_tok") tok"
+tip="${tip}\n5h cost: \$$(LC_ALL=C printf '%.2f' "${b_cost:-0}")"
 
 printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$text" "$tip" "$cls"
