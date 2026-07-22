@@ -4,9 +4,10 @@
  */
 
 /* vim-style navigation: Ctrl+j/k move the selection, Ctrl+h/l switch modes.
- * We clear the default owners of those chords (Ctrl+k = remove-to-eol,
- * Ctrl+j = accept, Ctrl+h = remove-char-back) so rofi doesn't error on a
- * duplicate binding. */
+ * Every one of these chords has a default owner that we must first clear, or
+ * rofi refuses to start with "Binding `Control+X` already bound":
+ *   Ctrl+k = remove-to-eol, Ctrl+j = accept, Ctrl+h = remove-char-back,
+ *   Ctrl+l = mode-complete. */
 configuration {
     kb-row-up:           "Up,Control+k,Control+p";
     kb-row-down:         "Down,Control+j,Control+n";
@@ -16,6 +17,7 @@ configuration {
     kb-accept-entry:     "Return,KP_Enter";
     kb-remove-char-back: "BackSpace,Shift+BackSpace";
     kb-clear-line:       "Control+w";
+    kb-mode-complete:    "";
 }
 
 * {
