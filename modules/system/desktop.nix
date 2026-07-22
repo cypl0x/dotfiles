@@ -63,6 +63,7 @@
   # Font configuration
   fonts.packages = with pkgs; [
     cascadia-code
+    maple-mono.NF # Maple Mono Nerd Font — primary UI/terminal font
   ];
 
   # Desktop-specific packages

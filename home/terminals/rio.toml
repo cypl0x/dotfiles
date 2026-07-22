@@ -9,6 +9,7 @@ padding-y = 6
 
 [fonts]
 size = 13
+family = "Maple Mono NF"
 
 [cursor]
 shape = "block"

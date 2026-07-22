@@ -75,6 +75,7 @@ config.scrollback_lines = 10000
 config.max_fps = 120
 
 config.font = wezterm.font_with_fallback({
+  "Maple Mono NF",
   "Cascadia Code NF",
   "JetBrains Mono",
   "FiraCode Nerd Font",

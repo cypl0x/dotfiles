@@ -2,6 +2,10 @@ _: {
   programs.kitty = {
     enable = true;
     settings = {
+      # Primary font — Maple Mono Nerd Font
+      font_family = "Maple Mono NF";
+      font_size = 12;
+
       # Tab bar layout (tmux-like).
       # Vertical (left-edge) tabs need kitty >= 0.48. Your pinned nixpkgs
       # still ships 0.47.4, whose parser silently falls back to "bottom" for

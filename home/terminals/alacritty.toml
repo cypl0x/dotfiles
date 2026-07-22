@@ -13,8 +13,7 @@ dynamic_title = true
 
 [font]
 size = 11.0
-# Font family intentionally unset — inherits the system monospace default so
-# this config never breaks on a missing font. Set family here if desired.
+normal = { family = "Maple Mono NF", style = "Regular" }
 
 [cursor]
 style = { shape = "Block", blinking = "Off" }
