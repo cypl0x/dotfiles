@@ -15,9 +15,11 @@
 (defpoll CLOCK  :interval "1s"  `date +'%H:%M:%S'`)
 (defpoll DATE   :interval "60s" `date +'%a %d %b %Y'`)
 
-;; world clocks — Berlin (WIB base) + Jakarta (Indonesia)
-(defpoll TZBERLIN  :interval "10s" `TZ='Europe/Berlin' date +'%H:%M'`)
-(defpoll TZJAKARTA :interval "10s" `TZ='Asia/Jakarta' date +'%H:%M'`)
+;; world clocks — Berlin + Jakarta (Indonesia).
+;; TZDIR is required on NixOS: there is no /usr/share/zoneinfo, so a bare
+;; TZ=<Zone> would silently resolve to UTC.
+(defpoll TZBERLIN  :interval "10s" `TZDIR=/etc/zoneinfo TZ='Europe/Berlin' date +'%H:%M'`)
+(defpoll TZJAKARTA :interval "10s" `TZDIR=/etc/zoneinfo TZ='Asia/Jakarta' date +'%H:%M'`)
 
 (defpoll CPU    :interval "2s"  `top -bn1 | awk -F',' '/Cpu\\(s\\)/{for(i=1;i<=NF;i++) if($i ~ /id/){gsub(/[^0-9.]/,"",$i); printf "%.0f", 100-$i}}'`)
 (defpoll MEMP   :interval "3s"  `free | awk '/Mem:/{printf "%.0f", $3/$2*100}'`)
