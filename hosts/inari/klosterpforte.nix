@@ -30,13 +30,12 @@ in {
     # Staging must not be indexed: a second crawlable copy would compete with the
     # production domain in search results. This shadows the robots.txt from the
     # build (which permits crawling) and blocks every crawler instead.
-    ${stagingDomain} =
-      lib.recursiveUpdate (mkKlosterpforte stagingDomain) {
-        locations."= /robots.txt".extraConfig = ''
-          add_header Content-Type text/plain always;
-          return 200 "User-agent: *\nDisallow: /\n";
-        '';
-      };
+    ${stagingDomain} = lib.recursiveUpdate (mkKlosterpforte stagingDomain) {
+      locations."= /robots.txt".extraConfig = ''
+        add_header Content-Type text/plain always;
+        return 200 "User-agent: *\nDisallow: /\n";
+      '';
+    };
 
     # Production domain: identical serving, but the build's own robots.txt is left
     # in place so search engines may index it (needed for a clean SEO audit).
