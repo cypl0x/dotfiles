@@ -64,6 +64,26 @@ in {
       source = ./hyprland/scripts/window-switcher.sh;
       executable = true;
     };
+    ".config/hypr/scripts/notification-click.sh" = {
+      source = ./hyprland/scripts/notification-click.sh;
+      executable = true;
+    };
+    ".config/hypr/scripts/doom-buffer-switcher.sh" = {
+      source = ./hyprland/scripts/doom-buffer-switcher.sh;
+      executable = true;
+    };
+    ".config/hypr/scripts/hypr-cheatsheet.sh" = {
+      source = ./hyprland/scripts/hypr-cheatsheet.sh;
+      executable = true;
+    };
+    ".config/hypr/scripts/waybar-claude.sh" = {
+      source = ./hyprland/scripts/waybar-claude.sh;
+      executable = true;
+    };
+    ".config/hypr/scripts/rofi-run-cmd.sh" = {
+      source = ./hyprland/scripts/rofi-run-cmd.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
     ".config/mako/config".source = ./hyprland/mako.conf;

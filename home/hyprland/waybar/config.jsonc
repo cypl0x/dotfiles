@@ -27,6 +27,7 @@
         "bluetooth",
         "network",
         "group/resources",
+        "custom/claude",
         "battery",
         "clock#jakarta",
         "clock",
@@ -228,6 +229,16 @@
                 "today":    "<span color='#7bc275'><b><u>{}</u></b></span>"
             }
         }
+    },
+
+    // Claude Code usage (active 5h block) via ccusage. 5-min interval keeps the
+    // npx fetch cheap; click opens a full ccusage report in a floating terminal.
+    "custom/claude": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "~/.config/hypr/scripts/waybar-claude.sh",
+        "interval": 300,
+        "on-click": "kitty --hold -e npx -y ccusage@latest blocks --active"
     },
 
     "custom/power": {

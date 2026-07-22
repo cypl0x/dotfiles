@@ -42,6 +42,7 @@ tooltip label {
 #resources,
 #battery,
 #clock,
+#custom-claude,
 #custom-power,
 #tray {
   background: rgba(28, 31, 36, 0.85);
@@ -112,6 +113,7 @@ window#waybar.empty #window {
 #bluetooth      { color: #51afef; }
 #network        { color: #5cefff; }
 #network.disconnected { color: #ff665c; }
+#custom-claude  { color: #da8548; }   /* Doom orange — Claude usage */
 
 /* resources group = cpu | mem | temp inside one pill */
 #resources {
