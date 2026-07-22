@@ -1,0 +1,30 @@
+# Warp terminal theme — Doom Vibrant (Henrik Lissner).
+#
+# Warp is proprietary and has no config-file keybindings, so unlike the other
+# terminals it cannot share the C-Space leader scheme — only its colours are
+# file-configurable. Drop this into ~/.warp/themes/ and pick "Doom Vibrant"
+# from Settings → Appearance → Themes.
+name: Doom Vibrant
+accent: '#51afef'
+background: '#242730'
+foreground: '#bbc2cf'
+details: darker
+terminal_colors:
+  normal:
+    black: '#2a2e38'
+    red: '#ff665c'
+    green: '#7bc275'
+    yellow: '#fcce7b'
+    blue: '#51afef'
+    magenta: '#c57bdb'
+    cyan: '#5cefff'
+    white: '#dfdfdf'
+  bright:
+    black: '#484854'
+    red: '#ff665c'
+    green: '#99bb66'
+    yellow: '#ecbe7b'
+    blue: '#51afef'
+    magenta: '#c678dd'
+    cyan: '#46d9ff'
+    white: '#bbc2cf'

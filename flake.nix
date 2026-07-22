@@ -107,6 +107,7 @@
               useUserPackages = true;
               sharedModules = [
                 ./home/kitty-thinkpad.nix
+                ./home/terminals.nix
                 ./home/hyprland.nix
               ];
               users = hmBaseUsers;

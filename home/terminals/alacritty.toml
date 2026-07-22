@@ -1,0 +1,63 @@
+# Alacritty — Doom Vibrant theme.
+#
+# Alacritty is deliberately single-surface: it has NO native tabs or splits.
+# Multiplexing is therefore delegated to tmux (home/shell/tmux.conf), which
+# already carries the full Doom-Emacs C-Space leader + w/b/p/t/o key-tables.
+# So this file only supplies the palette, font and vi-mode ergonomics; the
+# muxing muscle memory is identical because it lives in tmux underneath.
+
+[window]
+padding = { x = 6, y = 6 }
+opacity = 1.0
+dynamic_title = true
+
+[font]
+size = 11.0
+# Font family intentionally unset — inherits the system monospace default so
+# this config never breaks on a missing font. Set family here if desired.
+
+[cursor]
+style = { shape = "Block", blinking = "Off" }
+
+# ── Doom Vibrant palette (Henrik Lissner) ───────────────────────────────────
+[colors.primary]
+background = "#242730"
+foreground = "#bbc2cf"
+
+[colors.cursor]
+text = "#242730"
+cursor = "#bbc2cf"
+
+[colors.selection]
+text = "#bbc2cf"
+background = "#3d4451"
+
+[colors.normal]
+black = "#2a2e38"
+red = "#ff665c"
+green = "#7bc275"
+yellow = "#fcce7b"
+blue = "#51afef"
+magenta = "#c57bdb"
+cyan = "#5cefff"
+white = "#dfdfdf"
+
+[colors.bright]
+black = "#484854"
+red = "#ff665c"
+green = "#99bb66"
+yellow = "#ecbe7b"
+blue = "#51afef"
+magenta = "#c678dd"
+cyan = "#46d9ff"
+white = "#bbc2cf"
+
+# ── Keybindings ─────────────────────────────────────────────────────────────
+# Ctrl+Space is reserved as the tmux leader, so Alacritty must NOT swallow it —
+# it is passed straight through to the shell/tmux (ProgramKeys default already
+# forwards it; listed here only for documentation clarity).
+[keyboard]
+bindings = [
+  # vi mode (search / copy) — Alacritty's analogue of tmux copy-mode
+  { key = "Space", mods = "Control|Shift", action = "ToggleViMode" },
+]
