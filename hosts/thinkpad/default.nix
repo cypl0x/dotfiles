@@ -11,7 +11,6 @@
     ../../modules/system/nix-common.nix
     ../../modules/system/locale.nix
     ../../modules/system/desktop.nix
-    ../../modules/system/exwm.nix
     ../../modules/services/tailscale.nix
 
     # User configuration
@@ -21,7 +20,6 @@
     ../../modules/users/proxy.nix
 
     # Host-specific configuration
-    ./gnome.nix
     ./hyprland.nix
     ./thinkpad-packages.nix
   ];

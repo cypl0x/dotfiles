@@ -1,27 +1,20 @@
 {pkgs, ...}: {
-  # Desktop environment configuration for workstations
-  # KDE Plasma 6 with X11
+  # Base graphical stack for the workstation.
+  # Hyprland (Wayland) is the only desktop session — see hosts/thinkpad/hyprland.nix.
 
   services = {
-    # Enable the X11 windowing system
-    xserver = {
-      enable = true;
-      # Configure keymap in X11
-      xkb = {
-        layout = "de";
-        variant = "";
-        options = "caps:escape";
-      };
+    # X11 keymap (applies to XWayland clients under Hyprland).
+    xserver.xkb = {
+      layout = "de";
+      variant = "";
+      options = "caps:escape";
     };
 
-    # Ly — minimal animated TTY greeter. Lists every session (Hyprland, EXWM,
-    # KDE Plasma, GNOME) from the wayland-/xsessions desktop files
-    # automatically. x11Support is required so the X11 sessions (EXWM, Plasma
-    # X11) can launch. YubiKey/fingerprint still work — they are PAM-level and
-    # greeter-agnostic.
+    # Ly — minimal animated TTY greeter. Lists every session from the
+    # wayland-/xsessions desktop files automatically (here: Hyprland).
+    # YubiKey/fingerprint still work — they are PAM-level and greeter-agnostic.
     displayManager.ly = {
       enable = true;
-      x11Support = true;
       settings = {
         animation = "colormix"; # none | doom | matrix | colormix | gameoflife
         animate = true;
@@ -46,14 +39,14 @@
         border_fg = "0x0051afef"; # box border — Doom blue
         error_fg = "0x00ff665c"; # errors — Doom red
 
-        # colormix shader → Doom blue → magenta → dark wash. The third colour
-        # keeps ly's high-byte blend weight (0x20) from the default.
-        colormix_col1 = "0x0051afef"; # Doom blue
-        colormix_col2 = "0x00c57bdb"; # Doom magenta
-        colormix_col3 = "0x201c1f24"; # Doom darkest
+        # colormix shader animated across the Doom Vibrant accent palette:
+        # magenta → cyan → violet. col3's high byte (0x20) is ly's blend
+        # weight, not part of the RGB — keep it to preserve the mix intensity.
+        colormix_col1 = "0x00c57bdb"; # Doom magenta
+        colormix_col2 = "0x005cefff"; # Doom cyan
+        colormix_col3 = "0x20a9a1e1"; # Doom violet (0x20 = blend weight)
       };
     };
-    desktopManager.plasma6.enable = true;
 
     # Enable CUPS to print documents
     printing.enable = true;
@@ -88,24 +81,7 @@
 
   # Desktop-specific packages
   environment.systemPackages = with pkgs; [
-    # KDE applications
-    kdePackages.kate
-    kdePackages.kmail
-    kdePackages.kmail-account-wizard
-    kdePackages.kdepim-addons
-    kdePackages.merkuro
-    kdePackages.kdeconnect-kde
-    kdePackages.ktorrent
-    kdePackages.plasma-systemmonitor
-    kdePackages.akregator
-    kdePackages.marble
-    kdePackages.tokodon
-    kdePackages.plasmatube
-    kdePackages.kaddressbook
-    kdePackages.arianna
-    kdePackages.kasts
-
-    kmymoney
+    kmymoney # personal finance (Qt app, DE-agnostic)
 
     # Browsers
     firefox
