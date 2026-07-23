@@ -1,0 +1,72 @@
+/* Ghostty GTK tab bar — Doom Vibrant, wezterm-inspired.
+ *
+ * Loaded via `gtk-custom-css` in ghostty.config. Ghostty renders tabs with
+ * libadwaita's AdwTabBar; the node names below (tabbar / tabbox / tab) are its
+ * GTK4 CSS nodes. If a rule doesn't take, launch with
+ *   env GTK_DEBUG=interactive ghostty
+ * and inspect the live node names, then adjust the selectors here.
+ *
+ * Palette (Doom Vibrant):
+ *   bg-deep  #1c1f24   bg  #242730   fg #bbc2cf   dim #6b7280
+ *   blue     #51afef   magenta #c57bdb   red #ff665c
+ */
+
+/* ── Bar background ──────────────────────────────────────────────────────── */
+tabbar,
+tabbar > .box,
+tabbar tabbox {
+  background-color: #1c1f24;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+tabbar tab {
+  background-color: #1c1f24;
+  color: #6b7280;                 /* inactive: dim */
+  border: none;
+  margin: 0;
+  padding: 3px 14px;
+  min-height: 26px;
+  font-weight: 500;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+tabbar tab:hover {
+  background-color: #242730;
+  color: #bbc2cf;
+}
+
+/* active tab — wezterm-style: lifted bg + accent edge nearest the terminal.
+ * Tabs sit at the BOTTOM, so the accent goes on the TOP edge (points up at
+ * the content). libadwaita marks the active tab :checked (some builds
+ * :selected) — target both. */
+tabbar tab:checked,
+tabbar tab:selected {
+  background-color: #242730;
+  color: #bbc2cf;
+  box-shadow: inset 0 2px 0 0 #51afef;
+}
+
+/* ── Close button — invisible until you hover the tab ────────────────────── */
+tabbar tab button.close,
+tabbar tab button.image-button,
+tabbar tab .close {
+  opacity: 0;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0;
+  border-radius: 6px;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+tabbar tab:hover button.close,
+tabbar tab:hover button.image-button,
+tabbar tab:checked button.close,
+tabbar tab:hover .close {
+  opacity: 1;
+}
+
+tabbar tab button.close:hover,
+tabbar tab button.image-button:hover {
+  background-color: #ff665c;
+  color: #1c1f24;
+}

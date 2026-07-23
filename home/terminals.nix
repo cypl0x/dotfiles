@@ -11,6 +11,7 @@ _: {
 
   home.file = {
     ".config/ghostty/config".source = ./terminals/ghostty.config;
+    ".config/ghostty/ghostty-tabs.css".source = ./terminals/ghostty-tabs.css;
     ".config/alacritty/alacritty.toml".source = ./terminals/alacritty.toml;
     ".config/rio/config.toml".source = ./terminals/rio.toml;
     # Warp reads themes from ~/.local/share/warp-terminal/themes on Linux.
