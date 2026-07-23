@@ -13,7 +13,7 @@ cmd=$(printf '' | rofi -dmenu -p " sh" -lines 0 \
   -theme "$HOME/.config/rofi/doom-vibrant.rasi")
 [ -z "$cmd" ] && exit 0
 
-if [[ "$cmd" == em\ * ]]; then
+if [[ $cmd == em\ * ]]; then
   body=${cmd#em }
   emacsclient -c -e "(progn (vterm) (vterm-send-string \"${body//\"/\\\"}\") (vterm-send-return))"
 else

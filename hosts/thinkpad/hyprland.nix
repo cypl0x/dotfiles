@@ -1,6 +1,7 @@
 {pkgs, ...}: {
-  # Hyprland Wayland compositor — adds "Hyprland" to SDDM alongside
-  # KDE Plasma, GNOME, Pantheon, and EXWM. SDDM remains the shared DM.
+  # Hyprland Wayland compositor — the only desktop session on this host.
+  # The greeter is ly (see modules/system/desktop.nix); it lists every
+  # wayland-session desktop file, so "Hyprland" appears automatically.
   programs.hyprland = {
     enable = true;
     withUWSM = true; # proper systemd session management (recommended)

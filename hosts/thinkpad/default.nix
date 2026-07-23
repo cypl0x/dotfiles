@@ -22,6 +22,7 @@
     # Host-specific configuration
     ./hyprland.nix
     ./thinkpad-packages.nix
+    ./power.nix
   ];
 
   # Bootloader configuration
@@ -83,8 +84,14 @@
       package = pkgs.usbmuxd2;
     };
 
-    # Fingerprint authentication
-    fprintd.tod.enable = true;
+    # Fingerprint authentication.
+    # Plain fprintd (open libfprint drivers). NOT tod: fprintd.tod.enable
+    # needs a proprietary per-reader TOD driver (e.g. libfprint-2-tod1-vfs0090 /
+    # -goodix) that was never wired, so it loaded no device and did nothing.
+    # No USB fingerprint reader is currently detected via lsusb; if this
+    # ThinkPad's reader turns out to require TOD, re-enable tod AND set
+    # services.fprintd.tod.driver to the matching driver package.
+    fprintd.enable = true;
 
     # Push local builds to Cachix
     cachix-watch-store = {

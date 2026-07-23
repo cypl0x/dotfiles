@@ -28,82 +28,74 @@
 
     # Home Manager is pretty good at managing dotfiles. The primary way to manage
     # plain files is through 'home.file'.
-    file =
-      {
-        # ".zshrc".source = ./zshrc;
+    file = {
+      # ".zshrc".source = ./zshrc;
 
-        # Disable KDE Plasma's Baloo file indexer — it is a persistent CPU/RAM
-        # hog (baloo_file + baloorunner) and the biggest steady-state slowdown
-        # on this machine. No-op on hosts without Plasma.
-        ".config/baloofilerc".text = ''
-          [Basic Settings]
-          Indexing-Enabled=false
-        '';
+      # Disable KDE Plasma's Baloo file indexer — it is a persistent CPU/RAM
+      # hog (baloo_file + baloorunner) and the biggest steady-state slowdown
+      # on this machine. No-op on hosts without Plasma.
+      ".config/baloofilerc".text = ''
+        [Basic Settings]
+        Indexing-Enabled=false
+      '';
 
-        ".local/bin/e" = {
-          source = ./bin/e;
-          executable = true;
-        };
-
-        ".local/bin/emacsmail" = {
-          source = ./bin/emacsmail;
-          executable = true;
-        };
-
-        ".local/bin/elisp-qa.el" = {
-          source = ./bin/elisp-qa.el;
-        };
-
-        ".local/bin/elisp-qa" = {
-          source = ./bin/elisp-qa;
-          executable = true;
-        };
-
-        ".local/share/applications/emacsmail.desktop".text = ''
-          [Desktop Entry]
-          Name=Emacs Mail
-          GenericName=Email Client
-          Comment=Compose mail in mu4e via Emacs daemon
-          Exec=emacsmail %u
-          Terminal=false
-          Type=Application
-          Categories=Network;Email;
-          MimeType=x-scheme-handler/mailto;
-        '';
-
-        ".local/bin/sudo-askpass" = {
-          source = ./bin/sudo-askpass;
-          executable = true;
-        };
-
-        # Aider configuration
-        ".aider.conf.yml".text = ''
-          model: ollama/deepseek-coder:1.3b
-
-          # Use local ollama instance
-          # ollama-api-base: http://localhost:11434
-
-          # Editor settings
-          # editor: vim
-
-          # Auto-commit changes
-          auto-commits: false
-
-          # Show diffs before committing
-          show-diffs: true
-        '';
-
-        ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
-        ".config/emacs/eshell/alias".source = ./shell/eshell/alias;
-        ".config/doom/eshell/functions.el".source = ./shell/eshell/functions.el;
-      }
-      // lib.optionalAttrs (config.home.username != "proxy") {
-        ".config/sxhkd/sxhkdrc".text = ''
-          # Universal application launcher (Doom Emacs + Consult)
-          super + space
-            emacsclient --no-wait -e "(app-launcher)"
-        '';
+      ".local/bin/e" = {
+        source = ./bin/e;
+        executable = true;
       };
+
+      ".local/bin/emacsmail" = {
+        source = ./bin/emacsmail;
+        executable = true;
+      };
+
+      ".local/bin/elisp-qa.el" = {
+        source = ./bin/elisp-qa.el;
+      };
+
+      ".local/bin/elisp-qa" = {
+        source = ./bin/elisp-qa;
+        executable = true;
+      };
+
+      ".local/share/applications/emacsmail.desktop".text = ''
+        [Desktop Entry]
+        Name=Emacs Mail
+        GenericName=Email Client
+        Comment=Compose mail in mu4e via Emacs daemon
+        Exec=emacsmail %u
+        Terminal=false
+        Type=Application
+        Categories=Network;Email;
+        MimeType=x-scheme-handler/mailto;
+      '';
+
+      ".local/bin/sudo-askpass" = {
+        source = ./bin/sudo-askpass;
+        executable = true;
+      };
+
+      # Aider configuration
+      ".aider.conf.yml".text = ''
+        model: ollama/deepseek-coder:1.3b
+
+        # Use local ollama instance
+        # ollama-api-base: http://localhost:11434
+
+        # Editor settings
+        # editor: vim
+
+        # Auto-commit changes
+        auto-commits: false
+
+        # Show diffs before committing
+        show-diffs: true
+      '';
+
+      ".config/wezterm/wezterm.lua".source = ./wezterm/wezterm.lua;
+      ".config/emacs/eshell/alias".source = ./shell/eshell/alias;
+      ".config/doom/eshell/functions.el".source = ./shell/eshell/functions.el;
+    };
 
     sessionVariables = {
       VISUAL = "emacsclient -c -a ''";
@@ -224,6 +216,37 @@
       tmux.enableShellIntegration = true;
     };
 
+    # zoxide — frecency-ranked `cd`. `z foo` jumps to the best-matching dir,
+    # `zi` opens an fzf picker. Complements (does not replace) the dl/doc/dt
+    # aliases in shell/zsh/aliases.sh.
+    zoxide = {
+      enable = true;
+      enableZshIntegration = true;
+    };
+
+    # atuin — SQLite-backed shell history with fuzzy search (rebinds Ctrl-R and
+    # Up). Local-only by default; no sync server configured here.
+    atuin = {
+      enable = true;
+      enableZshIntegration = true;
+      flags = ["--disable-up-arrow"]; # keep Up = literal previous line; Ctrl-R = atuin
+      settings = {
+        style = "compact";
+        inline_height = 20;
+        show_preview = true;
+      };
+    };
+
+    # direnv + nix-direnv — per-project environments auto-load on `cd` from a
+    # .envrc (`use flake` / `use nix`). nix-direnv adds fast, GC-safe caching.
+    # This is the shell-level counterpart to the emacs direnv already wired in
+    # home/emacs-deps.nix.
+    direnv = {
+      enable = true;
+      nix-direnv.enable = true;
+      enableZshIntegration = true;
+    };
+
     emacs = {
       enable = true;
       package = pkgs.emacs-gtk;
@@ -231,54 +254,6 @@
         epkgs.vterm
         epkgs.eat
       ];
-    };
-  };
-
-  systemd = {
-    user = {
-      services = {
-        # Run sxhkd as a user service (X11 only)
-        sxhkd = {
-          Unit = {
-            Description = "Simple X hotkey daemon";
-            ConditionEnvironment = "XDG_SESSION_TYPE=x11";
-            After = ["graphical-session.target"];
-            PartOf = ["graphical-session.target"];
-          };
-          Service = {
-            ExecStart = "${pkgs.sxhkd}/bin/sxhkd -c %h/.config/sxhkd/sxhkdrc";
-            Restart = "on-failure";
-            RestartSec = 1;
-          };
-          Install = {
-            WantedBy = ["graphical-session.target"];
-          };
-        };
-      };
-
-      targets = {
-        "gnome-session@pantheon" = {
-          Unit.Description = "GNOME Session (Pantheon)";
-        };
-        "gnome-session-x11@pantheon" = {
-          Unit = {
-            Description = "GNOME Session (X11) (session: pantheon)";
-            After = ["gnome-session-pre.target"];
-            Wants = [
-              "gnome-session@pantheon.target"
-              "gnome-session-x11-services.target"
-              "gnome-session-x11-services-ready.target"
-            ];
-            BindsTo = ["gnome-session@pantheon.target"];
-          };
-        };
-        "gnome-session-x11-services" = {
-          Unit.Description = "GNOME Session X11 Services";
-        };
-        "gnome-session-x11-services-ready" = {
-          Unit.Description = "GNOME Session X11 Services Ready";
-        };
-      };
     };
   };
 }

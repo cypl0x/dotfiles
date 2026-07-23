@@ -22,13 +22,16 @@ LIMIT=${CLAUDE_5H_TOKEN_LIMIT:-80000000}
 # local npx cache, no network. Override with $CCUSAGE_VERSION; bump as needed.
 CCUSAGE="ccusage@${CCUSAGE_VERSION:-20.0.18}"
 
-fallback() { printf '{"text":"","tooltip":"%s","class":"claude"}\n' "$1"; exit 0; }
+fallback() {
+  printf '{"text":"","tooltip":"%s","class":"claude"}\n' "$1"
+  exit 0
+}
 command -v npx >/dev/null 2>&1 || fallback "npx not found"
 hum() { numfmt --to=si --format='%.1f' "${1%.*}" 2>/dev/null || echo "${1:-0}"; }
 
 # --prefer-offline: use the cached package without a registry round-trip.
-blocks=$(npx -y --prefer-offline "$CCUSAGE" blocks --active --token-limit "$LIMIT" --json 2>/dev/null) \
-  || fallback "ccusage unavailable"
+blocks=$(npx -y --prefer-offline "$CCUSAGE" blocks --active --token-limit "$LIMIT" --json 2>/dev/null) ||
+  fallback "ccusage unavailable"
 daily=$(npx -y --prefer-offline "$CCUSAGE" daily --json 2>/dev/null || echo '{}')
 
 # totalTokens, % of limit used NOW, minutes left in the 5h block, cost.
@@ -43,7 +46,7 @@ read -r b_tok b_pct b_rem b_cost <<<"$(printf '%s' "$blocks" | jq -r '
 
 # Fall back to the configured limit if ccusage omitted tokenLimitStatus.
 if [ "${b_pct:-'-1'}" = "-1" ] && [ "${b_tok:-0}" -gt 0 ] 2>/dev/null; then
-  b_pct=$(( b_tok * 100 / LIMIT ))
+  b_pct=$((b_tok * 100 / LIMIT))
 fi
 
 read -r today_tok week_tok <<<"$(printf '%s' "$daily" | jq -r '
@@ -53,12 +56,14 @@ read -r today_tok week_tok <<<"$(printf '%s' "$daily" | jq -r '
 
 # reset countdown "Xh Ym"
 rem=${b_rem:-0}
-reset=$(printf '%dh %02dm' $(( rem / 60 )) $(( rem % 60 )))
+reset=$(printf '%dh %02dm' $((rem / 60)) $((rem % 60)))
 
 if [ "${b_pct:-'-1'}" != "-1" ] && [ "${b_pct:-0}" -ge 0 ] 2>/dev/null; then
   text="󰧑 ${b_pct}%"
-  if   [ "$b_pct" -ge 90 ]; then cls="claude critical"
-  elif [ "$b_pct" -ge 70 ]; then cls="claude warning"
+  if [ "$b_pct" -ge 90 ]; then
+    cls="claude critical"
+  elif [ "$b_pct" -ge 70 ]; then
+    cls="claude warning"
   else cls="claude"; fi
 else
   text="󰧑 $(hum "$b_tok")"

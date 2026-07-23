@@ -5,7 +5,10 @@
 set -euo pipefail
 
 conf="$HOME/.config/hypr/hyprland.conf"
-[ -f "$conf" ] || { notify-send "Hyprland" "hyprland.conf not found"; exit 0; }
+[ -f "$conf" ] || {
+  notify-send "Hyprland" "hyprland.conf not found"
+  exit 0
+}
 
 awk '
   /^[[:space:]]*bind[a-z]*[[:space:]]*=/ {
@@ -28,6 +31,6 @@ awk '
     combo=(mods=="") ? key : mods"+"key
     if (desc=="") desc=action
     if (combo!="") printf "%-24s  %s\n", combo, desc
-  }' "$conf" \
-  | rofi -dmenu -i -no-custom -p "󰌌 keys" \
-         -theme "$HOME/.config/rofi/doom-vibrant.rasi" >/dev/null || true
+  }' "$conf" |
+  rofi -dmenu -i -no-custom -p "󰌌 keys" \
+    -theme "$HOME/.config/rofi/doom-vibrant.rasi" >/dev/null || true

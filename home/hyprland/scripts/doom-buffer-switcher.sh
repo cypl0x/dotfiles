@@ -13,7 +13,8 @@ buffers=$(emacsclient --eval '
     (seq-filter (lambda (n) (not (string-prefix-p " " n)))
       (mapcar (function buffer-name) (buffer-list)))
     "\n")' 2>/dev/null | sed -e 's/^"//' -e 's/"$//' -e 's/\\n/\n/g') || {
-  notify-send "Emacs" "No emacs server (start it with M-x server-start)"; exit 0;
+  notify-send "Emacs" "No emacs server (start it with M-x server-start)"
+  exit 0
 }
 [ -z "$buffers" ] && exit 0
 
@@ -22,9 +23,10 @@ choice=$(printf '%s\n' "$buffers" | rofi -dmenu -i -p "  buffer" \
 [ -z "$choice" ] && exit 0
 
 # Escape backslashes and quotes for the elisp string literal.
-esc=${choice//\\/\\\\}; esc=${esc//\"/\\\"}
+esc=${choice//\\/\\\\}
+esc=${esc//\"/\\\"}
 emacsclient --eval "(switch-to-buffer \"$esc\")" >/dev/null 2>&1 || true
 
-addr=$(hyprctl clients -j \
-  | jq -r '.[] | select(.class|test("emacs";"i")) | .address' | head -n1)
+addr=$(hyprctl clients -j |
+  jq -r '.[] | select(.class|test("emacs";"i")) | .address' | head -n1)
 [ -n "$addr" ] && hyprctl dispatch focuswindow "address:$addr"

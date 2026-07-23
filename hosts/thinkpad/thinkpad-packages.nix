@@ -54,6 +54,10 @@
     # Process viewer
     procs
 
+    # Ad-hoc power auditing (TLP owns the persistent tunables; this is just the
+    # interactive report — `sudo powertop`).
+    powertop
+
     # Password manager
     datapass.packages.${pkgs.stdenv.hostPlatform.system}.default
 
