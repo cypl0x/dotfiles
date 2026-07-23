@@ -9,9 +9,12 @@
 set -euo pipefail
 
 class="com.ghostty.term"
-# Top-anchored geometry (1920x1080 eDP): 1766×626, x=77 centres horizontally,
-# y=82 clears the 74px top waybar (otherwise the window hides behind it).
+# Top-anchored geometry (1920x1080 eDP): 1766×921, x=77 centres horizontally
+# with 77px L/R margins, y=82 clears the 74px top waybar, 77px bottom margin.
+# We force BOTH size and position on show — Ghostty's window-save-state restores
+# its previous size otherwise, overriding the windowrule.
 pos_x=77 pos_y=82
+size_w=1766 size_h=921
 
 # Currently visible? `hyprctl monitors` lists the active special workspace.
 if hyprctl monitors | grep -q "special:term"; then
@@ -25,5 +28,6 @@ else
         done
     fi
     hyprctl dispatch togglespecialworkspace term          # show
+    hyprctl dispatch resizewindowpixel "exact ${size_w} ${size_h},class:${class}"
     hyprctl dispatch movewindowpixel "exact ${pos_x} ${pos_y},class:${class}"
 fi
