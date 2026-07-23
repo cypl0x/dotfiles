@@ -114,6 +114,7 @@
               sharedModules = [
                 ./home/kitty-thinkpad.nix
                 ./home/terminals.nix
+                ./home/yazi.nix
                 ./home/launchers.nix
                 ./home/hyprland.nix
                 ./home/gtk.nix

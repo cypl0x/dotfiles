@@ -84,6 +84,21 @@ nrbs() {
 }
 
 # ============================================================================
+# Yazi — file manager that cd's the shell to its last dir on quit
+# ============================================================================
+# `y` launches yazi and, on exit, changes the shell into wherever you left it.
+# Quit with `q` / `SPC q q` to cd; use `SPC q Q` to stay put.
+y() {
+  local tmp cwd
+  tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    builtin cd -- "$cwd" || return
+  fi
+  rm -f -- "$tmp"
+}
+
+# ============================================================================
 # Desktop notifications for long-running commands (>= 5s)
 # ============================================================================
 

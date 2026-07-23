@@ -1,0 +1,113 @@
+# Yazi keymap — Doom Emacs (hlissner) flavour.
+#
+# Layering rationale, consistent with the rest of the desktop:
+#   - C-Space is the *mux* leader (ghostty / kitty / tmux / zellij) — it never
+#     reaches yazi, the terminal eats it first.
+#   - SPC is the *app* leader here, exactly like Doom's `SPC` in evil normal
+#     state. Native vim motions (h j k l, gg, G, /, n, N, v, V) stay intact.
+#
+# Only `prepend_keymap` / `append_keymap` are used, so yazi's built-in bindings
+# are preserved and ours simply take priority. Every leader binding carries a
+# `desc`, so yazi's which-key popup doubles as a live cheat-sheet.
+
+[mgr]
+
+# ── prepend: highest priority, Doom-style ──────────────────────────────────
+prepend_keymap = [
+  # Escape clears selection / find / filter in one press (Doom C-g feel)
+  { on = "<Esc>", run = "escape",                     desc = "Clear state (find/select/filter)" },
+
+  # SPC is a prefix now, so move quick multi-select onto Tab; keep visual on v/V
+  { on = "<Tab>", run = "toggle",                     desc = "Toggle selection" },
+  { on = "<C-Tab>", run = "spot",                     desc = "Spot (peek) hovered file" },
+
+  # vim-grade motions that Doom users expect
+  { on = "H", run = "leave",                          desc = "Up a directory (parent)" },
+  { on = "L", run = "enter",                          desc = "Into directory / open" },
+  { on = ["g", "g"], run = "arrow top",               desc = "Go to top" },
+  { on = "G",        run = "arrow bot",               desc = "Go to bottom" },
+  { on = "<C-u>", run = "arrow -50%",                 desc = "Half page up" },
+  { on = "<C-d>", run = "arrow 50%",                  desc = "Half page down" },
+
+  # jump-to-char (vim f/F over filenames)
+  { on = "f", run = "plugin jump-to-char",            desc = "Jump to char" },
+
+  # smart-enter: dir → enter, file → open (one key does the right thing)
+  { on = "<Enter>", run = "plugin smart-enter",       desc = "Enter dir / open file" },
+
+  # relative-motions: 5j / 3k style with the numbers shown in the gutter
+  { on = "1", run = "plugin relative-motions 1", desc = "Move (relative 1)" },
+  { on = "2", run = "plugin relative-motions 2", desc = "Move (relative 2)" },
+  { on = "3", run = "plugin relative-motions 3", desc = "Move (relative 3)" },
+  { on = "4", run = "plugin relative-motions 4", desc = "Move (relative 4)" },
+  { on = "5", run = "plugin relative-motions 5", desc = "Move (relative 5)" },
+  { on = "6", run = "plugin relative-motions 6", desc = "Move (relative 6)" },
+  { on = "7", run = "plugin relative-motions 7", desc = "Move (relative 7)" },
+  { on = "8", run = "plugin relative-motions 8", desc = "Move (relative 8)" },
+  { on = "9", run = "plugin relative-motions 9", desc = "Move (relative 9)" },
+
+  # ── SPC leader: FILE ──────────────────────────────────────────────────
+  { on = ["<Space>", "."], run = "plugin fzf",              desc = "Find file (fzf)" },
+  { on = ["<Space>", "f", "f"], run = "plugin fzf",         desc = "Find file (fzf)" },
+  { on = ["<Space>", "f", "r"], run = "plugin zoxide",      desc = "Recent dir (zoxide)" },
+  { on = ["<Space>", "f", "R"], run = "rename --cursor=before_ext", desc = "Rename file" },
+  { on = ["<Space>", "f", "y"], run = "copy path",          desc = "Yank absolute path" },
+  { on = ["<Space>", "f", "Y"], run = "copy name",          desc = "Yank filename" },
+  { on = ["<Space>", "f", "n"], run = "create",             desc = "New file/dir" },
+  { on = ["<Space>", "f", "d"], run = "remove",             desc = "Trash (to recycle bin)" },
+  { on = ["<Space>", "f", "D"], run = "remove --permanently", desc = "Delete permanently" },
+  { on = ["<Space>", "f", "m"], run = "plugin chmod",       desc = "chmod (on selection)" },
+  { on = ["<Space>", "f", "z"], run = "plugin compress",    desc = "Compress selection" },
+
+  # ── SPC leader: SEARCH ────────────────────────────────────────────────
+  { on = ["<Space>", "s", "s"], run = "plugin smart-filter",             desc = "Live filter (smart)" },
+  { on = ["<Space>", "s", "f"], run = "plugin fzf",                      desc = "Search filenames (fd+fzf)" },
+  { on = ["<Space>", "s", "r"], run = 'search rg',                       desc = "Search contents (ripgrep)" },
+  { on = ["<Space>", "s", "F"], run = 'search fd',                       desc = "Search filenames (fd)" },
+  { on = ["<Space>", "s", "c"], run = "search none",                     desc = "Cancel search" },
+
+  # ── SPC leader: GIT ───────────────────────────────────────────────────
+  { on = ["<Space>", "g", "g"], run = "plugin lazygit",   desc = "LazyGit" },
+  { on = ["<Space>", "g", "l"], run = "plugin lazygit",   desc = "LazyGit" },
+  { on = ["<Space>", "g", "d"], run = "plugin diff",      desc = "Diff selected vs hovered" },
+
+  # ── SPC leader: PROJECT ───────────────────────────────────────────────
+  { on = ["<Space>", "p", "p"], run = "plugin zoxide",    desc = "Switch project (zoxide)" },
+  { on = ["<Space>", "p", "f"], run = "plugin fzf",       desc = "Find file in project" },
+
+  # ── SPC leader: OPEN ──────────────────────────────────────────────────
+  { on = ["<Space>", "o", "o"], run = "open --interactive", desc = "Open with…" },
+  { on = ["<Space>", "o", "t"], run = 'shell -- setsid -f ghostty >/dev/null 2>&1', desc = "Terminal here (ghostty)" },
+  { on = ["<Space>", "o", "e"], run = "reveal",             desc = "Reveal / EXIF" },
+
+  # ── SPC leader: TABS (Doom buffers) ───────────────────────────────────
+  { on = ["<Space>", "b", "n"], run = "tab_create --current", desc = "New tab (here)" },
+  { on = ["<Space>", "b", "d"], run = "plugin close-and-restore-tab", desc = "Close tab (undo-able)" },
+  { on = ["<Space>", "b", "u"], run = "plugin close-and-restore-tab restore", desc = "Reopen closed tab" },
+  { on = ["<Space>", "b", "]"], run = "tab_switch 1 --relative", desc = "Next tab" },
+  { on = ["<Space>", "b", "["], run = "tab_switch -1 --relative", desc = "Previous tab" },
+
+  # ── SPC leader: WINDOW / preview pane ─────────────────────────────────
+  { on = ["<Space>", "w", "w"], run = "plugin toggle-pane min-preview", desc = "Toggle preview pane" },
+  { on = ["<Space>", "w", "m"], run = "plugin toggle-pane max-preview", desc = "Maximize preview" },
+
+  # ── SPC leader: TOGGLE ────────────────────────────────────────────────
+  { on = ["<Space>", "t", "h"], run = "hidden toggle",  desc = "Toggle hidden files" },
+  { on = ["<Space>", "t", "s"], run = "linemode size",  desc = "Linemode: size" },
+  { on = ["<Space>", "t", "m"], run = "linemode mtime", desc = "Linemode: mtime" },
+  { on = ["<Space>", "t", "n"], run = "linemode none",  desc = "Linemode: none" },
+
+  # ── SPC leader: QUIT / HELP ───────────────────────────────────────────
+  { on = ["<Space>", "q", "q"], run = "quit",           desc = "Quit (cd to cwd)" },
+  { on = ["<Space>", "q", "Q"], run = "quit --no-cwd-file", desc = "Quit (stay in $OLDPWD)" },
+  { on = ["<Space>", "h", "h"], run = "help",           desc = "Keybinding help" },
+]
+
+# ── append: fill-ins that must not shadow defaults ─────────────────────────
+append_keymap = [
+  { on = "!", run = 'shell "$SHELL" --block', desc = "Run shell here (blocking)" },
+  { on = "y", run = ["yank", 'shell -- printf "%s" "$(realpath -- "$0")" | wl-copy'], desc = "Yank (also copy path to clipboard)" },
+]
+
+# which-key popups inside sub-modes keep yazi defaults; only tasks/pick/etc.
+# are themed via theme.toml.

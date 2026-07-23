@@ -1,0 +1,146 @@
+# Yazi flavour — Doom Vibrant.
+#
+# Colours lifted verbatim from doom-themes' doom-vibrant-theme.el (GUI column,
+# by hlissner). Same palette as zellij (home/zellij.nix), wezterm, ghostty,
+# waybar, rofi — one coherent Doom look across the whole Hyprland desktop.
+#
+#   bg #242730  bg-alt #2a2e38  fg #bbc2cf
+#   base0 #1c1f24  base3 #23272e  grey #484854  base5 #62686e  base7 #9ca0a4
+#   red #ff665c  orange #e69055  green #7bc275  teal #4db5bd  yellow #fcce7b
+#   blue #51afef  dark-blue #1f5582  magenta #c57bdb  violet #a991f1
+#   cyan #5cefff  dark-cyan #6a8fbf  region #3d4451
+
+[mgr]
+cwd = { fg = "#5cefff" } # cyan
+
+# hovered row / hovered file in preview
+hovered         = { fg = "#bbc2cf", bg = "#3d4451" } # fg on region
+preview_hovered = { underline = true }
+
+# incremental find
+find_keyword  = { fg = "#fcce7b", bold = true, italic = true } # yellow
+find_position = { fg = "#c57bdb", bg = "reset", italic = true } # magenta
+
+# selection / yank markers (left gutter bar)
+marker_copied   = { fg = "#7bc275", bg = "#7bc275" } # green
+marker_cut      = { fg = "#ff665c", bg = "#ff665c" } # red
+marker_marked   = { fg = "#5cefff", bg = "#5cefff" } # cyan
+marker_selected = { fg = "#fcce7b", bg = "#fcce7b" } # yellow
+
+# counts in the status bar
+count_copied   = { fg = "#242730", bg = "#7bc275" }
+count_cut      = { fg = "#242730", bg = "#ff665c" }
+count_selected = { fg = "#242730", bg = "#fcce7b" }
+
+border_symbol = "│"
+border_style  = { fg = "#484854" } # grey
+
+[mode]
+normal_main = { fg = "#242730", bg = "#51afef", bold = true } # blue   (Doom normal)
+normal_alt  = { fg = "#51afef", bg = "#1c1f24" }
+select_main = { fg = "#242730", bg = "#7bc275", bold = true } # green  (Doom visual)
+select_alt  = { fg = "#7bc275", bg = "#1c1f24" }
+unset_main  = { fg = "#242730", bg = "#c57bdb", bold = true } # magenta
+unset_alt   = { fg = "#c57bdb", bg = "#1c1f24" }
+
+[status]
+separator_open  = ""
+separator_close = ""
+separator_style = { fg = "#1c1f24", bg = "#1c1f24" }
+
+# permission triplet colours
+perm_type = { fg = "#7bc275" }
+perm_read = { fg = "#fcce7b" }
+perm_write= { fg = "#ff665c" }
+perm_exec = { fg = "#5cefff" }
+perm_sep  = { fg = "#484854" }
+
+progress_label  = { fg = "#bbc2cf", bold = true }
+progress_normal = { fg = "#51afef", bg = "#1c1f24" }
+progress_error  = { fg = "#ff665c", bg = "#1c1f24" }
+
+[which]
+cols            = 3
+mask            = { bg = "#2a2e38" }
+cand            = { fg = "#5cefff", bold = true } # cyan candidate key
+rest            = { fg = "#62686e" }
+desc            = { fg = "#bbc2cf" }
+separator       = " ➜ "
+separator_style = { fg = "#484854" }
+
+[confirm]
+border     = { fg = "#51afef" }
+title      = { fg = "#51afef", bold = true }
+content    = {}
+list       = { fg = "#bbc2cf" }
+btn_yes    = { fg = "#242730", bg = "#7bc275", bold = true }
+btn_no     = { fg = "#242730", bg = "#ff665c" }
+btn_labels = ["  Yes  ", "  (n)o  "]
+
+[spot]
+border   = { fg = "#51afef" }
+title    = { fg = "#51afef", bold = true }
+tbl_col  = { fg = "#51afef" }
+tbl_cell = { fg = "#fcce7b", reversed = true }
+
+[notify]
+title_info  = { fg = "#7bc275" }
+title_warn  = { fg = "#fcce7b" }
+title_error = { fg = "#ff665c" }
+
+[pick]
+border   = { fg = "#51afef" }
+active   = { fg = "#c57bdb", bold = true }
+inactive = { fg = "#bbc2cf" }
+
+[input]
+border   = { fg = "#51afef" }
+title    = { fg = "#bbc2cf" }
+value    = { fg = "#bbc2cf" }
+selected = { reversed = true }
+
+[cmp]
+border      = { fg = "#51afef" }
+active      = { fg = "#5cefff", reversed = true }
+inactive    = { fg = "#bbc2cf" }
+icon_file   = ""
+icon_folder = ""
+icon_command= ""
+
+[tasks]
+border  = { fg = "#51afef" }
+title   = { fg = "#51afef", bold = true }
+hovered = { fg = "#c57bdb", underline = true }
+
+[help]
+on      = { fg = "#5cefff" }
+run     = { fg = "#c57bdb" }
+hovered = { reversed = true, bold = true }
+footer  = { fg = "#242730", bg = "#bbc2cf" }
+
+# ── File-type colouring ─────────────────────────────────────────────────────
+[filetype]
+rules = [
+  # dangling symlinks / special
+  { url = "*", is = "orphan", fg = "#ff665c" },
+  { url = "*", is = "exec",   fg = "#7bc275" },
+  { url = "*", is = "sticky", fg = "#e69055" },
+
+  # media
+  { mime = "image/*",        fg = "#c57bdb" }, # magenta
+  { mime = "{audio,video}/*",fg = "#fcce7b" }, # yellow
+
+  # archives
+  { mime = "application/{,g}zip",                        fg = "#e69055" },
+  { mime = "application/x-{tar,bzip2,7z-compressed,xz,rar,zstd}", fg = "#e69055" },
+
+  # documents
+  { mime = "application/pdf",       fg = "#5cefff" },
+  { mime = "application/{doc,docx,rtf,vnd.*}", fg = "#5cefff" },
+
+  # directories — Doom blue, bold
+  { url = "*/", fg = "#51afef", bold = true },
+
+  # fallback
+  { url = "*", fg = "#bbc2cf" },
+]
