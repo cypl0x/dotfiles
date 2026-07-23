@@ -1,22 +1,50 @@
 {pkgs, ...}: let
-  # Doom Vibrant wallpaper, generated at build time — a dark "aurora" mesh:
-  # three soft, heavily-blurred colour blobs (Doom blue / magenta / green)
-  # floating over the darkest base, plus a faint vignette. Matches the palette
-  # exactly, no external asset fetch.
+  # Doom Vibrant wallpaper, generated at build time. A dark "aurora" mesh of
+  # soft, heavily-blurred Doom-palette colour blobs over the darkest base, with
+  # a faint NixOS snowflake watermark centred and a gentle vignette. Matches the
+  # palette exactly, no external asset fetch.
   doomWallpaper =
     pkgs.runCommand "doom-vibrant-wallpaper.png" {
       nativeBuildInputs = [pkgs.imagemagick];
     } ''
-      # Render small + heavily blurred (fast), then upscale — a huge blur on a
-      # full-res canvas would make every rebuild crawl.
-      magick -size 640x360 xc:'#1c1f24' \
-        -fill 'rgba(81,175,239,0.55)'   -draw 'circle 130,108 130,250' \
-        -fill 'rgba(197,123,219,0.50)'  -draw 'circle 530,280 530,400' \
-        -fill 'rgba(123,194,117,0.34)'  -draw 'circle 560,75 560,160'  \
-        -fill 'rgba(92,239,255,0.26)'   -draw 'circle 325,325 325,400' \
-        -blur 0x38 \
+      # 1. Aurora base. Render small + heavily blurred (fast), then upscale — a
+      #    huge blur on a full-res canvas would make every rebuild crawl. More,
+      #    lower-opacity blobs than before blend into smoother gradients; a
+      #    faint grain kills the banding a big blur otherwise leaves behind.
+      magick -size 640x360 xc:'#14161b' \
+        -fill 'rgba(81,175,239,0.42)'   -draw 'circle 120,110 120,250' \
+        -fill 'rgba(31,85,130,0.55)'    -draw 'circle 60,300  60,420'  \
+        -fill 'rgba(197,123,219,0.38)'  -draw 'circle 540,285 540,410' \
+        -fill 'rgba(123,194,117,0.26)'  -draw 'circle 565,70  565,160' \
+        -fill 'rgba(92,239,255,0.22)'   -draw 'circle 330,330 330,410' \
+        -fill 'rgba(169,161,225,0.20)'  -draw 'circle 360,60  360,150' \
+        -blur 0x40 \
         -resize 2560x1440 \
-        \( -size 2560x1440 radial-gradient:none-'#0d0f13cc' \) -compose over -composite \
+        -attenuate 0.6 +noise Gaussian \
+        \( -size 2560x1440 radial-gradient:none-'#0b0d11d0' \) -compose over -composite \
+        aurora.png
+
+      # 2. NixOS-style six-fold snowflake. One branch (stem + twig pairs) drawn
+      #    once, then rotated 0/60/…/300° and merged — a subtle Doom-blue motif.
+      magick -size 1440x1440 xc:none \
+        -stroke '#5c9fd6' -strokewidth 15 -fill none \
+        -draw 'line 720,720 720,150' \
+        -draw 'line 720,345 618,258' -draw 'line 720,345 822,258' \
+        -draw 'line 720,470 638,401' -draw 'line 720,470 802,401' \
+        -draw 'line 720,595 660,545' -draw 'line 720,595 780,545' \
+        arm.png
+      magick arm.png \
+        \( arm.png -distort SRT 60  \) \
+        \( arm.png -distort SRT 120 \) \
+        \( arm.png -distort SRT 180 \) \
+        \( arm.png -distort SRT 240 \) \
+        \( arm.png -distort SRT 300 \) \
+        -background none -layers merge +repage snow.png
+
+      # 3. Composite the flake faint + softened over the aurora, centred.
+      magick aurora.png \
+        \( snow.png -channel A -evaluate multiply 0.12 +channel -blur 0x1.2 \) \
+        -gravity center -compose over -composite \
         "$out"
     '';
 in {

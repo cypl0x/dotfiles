@@ -39,7 +39,7 @@
     // ── Left ─────────────────────────────────────────────────────────────────
 
     "custom/logo": {
-        "format": "",
+        "format": "",
         "tooltip-format": "Applications (Super+Space)",
         "on-click": "rofi -show drun -show-icons -theme ~/.config/rofi/doom-vibrant.rasi",
         "on-click-right": "wlogout --protocol layer-shell"

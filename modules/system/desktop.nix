@@ -39,12 +39,15 @@
         border_fg = "0x0051afef"; # box border — Doom blue
         error_fg = "0x00ff665c"; # errors — Doom red
 
-        # colormix shader animated across the Doom Vibrant accent palette:
-        # magenta → cyan → violet. col3's high byte (0x20) is ly's blend
-        # weight, not part of the RGB — keep it to preserve the mix intensity.
-        colormix_col1 = "0x00c57bdb"; # Doom magenta
-        colormix_col2 = "0x005cefff"; # Doom cyan
-        colormix_col3 = "0x20a9a1e1"; # Doom violet (0x20 = blend weight)
+        # colormix shader animated across the Doom Vibrant accent palette.
+        # Analogous, dimmed blues → violet (not the old saturated magenta ↔
+        # cyan ↔ violet, which flickered harsh and bright over the dark base):
+        # neighbouring hues at ~55% brightness blend smoothly and stay subtle.
+        # col3's high byte (0x20) is ly's blend weight, not part of the RGB —
+        # keep it to preserve the mix intensity.
+        colormix_col1 = "0x001f5582"; # Doom dark-blue
+        colormix_col2 = "0x003d84b3"; # Doom blue, dimmed
+        colormix_col3 = "0x206b6497"; # Doom violet, dimmed (0x20 = blend weight)
       };
     };
 
