@@ -116,6 +116,10 @@ in {
       source = ./hyprland/scripts/claude-notify.sh;
       executable = true;
     };
+    ".config/hypr/scripts/toggle-scratch-term.sh" = {
+      source = ./hyprland/scripts/toggle-scratch-term.sh;
+      executable = true;
+    };
     ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
     ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
     ".config/swaync/config.json".source = ./hyprland/swaync/config.json;
