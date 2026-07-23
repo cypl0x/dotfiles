@@ -2,21 +2,27 @@
 # Drop-down terminal (Yakuake-style), resilient to `exit`.
 #
 # The dedicated Ghostty lives on the hidden `special:term` workspace and is
-# only shown/hidden on toggle (redraw, no relaunch). But if the user types
-# `exit`, the terminal is gone — so before toggling, respawn it when missing.
+# only shown/hidden on toggle (redraw, no relaunch). Two quirks handled here:
+#   1. If the user typed `exit`, the terminal is gone — respawn when missing.
+#   2. Hyprland won't hold a floating special-workspace window at y=0 via a
+#      static windowrule, so we pin it to the top edge each time we reveal it.
 set -euo pipefail
 
 class="com.ghostty.term"
+# Top-anchored geometry (1920x1080 eDP): 92%w × 58%h, x-offset 4%.
+pos_x=77 pos_y=0
 
-if hyprctl clients | grep -q "class: ${class}$"; then
-    # Alive — just toggle visibility.
-    hyprctl dispatch togglespecialworkspace term
+# Currently visible? `hyprctl monitors` lists the active special workspace.
+if hyprctl monitors | grep -q "special:term"; then
+    hyprctl dispatch togglespecialworkspace term          # hide
 else
-    # Died (user `exit`ed) or never spawned — respawn, wait for map, then show.
-    hyprctl dispatch exec "[workspace special:term silent] ghostty --class=${class}"
-    for _ in $(seq 1 40); do
-        hyprctl clients | grep -q "class: ${class}$" && break
-        sleep 0.05
-    done
-    hyprctl dispatch togglespecialworkspace term
+    if ! hyprctl clients | grep -q "class: ${class}$"; then
+        hyprctl dispatch exec "[workspace special:term silent] ghostty --class=${class} --background-opacity=0.9"
+        for _ in $(seq 1 40); do
+            hyprctl clients | grep -q "class: ${class}$" && break
+            sleep 0.05
+        done
+    fi
+    hyprctl dispatch togglespecialworkspace term          # show
+    hyprctl dispatch movewindowpixel "exact ${pos_x} ${pos_y},class:${class}"
 fi
