@@ -9,8 +9,9 @@
 set -euo pipefail
 
 class="com.ghostty.term"
-# Top-anchored geometry (1920x1080 eDP): 92%w × 58%h, x-offset 4%.
-pos_x=77 pos_y=0
+# Top-anchored geometry (1920x1080 eDP): 1766×626, x=77 centres horizontally,
+# y=82 clears the 74px top waybar (otherwise the window hides behind it).
+pos_x=77 pos_y=82
 
 # Currently visible? `hyprctl monitors` lists the active special workspace.
 if hyprctl monitors | grep -q "special:term"; then
