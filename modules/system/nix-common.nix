@@ -10,6 +10,10 @@ _: {
       "cypl0x.cachix.org-1:WMLmCcn2gTAZyWZDD6N2rghvpPn0rU9Gr5Cc2OTEdow="
     ];
     download-buffer-size = 524288000; # B instead of  32 MB
+    # Hardlink byte-identical files in /nix/store after each build. Reclaims GB
+    # over time (shared libs/docs duplicated across derivations) — the automatic
+    # equivalent of a manual `nix-store --optimise`.
+    auto-optimise-store = true;
   };
 
   # nh — the modern nix helper. Nicer build/switch UI with a package diff, and
