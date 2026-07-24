@@ -104,8 +104,8 @@ at() { [ -n "$1" ] && date -d "$1" '+%a %H:%M' 2>/dev/null || echo "?"; }
 h5_pct=${h5_pct:-0}; d7_pct=${d7_pct:-0}
 h5_d=$(delta "$h5_reset"); d7_d=$(delta "$d7_reset")
 
-# Binding window = the one with higher utilization; show its reset in the bar.
-if (( d7_pct >= h5_pct )); then bind="7d"; bind_d=$d7_d; else bind="5h"; bind_d=$h5_d; fi
+# Bar always shows the 5h reset — it's the window the user watches most.
+bind="5h"; bind_d=$h5_d
 
 case "$sev" in
   critical) cls="claude critical" ;;
