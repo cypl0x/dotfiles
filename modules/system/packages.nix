@@ -9,7 +9,6 @@
       alejandra # Nix code formatter
       bat
       cheat
-      comma # run any program without installing it: `, cowsay hi` (needs nix-index DB)
       # AI
       gemini-cli
       codex # OpenAI ChatGPT

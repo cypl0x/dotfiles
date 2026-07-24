@@ -29,8 +29,10 @@ _: {
     # nix-index — locate which package provides a binary/file
     # (`nix-locate bin/htop`) and back `comma`. Replaces the channel-based
     # command-not-found handler (needs programs.command-not-found, useless on a
-    # pure-flake system). One-time: run `nix-index` to build the DB (~minutes).
+    # pure-flake system). The prebuilt DB comes from the nix-index-database
+    # module (wired per-host in flake.nix) — no local `nix-index` run needed.
     nix-index.enable = true;
+    nix-index-database.comma.enable = true; # `, foo` runs foo without installing
     command-not-found.enable = false;
   };
 

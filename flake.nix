@@ -3,6 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    # Prebuilt nix-index DB (Hydra-generated, refreshed regularly). Gives comma
+    # full coverage — including unfree pkgs like claude-code — with no local
+    # `nix-index` run. Ships its own `comma` wrapper bound to the DB.
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -103,6 +110,7 @@
         specialArgs = {inherit datapass;};
         modules = [
           ./hosts/thinkpad
+          inputs.nix-index-database.nixosModules.nix-index
           home-manager.nixosModules.home-manager
           {
             home-manager = {
@@ -133,6 +141,7 @@
         specialArgs = {inherit blog;};
         modules = [
           inputs."authentik-nix".nixosModules.default
+          inputs.nix-index-database.nixosModules.nix-index
           ./hosts/inari
           {nixpkgs.overlays = [nix-openclaw.overlays.default];}
           disko.nixosModules.disko
