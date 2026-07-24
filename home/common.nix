@@ -213,6 +213,17 @@
         plugins = ["git" "fzf" "tmux"];
       };
 
+      # fzf-tab — replace zsh's plain tab menu with an fzf picker (fuzzy, with
+      # previews). Must load after compinit (oh-my-zsh runs it) and before
+      # syntax-highlighting; home-manager sources plugins in that window.
+      plugins = [
+        {
+          name = "fzf-tab";
+          src = pkgs.zsh-fzf-tab;
+          file = "share/fzf-tab/fzf-tab.plugin.zsh";
+        }
+      ];
+
       initContent = ''
         source ${./shell/zsh/aliases.sh}
         source ${./shell/zsh/completions.sh}

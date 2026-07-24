@@ -14,6 +14,13 @@ _has_command() {
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$HOME/.cache/zsh/zcompcache"
 
+# fzf-tab tuning: eza preview when completing `cd`, group-switch with , / .
+if _has_command eza; then
+  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --icons --color=always $realpath'
+fi
+zstyle ':fzf-tab:*' switch-group ',' '.'
+zstyle ':completion:*' menu no # fzf-tab needs zsh's own menu disabled
+
 # ============================================================================
 # Tailscale Completions
 # ============================================================================
