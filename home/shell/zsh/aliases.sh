@@ -108,7 +108,8 @@ alias du='du -h'     # Human readable
 alias free='free -h' # Human readable
 
 # Process management
-alias psg='ps aux | grep -v grep | grep -i -e VSZ -e' # Grep processes
+# Grep processes, keeping the header row. Usage: psg firefox
+psg() { ps aux | grep -iE "VSZ|$1" | grep -v grep; }
 alias topcpu='ps aux | sort -nrk 3,3 | head -n 10'    # Top CPU processes
 alias topmem='ps aux | sort -nrk 4,4 | head -n 10'    # Top memory processes
 
