@@ -208,9 +208,19 @@
         source ${./shell/zsh/env.sh}
       '';
 
-      oh-my-zsh = {
-        enable = true;
-        plugins = ["git" "fzf" "tmux"];
+      # oh-my-zsh removed: its git/tmux plugins only added aliases already
+      # defined in shell/zsh/aliases.sh, and its fzf plugin duplicated the
+      # keybindings from programs.fzf.enableZshIntegration. Dropping it removes a
+      # second compinit and a chunk of startup. The sane defaults it used to set
+      # (emacs keys, history opts, auto_cd) are declared explicitly below.
+      history = {
+        size = 100000;
+        save = 100000;
+        ignoreDups = true;
+        ignoreSpace = true;
+        expireDuplicatesFirst = true;
+        share = true;
+        extended = true;
       };
 
       # fzf-tab — replace zsh's plain tab menu with an fzf picker (fuzzy, with
@@ -225,6 +235,11 @@
       ];
 
       initContent = ''
+        # Baseline interactive options previously provided by oh-my-zsh.
+        bindkey -e                                  # emacs keymap
+        setopt auto_cd auto_pushd pushd_ignore_dups pushd_silent
+        setopt hist_verify hist_reduce_blanks interactive_comments
+
         source ${./shell/zsh/aliases.sh}
         source ${./shell/zsh/completions.sh}
         source ${./shell/zsh/functions.sh}
