@@ -347,41 +347,10 @@ if _has_command starship; then
   fi
 fi
 
-# ============================================================================
-# Direnv Completions
-# ============================================================================
-
-if _has_command direnv; then
-  if [[ -n "$ZSH_VERSION" ]]; then
-    eval "$(direnv hook zsh)"
-  elif [[ -n "$BASH_VERSION" ]]; then
-    eval "$(direnv hook bash)"
-  fi
-fi
-
-# ============================================================================
-# Zoxide (better cd) Completions
-# ============================================================================
-
-if _has_command zoxide; then
-  if [[ -n "$ZSH_VERSION" ]]; then
-    eval "$(zoxide init zsh)"
-  elif [[ -n "$BASH_VERSION" ]]; then
-    eval "$(zoxide init bash)"
-  fi
-fi
-
-# ============================================================================
-# Atuin (shell history) Completions
-# ============================================================================
-
-if _has_command atuin; then
-  if [[ -n "$ZSH_VERSION" ]]; then
-    eval "$(atuin init zsh)"
-  elif [[ -n "$BASH_VERSION" ]]; then
-    eval "$(atuin init bash)"
-  fi
-fi
+# NOTE: direnv / zoxide / atuin init is NOT done here. home-manager already
+# injects it into .zshrc via programs.{direnv,zoxide,atuin}.enableZshIntegration
+# (see home/common.nix). Re-running the evals here double-bound their hooks
+# (atuin Ctrl-R, direnv precmd) and slowed startup — so it was removed.
 
 # ============================================================================
 # Tmuxinator Completions
