@@ -232,8 +232,9 @@
         }
     },
 
-    // Claude Code usage (active 5h block) via ccusage. 5-min interval keeps the
-    // npx fetch cheap; click opens a full ccusage report in a floating terminal.
+    // Claude usage — real 5h + weekly limits from Anthropic's own usage
+    // endpoint (same data as claude.ai / `/usage`). Left-click force-refreshes;
+    // right-click opens a full breakdown in a floating terminal.
     "custom/claude": {
         "format": "{}",
         "return-type": "json",
@@ -241,7 +242,7 @@
         "interval": 120,
         "signal": 8,
         "on-click": "pkill -RTMIN+8 waybar",
-        "on-click-right": "kitty --hold -e npx -y --prefer-offline ccusage@20.0.18 blocks --active"
+        "on-click-right": "kitty --hold -e ~/.config/hypr/scripts/waybar-claude.sh --detail"
     },
 
     // swaync notification center: icon reflects unread / DND state.
