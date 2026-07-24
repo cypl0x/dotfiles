@@ -33,21 +33,21 @@
         clear_password = true; # wipe the field on a failed login
         blank_box = true; # blank the box background for cleaner contrast
 
-        # Doom Vibrant colours (0x00RRGGBB). Background left untouched (black)
-        # so only the input fields / text / borders are themed.
-        fg = "0x00bbc2cf"; # text  — Doom foreground
-        border_fg = "0x0051afef"; # box border — Doom blue
-        error_fg = "0x00ff665c"; # errors — Doom red
+        # Lava palette (0x00RRGGBB). Background left untouched (black) so the
+        # box reads as molten glow over cooled rock — only fields/text/borders
+        # are themed. Warm, condensed hues (all in the red→amber arc).
+        fg = "0x00ffcf9e"; # text  — warm amber cream (legible on black)
+        border_fg = "0x00ff5e1a"; # box border — glowing lava orange
+        error_fg = "0x00ff2d55"; # errors — hot magma red
 
-        # colormix shader animated across the Doom Vibrant accent palette.
-        # Analogous, dimmed blues → violet (not the old saturated magenta ↔
-        # cyan ↔ violet, which flickered harsh and bright over the dark base):
-        # neighbouring hues at ~55% brightness blend smoothly and stay subtle.
-        # col3's high byte (0x20) is ly's blend weight, not part of the RGB —
+        # colormix shader animated across a condensed lava gradient: dark ember
+        # red → molten orange → amber glow. Analogous warm hues at ~50–60%
+        # brightness so the mix smoulders instead of flickering harshly over the
+        # black base. col3's high byte (0x20) is ly's blend weight, not RGB —
         # keep it to preserve the mix intensity.
-        colormix_col1 = "0x001f5582"; # Doom dark-blue
-        colormix_col2 = "0x003d84b3"; # Doom blue, dimmed
-        colormix_col3 = "0x206b6497"; # Doom violet, dimmed (0x20 = blend weight)
+        colormix_col1 = "0x006e1e0a"; # dark ember red
+        colormix_col2 = "0x00b34a1a"; # molten orange, dimmed
+        colormix_col3 = "0x20cc8a2e"; # amber glow, dimmed (0x20 = blend weight)
       };
     };
 
