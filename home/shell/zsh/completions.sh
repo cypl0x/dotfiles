@@ -10,6 +10,10 @@ _has_command() {
   command -v "$1" &>/dev/null
 }
 
+# Cache slow completions (apt-style generators) on disk under ~/.cache/zsh.
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "$HOME/.cache/zsh/zcompcache"
+
 # ============================================================================
 # Tailscale Completions
 # ============================================================================

@@ -189,6 +189,21 @@
       autosuggestion.enable = true;
       syntaxHighlighting.enable = true;
 
+      # Faster startup: only rebuild the completion dump (and re-run compinit's
+      # security check) when the cached dump is >24h old; otherwise take the
+      # trusted fast path (compinit -C). Dump lives under ~/.cache/zsh.
+      completionInit = ''
+        autoload -Uz compinit
+        _zcompdump="$HOME/.cache/zsh/zcompdump"
+        [[ -d "$HOME/.cache/zsh" ]] || mkdir -p "$HOME/.cache/zsh"
+        if [[ -n $_zcompdump(#qN.mh+24) ]]; then
+          compinit -d "$_zcompdump"
+        else
+          compinit -C -d "$_zcompdump"
+        fi
+        unset _zcompdump
+      '';
+
       envExtra = ''
         source ${./shell/zsh/env.sh}
       '';
