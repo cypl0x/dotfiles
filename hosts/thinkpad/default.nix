@@ -58,6 +58,10 @@
   # Enable nix-ld for running unpatched dynamic binaries (e.g. Android SDK)
   programs.nix-ld.enable = true;
 
+  # nh reads this to `nh os switch` without a --flake arg. `nh clean` (enabled
+  # in nix-common) needs no flake; this only wires the switch/build subcommands.
+  programs.nh.flake = "/home/wap/dotfiles";
+
   # Allow passwordless nixos-rebuild switch for wap on this host only
   security.sudo.extraRules = [
     {
