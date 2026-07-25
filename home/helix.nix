@@ -15,7 +15,7 @@ _: {
         line-number = "absolute"; # Doom shows absolute numbers, not relative
         cursorline = true;
         color-modes = true;
-        bufferline = "multiple";
+        bufferline.render-mode = "multiple"; # 25.07+: bufferline is a table, not a string
         true-color = true;
         scrolloff = 6;
         rulers = [80 120];
