@@ -9,6 +9,26 @@
   font-size: 13px;
 }
 
+/* ── Layer-shell surfaces ────────────────────────────────────────────────────
+ * This file replaces swaync's bundled style.css outright, so the defaults that
+ * make the popup/control-center layer surfaces transparent have to be restated
+ * here. Without them GTK paints its own theme background across the whole
+ * surface — which is full screen height (`fit-to-screen`) — showing up as a
+ * dark bar down the side of the screen. */
+.blank-window {
+  background: transparent;
+}
+
+.floating-notifications,
+.floating-notifications.background,
+.floating-notifications .notification-row,
+.floating-notifications box,
+.floating-notifications viewport,
+.floating-notifications list {
+  background: transparent;
+  box-shadow: none;
+}
+
 /* ── Toasts (individual popup notifications) ─────────────────────────────── */
 .notification {
   border-radius: 12px;
