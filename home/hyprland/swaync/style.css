@@ -41,8 +41,10 @@
   outline: none;
 }
 
+/* Alpha stays above the `ignore_alpha` threshold in the swaync layerrule
+ * (hyprland.conf) so Hyprland still blurs behind the toast. */
 .notification-content {
-  background: #242730;
+  background: rgba(36, 39, 48, 0.8);
   border: 1px solid rgba(72, 72, 84, 0.6);
   border-radius: 12px;
   padding: 10px;
