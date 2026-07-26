@@ -440,16 +440,21 @@ psgrep() {
   ps aux | grep -v grep | grep -i "$1"
 }
 
-# Kill process by name
+# Kill process by name.
+# NB: the PID list must reach kill as separate arguments. The old `kill "$pid"`
+# passed the whole newline-separated list as one argument, so as soon as the
+# pattern matched more than one process the kill failed outright. xargs does the
+# splitting portably (unquoted $pids would not split under zsh).
 killps() {
   if [ -z "$1" ]; then
     echo "Usage: killps <process-name>"
     return 1
   fi
-  local pid=$(ps aux | grep -v grep | grep -i "$1" | awk '{print $2}')
-  if [ -n "$pid" ]; then
-    echo "Killing process: $pid"
-    kill "$pid"
+  local pids
+  pids=$(ps aux | grep -v grep | grep -i "$1" | awk '{print $2}' | tr '\n' ' ')
+  if [ -n "$pids" ]; then
+    echo "Killing process(es): $pids"
+    echo "$pids" | xargs -r kill
   else
     echo "No process found matching: $1"
   fi

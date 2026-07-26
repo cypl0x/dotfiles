@@ -8,12 +8,17 @@
 # Detect dotfiles directory (default to ~/dotfiles if DOTFILES_DIR not set)
 export DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
+# These helpers all operate on $DOTFILES_DIR. Each cd runs inside a subshell so
+# the calling shell stays wherever you invoked it from — a bare `cd` here used
+# to dump you in ~/dotfiles after every update.
+
 # Full update: flake update + rebuild
 nixup() {
-  local hostname=$(hostname)
-  cd "$DOTFILES_DIR"
-  nix flake update
-  sudo nixos-rebuild switch --flake ".#$hostname"
+  (
+    cd "$DOTFILES_DIR" || return 1
+    nix flake update
+    sudo nixos-rebuild switch --flake ".#$(hostname)"
+  )
 }
 
 # Update a specific flake input + rebuild
@@ -23,24 +28,29 @@ nixup-input() {
     echo "Example: nixup-input nixpkgs"
     return 1
   fi
-  local hostname=$(hostname)
-  cd "$DOTFILES_DIR"
-  nix flake lock --update-input "$1"
-  sudo nixos-rebuild switch --flake ".#$hostname"
+  (
+    cd "$DOTFILES_DIR" || return 1
+    nix flake lock --update-input "$1"
+    sudo nixos-rebuild switch --flake ".#$(hostname)"
+  )
 }
 
 # Quick flake check (statix + nix flake check)
 nixcheck() {
-  cd "$DOTFILES_DIR"
-  echo "Running flake check..."
-  nix flake check
-  echo "Running statix check..."
-  statix check
+  (
+    cd "$DOTFILES_DIR" || return 1
+    echo "Running flake check..."
+    nix flake check
+    echo "Running statix check..."
+    statix check
+  )
 }
 
 nixshow() {
-  cd "$DOTFILES_DIR"
-  nix flake show
+  (
+    cd "$DOTFILES_DIR" || return 1
+    nix flake show
+  )
 }
 
 nixlint() {
@@ -59,12 +69,14 @@ nrsl() {
 
 # Remote rebuild/deploy to inari
 nrsi() {
-  cd "$DOTFILES_DIR"
-  nixos-rebuild switch \
-    --flake ".#inari" \
-    --use-substitutes \
-    --build-host root@65.109.108.233 \
-    --target-host root@65.109.108.233
+  (
+    cd "$DOTFILES_DIR" || return 1
+    nixos-rebuild switch \
+      --flake ".#inari" \
+      --use-substitutes \
+      --build-host root@65.109.108.233 \
+      --target-host root@65.109.108.233
+  )
 }
 
 nrb() {
