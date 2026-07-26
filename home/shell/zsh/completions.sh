@@ -457,8 +457,9 @@ fi
 if [[ -n "$ZSH_VERSION" ]]; then
   zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-  # Use menu selection for completions
-  zstyle ':completion:*' menu select
+  # NB: do NOT set `menu select` here — fzf-tab replaces zsh's own menu and
+  # needs `menu no` (set at the top of this file). A `menu select` further down
+  # wins by virtue of running last and silently disables the fzf picker.
 
   # Group completions by type
   zstyle ':completion:*' group-name ''
@@ -469,9 +470,9 @@ if [[ -n "$ZSH_VERSION" ]]; then
   # Warnings format
   zstyle ':completion:*:warnings' format 'No matches for: %d'
 
-  # Enable completion caching
-  zstyle ':completion:*' use-cache on
-  zstyle ':completion:*' cache-path ~/.zsh/cache
+  # Caching (use-cache / cache-path) is configured once at the top of this file
+  # under ~/.cache/zsh/zcompcache — re-declaring it here pointed at a second,
+  # never-populated ~/.zsh/cache.
 fi
 
 # ============================================================================
