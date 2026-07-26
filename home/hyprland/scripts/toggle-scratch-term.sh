@@ -18,16 +18,16 @@ size_w=1766 size_h=921
 
 # Currently visible? `hyprctl monitors` lists the active special workspace.
 if hyprctl monitors | grep -q "special:term"; then
-    hyprctl dispatch togglespecialworkspace term          # hide
+  hyprctl dispatch togglespecialworkspace term # hide
 else
-    if ! hyprctl clients | grep -q "class: ${class}$"; then
-        hyprctl dispatch exec "[workspace special:term silent] ghostty --class=${class} --background-opacity=0.9"
-        for _ in $(seq 1 40); do
-            hyprctl clients | grep -q "class: ${class}$" && break
-            sleep 0.05
-        done
-    fi
-    hyprctl dispatch togglespecialworkspace term          # show
-    hyprctl dispatch resizewindowpixel "exact ${size_w} ${size_h},class:${class}"
-    hyprctl dispatch movewindowpixel "exact ${pos_x} ${pos_y},class:${class}"
+  if ! hyprctl clients | grep -q "class: ${class}$"; then
+    hyprctl dispatch exec "[workspace special:term silent] ghostty --class=${class} --background-opacity=0.9"
+    for _ in $(seq 1 40); do
+      hyprctl clients | grep -q "class: ${class}$" && break
+      sleep 0.05
+    done
+  fi
+  hyprctl dispatch togglespecialworkspace term # show
+  hyprctl dispatch resizewindowpixel "exact ${size_w} ${size_h},class:${class}"
+  hyprctl dispatch movewindowpixel "exact ${pos_x} ${pos_y},class:${class}"
 fi

@@ -19,7 +19,7 @@ fallback() {
   printf '{"text":"%s","tooltip":"%s","class":"claude"}\n' "${2:-󰧑 –}" "$1"
   exit 0
 }
-command -v jq   >/dev/null 2>&1 || fallback "jq not found"
+command -v jq >/dev/null 2>&1 || fallback "jq not found"
 command -v curl >/dev/null 2>&1 || fallback "curl not found"
 [ -r "$CREDS" ] || fallback "no credentials file"
 
@@ -35,25 +35,44 @@ fetch() {
 
 # Local date/time of an ISO reset, plus "(in …)" countdown. Defined early so
 # --detail can reuse it.
-fmt_reset() {  # $1 = iso -> "Fri 02:00  (in 11h 38m)"
+fmt_reset() { # $1 = iso -> "Fri 02:00  (in 11h 38m)"
   local iso=$1 tgt now s d h m
-  [ -n "$iso" ] || { echo "?"; return; }
-  tgt=$(date -d "$iso" +%s 2>/dev/null) || { echo "$iso"; return; }
-  now=$(date +%s); s=$((tgt - now))
-  local when; when=$(date -d "$iso" '+%a %b %-d, %H:%M' 2>/dev/null)
-  if (( s < 0 )); then echo "$when (now)"; return; fi
-  d=$((s/86400)); h=$(((s%86400)/3600)); m=$(((s%3600)/60))
+  [ -n "$iso" ] || {
+    echo "?"
+    return
+  }
+  tgt=$(date -d "$iso" +%s 2>/dev/null) || {
+    echo "$iso"
+    return
+  }
+  now=$(date +%s)
+  s=$((tgt - now))
+  local when
+  when=$(date -d "$iso" '+%a %b %-d, %H:%M' 2>/dev/null)
+  if ((s < 0)); then
+    echo "$when (now)"
+    return
+  fi
+  d=$((s / 86400))
+  h=$(((s % 86400) / 3600))
+  m=$(((s % 3600) / 60))
   local in
-  if   (( d > 0 )); then in=$(printf '%dd %dh' "$d" "$h")
-  elif (( h > 0 )); then in=$(printf '%dh %02dm' "$h" "$m")
+  if ((d > 0)); then
+    in=$(printf '%dd %dh' "$d" "$h")
+  elif ((h > 0)); then
+    in=$(printf '%dh %02dm' "$h" "$m")
   else in=$(printf '%dm' "$m"); fi
   printf '%s (in %s)' "$when" "$in"
 }
 
 # --detail: human-readable dump for the right-click terminal popup.
 if [ "${1:-}" = "--detail" ]; then
-  d=$(fetch) || { echo "Claude usage API unreachable (token may be expired — run Claude Code to refresh)."; exit 0; }
-  echo "Claude usage — real limits (claude.ai)"; echo
+  d=$(fetch) || {
+    echo "Claude usage API unreachable (token may be expired — run Claude Code to refresh)."
+    exit 0
+  }
+  echo "Claude usage — real limits (claude.ai)"
+  echo
   while IFS=$'\t' read -r name pct iso; do
     printf '  %-8s %3d%%   resets %s\n' "$name" "$pct" "$(fmt_reset "$iso")"
   done < <(printf '%s' "$d" | jq -r '
@@ -64,8 +83,12 @@ if [ "${1:-}" = "--detail" ]; then
     | if ($e != null and $e.is_enabled)
       then "  Overage  \($e.used_credits/100|floor)/\($e.monthly_limit/100|floor) \($e.currency)  (\($e.utilization|round)%)"
       else empty end')
-  [ -n "$extra" ] && { echo; echo "$extra"; }
-  echo; echo "All active limits:"
+  [ -n "$extra" ] && {
+    echo
+    echo "$extra"
+  }
+  echo
+  echo "All active limits:"
   while IFS=$'\t' read -r sev kind pct iso; do
     printf '  [%-8s] %-12s %3s%%   resets %s\n' "$sev" "$kind" "$pct" "$(fmt_reset "$iso")"
   done < <(printf '%s' "$d" | jq -r '.limits[]? | [.severity, .kind, .percent, .resets_at] | @tsv')
@@ -89,28 +112,43 @@ read -r h5_pct h5_reset d7_pct d7_reset sev <<<"$(printf '%s' "$resp" | jq -r '
 # ISO-8601 (with tz) -> "Xd Yh" / "Xh Ym" / "Xm" until then.
 delta() {
   local iso=$1 tgt now s
-  [ -n "$iso" ] || { echo "?"; return; }
-  tgt=$(date -d "$iso" +%s 2>/dev/null) || { echo "?"; return; }
-  now=$(date +%s); s=$((tgt - now))
-  (( s < 0 )) && { echo "now"; return; }
-  local d=$((s/86400)) h=$(((s%86400)/3600)) m=$(((s%3600)/60))
-  if   (( d > 0 )); then printf '%dd %dh' "$d" "$h"
-  elif (( h > 0 )); then printf '%dh %02dm' "$h" "$m"
+  [ -n "$iso" ] || {
+    echo "?"
+    return
+  }
+  tgt=$(date -d "$iso" +%s 2>/dev/null) || {
+    echo "?"
+    return
+  }
+  now=$(date +%s)
+  s=$((tgt - now))
+  ((s < 0)) && {
+    echo "now"
+    return
+  }
+  local d=$((s / 86400)) h=$(((s % 86400) / 3600)) m=$(((s % 3600) / 60))
+  if ((d > 0)); then
+    printf '%dd %dh' "$d" "$h"
+  elif ((h > 0)); then
+    printf '%dh %02dm' "$h" "$m"
   else printf '%dm' "$m"; fi
 }
 # Exact local date/time of a reset.
 at() { [ -n "$1" ] && date -d "$1" '+%a %H:%M' 2>/dev/null || echo "?"; }
 
-h5_pct=${h5_pct:-0}; d7_pct=${d7_pct:-0}
-h5_d=$(delta "$h5_reset"); d7_d=$(delta "$d7_reset")
+h5_pct=${h5_pct:-0}
+d7_pct=${d7_pct:-0}
+h5_d=$(delta "$h5_reset")
+d7_d=$(delta "$d7_reset")
 
 # Bar always shows the 5h reset — it's the window the user watches most.
-bind="5h"; bind_d=$h5_d
+bind="5h"
+bind_d=$h5_d
 
 case "$sev" in
-  critical) cls="claude critical" ;;
-  warning)  cls="claude warning" ;;
-  *)        cls="claude" ;;
+critical) cls="claude critical" ;;
+warning) cls="claude warning" ;;
+*) cls="claude" ;;
 esac
 
 text=$(printf '󰧑 5h %d%% · 7d %d%% · %s↻%s' "$h5_pct" "$d7_pct" "$bind" "$bind_d")
