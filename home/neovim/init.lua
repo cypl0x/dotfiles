@@ -1,4 +1,2 @@
-require("core.options")
-require("core.keymaps")
-require("core.autocmds")
-require("plugins")
+-- LazyVim entry point. Everything else lives in lua/config/ and lua/plugins/.
+require("config.lazy")

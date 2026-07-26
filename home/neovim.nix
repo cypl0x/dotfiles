@@ -1,4 +1,16 @@
 {pkgs, ...}: {
+  # Neovim runs LazyVim (https://lazyvim.org) — a Doom-Emacs-shaped distro:
+  # Space leader, which-key menus, the usual SPC f / SPC b / SPC g chords.
+  #
+  # Split of responsibilities:
+  #   Nix         → neovim, lazy.nvim, and every external binary (LSP servers,
+  #                 formatters, compilers, pickers' fd/rg).
+  #   lazy.nvim   → the ~40 Lua plugins of the LazyVim spec, cloned from GitHub
+  #                 into ~/.local/share/nvim/lazy and pinned by
+  #                 ~/.local/share/nvim/lazy-lock.json. `:Lazy update` bumps
+  #                 them; `nrs` does not.
+  # mason is disabled (see neovim/lua/plugins/nixos.lua) because its prebuilt
+  # binaries cannot run on NixOS — hence the long extraPackages list.
   programs.neovim = {
     enable = true;
     viAlias = true;
@@ -8,48 +20,37 @@
     withRuby = false; # adopt the new 26.05 default; silences the eval warning
 
     extraPackages = with pkgs; [
+      # lazy.nvim + treesitter's :TSUpdate need these at runtime
+      git
+      gcc
+      tree-sitter
+
+      # pickers, clipboard, git UI
       fd
       ripgrep
       wl-clipboard
       xclip
+      lazygit
+
+      # language servers (mason's job upstream)
+      bash-language-server
+      lua-language-server
+      marksman
+      nil
+
+      # formatters LazyVim reaches for
+      shfmt
+      stylua
     ];
 
-    plugins = with pkgs.vimPlugins; [
-      plenary-nvim
-      telescope-nvim
-      telescope-fzf-native-nvim
-      which-key-nvim
-      project-nvim
-      gitsigns-nvim
-      nvim-treesitter.withAllGrammars
-      nvim-lspconfig
-      nvim-cmp
-      cmp-nvim-lsp
-      cmp-buffer
-      cmp-path
-      cmp-cmdline
-      luasnip
-      cmp_luasnip
-      friendly-snippets
-      nvim-autopairs
-      comment-nvim
-      lualine-nvim
-      nvim-web-devicons
-      vim-fugitive
-      vim-surround
-      vim-repeat
-      orgmode # org-mode: syntax highlight (incl. src blocks), SPC m ' edit special
-      oil-nvim # dired-like: edit the filesystem as a buffer
-    ];
+    # Only lazy.nvim itself — everything else is managed by lazy.nvim at runtime.
+    # Adding plugins here as well would shadow lazy's copies.
+    plugins = [pkgs.vimPlugins.lazy-nvim];
   };
 
   xdg.configFile = {
     "nvim/init.lua".source = ./neovim/init.lua;
-    "nvim/lua/core/theme.lua".source = ./neovim/lua/core/theme.lua;
-    "nvim/lua/core/options.lua".source = ./neovim/lua/core/options.lua;
-    "nvim/lua/core/keymaps.lua".source = ./neovim/lua/core/keymaps.lua;
-    "nvim/lua/core/autocmds.lua".source = ./neovim/lua/core/autocmds.lua;
-    "nvim/lua/plugins/init.lua".source = ./neovim/lua/plugins/init.lua;
-    "nvim/colors/doom-vibrant.lua".source = ./neovim/colors/doom-vibrant.lua;
+    "nvim/lua".source = ./neovim/lua;
+    "nvim/colors".source = ./neovim/colors;
   };
 }

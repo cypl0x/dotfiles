@@ -1,4 +1,4 @@
-local theme = require("core.theme")
+local theme = require("config.theme")
 local c = theme.palette
 
 vim.cmd("highlight clear")
