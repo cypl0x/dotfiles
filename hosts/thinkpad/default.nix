@@ -25,6 +25,7 @@
     ./thinkpad-packages.nix
     ./power.nix
     ./graphics.nix
+    ./extra-consoles.nix
   ];
 
   # Bootloader configuration
