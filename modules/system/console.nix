@@ -28,5 +28,31 @@
     # and never saw them, so Caps Lock was still Caps Lock and the layout was
     # still us on every tty.
     useXkbConfig = true;
+
+    # Doom Vibrant, matching home/zellij.nix so the VT, zellij and kitty all
+    # agree. Slots 0-7 are the base hues taken verbatim from that theme; 8-15
+    # are brightened derivations, since the theme only defines eight.
+    #
+    # Sixteen is the hard ceiling: the kernel VT parses no 256-colour or 24-bit
+    # SGR at all. What it does allow is remapping each of the sixteen to an
+    # arbitrary RGB, which is what this is.
+    colors = [
+      "1c1f24" #  0 black         (base0)
+      "ff665c" #  1 red
+      "7bc275" #  2 green
+      "fcce7b" #  3 yellow
+      "51afef" #  4 blue
+      "c57bdb" #  5 magenta
+      "5cefff" #  6 cyan
+      "bbc2cf" #  7 white         (fg)
+      "5b6268" #  8 bright black  (fg-alt — comments, dim UI)
+      "ff7b70" #  9 bright red
+      "92cf8c" # 10 bright green
+      "ffd98f" # 11 bright yellow
+      "6cc0ff" # 12 bright blue
+      "d494e8" # 13 bright magenta
+      "7df5ff" # 14 bright cyan
+      "dfdfdf" # 15 bright white
+    ];
   };
 }
