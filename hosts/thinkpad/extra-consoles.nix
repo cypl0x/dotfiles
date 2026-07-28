@@ -79,48 +79,158 @@ in {
   #
   # services.kmscon.enable is deliberately NOT used: that module sets
   # aliases = [ "autovt@.service" ] and suppresses getty@.service outright, so
-  # it takes over every VT at once. Driving the package's own kmsconvt@ template
-  # for a single instance keeps tty2-4 on the kernel VT.
+  # it converts every VT at once. Claiming two specific autovt instances keeps
+  # tty2-4 on the kernel VT.
 
-  # logind would otherwise auto-spawn a getty on tty5/tty6 the moment either is
-  # switched to, and ReserveVT defaults to 6 — both would fight the units below.
-  services.logind.settings.Login = {
-    NAutoVTs = 4;
-    ReserveVT = 0;
-  };
+  # Both consoles start on demand, via logind's autovt mechanism: on a switch
+  # to an idle ttyN, logind starts autovt@ttyN.service. That name normally
+  # resolves through the autovt@.service -> getty@.service symlink, but systemd
+  # prefers a unit file matching the instance name exactly, so defining
+  # autovt@tty5 / autovt@tty6 claims just those two VTs and leaves tty2-4 on
+  # the generic template.
+  #
+  # On demand rather than at boot is not a stylistic choice for cage: wlroots
+  # waits ~10s for its logind session to become active and then aborts with
+  # "Failed to start a DRM session". A VT in the background never activates, so
+  # an eagerly started cage crash-loops forever. Deferring to the switch means
+  # the VT is foreground by the time it runs.
+  #
+  # ReserveVT defaults to 6, which would keep a getty pinned to tty6.
+  services.logind.settings.Login.ReserveVT = 0;
 
-  systemd = {
-    # Provides kmsconvt@.service. NixOS never runs `systemctl enable` on
-    # package units, so the template's [Install] Alias=autovt@.service stays
-    # inert and only the instance wanted below is started.
-    packages = [pkgs.kmscon];
-
-    # Drop-in over the shipped template. The upstream ExecStart defaults to
-    # `/bin/login`, which does not exist on NixOS, so the login program has to
-    # be passed explicitly.
-    services."kmsconvt@" = {
+  systemd.services = {
+    # tty5: kmscon. Config is via --configdir; the upstream ExecStart defaults
+    # to /bin/login, which does not exist on NixOS, hence the explicit path.
+    "autovt@tty5" = {
+      description = "KMS System Console on tty5";
+      after = ["systemd-user-sessions.service"];
       restartIfChanged = false;
-      serviceConfig.ExecStart = [
-        "" # reset the packaged ExecStart before appending our own
-        (lib.concatStringsSep " " [
+
+      unitConfig = {
+        # Same safety net the packaged kmsconvt@ template carries: never share
+        # the VT with agetty, and fall back to one if kmscon cannot start.
+        Conflicts = "getty@tty5.service";
+        OnFailure = "getty@tty5.service";
+        IgnoreOnIsolate = true;
+        ConditionPathExists = "/dev/tty0";
+      };
+
+      serviceConfig = {
+        User = "root";
+        PAMName = "kmscon";
+        ExecStart = lib.concatStringsSep " " [
           "${pkgs.kmscon}/bin/kmscon"
           "--configdir ${kmsconConfigDir}"
-          "--vt=%I"
+          "--vt=tty5"
           "--no-switchvt"
           "--login"
           "--"
           "${config.services.getty.loginProgram} -p"
-        ])
-      ];
+        ];
+        UtmpIdentifier = "tty5";
+        TTYPath = "/dev/tty5";
+        TTYReset = "yes";
+        TTYVHangup = "yes";
+        TTYVTDisallocate = "yes";
+      };
     };
 
-    # The shipped unit already carries Conflicts=getty@%i and
-    # OnFailure=getty@%i, so tty5 falls back to a plain agetty if kmscon fails.
-    targets.getty.wants = ["kmsconvt@tty5.service"];
+    # tty6: cage (wlroots kiosk compositor) running a single ghostty.
+    #
+    # services.cage is unusable here — that module hardcodes tty1, which ly
+    # already owns, down to the unit name. This is its unit re-pointed at tty6.
+    #
+    # Unlike kmscon this is a full Wayland stack, so ghostty gets true colour,
+    # the same config it uses under Hyprland, and — the reason it earns a VT —
+    # the kitty keyboard protocol, which is what makes shift+Enter
+    # distinguishable from Enter in Claude Code. Neither the kernel VT nor
+    # kmscon can do that; both drop the modifier and send a bare CR.
+    "autovt@tty6" = {
+      description = "Cage + ghostty on tty6";
+      after = [
+        "systemd-user-sessions.service"
+        "systemd-logind.service"
+      ];
+      wants = [
+        "dbus.socket"
+        "systemd-logind.service"
+      ];
+      restartIfChanged = false;
+
+      unitConfig = {
+        Conflicts = "getty@tty6.service";
+        OnFailure = "getty@tty6.service";
+        IgnoreOnIsolate = true;
+        ConditionPathExists = "/dev/tty6";
+      };
+
+      environment = {
+        # cage is wlroots, so it reads WLR_DRM_DEVICES rather than the
+        # AQ_DRM_DEVICES that aquamarine/Hyprland uses. Same reasoning as in
+        # graphics.nix: pin to the Intel iGPU by by-path, because DRM card
+        # numbers are probe-ordered and come up scrambled on this machine.
+        WLR_DRM_DEVICES = "/dev/dri/by-path/pci-0000:00:02.0-card";
+
+        # No display manager sits in this path to set the keymap, so
+        # libinput/xkbcommon have to be told directly.
+        XKB_DEFAULT_LAYOUT = config.services.xserver.xkb.layout;
+        XKB_DEFAULT_OPTIONS = config.services.xserver.xkb.options;
+      };
+
+      serviceConfig = {
+        # -s allows VT switching, without which ctrl+alt+F<n> would be trapped
+        # inside cage. -d drops client-side decorations, so ghostty fills the
+        # screen instead of drawing a titlebar nothing can move.
+        #
+        # --gtk-single-instance=false overrides home/terminals/ghostty.config,
+        # which sets it true. This unit shares XDG_RUNTIME_DIR with the Hyprland
+        # session, so a single-instance ghostty would hand the launch off to the
+        # instance already running there over D-Bus and exit immediately —
+        # taking cage, and the whole tty6 console, with it.
+        ExecStart = lib.concatStringsSep " " [
+          "${pkgs.cage}/bin/cage"
+          "-s"
+          "-d"
+          "--"
+          "${pkgs.ghostty}/bin/ghostty"
+          "--gtk-single-instance=false"
+        ];
+        User = "wap";
+
+        # on-success, not always: quitting ghostty exits cage 0 and should give
+        # a fresh terminal, but a failure to acquire the VT exits 1 and must
+        # not be retried, or an accidental start off-VT loops forever.
+        Restart = "on-success";
+
+        IgnoreSIGPIPE = "no";
+
+        # This replaces agetty on tty6, so it registers in utmp itself for `w`
+        # and `who` to show the session.
+        UtmpIdentifier = "tty6";
+        UtmpMode = "user";
+
+        TTYPath = "/dev/tty6";
+        TTYReset = "yes";
+        TTYVHangup = "yes";
+        TTYVTDisallocate = "yes";
+        StandardInput = "tty-fail"; # refuse to start without the VT
+        StandardOutput = "journal";
+        StandardError = "journal";
+
+        PAMName = "cage";
+      };
+    };
   };
 
-  security.pam.services.kmscon = {
-    startSession = true;
-    allowNullPassword = true;
+  security.pam.services = {
+    kmscon = {
+      startSession = true;
+      allowNullPassword = true;
+    };
+    # cage needs a logind session of its own to acquire the seat and DRM master.
+    cage = {
+      startSession = true;
+      allowNullPassword = true;
+    };
   };
 }
