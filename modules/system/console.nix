@@ -55,4 +55,26 @@
       "dfdfdf" # 15 bright white
     ];
   };
+
+  boot.kernelParams = [
+    # Block cursor instead of the default underscore.
+    #
+    # The low nibble of vt.cur_default is the shape, per the kernel's CUR_*
+    # constants: 1 none, 2 underline, 3 lower third, 4 lower half,
+    # 5 two thirds, 6 block. The running value was 2, which is where the
+    # underscore came from. The equivalent at runtime is `printf '\033[?6c'`
+    # written to a specific tty — that form is per-VT, this one is the default
+    # every VT resets to.
+    "vt.cur_default=6"
+
+    # The console never blanked (consoleblank defaulted to 0). Five minutes,
+    # matching the rough feel of the Hyprland idle timeout.
+    "consoleblank=300"
+  ];
+
+  # Stop the block cursor blinking. This is an fbcon runtime knob with no
+  # kernel-parameter equivalent, so it has to be written after boot.
+  systemd.tmpfiles.rules = [
+    "w /sys/class/graphics/fbcon/cursor_blink - - - - 0"
+  ];
 }
