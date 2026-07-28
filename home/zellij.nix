@@ -13,6 +13,13 @@ _: {
 
     settings = {
       theme = "doom-vibrant";
+
+      # Match tmux's history-limit of 50000 (home/shell/tmux.conf). zellij
+      # defaults to 10000, which is already five times tmux's own default, but
+      # the two should not disagree — the split is zellij locally, tmux over
+      # SSH, and scrollback depth should not depend on which one you landed in.
+      scroll_buffer_size = 50000;
+
       pane_frames = true;
       default_layout = "compact";
       simplified_ui = false;
