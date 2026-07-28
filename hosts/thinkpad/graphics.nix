@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  config,
+  pkgs,
+  ...
+}: {
   # Graphics stack for the ThinkPad's Optimus pair:
   #   00:02.0  Intel HD Graphics 530 (Skylake-H GT2, Gen9)  -> i915
   #   01:00.0  NVIDIA Quadro M2000M (GM107, Maxwell)        -> see below
@@ -18,9 +22,64 @@
     ];
   };
 
+  # NVIDIA Quadro M2000M — proprietary driver with PRIME render offload.
+  #
+  # 580 is the LAST branch supporting Maxwell/Pascal/Volta; 595 and 610 dropped
+  # them. So this pin is permanent, not a "catch up later" placeholder.
+  services.xserver.videoDrivers = ["nvidia"];
+
+  hardware.nvidia = {
+    package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
+
+    # GM107 is Maxwell. The open kernel module requires Turing or newer, so the
+    # proprietary blob is the only option here.
+    open = false;
+
+    # nvidia-drm.modeset=1. Required for anything Wayland to talk to the card.
+    modesetting.enable = true;
+
+    # Saves/restores VRAM across suspend. Worth having on a laptop even when
+    # the dGPU is idle, since the blob otherwise corrupts state on resume.
+    powerManagement.enable = true;
+
+    # NOT enabled: powerManagement.finegrained. That is PCIe Runtime D3 (RTD3),
+    # which NVIDIA only supports on Turing and newer. On Maxwell it does
+    # nothing at best and hangs resume at worst.
+    #
+    # Consequence, stated plainly: with offload but no RTD3 the Quadro stays
+    # powered whenever the nvidia module is loaded — roughly 5-10 W idle on
+    # this chip. If battery life matters more than dGPU access, set
+    # services.xserver.videoDrivers = ["modesetting"] and drop hardware.nvidia;
+    # nothing else here depends on it.
+    powerManagement.finegrained = false;
+
+    prime = {
+      # Bus IDs from lspci: Intel 00:02.0, NVIDIA 01:00.0.
+      intelBusId = "PCI:0:2:0";
+      nvidiaBusId = "PCI:1:0:0";
+
+      # Render offload, not sync: the Intel iGPU drives all displays (it owns
+      # eDP-1 and both HDMI ports), and only commands prefixed with
+      # `nvidia-offload` execute on the Quadro.
+      offload = {
+        enable = true;
+        enableOffloadCmd = true; # provides the `nvidia-offload` wrapper
+      };
+    };
+  };
+
   # Firefox and mpv both probe LIBVA_DRIVER_NAME before guessing. Pinning it
   # avoids a fallback to i965 when both drivers are present in the store.
-  environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
+  environment.sessionVariables = {
+    LIBVA_DRIVER_NAME = "iHD";
+
+    # Pin Hyprland/aquamarine to the Intel card. DRM card numbers are assigned
+    # in probe order and already come up scrambled on this machine (nouveau
+    # took card0, i915 card1), so the by-path symlink is the only stable
+    # reference. Without this, wlroots may pick the Quadro, which drives no
+    # connectors here and yields a black screen.
+    AQ_DRM_DEVICES = "/dev/dri/by-path/pci-0000:00:02.0-card";
+  };
 
   environment.systemPackages = with pkgs; [
     libva-utils # vainfo — verify decode/encode entrypoints
