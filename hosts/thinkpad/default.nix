@@ -23,6 +23,7 @@
     ./hyprland.nix
     ./thinkpad-packages.nix
     ./power.nix
+    ./graphics.nix
   ];
 
   # Bootloader configuration
