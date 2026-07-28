@@ -11,6 +11,7 @@
     ../../modules/system/nix-common.nix
     ../../modules/system/locale.nix
     ../../modules/system/desktop.nix
+    ../../modules/system/console.nix
     ../../modules/services/tailscale.nix
 
     # User configuration
