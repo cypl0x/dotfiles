@@ -57,6 +57,24 @@
       xkb-options = config.services.xserver.xkb.options;
 
       dpms-timeout = 300; # same as consoleblank on the kernel VTs
+
+      # No pointer on tty5.
+      #
+      # kmscon has no "hide while typing" setting — that is a libinput feature,
+      # and kmscon does not use libinput. It reads evdev directly through its
+      # own uterm_input layer, which is also why two-finger scrolling does
+      # nothing here: a touchpad reports absolute multitouch, and turning that
+      # into wheel events is precisely the gesture interpretation libinput
+      # performs and kmscon lacks. No kmscon setting can produce it.
+      #
+      # Off is therefore the only way to get rid of the cursor. The cost is
+      # mouse text selection; scrollback is unaffected and stays on
+      # Shift+Up/Down and Shift+PgUp/PgDn.
+      #
+      # tty6 has none of this problem: cage/wlroots does use libinput, so
+      # scrolling works there and ghostty hides the pointer while typing on its
+      # own (home/terminals/ghostty.config:69).
+      mouse = false;
     };
 
   kmsconConfigDir = pkgs.writeTextFile {
@@ -166,10 +184,11 @@ in {
 
       environment = {
         # cage is wlroots, so it reads WLR_DRM_DEVICES rather than the
-        # AQ_DRM_DEVICES that aquamarine/Hyprland uses. Same reasoning as in
-        # graphics.nix: pin to the Intel iGPU by by-path, because DRM card
-        # numbers are probe-ordered and come up scrambled on this machine.
-        WLR_DRM_DEVICES = "/dev/dri/by-path/pci-0000:00:02.0-card";
+        # AQ_DRM_DEVICES that aquamarine/Hyprland uses. Same target, same
+        # reason, and the same colon trap: both parse the value as a
+        # colon-separated list, so this must be the udev symlink from
+        # graphics.nix and never a /dev/dri/by-path/ name.
+        WLR_DRM_DEVICES = "/dev/dri/intel-gpu";
 
         # No display manager sits in this path to set the keymap, so
         # libinput/xkbcommon have to be told directly.

@@ -74,12 +74,24 @@
     LIBVA_DRIVER_NAME = "iHD";
 
     # Pin Hyprland/aquamarine to the Intel card. DRM card numbers are assigned
-    # in probe order and already come up scrambled on this machine (nouveau
-    # took card0, i915 card1), so the by-path symlink is the only stable
-    # reference. Without this, wlroots may pick the Quadro, which drives no
-    # connectors here and yields a black screen.
-    AQ_DRM_DEVICES = "/dev/dri/by-path/pci-0000:00:02.0-card";
+    # in probe order and come up scrambled on this machine (the Quadro takes
+    # card0, i915 card1), so a stable reference is needed — without one,
+    # aquamarine can select the Quadro, which drives no connectors here.
+    #
+    # It must be the colon-free symlink from the udev rule below, NOT the
+    # /dev/dri/by-path/ name: AQ_DRM_DEVICES is a colon-separated *list*, and a
+    # PCI by-path contains colons, so aquamarine splits "pci-0000:00:02.0-card"
+    # into three nonexistent paths and aborts with "Found no gpus to use".
+    AQ_DRM_DEVICES = "/dev/dri/intel-gpu";
   };
+
+  # Colon-free stable name for the Intel GPU. Both AQ_DRM_DEVICES (aquamarine)
+  # and WLR_DRM_DEVICES (wlroots) parse their value as a colon-separated list,
+  # which rules out /dev/dri/by-path/ names for this purpose. ID_PATH_TAG is
+  # udev's punctuation-safe form of ID_PATH — here pci-0000_00_02_0.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ENV{ID_PATH_TAG}=="pci-0000_00_02_0", SYMLINK+="dri/intel-gpu"
+  '';
 
   environment.systemPackages = with pkgs; [
     libva-utils # vainfo — verify decode/encode entrypoints
