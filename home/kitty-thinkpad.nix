@@ -72,6 +72,14 @@ _: {
       color7 = "#DFDFDF";
       color15 = "#bbc2cf";
 
+      # Scrollback pager = neovim, which is what turns "browse the scrollback"
+      # into a real selection mode: evil motions, visual select, search, and
+      # `y` straight to the system clipboard. kitty's own recommended
+      # invocation for neovim >= 0.12 (nvim here is 0.12.4); nvim_open_term
+      # makes it interpret the ANSI colours kitty pipes in rather than showing
+      # the escape codes as text. `q` quits without the write prompt.
+      scrollback_pager = "nvim --cmd 'set eventignore=FileType' +'nnoremap q ZQ' +'call nvim_open_term(0, {})' +'set nomodified nolist clipboard=unnamedplus' +'$' -";
+
       # Enable kitty remote control (kitten @ ...). "yes" lets programs running
       # inside kitty drive it over the tty; listen_on additionally opens a unix
       # socket so *other* processes — a script, or the kitty on tty6 — can too.
@@ -158,14 +166,28 @@ _: {
       # output into the pager, using the OSC 133 marks that kitty's shell
       # integration emits. It is empty inside tmux or zellij — the multiplexer
       # renders the screen itself and never forwards those marks.
-      map ctrl+space>s>s show_scrollback
-      map ctrl+space>s>g show_last_command_output
-      map ctrl+space>s>k scroll_line_up
-      map ctrl+space>s>j scroll_line_down
+      # s>k / s>j jump a whole shell command at a time, not a line — the
+      # equivalent of ghostty's jump_to_prompt, and the only sane granularity
+      # for "take me back to what I ran before this". Line scrolling moves to
+      # shift+k/j (spelled with the modifier, per the collision note above).
+      # Both need the OSC 133 prompt marks, so both are inert inside tmux.
+      map ctrl+space>s>k scroll_to_prompt -1
+      map ctrl+space>s>j scroll_to_prompt 1
+      map ctrl+space>s>shift+k scroll_line_up
+      map ctrl+space>s>shift+j scroll_line_down
       map ctrl+space>s>u scroll_page_up
       map ctrl+space>s>d scroll_page_down
       map ctrl+space>s>t scroll_home
       map ctrl+space>s>b scroll_end
+      map ctrl+space>s>s show_scrollback
+      map ctrl+space>s>g show_last_command_output
+      # s>v — "visual mode": kitty has no vi/copy mode of its own, but the
+      # scrollback pager is nvim (see scrollback_pager), so this is the closest
+      # thing to tmux's prefix+[ or Doom's visual state — real evil motions,
+      # viw/V, / search, y to the system clipboard, q to leave.
+      # Bound on a letter, not `[`, because brackets sit behind AltGr on the
+      # DE layout.
+      map ctrl+space>s>v show_scrollback
 
       # Yank key-table (Ctrl+Space y ...) — the hints kitten, i.e. kitty's
       # native equivalent of tmux-thumbs/extrakto. `--program -` pastes the
