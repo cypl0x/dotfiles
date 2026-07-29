@@ -342,7 +342,7 @@
 
     emacs = {
       enable = true;
-      package = pkgs.emacs-gtk;
+      package = pkgs.emacs-git-pgtk;
       extraPackages = epkgs: [
         epkgs.vterm
         epkgs.eat
