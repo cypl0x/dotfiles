@@ -1,6 +1,20 @@
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
 
+;; Several third-party packages below (claude-code, ollama-buddy, ...) call
+;; transient-define-prefix at their top level to define a menu. transient is
+;; a macro, so straight's normal dependency handling — loading a dependency's
+;; *autoloads* before building a dependent package — isn't enough to make it
+;; visible; autoloads only provide lazy function stubs, not macros. Without
+;; the real feature loaded, `doom sync`'s autoload generator doesn't
+;; recognize transient-define-prefix and inlines the raw form into the
+;; dependent package's *-autoloads.el, which then fails to load with
+;; "Symbol's function definition is void: transient-define-prefix". `:tools
+;; magit` already builds transient earlier in this same sync, so a plain
+;; `require' here (not just `package!', which only registers/builds) is
+;; enough to make the macro available for everything built after this line.
+(require 'transient)
+
 ;; ---------------------------------------------------------------------------
 ;; UI / Editor
 ;; ---------------------------------------------------------------------------
