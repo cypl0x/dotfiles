@@ -12,6 +12,16 @@
 ;; ---------------------------------------------------------------------------
 
 (setq doom-font (font-spec :family "Maple Mono NF" :size 14))
+;; doom/increase-font-size resizes doom-font *and* doom-serif-font /
+;; doom-variable-pitch-font together (see doom-adjust-font-size). Left unset,
+;; those two fall back to whatever the system's serif/variable-pitch face
+;; resolves to — a font that may not exist at every size. If resizing any one
+;; of the three fails, Doom rolls back *all* of them, which is why growing
+;; the font silently no-ops while shrinking (which only needs smaller, more
+;; permissively-matched sizes) keeps working. Pin all three to the same
+;; scalable font so every step in the resize loop succeeds.
+(setq doom-variable-pitch-font (font-spec :family "Maple Mono NF" :size 14))
+(setq doom-serif-font (font-spec :family "Maple Mono NF" :size 14))
 (setq doom-theme 'doom-vibrant)
 (setq display-line-numbers-type t)
 
