@@ -172,7 +172,21 @@
       extraConfig = builtins.readFile ./shell/tmux.conf;
       plugins = with pkgs.tmuxPlugins; [
         extrakto
-        fzf-tmux-url
+        # fzf-tmux-url — fzf picker over the URLs in the pane. Its default
+        # binding is `prefix + u`, which shell/tmux.conf overrides with
+        # clear-history, so until now the plugin was loaded but unreachable.
+        # Same load-order rule as tmux-thumbs below: fzf-url.tmux reads
+        # @fzf-url-bind at load time, so the option rides with the plugin.
+        {
+          plugin = fzf-tmux-url;
+          extraConfig = ''
+            set -g @fzf-url-bind U
+            # Default 'screen' only scans the visible rows; a number scans that
+            # many lines of scrollback instead, so a URL that scrolled past is
+            # still reachable.
+            set -g @fzf-url-history-limit 5000
+          '';
+        }
         # tmux-thumbs — vimium-style hint labels over every match in the pane
         # (paths, hashes, UUIDs, IPs, URLs); press the label to grab it. This
         # is the "point at a thing already on screen" half of the problem;
