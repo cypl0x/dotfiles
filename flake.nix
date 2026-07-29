@@ -32,6 +32,10 @@
       url = "github:nix-community/authentik-nix/bf3c780157449d75ac8dfc184963d57d23f59e8c";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    emacs-overlay = {
+      url = "github:nix-community/emacs-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {
@@ -42,6 +46,7 @@
     blog,
     nix-openclaw,
     disko,
+    emacs-overlay,
     ...
   }: let
     system = "x86_64-linux";
@@ -111,6 +116,7 @@
         modules = [
           ./hosts/thinkpad
           inputs.nix-index-database.nixosModules.nix-index
+          {nixpkgs.overlays = [emacs-overlay.overlays.default];}
           home-manager.nixosModules.home-manager
           {
             home-manager = {
