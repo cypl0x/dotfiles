@@ -138,3 +138,66 @@ precmd() {
   __cmd_start_time=0
   __cmd_last=()
 }
+
+# ============================================================================
+# pick-from-screen — reuse something a previous command printed
+# ============================================================================
+# The shell never sees stdout. It goes straight to the pty, and only whoever
+# owns the scrollback keeps it — the multiplexer if there is one, the terminal
+# otherwise, and on a bare kernel VT nobody at all. So "copy that UUID from
+# the last command" is only solvable by asking the owner for the text back.
+#
+# tmux and zellij both expose their buffer to the CLI, so one keybinding can
+# cover both. A bare terminal exposes nothing, hence the graceful bail-out.
+#
+# Alt-v  words — UUIDs, hashes, paths, IPs
+# Alt-V  lines — a whole suggested command, e.g. from `tldr`
+#
+# Under tmux, prefix+Tab (extrakto) and prefix+g (tmux-thumbs) do this with
+# better ergonomics. This exists because it also works under zellij, and
+# because it never leaves the zsh line editor.
+
+__screen_dump() {
+  if [[ -n $TMUX ]]; then
+    # -J rejoins wrapped lines so a long URL doesn't arrive in two pieces.
+    tmux capture-pane -p -J -S -5000
+  elif [[ -n $ZELLIJ ]]; then
+    # No --path means STDOUT; no --ansi means plain text.
+    zellij action dump-screen --full
+  else
+    return 1
+  fi
+}
+
+__pick_from_screen() {
+  local mode=$1 dump sel
+  if ! dump=$(__screen_dump) || [[ -z $dump ]]; then
+    zle -M "pick-from-screen: needs tmux or zellij — nothing else hands the scrollback back"
+    return 1
+  fi
+
+  if [[ $mode == words ]]; then
+    # Split on anything unprintable-or-space, drop 1-char noise, dedup, then
+    # reverse so the most recent output is at the top of the picker.
+    sel=$(print -r -- "$dump" | tr -cs '[:graph:]' '\n' |
+      awk 'length >= 2 && !seen[$0]++' | tac |
+      fzf --height 40% --reverse --multi --prompt='screen word> ')
+  else
+    sel=$(print -r -- "$dump" | awk 'NF && !seen[$0]++' | tac |
+      fzf --height 40% --reverse --multi --prompt='screen line> ')
+  fi
+
+  # fzf exits non-zero when cancelled; either way redraw the prompt it ate.
+  if [[ -n $sel ]]; then
+    # Multi-select joins with spaces; strip fzf's trailing newline first.
+    LBUFFER+="${${sel%$'\n'}//$'\n'/ }"
+  fi
+  zle reset-prompt
+}
+
+_pick_word_from_screen() { __pick_from_screen words; }
+_pick_line_from_screen() { __pick_from_screen lines; }
+zle -N _pick_word_from_screen
+zle -N _pick_line_from_screen
+bindkey '^[v' _pick_word_from_screen
+bindkey '^[V' _pick_line_from_screen
