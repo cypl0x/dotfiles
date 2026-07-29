@@ -147,15 +147,15 @@ precmd() {
 # otherwise, and on a bare kernel VT nobody at all. So "copy that UUID from
 # the last command" is only solvable by asking the owner for the text back.
 #
-# tmux and zellij both expose their buffer to the CLI, so one keybinding can
-# cover both. A bare terminal exposes nothing, hence the graceful bail-out.
+# tmux, zellij and kitty all expose their buffer to the CLI, so one keybinding
+# can cover all three. Everything else exposes nothing, hence the bail-out.
 #
 # Alt-v  words — UUIDs, hashes, paths, IPs
 # Alt-V  lines — a whole suggested command, e.g. from `tldr`
 #
-# Under tmux, prefix+Tab (extrakto) and prefix+g (tmux-thumbs) do this with
-# better ergonomics. This exists because it also works under zellij, and
-# because it never leaves the zsh line editor.
+# Each host has a better native tool: prefix+Tab (extrakto) and prefix+g
+# (tmux-thumbs) under tmux, ctrl+space>y under kitty. This exists because it is
+# the same keybinding everywhere and never leaves the zsh line editor.
 
 __screen_dump() {
   if [[ -n $TMUX ]]; then
@@ -164,6 +164,10 @@ __screen_dump() {
   elif [[ -n $ZELLIJ ]]; then
     # No --path means STDOUT; no --ansi means plain text.
     zellij action dump-screen --full
+  elif [[ -n $KITTY_WINDOW_ID ]] && (( $+commands[kitten] )); then
+    # kitty needs no multiplexer: remote control hands back the scrollback.
+    # Requires allow_remote_control (set in home/kitty-thinkpad.nix).
+    kitten @ get-text --extent all --ansi=false 2>/dev/null
   else
     return 1
   fi
@@ -172,7 +176,7 @@ __screen_dump() {
 __pick_from_screen() {
   local mode=$1 dump sel
   if ! dump=$(__screen_dump) || [[ -z $dump ]]; then
-    zle -M "pick-from-screen: needs tmux or zellij — nothing else hands the scrollback back"
+    zle -M "pick-from-screen: needs tmux, zellij or kitty — nothing else hands the scrollback back"
     return 1
   fi
 
