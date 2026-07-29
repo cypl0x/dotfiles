@@ -7,3 +7,4 @@ result
 # ShellFish secrets
 home/shell/.shellfishrc.secrets
 .shellfishrc.secrets
+/.agent-shell/

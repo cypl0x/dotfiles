@@ -52,6 +52,7 @@
 (package! ollama-buddy)
 (package! copilot)
 (package! agent-shell)
+(package! aider)             ;; aider.el — CLI pair-programming, drives `aider` on PATH
 
 ;; MCP (Model Context Protocol) tooling
 (package! mcp)
@@ -95,6 +96,11 @@
 
 (package! multi-vterm
   :recipe (:host github :repo "suonlight/multi-vterm"))
+
+;; ghostel: terminal emulator powered by libghostty-vt (native module, no
+;; toolchain needed — downloads a prebuilt binary on first use).
+(package! ghostel)
+(package! evil-ghostel)      ;; evil-mode keybindings for ghostel buffers
 
 ;; ---------------------------------------------------------------------------
 ;; Reading

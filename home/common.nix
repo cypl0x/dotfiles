@@ -346,6 +346,7 @@
       extraPackages = epkgs: [
         epkgs.vterm
         epkgs.eat
+        epkgs.ghostel
       ];
     };
   };

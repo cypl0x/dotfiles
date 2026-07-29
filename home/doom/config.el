@@ -313,6 +313,28 @@
         (setq-local projectile-project-root default-directory))
       (apply orig-fn args))))
 
+;; ── monet — Claude Code IDE protocol bridge ────────────────────────────────
+;; Lets a claude-code.el session (SPC c c / C-c c above) see the current
+;; selection, buffer diagnostics, and open diff views over a local WebSocket
+;; — the same protocol the official VS Code / JetBrains extensions use.
+;; monet-start-server-function feeds claude-code.el the env vars
+;; (ENABLE_IDE_INTEGRATION, CLAUDE_CODE_SSE_PORT) needed to auto-connect, so
+;; every claude-code session starts wired up with no manual `/ide` step.
+(use-package! monet
+  :config
+  (monet-mode 1)
+  (add-hook 'claude-code-process-environment-functions
+            #'monet-start-server-function))
+
+;; ── aider.el — aider CLI pair-programming ──────────────────────────────────
+;; Model/backend (currently local ollama) is configured once in
+;; ~/.aider.conf.yml (home/common.nix), shared between the CLI and this
+;; package — no aider-args / API key duplicated here.
+(use-package! aider
+  :config
+  (global-set-key (kbd "C-c a") #'aider-transient-menu)
+  (aider-magit-setup-transients))
+
 ;; eat — terminal emulator in Eshell.
 ;; Provided by Nix (emacsPackages.eat); no package! declaration needed.
 (after! eat
@@ -339,6 +361,24 @@
                   (define-key map (kbd key) #'vterm--self-insert)))))
 
   (define-key vterm-mode-map (kbd "<f9>") #'+vterm-lock-mode))
+
+;; ── ghostel — libghostty-powered terminal emulator ─────────────────────────
+;; Native module (Zig) handles PTY/rendering; downloads its prebuilt binary
+;; on first use — no C toolchain needed, unlike vterm above.
+(use-package! ghostel
+  :bind ("C-x m" . ghostel)
+  :config
+  (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t))
+
+(use-package! ghostel-eshell
+  :hook (eshell-load . ghostel-eshell-visual-command-mode))
+
+(use-package! ghostel-compile
+  :hook (after-init . ghostel-compile-global-mode))
+
+(use-package! evil-ghostel
+  :after (ghostel evil)
+  :hook (ghostel-mode . evil-ghostel-mode))
 
 (with-eval-after-load 'eshell
   (load! "lisp/functions"))
