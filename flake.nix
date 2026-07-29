@@ -36,6 +36,13 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # AI coding agent CLIs (auto-bumped upstream). Prefer this over stale
+    # nixpkgs packages for harnesses like grok/claude-code. Do not set
+    # inputs.nixpkgs.follows — keep numtide's pinned nixpkgs so their
+    # binary cache hits (cache.numtide.com; see modules/system/nix-common.nix).
+    # Packages are wired in a later step; input is locked first so the cache
+    # is active before we start pulling agent derivations.
+    llm-agents.url = "github:numtide/llm-agents.nix";
   };
 
   outputs = inputs @ {
