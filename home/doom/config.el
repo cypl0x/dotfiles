@@ -113,6 +113,14 @@
 (map! "M-ö" #'previous-buffer
       "M-ä" #'next-buffer)
 
+;; Font resize on German keyboard layout — C-M-=/C-M--/C-+ are an awkward
+;; multi-modifier reach on QWERTZ (no unshifted "=" key at all). ö/ä/ü sit
+;; right next to each other and take Ctrl cleanly, same rationale as the
+;; buffer-cycling remap above.
+(map! "C-ö" #'doom/decrease-font-size
+      "C-ä" #'doom/increase-font-size
+      "C-ü" #'doom/reset-font-size)
+
 ;; ---------------------------------------------------------------------------
 ;; Packages
 ;; ---------------------------------------------------------------------------
