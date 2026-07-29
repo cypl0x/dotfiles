@@ -10,6 +10,8 @@ _: {
   #   warp      → proprietary; theme colours only, no keybind file
 
   home.file = {
+    # kitty's `tab_bar_style custom` looks for this exact path.
+    ".config/kitty/tab_bar.py".source = ./terminals/kitty-tab-bar.py;
     ".config/ghostty/config".source = ./terminals/ghostty.config;
     ".config/ghostty/ghostty-tabs.css".source = ./terminals/ghostty-tabs.css;
     ".config/alacritty/alacritty.toml".source = ./terminals/alacritty.toml;

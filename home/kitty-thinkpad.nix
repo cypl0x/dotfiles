@@ -6,20 +6,27 @@ _: {
       font_family = "Maple Mono NF";
       font_size = 12;
 
-      # Tab bar layout (tmux-like).
-      # Vertical (left-edge) tabs need kitty >= 0.48. Your pinned nixpkgs
-      # still ships 0.47.4, whose parser silently falls back to "bottom" for
-      # unknown edges — so setting "left" is harmless now and auto-activates
-      # vertical tabs the moment nixpkgs bumps kitty to 0.48.
+      # Tab bar layout (tmux-like). kitty 0.48 is installed, so the left edge
+      # really is a vertical tab strip now — the thing ghostty, wezterm and
+      # zellij all lack.
       tab_bar_edge = "left";
-      tab_bar_style = "powerline";
+      # "custom" loads ~/.config/kitty/tab_bar.py (home/terminals/kitty-tab-bar.py),
+      # which adds a per-process Nerd Font icon and then delegates to kitty's
+      # own powerline renderer — so this is still powerline styling, with the
+      # icons the declarative template cannot express.
+      tab_bar_style = "custom";
+      tab_powerline_style = "slanted";
+      # Width of the vertical strip, in cells.
+      tab_bar_min_tabs = 1;
       tab_bar_background = "#242730";
       active_tab_foreground = "#1c1f24";
       active_tab_background = "#51afef";
-      inactive_tab_foreground = "#bbc2cf";
+      active_tab_font_style = "bold";
+      inactive_tab_foreground = "#62686E";
       inactive_tab_background = "#242730";
-      tab_title_template = " {index}:{title} ";
-      active_tab_title_template = " {index}:{title} ";
+      # The icon is prepended by tab_bar.py, so the template only owns the rest.
+      tab_title_template = "{index}:{title}";
+      active_tab_title_template = "{index}:{title}";
       # Layouts: "splits" must be enabled (and listed first, so it is the
       # startup layout) for `launch --location=vsplit/hsplit` to work at all.
       # Note: "startup_layout" is NOT a kitty option — kitty ignores it and
@@ -65,8 +72,13 @@ _: {
       color7 = "#DFDFDF";
       color15 = "#bbc2cf";
 
-      # Enable kitty remote control (kitty @ ...)
+      # Enable kitty remote control (kitten @ ...). "yes" lets programs running
+      # inside kitty drive it over the tty; listen_on additionally opens a unix
+      # socket so *other* processes — a script, or the kitty on tty6 — can too.
+      # The socket lives in XDG_RUNTIME_DIR, which is mode 0700, so this does
+      # not widen access beyond the user.
       allow_remote_control = "yes";
+      listen_on = "unix:/run/user/1000/kitty-{kitty_pid}";
     };
 
     # Doom-like leader emulation (Ctrl+Space) using kitty multi-key shortcuts.
@@ -81,14 +93,25 @@ _: {
       map ctrl+space>k neighboring_window top
       map ctrl+space>l neighboring_window right
 
-      # Pane resize (Shift+H/J/K/L)
-      map ctrl+space>H resize_window narrower 5
-      map ctrl+space>J resize_window shorter 3
-      map ctrl+space>K resize_window taller 3
-      map ctrl+space>L resize_window wider 5
+      # Pane resize.
+      #
+      # These MUST be spelled shift+h, not H. kitty normalises a bare uppercase
+      # letter to its lowercase key with no shift modifier, so `map ctrl+space>H`
+      # parsed to exactly the same trigger as `map ctrl+space>h` and silently
+      # replaced it — which is why ctrl+space>h used to resize the window
+      # instead of focusing the split to its left.
+      map ctrl+space>shift+h resize_window narrower 5
+      map ctrl+space>shift+j resize_window shorter 3
+      map ctrl+space>shift+k resize_window taller 3
+      map ctrl+space>shift+l resize_window wider 5
 
       # Window key-table equivalents (Ctrl+Space w ...)
       map ctrl+space>w>w focus_visible_window
+      # hjkl again under the w table, for when the leader is already half-typed.
+      map ctrl+space>w>h neighboring_window left
+      map ctrl+space>w>j neighboring_window bottom
+      map ctrl+space>w>k neighboring_window top
+      map ctrl+space>w>l neighboring_window right
       # vim convention: v = vertical split = side-by-side (kitty "vsplit"),
       # s = horizontal split = stacked (kitty "hsplit"). These used to be
       # swapped, so "v" produced a top/bottom split.
@@ -127,6 +150,34 @@ _: {
       map ctrl+space>o>t new_tab
       map ctrl+space>o>v launch --location=vsplit --cwd=current
       map ctrl+space>o>s launch --location=hsplit --cwd=current
+
+      # Scroll / search key-table (Ctrl+Space s ...) — mirrors the s table in
+      # home/terminals/ghostty.config.
+      #
+      # s>g is kitty's killer feature: it pulls JUST the previous command's
+      # output into the pager, using the OSC 133 marks that kitty's shell
+      # integration emits. It is empty inside tmux or zellij — the multiplexer
+      # renders the screen itself and never forwards those marks.
+      map ctrl+space>s>s show_scrollback
+      map ctrl+space>s>g show_last_command_output
+      map ctrl+space>s>k scroll_line_up
+      map ctrl+space>s>j scroll_line_down
+      map ctrl+space>s>u scroll_page_up
+      map ctrl+space>s>d scroll_page_down
+      map ctrl+space>s>t scroll_home
+      map ctrl+space>s>b scroll_end
+
+      # Yank key-table (Ctrl+Space y ...) — the hints kitten, i.e. kitty's
+      # native equivalent of tmux-thumbs/extrakto. `--program -` pastes the
+      # match onto the command line; `--program @` copies it to the clipboard.
+      # Works without any multiplexer, which is the whole point.
+      map ctrl+space>y>y kitten hints --type word --program -
+      map ctrl+space>y>l kitten hints --type line --program -
+      map ctrl+space>y>p kitten hints --type path --program -
+      map ctrl+space>y>h kitten hints --type hash --program -
+      map ctrl+space>y>n kitten hints --type linenum
+      map ctrl+space>y>u kitten hints --type url --program @
+      map ctrl+space>y>o kitten hints --type url
     '';
   };
 }
