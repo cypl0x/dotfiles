@@ -311,6 +311,27 @@
   (add-hook 'eshell-mode-hook #'eat-eshell-mode)
   (setq eat-term-name "xterm-256color"))
 
+;; ── vterm key lock — zellij Ctrl-g-style raw passthrough toggle ───────────
+;; vterm reserves a handful of chords (C-c, C-x, C-g, C-u, C-h, C-l, M-x,
+;; M-o, C-v, M-v, C-y — see `vterm-keymap-exceptions') for Emacs instead of
+;; forwarding them to the terminal. CLIs with their own handling for those
+;; chords (Claude Code's C-c to interrupt, C-g to cancel, …) fight with
+;; Doom's global bindings as a result. <f9> locks/unlocks the current vterm
+;; buffer, forwarding every reserved chord straight to the terminal while
+;; locked.
+(after! vterm
+  (add-to-list 'vterm-keymap-exceptions "<f9>")
+
+  (define-minor-mode +vterm-lock-mode
+    "Forward vterm's reserved Emacs chords straight to the terminal."
+    :lighter " Locked"
+    :keymap (let ((map (make-sparse-keymap)))
+              (dolist (key vterm-keymap-exceptions map)
+                (unless (equal key "<f9>")
+                  (define-key map (kbd key) #'vterm--self-insert)))))
+
+  (define-key vterm-mode-map (kbd "<f9>") #'+vterm-lock-mode))
+
 (with-eval-after-load 'eshell
   (load! "lisp/functions"))
 
