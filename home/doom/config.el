@@ -246,7 +246,7 @@
 ;;   s    stage prefix                 z  stash prefix
 ;; Below we fill in the remaining slots with our extra tools.
 (map! :leader
-      (:prefix ("g" . "git")
+      (:prefix-map ("g" . "git")
        ;; ── Inline annotations (blamer) ──────────────────────────────────
        ;; SPC g B  = magit-blame-addition  (line-by-line, enter Magit blame)
        ;; SPC g a  = blamer overlay        (idle, non-intrusive, current line)
