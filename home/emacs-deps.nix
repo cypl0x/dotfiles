@@ -18,8 +18,10 @@
     # nil (Nix LSP) is installed system-wide in hosts/thinkpad
     # dart LSP is bundled with the dart SDK in hosts/thinkpad
 
-    # treesitter
+    # treesitter (:tools tree-sitter module — required by lang/dart, lang/nix,
+    # lang/rust's +tree-sitter flags; doom doctor errors without it)
     tree-sitter-grammars.tree-sitter-nix
+    # tree-sitter-grammars.tree-sitter-dart # conflicts with tree-sitter-nix (queries/tags.scm)
     # tree-sitter-grammars.tree-sitter-rust # conflicts with tree-sitter nix
     # tree-sitter-grammars.tree-sitter-elisp
     # tree-sitter-grammars.tree-sitter-elisp
@@ -48,6 +50,16 @@
 
     # direnv integration (tools/direnv module)
     direnv
+
+    # doom doctor: linters/formatters/screenshot tool it looks for on PATH
+    nixfmt # lang/nix nix-format-buffer
+    shellcheck # lang/sh script linting
+    html-tidy # lang/web HTML formatting
+    stylelint # lang/web CSS linting
+    js-beautify # lang/web JS/CSS/HTML formatting
+    ktlint # lang/kotlin flycheck-kotlin
+    gnuplot # lang/org +gnuplot, org-plot/gnuplot
+    maim # lang/org org-download-clipboard
 
     # app-launcher.el: window focus and .desktop file launching
     wmctrl # window switching via wmctrl -a
