@@ -31,7 +31,11 @@ ICONS = {
     "gitui": "",
     "lazygit": "",
     "nvim": "",
+    "neovim": "",
     "vim": "",
+    "vi": "",
+    "hx": "",
+    "helix": "",
     "tmux": "",
     "zellij": "󰖲",
     "htop": "󱄖",
@@ -54,8 +58,35 @@ ICONS = {
     "emacsclient": "",
     "yazi": "",
     "claude": "󰚩",
+    "k9s": "󱃾",
+    "lazydocker": "󰡨",
+    "man": "",
+    "journalctl": "",
+    "systemctl": "",
+    "nix": "",
+    "nixos-rebuild": "",
+    "make": "",
+    "fzf": "",
 }
 FALLBACK_ICON = ""
+
+# Processes that are never what the tab is "about" — they wrap the interesting
+# one, so a tab running `sudo nvim` should show the nvim icon, not a shell.
+TRANSPARENT = frozenset({"sudo", "doas", "env", "sh", "dash", "nix-shell", "script"})
+
+
+def _normalize(argv0: str) -> str:
+    """Reduce an argv[0] to a plain program name.
+
+    Nix stores real binaries under paths like
+    /nix/store/<hash>-neovim-unwrapped-0.12.4/bin/nvim and installs wrappers
+    named .nvim-wrapped, so both the directory and the decorations have to go
+    before the name can be looked up.
+    """
+    name = os.path.basename(argv0)
+    if name.startswith("."):
+        name = name[1:]
+    return name.removesuffix("-wrapped")
 
 
 def _icon_for(tab_id: int) -> str:
@@ -73,18 +104,24 @@ def _icon_for(tab_id: int) -> str:
         if window is None:
             return FALLBACK_ICON
         # foreground_processes is the process group attached to the tty, i.e.
-        # what the user is actually looking at, not the shell that spawned it.
-        procs = window.child.foreground_processes
-        if not procs:
-            return FALLBACK_ICON
-        cmdline = procs[-1].get("cmdline") or []
-        if not cmdline:
-            return FALLBACK_ICON
-        name = os.path.basename(cmdline[0])
-        # Strip the interpreter so `python3 foo.py` and wrappers like
-        # `.nvim-wrapped` still resolve to a sensible name.
-        name = name.lstrip(".").removesuffix("-wrapped")
-        return ICONS.get(name, FALLBACK_ICON)
+        # what the user is looking at rather than the shell that spawned it.
+        # It can hold several entries (a pipeline, or sudo wrapping an editor),
+        # and the interesting one is not reliably first or last — so prefer any
+        # process we have an icon for, scanning newest first.
+        names = []
+        for proc in reversed(window.child.foreground_processes):
+            cmdline = proc.get("cmdline") or []
+            if not cmdline:
+                continue
+            name = _normalize(cmdline[0])
+            if name in TRANSPARENT and len(cmdline) > 1:
+                # `sudo nvim foo` — the argument is the real program.
+                name = _normalize(cmdline[1])
+            if name in ICONS:
+                return ICONS[name]
+            names.append(name)
+        # Nothing recognised: a plain shell prompt is the common case.
+        return ICONS.get(names[0], FALLBACK_ICON) if names else FALLBACK_ICON
     except Exception:
         return FALLBACK_ICON
 
