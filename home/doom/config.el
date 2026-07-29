@@ -63,12 +63,10 @@
         :leader
         "y" #'consult-yank-pop))
 
-;; Completion popup (company, e.g. C-SPC): C-j/C-k wrap around at the ends of
-;; the candidate list. Doom already binds C-j/C-k to company-select-next/
-;; previous; wrap-around is off by default. The minibuffer (vertico) already
-;; wraps via `vertico-cycle', which Doom's vertico module sets to t.
-(after! company
-  (setq company-selection-wrap-around t))
+;; Completion popup (corfu, e.g. C-SPC): wrap-around at the ends of the
+;; candidate list is already on via `corfu-cycle' (set by Doom's corfu
+;; module). The minibuffer (vertico) already wraps via `vertico-cycle',
+;; which Doom's vertico module also sets to t.
 
 (after! vertico
   (map! :map vertico-map
