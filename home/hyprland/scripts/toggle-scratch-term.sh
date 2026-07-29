@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # Drop-down terminal (Yakuake-style), resilient to `exit`.
 #
-# The dedicated Ghostty lives on the hidden `special:term` workspace and is
+# The dedicated kitty lives on the hidden `special:term` workspace and is
 # only shown/hidden on toggle (redraw, no relaunch). Two quirks handled here:
 #   1. If the user typed `exit`, the terminal is gone — respawn when missing.
 #   2. Hyprland won't hold a floating special-workspace window at y=0 via a
 #      static windowrule, so we pin it to the top edge each time we reveal it.
 set -euo pipefail
 
-class="com.ghostty.term"
+class="com.kitty.term"
 # Top-anchored geometry (1920x1080 eDP): 1766×921, x=77 centres horizontally
 # with 77px L/R margins, y=82 clears the 74px top waybar, 77px bottom margin.
-# We force BOTH size and position on show — Ghostty's window-save-state restores
-# its previous size otherwise, overriding the windowrule.
+# We force BOTH size and position on show — a terminal that remembers its own
+# geometry would otherwise override the windowrule.
 pos_x=77 pos_y=82
 size_w=1766 size_h=921
 
@@ -21,7 +21,7 @@ if hyprctl monitors | grep -q "special:term"; then
   hyprctl dispatch togglespecialworkspace term # hide
 else
   if ! hyprctl clients | grep -q "class: ${class}$"; then
-    hyprctl dispatch exec "[workspace special:term silent] ghostty --class=${class} --background-opacity=0.9"
+    hyprctl dispatch exec "[workspace special:term silent] kitty --class=${class} -o background_opacity=0.9"
     for _ in $(seq 1 40); do
       hyprctl clients | grep -q "class: ${class}$" && break
       sleep 0.05

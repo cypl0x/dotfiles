@@ -72,8 +72,8 @@
       # Shift+Up/Down and Shift+PgUp/PgDn.
       #
       # tty6 has none of this problem: cage/wlroots does use libinput, so
-      # scrolling works there and ghostty hides the pointer while typing on its
-      # own (home/terminals/ghostty.config:69).
+      # scrolling works there and kitty hides the pointer while typing on its
+      # own (kitty defaults mouse_hide_wait to 3s).
       mouse = false;
     };
 
@@ -93,7 +93,7 @@ in {
   #   tty1      ly -> Hyprland
   #   tty2-4    agetty on the kernel VT (modules/system/console.nix)
   #   tty5      kmscon
-  #   tty6      cage + ghostty
+  #   tty6      cage + kitty
   #
   # services.kmscon.enable is deliberately NOT used: that module sets
   # aliases = [ "autovt@.service" ] and suppresses getty@.service outright, so
@@ -153,18 +153,18 @@ in {
       };
     };
 
-    # tty6: cage (wlroots kiosk compositor) running a single ghostty.
+    # tty6: cage (wlroots kiosk compositor) running a single kitty.
     #
     # services.cage is unusable here — that module hardcodes tty1, which ly
     # already owns, down to the unit name. This is its unit re-pointed at tty6.
     #
-    # Unlike kmscon this is a full Wayland stack, so ghostty gets true colour,
+    # Unlike kmscon this is a full Wayland stack, so kitty gets true colour,
     # the same config it uses under Hyprland, and — the reason it earns a VT —
     # the kitty keyboard protocol, which is what makes shift+Enter
     # distinguishable from Enter in Claude Code. Neither the kernel VT nor
     # kmscon can do that; both drop the modifier and send a bare CR.
     "autovt@tty6" = {
-      description = "Cage + ghostty on tty6";
+      description = "Cage + kitty on tty6";
       after = [
         "systemd-user-sessions.service"
         "systemd-logind.service"
@@ -198,25 +198,28 @@ in {
 
       serviceConfig = {
         # -s allows VT switching, without which ctrl+alt+F<n> would be trapped
-        # inside cage. -d drops client-side decorations, so ghostty fills the
+        # inside cage. -d drops client-side decorations, so kitty fills the
         # screen instead of drawing a titlebar nothing can move.
         #
-        # --gtk-single-instance=false overrides home/terminals/ghostty.config,
-        # which sets it true. This unit shares XDG_RUNTIME_DIR with the Hyprland
-        # session, so a single-instance ghostty would hand the launch off to the
-        # instance already running there over D-Bus and exit immediately —
-        # taking cage, and the whole tty6 console, with it.
+        # No single-instance guard is needed here: kitty only joins an existing
+        # process when explicitly started with --single-instance. ghostty was
+        # the opposite — it defaulted to joining the Hyprland session's
+        # instance over D-Bus and exiting immediately, taking cage and the
+        # whole tty6 console with it.
+        #
+        # --listen-on gives this console its own remote-control socket, so a
+        # kitty under Hyprland can drive it with `kitten @ --to`.
         ExecStart = lib.concatStringsSep " " [
           "${pkgs.cage}/bin/cage"
           "-s"
           "-d"
           "--"
-          "${pkgs.ghostty}/bin/ghostty"
-          "--gtk-single-instance=false"
+          "${pkgs.kitty}/bin/kitty"
+          "--listen-on=unix:/run/user/1000/kitty-tty6"
         ];
         User = "wap";
 
-        # on-success, not always: quitting ghostty exits cage 0 and should give
+        # on-success, not always: quitting kitty exits cage 0 and should give
         # a fresh terminal, but a failure to acquire the VT exits 1 and must
         # not be retried, or an accidental start off-VT loops forever.
         Restart = "on-success";
