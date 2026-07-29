@@ -173,6 +173,44 @@
       plugins = with pkgs.tmuxPlugins; [
         extrakto
         fzf-tmux-url
+        # tmux-thumbs — vimium-style hint labels over every match in the pane
+        # (paths, hashes, UUIDs, IPs, URLs); press the label to grab it. This
+        # is the "point at a thing already on screen" half of the problem;
+        # extrakto (prefix + Tab) is the "fuzzy-search the scrollback" half.
+        #
+        # Options MUST be set before the plugin's own run-shell, because
+        # tmux-thumbs.tmux reads @thumbs-key at load time to create its
+        # binding. home-manager emits a plugin's `extraConfig` immediately
+        # before its run-shell line, whereas programs.tmux.extraConfig lands
+        # after every plugin — which is why this is attached to the plugin.
+        {
+          plugin = tmux-thumbs;
+          extraConfig = ''
+            # Default key is `space`, which shell/tmux.conf already binds to
+            # send-prefix. `g` = grab, and is free in the prefix table.
+            set -g @thumbs-key g
+            # -w copies to the *system* clipboard via OSC52 as well as the tmux
+            # buffer. Works over SSH and under any OSC52-capable terminal
+            # (ghostty has clipboard-write = allow), unlike a wl-copy call,
+            # which is dead on the kernel VT and on the remote end of an SSH
+            # session.
+            set -g @thumbs-command 'tmux set-buffer -w -- {}'
+            # Upcase (Shift+label) types the match into the pane instead.
+            set -g @thumbs-upcase-command 'tmux set-buffer -- {} && tmux paste-buffer'
+            # Collapse duplicate matches onto one hint, and hand out the short
+            # hints starting from the bottom of the screen — the newest output
+            # is what you almost always want.
+            set -g @thumbs-unique enabled
+            set -g @thumbs-reverse enabled
+            # Doom Vibrant.
+            set -g @thumbs-fg-color '#7bc275'
+            set -g @thumbs-bg-color '#242730'
+            set -g @thumbs-hint-fg-color '#fcce7b'
+            set -g @thumbs-hint-bg-color '#1c1f24'
+            set -g @thumbs-select-fg-color '#51afef'
+            set -g @thumbs-select-bg-color '#242730'
+          '';
+        }
       ];
     };
 
