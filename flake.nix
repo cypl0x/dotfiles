@@ -40,8 +40,7 @@
     # nixpkgs packages for harnesses like grok/claude-code. Do not set
     # inputs.nixpkgs.follows — keep numtide's pinned nixpkgs so their
     # binary cache hits (cache.numtide.com; see modules/system/nix-common.nix).
-    # Packages are wired in a later step; input is locked first so the cache
-    # is active before we start pulling agent derivations.
+    # Consumed in modules/system/packages.nix via specialArgs.
     llm-agents.url = "github:numtide/llm-agents.nix";
   };
 
@@ -119,7 +118,10 @@
       # ThinkPad laptop configuration (using unstable)
       thinkpad = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = {inherit datapass;};
+        specialArgs = {
+          inherit datapass;
+          inherit (inputs) llm-agents;
+        };
         modules = [
           ./hosts/thinkpad
           inputs.nix-index-database.nixosModules.nix-index
@@ -151,7 +153,10 @@
       # Hetzner Dedicated AX41-NVMe (Finnland, HEL1)
       inari = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = {inherit blog;};
+        specialArgs = {
+          inherit blog;
+          inherit (inputs) llm-agents;
+        };
         modules = [
           inputs."authentik-nix".nixosModules.default
           inputs.nix-index-database.nixosModules.nix-index
