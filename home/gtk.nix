@@ -1,4 +1,8 @@
-{pkgs, ...}: let
+{
+  pkgs,
+  lib,
+  ...
+}: let
   # Doom Vibrant (Henrik Lissner) palette mapped onto the libadwaita named
   # colours. GTK4/libadwaita apps ignore the classic theme engine, so the only
   # reliable way to recolour them is to redefine these @define-color tokens.
@@ -51,8 +55,46 @@ in {
     gtk4.theme = null;
   };
 
-  home.file = {
-    ".config/gtk-4.0/gtk.css".text = doomVibrantCss;
-    ".config/gtk-3.0/gtk.css".text = doomVibrantCss;
+  # Portal Settings + libadwaita/Flatpak "system appearance" read this. Without
+  # prefer-dark, xdg-desktop-portal-gtk reports color-scheme=0 (no preference)
+  # and browsers like Zen fall back to a bright chrome.
+  dconf.settings = {
+    "org/gnome/desktop/interface" = {
+      color-scheme = "prefer-dark";
+      gtk-theme = "adw-gtk3-dark";
+      icon-theme = "Papirus-Dark";
+      cursor-theme = "Adwaita";
+    };
+  };
+
+  # Qt apps follow the GTK dark theme instead of a default bright style.
+  qt = {
+    enable = true;
+    platformTheme.name = "gtk3";
+    style.name = "adwaita-dark";
+  };
+
+  home = {
+    file = {
+      ".config/gtk-4.0/gtk.css".text = doomVibrantCss;
+      ".config/gtk-3.0/gtk.css".text = doomVibrantCss;
+    };
+
+    # Flatpak (Zen, libadwaita apps, …): host GTK config for themes that honour
+    # it, plus Adwaita:dark (ships inside most runtimes — adw-gtk3-dark does not).
+    # Zen's own chrome follows org.freedesktop.appearance color-scheme via the
+    # GTK Settings portal (wired in hosts/thinkpad/hyprland.nix), not GTK_THEME.
+    # Re-run on every activation; flatpak override is idempotent.
+    activation.flatpakDarkTheme = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      if command -v flatpak >/dev/null 2>&1; then
+        $DRY_RUN_CMD flatpak override --user \
+          --filesystem=xdg-config/gtk-3.0:ro \
+          --filesystem=xdg-config/gtk-4.0:ro \
+          --filesystem=xdg-data/icons:ro \
+          --env=GTK_THEME=Adwaita:dark \
+          --env=GTK_APPLICATION_PREFER_DARK_THEME=1 \
+          || true
+      fi
+    '';
   };
 }
