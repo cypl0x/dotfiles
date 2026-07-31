@@ -65,78 +65,127 @@ in {
 
   # ── Config files ─────────────────────────────────────────────────────────
 
-  home.file = {
-    ".config/hypr/hyprlock.conf".source = ./hyprland/hyprlock.conf;
-    ".config/hypr/hypridle.conf".source = ./hyprland/hypridle.conf;
-    ".config/hypr/hyprpaper.conf".source = ./hyprland/hyprpaper.conf;
-    ".config/hypr/wallpaper.png".source = doomWallpaper;
-    ".config/eww/eww.yuck".source = ./hyprland/eww/eww.yuck;
-    ".config/eww/eww.scss".source = ./hyprland/eww/eww.scss;
-    ".config/eww/scripts/net.sh" = {
-      source = ./hyprland/eww/scripts/net.sh;
-      executable = true;
+  # PCManFM / libfm defaults. Fully managed: prefs set in the GUI may be
+  # rewritten on the next home-manager activation (add them here if you care).
+  # view_mode: icon | compact | thumbnail | list  (list = detailed list view)
+  # sort: <col>;ascending|descending  — cols: name, mtime, size, type, …
+  xdg.configFile = {
+    # force: PCManFM rewrites this when the GUI is used, and a stale
+    # pcmanfm.conf.bak would then make HM activation refuse to back up.
+    "pcmanfm/default/pcmanfm.conf" = {
+      force = true;
+      text = ''
+        [config]
+        bm_open_method=0
+        # "Open Terminal Here" — matches $terminal in hyprland.conf
+        terminal=kitty
+
+        [volume]
+        mount_on_startup=1
+        mount_removable=1
+        autorun=1
+
+        [ui]
+        always_show_tabs=0
+        max_tab_chars=32
+        win_width=960
+        win_height=640
+        side_pane_mode=dirtree
+        # Detailed list view (Name / Size / Type / Modified columns)
+        view_mode=list
+        show_hidden=1
+        # Newest files first
+        sort=mtime;descending;
+        toolbar=newtab;navigation;home;
+        show_statusbar=1
+        pathbar_mode_buttons=0
+        close_on_unmount=1
+        change_tab_on_drop=1
+      '';
     };
-    ".config/hypr/scripts/run-or-raise.sh" = {
-      source = ./hyprland/scripts/run-or-raise.sh;
-      executable = true;
+    "libfm/libfm.conf" = {
+      force = true;
+      text = ''
+        [config]
+        terminal=kitty
+      '';
     };
-    ".config/hypr/scripts/set-wallpaper.sh" = {
-      source = ./hyprland/scripts/set-wallpaper.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/lock-stats.sh" = {
-      source = ./hyprland/scripts/lock-stats.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/window-switcher.sh" = {
-      source = ./hyprland/scripts/window-switcher.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/doom-buffer-switcher.sh" = {
-      source = ./hyprland/scripts/doom-buffer-switcher.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/hypr-cheatsheet.sh" = {
-      source = ./hyprland/scripts/hypr-cheatsheet.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/waybar-claude.sh" = {
-      source = ./hyprland/scripts/waybar-claude.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/rofi-run-cmd.sh" = {
-      source = ./hyprland/scripts/rofi-run-cmd.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/firefox-tab-switcher.sh" = {
-      source = ./hyprland/scripts/firefox-tab-switcher.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/claude-notify.sh" = {
-      source = ./hyprland/scripts/claude-notify.sh;
-      executable = true;
-    };
-    ".config/hypr/scripts/toggle-scratch-term.sh" = {
-      source = ./hyprland/scripts/toggle-scratch-term.sh;
-      executable = true;
-    };
-    ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
-    ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
-    ".config/swaync/config.json".source = ./hyprland/swaync/config.json;
-    ".config/swaync/style.css".source = ./hyprland/swaync/style.css;
-    ".config/rofi/doom-vibrant.rasi".source = ./hyprland/rofi/doom-vibrant.rasi;
   };
 
-  # ── Hyprland-aware session variables ─────────────────────────────────────
+  home = {
+    file = {
+      ".config/hypr/hyprlock.conf".source = ./hyprland/hyprlock.conf;
+      ".config/hypr/hypridle.conf".source = ./hyprland/hypridle.conf;
+      ".config/hypr/hyprpaper.conf".source = ./hyprland/hyprpaper.conf;
+      ".config/hypr/wallpaper.png".source = doomWallpaper;
+      ".config/eww/eww.yuck".source = ./hyprland/eww/eww.yuck;
+      ".config/eww/eww.scss".source = ./hyprland/eww/eww.scss;
+      ".config/eww/scripts/net.sh" = {
+        source = ./hyprland/eww/scripts/net.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/run-or-raise.sh" = {
+        source = ./hyprland/scripts/run-or-raise.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/set-wallpaper.sh" = {
+        source = ./hyprland/scripts/set-wallpaper.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/lock-stats.sh" = {
+        source = ./hyprland/scripts/lock-stats.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/window-switcher.sh" = {
+        source = ./hyprland/scripts/window-switcher.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/doom-buffer-switcher.sh" = {
+        source = ./hyprland/scripts/doom-buffer-switcher.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/hypr-cheatsheet.sh" = {
+        source = ./hyprland/scripts/hypr-cheatsheet.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/waybar-claude.sh" = {
+        source = ./hyprland/scripts/waybar-claude.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/rofi-run-cmd.sh" = {
+        source = ./hyprland/scripts/rofi-run-cmd.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/firefox-tab-switcher.sh" = {
+        source = ./hyprland/scripts/firefox-tab-switcher.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/claude-notify.sh" = {
+        source = ./hyprland/scripts/claude-notify.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/toggle-scratch-term.sh" = {
+        source = ./hyprland/scripts/toggle-scratch-term.sh;
+        executable = true;
+      };
+      ".config/waybar/config.jsonc".source = ./hyprland/waybar/config.jsonc;
+      ".config/waybar/style.css".source = ./hyprland/waybar/style.css;
+      ".config/swaync/config.json".source = ./hyprland/swaync/config.json;
+      ".config/swaync/style.css".source = ./hyprland/swaync/style.css;
+      ".config/rofi/doom-vibrant.rasi".source = ./hyprland/rofi/doom-vibrant.rasi;
+    };
 
-  home.sessionVariables = {
     # XDG Wayland hints (supplement what Hyprland sets in the session)
-    NIXOS_OZONE_WL = "1";
-    MOZ_ENABLE_WAYLAND = "1";
-    QT_QPA_PLATFORM = "wayland;xcb";
-    SDL_VIDEODRIVER = "wayland";
-    CLUTTER_BACKEND = "wayland";
+    sessionVariables = {
+      NIXOS_OZONE_WL = "1";
+      MOZ_ENABLE_WAYLAND = "1";
+      QT_QPA_PLATFORM = "wayland;xcb";
+      SDL_VIDEODRIVER = "wayland";
+      CLUTTER_BACKEND = "wayland";
+    };
+
   };
+
 
   # hypridle, hyprpaper, swayosd, waybar, and swaync are all started via
   # exec-once in hyprland.conf — no separate systemd services needed.

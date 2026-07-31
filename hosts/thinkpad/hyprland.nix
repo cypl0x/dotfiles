@@ -50,6 +50,12 @@
   # hyprland.conf) handles privilege-elevation dialogs.
   security.polkit.enable = true;
 
+  # gvfs — trash, MTP/sftp mounts, "eject", volume monitor for GUI file
+  # managers (pcmanfm). Without this, Trash and removable media feel broken.
+  services.gvfs.enable = true;
+  # Disk mounts / USB (usually on already; pin it next to gvfs for clarity).
+  services.udisks2.enable = true;
+
   # System packages for the full Hyprland ecosystem
   environment.systemPackages = with pkgs; [
     # Wallpaper / idle / lock
@@ -120,5 +126,18 @@
 
     # Polkit agent (Qt-based, fits alongside KDE)
     kdePackages.polkit-kde-agent-1
+
+    # ── GUI file manager (secondary to yazi; drag-and-drop / USB / Trash) ──
+    # Super+E stays kitty+yazi; Super+CTRL+E launches pcmanfm (see hyprland.conf).
+    pcmanfm
+    # Classic lightweight archive GUI (open / extract / create). PCManFM has no
+    # thunar-style archive plugin; double-click + context "Open with" go here.
+    xarchiver
+    # CLI backends xarchiver / shell "Extract here" custom actions shell out to.
+    zip
+    unzip
+    p7zip
+    # "Create New → …" menu templates in pcmanfm / other LXDE-ish apps.
+    lxmenu-data
   ];
 }
