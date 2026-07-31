@@ -2,23 +2,49 @@
   # Hyprland Wayland compositor — the only desktop session on this host.
   # The greeter is ly (see modules/system/desktop.nix); it lists every
   # wayland-session desktop file, so "Hyprland" appears automatically.
-  programs.hyprland = {
-    enable = true;
-    withUWSM = true; # proper systemd session management (recommended)
-    xwayland.enable = true;
+  programs = {
+    hyprland = {
+      enable = true;
+      withUWSM = true; # proper systemd session management (recommended)
+      xwayland.enable = true;
+    };
+
+    # SSH passphrase prompt GUI. Previously provided implicitly by Plasma 6;
+    # set explicitly now that plasma6 is gone. Qt-based, fits the Hyprland/KDE
+    # polkit-agent stack below.
+    ssh.askPassword = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
+
+    # Required for dconf settings (color-scheme=prefer-dark) and for
+    # xdg-desktop-portal-gtk to read them for Flatpak "system appearance".
+    dconf.enable = true;
   };
 
   # Hyprland-specific XDG portal (for screenshot, screen-share, file-picker)
-  # The generic xdg.portal.enable is already set in modules/system/desktop.nix
+  # The generic xdg.portal.enable is already set in modules/system/desktop.nix.
+  #
+  # gtk MUST be in extraPortals (not only named in config.default): otherwise
+  # xdg-desktop-portal logs "Requested gtk.portal is unrecognized", never
+  # exposes org.freedesktop.portal.Settings, and Flatpak apps that follow
+  # "system appearance" (Zen Browser, libadwaita, etc.) fall back to light.
   xdg.portal = {
-    extraPortals = [pkgs.xdg-desktop-portal-hyprland];
-    config.hyprland.default = ["hyprland" "gtk"];
+    extraPortals = [
+      pkgs.xdg-desktop-portal-hyprland
+      pkgs.xdg-desktop-portal-gtk
+    ];
+    config = {
+      # Preferred backends: hyprland for screencast/screenshot/shortcuts;
+      # gtk for Settings (color-scheme), FileChooser, etc.
+      hyprland = {
+        default = ["hyprland" "gtk"];
+        "org.freedesktop.impl.portal.Settings" = ["gtk"];
+        "org.freedesktop.impl.portal.FileChooser" = ["gtk"];
+      };
+      common = {
+        default = ["gtk"];
+        "org.freedesktop.impl.portal.Settings" = ["gtk"];
+      };
+    };
   };
-
-  # SSH passphrase prompt GUI. Previously provided implicitly by Plasma 6;
-  # set explicitly now that plasma6 is gone. Qt-based, fits the Hyprland/KDE
-  # polkit-agent stack below.
-  programs.ssh.askPassword = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
 
   # Polkit authentication agent — polkit-kde-agent (launched via exec-once in
   # hyprland.conf) handles privilege-elevation dialogs.
