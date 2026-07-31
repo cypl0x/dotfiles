@@ -16,8 +16,10 @@ _: {
       # icons the declarative template cannot express.
       tab_bar_style = "custom";
       tab_powerline_style = "slanted";
-      # Width of the vertical strip, in cells.
-      tab_bar_min_tabs = 1;
+      # Hide the left tab strip when only one tab is open (kitty default is 2).
+      # Was 1 (always show), which wasted cells and squeezed Super+E yazi in a
+      # tiled split. Strip reappears as soon as a second tab exists.
+      tab_bar_min_tabs = 2;
       tab_bar_background = "#242730";
       active_tab_foreground = "#1c1f24";
       active_tab_background = "#51afef";
