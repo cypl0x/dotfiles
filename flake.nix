@@ -161,7 +161,14 @@
           inputs."authentik-nix".nixosModules.default
           inputs.nix-index-database.nixosModules.nix-index
           ./hosts/inari
-          {nixpkgs.overlays = [nix-openclaw.overlays.default];}
+          # emacs-overlay supplies emacs-git-pgtk used by home/common.nix (shared
+          # across hosts). openclaw overlay is inari-specific.
+          {
+            nixpkgs.overlays = [
+              nix-openclaw.overlays.default
+              emacs-overlay.overlays.default
+            ];
+          }
           disko.nixosModules.disko
           home-manager.nixosModules.home-manager
           {
