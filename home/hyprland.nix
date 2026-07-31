@@ -1,4 +1,8 @@
-{pkgs, ...}: let
+{
+  pkgs,
+  lib,
+  ...
+}: let
   # Doom Vibrant wallpaper, generated at build time. A dark "aurora" mesh of
   # soft, heavily-blurred Doom-palette colour blobs over the darkest base, with
   # a faint NixOS snowflake watermark centred and a gentle vignette. Matches the
@@ -184,8 +188,52 @@ in {
       CLUTTER_BACKEND = "wayland";
     };
 
+    # Default browser → Firefox; PDF → zathura. Uses xdg-mime/xdg-settings so we
+    # don't clobber the rest of a hand-edited mimeapps.list (image handlers, etc.).
+    activation.setDesktopDefaults = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      xdg_mime=${pkgs.xdg-utils}/bin/xdg-mime
+      xdg_settings=${pkgs.xdg-utils}/bin/xdg-settings
+      $DRY_RUN_CMD $xdg_settings set default-web-browser firefox.desktop || true
+      for mime in \
+        x-scheme-handler/http \
+        x-scheme-handler/https \
+        x-scheme-handler/chrome \
+        text/html \
+        application/xhtml+xml
+      do
+        $DRY_RUN_CMD $xdg_mime default firefox.desktop "$mime" || true
+      done
+      # PDF plugin desktop (mupdf backend); meta org.pwmt.zathura.desktop also works.
+      $DRY_RUN_CMD $xdg_mime default org.pwmt.zathura-pdf-mupdf.desktop application/pdf || true
+      $DRY_RUN_CMD $xdg_mime default org.pwmt.zathura-pdf-mupdf.desktop application/x-pdf || true
+    '';
   };
 
+  # ── PDF viewer (Skim analogue: auto-reloads when the file changes) ────────
+  # Primary for LaTeX/preview + general reading. Okular remains an optional
+  # second install for annotations/forms if you miss the KDE workflow.
+  programs.zathura = {
+    enable = true;
+    options = {
+      # Invert light-paper PDFs into the Doom palette for night reading.
+      recolor = true;
+      recolor-keephue = true;
+      recolor-darkcolor = "#bbc2cf";
+      recolor-lightcolor = "#242730";
+      default-bg = "#242730";
+      default-fg = "#bbc2cf";
+      statusbar-bg = "#1c1f24";
+      statusbar-fg = "#bbc2cf";
+      inputbar-bg = "#21242b";
+      inputbar-fg = "#bbc2cf";
+      highlight-color = "rgba(81,175,239,0.4)";
+      highlight-active-color = "rgba(81,175,239,0.7)";
+      selection-clipboard = "clipboard";
+      adjust-open = "best-fit";
+      # Render a bit denser on the ThinkPad panel.
+      font = "Maple Mono NF 10";
+    };
+  };
 
   # hypridle, hyprpaper, swayosd, waybar, and swaync are all started via
   # exec-once in hyprland.conf — no separate systemd services needed.
