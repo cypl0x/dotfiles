@@ -164,9 +164,10 @@ __screen_dump() {
   elif [[ -n $ZELLIJ ]]; then
     # No --path means STDOUT; no --ansi means plain text.
     zellij action dump-screen --full
-  elif [[ -n $KITTY_WINDOW_ID ]] && (( $+commands[kitten] )); then
+  elif [[ -n $KITTY_WINDOW_ID ]] && command -v kitten >/dev/null 2>&1; then
     # kitty needs no multiplexer: remote control hands back the scrollback.
     # Requires allow_remote_control (set in home/kitty-thinkpad.nix).
+    # Use command -v (not zsh $+commands) so shellcheck stays happy.
     kitten @ get-text --extent all --ansi=false 2>/dev/null
   else
     return 1
@@ -174,7 +175,7 @@ __screen_dump() {
 }
 
 __pick_from_screen() {
-  local mode=$1 dump sel
+  local mode=$1 dump sel cleaned
   if ! dump=$(__screen_dump) || [[ -z $dump ]]; then
     zle -M "pick-from-screen: needs tmux, zellij or kitty — nothing else hands the scrollback back"
     return 1
@@ -194,7 +195,10 @@ __pick_from_screen() {
   # fzf exits non-zero when cancelled; either way redraw the prompt it ate.
   if [[ -n $sel ]]; then
     # Multi-select joins with spaces; strip fzf's trailing newline first.
-    LBUFFER+="${${sel%$'\n'}//$'\n'/ }"
+    # Unnested expansions (shellcheck SC2299; bash-compatible form).
+    cleaned=${sel%$'\n'}
+    cleaned=${cleaned//$'\n'/ }
+    LBUFFER+=$cleaned
   fi
   zle reset-prompt
 }

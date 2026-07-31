@@ -80,12 +80,14 @@
   kmsconConfigDir = pkgs.writeTextFile {
     name = "kmscon-config";
     destination = "/kmscon.conf";
-    text = lib.generators.toKeyValue {
-      mkKeyValue = k: v:
-        if lib.isBool v
-        then (lib.optionalString (!v) "no-") + k
-        else "${k}=${toString v}";
-    } kmsconSettings;
+    text =
+      lib.generators.toKeyValue {
+        mkKeyValue = k: v:
+          if lib.isBool v
+          then (lib.optionalString (!v) "no-") + k
+          else "${k}=${toString v}";
+      }
+      kmsconSettings;
   };
 in {
   # Two non-default consoles, each replacing agetty on one VT.
