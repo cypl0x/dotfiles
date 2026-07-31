@@ -19,17 +19,22 @@
   background: transparent;
 }
 
+/* Only the layer wrappers — not every nested `box`, which would also match
+ * `.notification-content` / `.notification-background` and zero out the
+ * solid toast fill (class+element beats a single class). */
 .floating-notifications,
 .floating-notifications.background,
-.floating-notifications .notification-row,
-.floating-notifications box,
-.floating-notifications viewport,
-.floating-notifications list {
+.floating-notifications > viewport,
+.floating-notifications > viewport > list,
+.floating-notifications .notification-row {
   background: transparent;
   box-shadow: none;
 }
 
-/* ── Toasts (individual popup notifications) ─────────────────────────────── */
+/* ── Toasts (individual popup notifications) ───────────────────────────────
+ * Wrappers stay transparent (see above) so the full-height layer surface
+ * never paints a solid bar down the screen. Only the toast card itself is
+ * filled — fully opaque so summary/body stay readable on any wallpaper. */
 .notification {
   border-radius: 12px;
   margin: 6px 10px;
@@ -41,19 +46,30 @@
   outline: none;
 }
 
-/* Alpha stays above the `ignore_alpha` threshold in the swaync layerrule
- * (hyprland.conf) so Hyprland still blurs behind the toast. */
-.notification-content {
-  background: rgba(36, 39, 48, 0.8);
-  border: 1px solid rgba(72, 72, 84, 0.6);
+/* Solid Doom surface. No alpha: semi-transparent glass still bleeds bright
+ * wallpapers through the text. Box-shadow separates the card on light bgs;
+ * Hyprland blur (ignore_alpha on the layer) still softens the shadow edge.
+ * Selectors are nested under `.floating-notifications` so they outrank any
+ * remaining wrapper transparency. */
+.floating-notifications .notification-content,
+.floating-notifications .notification-background,
+.notification-content,
+.notification-background {
+  background: #242730;
+  border: 1px solid #484854;
   border-radius: 12px;
   padding: 10px;
   margin: 0;
   color: #bbc2cf;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.65);
 }
 
-.notification.critical .notification-content {
+.floating-notifications .notification.critical .notification-content,
+.floating-notifications .notification.critical .notification-background,
+.notification.critical .notification-content,
+.notification.critical .notification-background {
   border-color: #ff665c;
+  background: #2a2228;
 }
 
 .notification .summary {
