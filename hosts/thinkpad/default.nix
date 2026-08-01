@@ -27,6 +27,7 @@
     ./graphics.nix
     ./extra-consoles.nix
     ./kdeconnect.nix
+    ./tailnet-ports.nix
   ];
 
   # Bootloader configuration
