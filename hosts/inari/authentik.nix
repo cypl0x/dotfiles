@@ -22,6 +22,10 @@
         host = "127.0.0.1";
         port = 6379;
       };
+
+      # authentik 2026.5 runs an HTTP server in the worker too; its default
+      # [::1]:9001 collides with the tor relay's ORPort (modules/services/tor.nix).
+      worker.listenHTTP = "[::1]:9011";
     };
 
     authentik-ldap = {
@@ -48,8 +52,9 @@
   };
 
   systemd.services = {
-    # Keep the Authentik web server internal-only.
-    authentik.environment.AUTHENTIK_LISTEN__HTTP = "127.0.0.1:9000";
+    # Keep the Authentik web server internal-only. Port 9000 belongs to appvibe
+    # (hosts/inari/appvibe.nix); nginx reaches authentik over 9443 either way.
+    authentik.environment.AUTHENTIK_LISTEN__HTTP = "127.0.0.1:9010";
     authentik.environment.AUTHENTIK_BLUEPRINTS_DIR = "${pkgs.authentik.src}/blueprints";
     authentik-worker.environment.AUTHENTIK_BLUEPRINTS_DIR = "${pkgs.authentik.src}/blueprints";
     authentik-migrate.environment.AUTHENTIK_BLUEPRINTS_DIR = "${pkgs.authentik.src}/blueprints";
