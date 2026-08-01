@@ -17,6 +17,7 @@
     ./n8n.nix
     ./paperless.nix
     ./appvibe.nix
+    ./fabinixos.nix
     ./gui-proxy.nix
     ./gui-fabian.nix
 
