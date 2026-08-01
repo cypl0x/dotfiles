@@ -14,11 +14,25 @@ _: {
   # plain daemon, so no GNOME session is pulled in.
   #
   # Unlocking: the module sets security.pam.services.login.enableGnomeKeyring,
-  # and ly's PAM stack substacks/includes `login`, so the login keyring is
-  # unlocked with the ly password without any extra PAM rules. Store secrets in
-  # the login keyring — a separate named keyring is not covered by this and
-  # prompts on every session.
+  # and ly's PAM stack substacks/includes `login`. Store secrets in the login
+  # keyring — a separate named keyring is not covered by this and prompts on
+  # every session.
   services.gnome.gnome-keyring.enable = true;
+
+  # Do not reach for security.pam.services.ly.enableGnomeKeyring — nixpkgs' ly
+  # module sets useDefaultRules = false, so that option generates no rules and
+  # silently does nothing. ly inherits pam_gnome_keyring through its
+  # `substack login` / `include login` rules instead.
+  #
+  # The other half is on disk, not in Nix: ~/.local/share/keyrings/default must
+  # name `login`, and login.keyring must exist with the login password as its
+  # passphrase. pam_gnome_keyring unlocks the keyring named `login` and nothing
+  # else. If the pointer names a keyring the daemon does not load, the default
+  # collection resolves to a D-Bus path that does not exist, and clients which
+  # create items there fail — Proton Mail Bridge aborts with "could not create
+  # keychain: no keychain" and then reports finding no password manager.
+  # gnome-keyring 50 no longer loads the old plaintext `[keyring]` ini format,
+  # which is one way to end up with such a dangling pointer.
 
   # Keyring GUI, for when the login and keyring passwords drift apart and the
   # login keyring has to be reset. gcr provides the unlock prompter itself.
