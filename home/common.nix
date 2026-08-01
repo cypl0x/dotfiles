@@ -327,6 +327,11 @@
         style = "compact";
         inline_height = 20;
         show_preview = true;
+        # AI assistant on `?` at an empty prompt. Must be declared here: the
+        # `atuin config set ai.enabled true` the TUI suggests writes to
+        # config.toml, which HM symlinks read-only out of /nix/store.
+        # Auth token stays out of the store — export ATUIN_AI__API_TOKEN.
+        ai.enabled = true;
       };
     };
 
