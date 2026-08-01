@@ -242,8 +242,45 @@ in {
     };
   };
 
-  # hypridle, hyprpaper, swayosd, waybar, and swaync are all started via
-  # exec-once in hyprland.conf — no separate systemd services needed.
+  # ── hyprshell: hold-ALT MRU window switcher (the old "hyprswitch") ────────
+  # Hyprland has no native cross-workspace window cycler — `cyclenext` only ever
+  # walks the current workspace. hyprshell's "switch" mode is the real alt-tab:
+  # hold ALT, tap Tab to walk a most-recently-used list, release ALT to commit.
+  #
+  # It registers its keybind by pushing `bind` keywords into the running
+  # compositor at startup, so ALT+Tab must stay unbound in hyprland.conf —
+  # otherwise a `hyprctl reload` (SUPER+CTRL+R) puts the static bind back on top.
+  # Because we use configType = "hyprlang" rather than lua, hyprshell logs
+  # "eval is only supported with the lua config manager, trying legacy syntax"
+  # on every start. Cosmetic — the legacy path installs the binds fine.
+  #
+  # filter_by = [] means "every window": the default is [current_monitor],
+  # which would hide the other screen's windows once a monitor is plugged in.
+  # `overview` is deliberately left unset (= disabled) — it ships its own app
+  # launcher and there are already four of those on SUPER+Space variants.
+  services.hyprshell = {
+    enable = true;
+    # exec-once, not a unit — see the note below on graphical-session.target.
+    systemd.enable = false;
+    settings = {
+      # Schema version of this config. Without it hyprshell logs "Config file
+      # does not have a version specified" and skips its migration check; bump
+      # when a hyprshell release changes the config layout.
+      version = 4;
+      windows = {
+        scale = 8.5;
+        items_per_row = 5;
+        switch = {
+          modifier = "alt";
+          key = "Tab";
+          filter_by = [];
+        };
+      };
+    };
+  };
+
+  # hypridle, hyprpaper, swayosd, waybar, swaync, and hyprshell are all started
+  # via exec-once in hyprland.conf — no separate systemd services needed.
   # Systemd services scoped to graphical-session.target would fire in KDE/GNOME
   # too, where ext-idle-notifier-v1 and hyprpaper's socket don't exist.
 }
