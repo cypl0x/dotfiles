@@ -65,6 +65,13 @@ in {
 
     # Raw config — same approach as tmux (builtins.readFile)
     extraConfig = builtins.readFile ./hyprland/hyprland.conf;
+
+    # uwsm (login via "Hyprland (uwsm-managed)" in ly) already provides
+    # systemd session integration. Home-manager's own defaults to on too and
+    # binds hyprland-session.target the same way uwsm binds the compositor
+    # service — the two racing during startup was what killed the compositor
+    # right after login. See wiki.hypr.land/Nix/Hyprland-on-Home-Manager.
+    systemd.enable = false;
   };
 
   # ── Config files ─────────────────────────────────────────────────────────
