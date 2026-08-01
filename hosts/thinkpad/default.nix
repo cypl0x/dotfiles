@@ -26,6 +26,7 @@
     ./power.nix
     ./graphics.nix
     ./extra-consoles.nix
+    ./kdeconnect.nix
   ];
 
   # Bootloader configuration
