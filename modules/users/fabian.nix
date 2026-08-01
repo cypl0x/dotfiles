@@ -6,7 +6,7 @@
   users.users.fabian = {
     isNormalUser = true;
     description = "Fabian";
-    extraGroups = ["networkmanager" "wheel" "docker"];
+    extraGroups = ["networkmanager" "wheel" "podman"];
     shell = pkgs.zsh;
     openssh.authorizedKeys.keyFiles = [
       ../ssh-keys/homelab.pub

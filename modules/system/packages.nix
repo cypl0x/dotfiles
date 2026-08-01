@@ -20,6 +20,7 @@ in {
         bat
         cheat
         deadnix # Find unused Nix code
+        docker-compose # podman's compose provider — see virtualisation.podman below
         eza # Modern replacement for ls (formerly exa)
         felix-fm # Tui file manager with vim-like key mapping
         fd # Fast file finder (used in Makefile)
@@ -80,5 +81,30 @@ in {
   # This ensures each user can have their own git identity
   programs.git.enable = true;
 
-  virtualisation.docker.enable = true;
+  # Containers: podman, not docker. Rootless by default, so a normal user's
+  # containers no longer run as a root daemon's children.
+  #
+  # dockerCompat aliases `docker` -> podman, and dockerSocket serves
+  # /run/docker.sock from podman for tools that hardcode it (testcontainers,
+  # devcontainers, DOCKER_HOST). Both assert against virtualisation.docker.enable
+  # — only one engine can own the name and the socket, so docker is off.
+  #
+  # Caveat worth knowing: the *socket* half is rootful, and the podman group that
+  # guards it is root-equivalent exactly like the docker group was. Rootless
+  # `podman`/`docker` CLI use does not touch it — it goes to the per-user socket
+  # under $XDG_RUNTIME_DIR instead.
+  #
+  # docker-compose (the v2 Go binary) is podman's compose provider: podman finds
+  # it on PATH, so `docker compose up` keeps working against the podman socket.
+  virtualisation.podman = {
+    enable = true;
+    dockerCompat = true;
+    dockerSocket.enable = true;
+    # Container-name DNS on the default network (pulls in aardvark-dns).
+    defaultNetwork.settings.dns_enabled = true;
+    autoPrune = {
+      enable = true;
+      dates = "weekly";
+    };
+  };
 }
