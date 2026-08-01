@@ -101,10 +101,9 @@
     # vim mode for Firefox
     tridactyl-native
 
-    # In order to get AnyType login key visible
+    # AnyType login key needs a Secret Service — now provided system-wide by
+    # modules/system/keyring.nix (gnome-keyring + gcr), not by these packages.
     # https://github.com/anyproto/anytype-ts/issues/729#issuecomment-2799841750
-    # gnome-keyring
-    # gcr
 
     cmake
 

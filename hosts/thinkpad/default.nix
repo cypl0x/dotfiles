@@ -12,6 +12,7 @@
     ../../modules/system/locale.nix
     ../../modules/system/desktop.nix
     ../../modules/system/console.nix
+    ../../modules/system/keyring.nix
     ../../modules/services/tailscale.nix
 
     # User configuration
