@@ -26,13 +26,11 @@ _: {
 
         # Consumer polling interval in seconds (0 = inotify, more efficient)
         PAPERLESS_CONSUMER_POLLING = 0;
-
-        # Point to gotenberg on non-default port (3000 is taken by AdGuard Home)
-        PAPERLESS_TIKA_GOTENBERG_ENDPOINT = "http://localhost:3002";
       };
     };
 
-    # Move gotenberg off port 3000 (conflict with AdGuard Home)
+    # Move gotenberg off port 3000 (conflict with AdGuard Home).
+    # The paperless module derives PAPERLESS_TIKA_GOTENBERG_ENDPOINT from this.
     gotenberg.port = 3002;
 
     # Add ACME/SSL on top of the vhost the paperless module creates
