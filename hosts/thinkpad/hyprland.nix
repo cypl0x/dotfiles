@@ -34,14 +34,22 @@
     config = {
       # Preferred backends: hyprland for screencast/screenshot/shortcuts;
       # gtk for Settings (color-scheme), FileChooser, etc.
+      # Secret must be named explicitly: gnome-keyring.portal declares
+      # `UseIn=gnome`, so it is never auto-selected here, and a backend absent
+      # from these lists is refused outright — xdg-desktop-portal then never
+      # exports the org.freedesktop.portal.Secret frontend and sandboxed apps
+      # fail with "A portal frontend implementing
+      # `org.freedesktop.portal.Secret` was not found" (Field Monitor).
       hyprland = {
         default = ["hyprland" "gtk"];
         "org.freedesktop.impl.portal.Settings" = ["gtk"];
         "org.freedesktop.impl.portal.FileChooser" = ["gtk"];
+        "org.freedesktop.impl.portal.Secret" = ["gnome-keyring"];
       };
       common = {
         default = ["gtk"];
         "org.freedesktop.impl.portal.Settings" = ["gtk"];
+        "org.freedesktop.impl.portal.Secret" = ["gnome-keyring"];
       };
     };
   };
