@@ -29,7 +29,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     authentik-nix = {
-      url = "github:nix-community/authentik-nix/bf3c780157449d75ac8dfc184963d57d23f59e8c";
+      url = "github:nix-community/authentik-nix/65952f8360754a8aa5507f8c345ed3d256212ccb";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     emacs-overlay = {
