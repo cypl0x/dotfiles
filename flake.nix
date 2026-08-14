@@ -187,6 +187,7 @@
                     ];
                   };
                   fabian = import ./home/fabian.nix;
+                  raphael = import ./home/raphael.nix;
                 };
             };
           }

@@ -20,6 +20,7 @@
     ./fabinixos.nix
     ./gui-proxy.nix
     ./gui-fabian.nix
+    ./gui-raphael.nix
 
     ../../modules/system/packages.nix
     ../../modules/system/shell.nix
@@ -38,6 +39,7 @@
     ../../modules/users/wap.nix
     ../../modules/users/proxy.nix
     ../../modules/users/fabian.nix
+    ../../modules/users/raphael.nix
   ];
 
   boot.tmp.cleanOnBoot = true;
@@ -93,6 +95,7 @@
     cypl0x.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
     proxy.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
     fabian.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
+    raphael.extraGroups = lib.mkAfter ["libvirtd" "kvm"];
   };
 
   system.stateVersion = "24.11";
