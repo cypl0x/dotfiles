@@ -210,6 +210,31 @@ and a temp exec-path where bin/tar links to store/tar."
        (with-current-buffer "*tldr: nope*"
          (should (string-match-p "No tldr page for nope" (buffer-string))))
      (kill-buffer "*tldr: nope*"))))
+
+;;; +proced
+
+(load (expand-file-name "+proced" test-lisp-dir) nil t)
+(require 'proced)
+
+(ert-deftest proced/defaults-show-everyone-with-command-lines ()
+  (should (eq (default-value 'proced-filter) 'all))
+  (should (eq (default-value 'proced-format) 'medium))
+  (should (eq (default-value 'proced-auto-update-flag) 'visible)))
+
+(ert-deftest proced/grep-narrows-to-matching-command-lines ()
+  (let ((proc (make-process :name "claude-proced-probe" :noquery t
+                            :command '("sleep" "31.4159"))))
+    (unwind-protect
+        (with-temp-buffer
+          (proced-mode)
+          (proced-update t t)
+          (let ((all (count-lines (point-min) (point-max))))
+            (+proced/grep "31\\.4159")
+            (should (string-match-p "sleep 31\\.4159" (buffer-string)))
+            (should (< (count-lines (point-min) (point-max)) all))
+            (+proced/grep "")
+            (should (eq proced-filter 'all))))
+      (delete-process proc))))
 ;;; +workflow
 
 (load (expand-file-name "+workflow" test-lisp-dir) nil t)

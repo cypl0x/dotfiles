@@ -494,6 +494,7 @@
 (load! "lisp/+vellumory")   ;; SPC m F: capture Vellumory review feedback
 (load! "lisp/+workflow")    ;; SPC p h/u/P/G: history runs, peer pull, git-closure
 (load! "lisp/+tldr")        ;; SPC h X: which -a + tldr examples + man, one buffer
+(load! "lisp/+proced")      ;; SPC o k: ps aux | rg, kill N, as live proced
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules

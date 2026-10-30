@@ -883,6 +883,23 @@ Pages come from tealdeer's cache (=~/.cache/tealdeer=): no package, no
 network. The cache is never updated from Emacs (metered link); run
 =tldr --update= yourself.
 
+** =+proced.el= — Processes Without =ps aux | rg=
+:PROPERTIES:
+:CUSTOM_ID: proced
+:END:
+
+atuin showed =ps aux= piped into =rg=/=fzf=/=bat= to find a PID, then
+=kill N= (41×). =SPC o k= opens Emacs's proced with every user's processes
+(like =sudo ps aux=), full command lines, refreshing while visible.
+
+| Key   | What                                                  |
+|-------+-------------------------------------------------------|
+| =f=   | only command lines matching a regexp (empty: all)     |
+| =RET= | only processes sharing the field under point          |
+| =o…=  | sort: =oc= CPU, =om= memory, =op= PID, =ot= time      |
+| =m=   | mark                                                  |
+| =x=   | send a signal to the marked (or current) processes    |
+
 ** =+daemon.el= — Sync, Restart and Restore
 :PROPERTIES:
 :CUSTOM_ID: daemon
