@@ -121,9 +121,11 @@ Calls THEN with no arguments if the pull succeeds."
          (branch (or (magit-get-current-branch) "main"))
          (proc (magit-run-git-async "pull" "--ff-only" url branch)))
     (message "Pulling %s from %s…" branch url)
-    (add-function :after (process-sentinel proc)
+    ;; :before, so a failing `magit-refresh' in magit's own sentinel (e.g. when
+    ;; called from a buffer outside the repo) can't swallow THEN.
+    (add-function :before (process-sentinel proc)
                   (lambda (p _)
-                    (unless (process-live-p p)
+                    (when (memq (process-status p) '(exit signal))
                       (if (zerop (process-exit-status p))
                           (when then (funcall then))
                         (message "Pull from peer failed; see magit's process buffer ($)")))))
