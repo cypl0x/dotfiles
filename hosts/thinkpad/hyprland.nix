@@ -86,10 +86,13 @@
     # with history / DND / MPRIS widgets; config in home/hyprland/swaync/).
     # Drop swaync's D-Bus activation file so it is NOT auto-started as
     # org.freedesktop.Notifications under KDE/GNOME — there Plasma's native
-    # notification server must own that name. Under Hyprland, exec-once launches
-    # swaync explicitly (see hyprland.conf), so on-demand D-Bus activation is
-    # unneeded. The shipped systemd user unit is left as-is: NixOS never enables
-    # package-provided user units, so it stays inert.
+    # notification server must own that name. Under Hyprland, exec-once starts
+    # swaync's systemd user unit (see hyprland.conf).
+    # NOTE: swaync >= 0.12 ships a second activation file,
+    # org.erikreider.swaync.cc.service (SystemdService=swaync.service), which
+    # this override does not remove; it only starts swaync when a swaync-client
+    # calls, and none runs outside Hyprland. Removing it here would rebuild
+    # swaync from source.
     (swaynotificationcenter.overrideAttrs (old: {
       postInstall =
         (old.postInstall or "")

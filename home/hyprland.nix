@@ -279,8 +279,9 @@ in {
     };
   };
 
-  # hypridle, hyprpaper, swayosd, waybar, swaync, and hyprshell are all started
-  # via exec-once in hyprland.conf — no separate systemd services needed.
+  # hypridle, hyprpaper, swayosd, waybar and hyprshell are started via exec-once
+  # in hyprland.conf; swaync too, but through its packaged systemd user unit
+  # (exec-once = systemctl --user start swaync), so there is exactly one.
   # Systemd services scoped to graphical-session.target would fire in KDE/GNOME
   # too, where ext-idle-notifier-v1 and hyprpaper's socket don't exist.
 }
