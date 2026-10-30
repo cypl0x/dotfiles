@@ -258,5 +258,28 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
       (should-error (familiar-explain-compilation-error) :type 'user-error)
       (should-not requests))))
 
+
+(ert-deftest familiar/prices-fall-back-when-gptel-lacks-the-model ()
+  "An older gptel without the model's metadata must not make spend $0."
+  (skip-unless test-familiar-available)
+  (let ((in (get 'claude-haiku-5-5 :input-cost))
+        (out (get 'claude-haiku-5-5 :output-cost)))
+    (unwind-protect
+        (progn
+          (put 'claude-haiku-5-5 :input-cost nil)
+          (put 'claude-haiku-5-5 :output-cost nil)
+          (should (equal (familiar--prices 'claude-haiku-5-5) '(0.10 . 0.50)))
+          (should (> (familiar-cost 'claude-haiku-5-5 '(:input 1000)) 0)))
+      (put 'claude-haiku-5-5 :input-cost in)
+      (put 'claude-haiku-5-5 :output-cost out))))
+
+(ert-deftest familiar/unknown-price-warns-once-and-counts-zero ()
+  (skip-unless test-familiar-available)
+  (let ((familiar--unpriced-warned nil) (warnings 0))
+    (cl-letf (((symbol-function 'display-warning) (lambda (&rest _) (cl-incf warnings))))
+      (should (= 0 (familiar-cost 'claude-unknown-9 '(:input 1000 :output 10))))
+      (familiar-cost 'claude-unknown-9 '(:input 1))
+      (should (= warnings 1)))))
+
 (provide 'test-familiar)
 ;;; test-familiar.el ends here

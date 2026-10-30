@@ -98,15 +98,41 @@
 
 ;;;; Pricing and the ledger
 
+(defcustom familiar-model-prices
+  '((claude-haiku-5-5 0.10 0.50)
+    (claude-sonnet-5-5 2.0 10.0)
+    (claude-opus-5-5 4.0 20.0)
+    (claude-fable-5-1 10.0 50.0))
+  "Fallback (MODEL INPUT OUTPUT) prices in USD per million tokens.
+Used when gptel's model table has no price for MODEL, e.g. with a gptel
+older than the model.  From platform.claude.com, 2026-10."
+  :type '(repeat (list symbol number number)))
+
+(defvar familiar--unpriced-warned nil "Models already warned about.")
+
+(defun familiar--prices (model)
+  "(INPUT . OUTPUT) USD per million tokens for MODEL, or nil if unknown."
+  (let ((in (get model :input-cost)) (out (get model :output-cost)))
+    (if (and in out) (cons in out)
+      (when-let* ((p (alist-get model familiar-model-prices)))
+        (cons (nth 0 p) (nth 1 p))))))
+
 (defun familiar-cost (model tokens)
-  "USD cost of TOKENS (gptel's :tokens plist) on MODEL, per gptel's model table.
-Cache reads are billed at a tenth of the input price."
-  (let ((in (or (get model :input-cost) 0))
-        (out (or (get model :output-cost) 0)))
-    (/ (+ (* in (or (plist-get tokens :input) 0))
-          (* in 0.1 (or (plist-get tokens :cached) 0))
-          (* out (or (plist-get tokens :output) 0)))
-       1e6)))
+  "USD cost of TOKENS (gptel's :tokens plist) on MODEL.
+Prices come from gptel's model table, else `familiar-model-prices'.  Cache
+reads are billed at a tenth of the input price (an upper bound: some models
+charge less).  An unknown price counts as 0, with a one-time warning."
+  (let ((prices (familiar--prices model)))
+    (unless (or prices (memq model familiar--unpriced-warned))
+      (push model familiar--unpriced-warned)
+      (display-warning 'familiar
+                       (format "No price known for %s; its spend counts as $0. \
+Add it to `familiar-model-prices'." model)))
+    (let ((in (or (car prices) 0)) (out (or (cdr prices) 0)))
+      (/ (+ (* in (or (plist-get tokens :input) 0))
+            (* in 0.1 (or (plist-get tokens :cached) 0))
+            (* out (or (plist-get tokens :output) 0)))
+         1e6))))
 
 (defun familiar--ledger ()
   "All ledger entries: (TIME MODEL TASK INPUT OUTPUT CACHED COST)."
