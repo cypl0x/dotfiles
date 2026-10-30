@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 03:15]
+:UPDATED:  [2026-10-30 Fr 03:37]
 :END:
 
 | Area                         | Status | What changed                                                   |
@@ -31,10 +31,36 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | Shell loops → keys           | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure) |
 | Real-input testing           | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9) |
 | inari disk                   | ◐      | 95% → 94% (8.5 GiB); the big wins need your OK, see below        |
-| AI package "familiar"        | ✔ ✦    | v0.1: commit msg, explain, diagnostics, smerge fixes, spend ledger |
-| GitHub CI                    | ⏳     | Queued after the Emacs work (one known cause found)              |
+| AI package "familiar"        | ✔ ✦    | v0.2: commit msg, explain, diagnostics, build errors, review, smerge fixes, spend ledger |
+| GitHub CI                    | ⏳ 🔧  | Fixed on branch claude/ci-repair (stub for private input + Emacs job); run in progress |
 
 * 📓 Log
+** [2026-10-30 Fr 03:37] (+117m) — familiar learns builds and reviews; CI gets unstuck
+*familiar v0.2:*
+- =SPC A E= :: explain the *compilation error at point*: in =*compilation*=
+  or your =SPC p h= =*run: …*= buffers. The locus is resolved through
+  =compile-goto-error=, so every error format Emacs knows is covered. Real
+  test: a gcc "expected ';'" was explained correctly, and the model spotted
+  the =totl= typo the compiler hadn't reached yet. $0.0003.
+- =SPC A v= :: *review* the staged diff (or the unstaged one): one bullet per
+  real problem, most severe first, with file:line. Uses the smart tier,
+  capped at 60k chars to bound cost.
+- 42 offline tests total; the popup no longer shows line numbers.
+
+*CI* (you chose "push branch + dispatch"):
+- *Why it was red:* the Aug 14 run was a runner *OOM* compiling
+  =emacs-git-pgtk= before your laptop had pushed it to cachix. And since
+  Vellumory arrived, the input is a =git+file= checkout of a *private*
+  repo, so no runner could evaluate the thinkpad at all.
+- *Fix:* every nix call in CI overrides the input with =ci/vellumory-stub=,
+  a flake with the same interface whose nixpkgs follows ours. Your local
+  builds don't change. The Makefile gained =NIX_FLAGS= for that.
+- *New job:* Emacs Lisp lint (warnings as errors) + the batch ERT suites,
+  on emacs-nox with gptel from the exact nixpkgs rev in =flake.lock=.
+- Also: the =enchant2= deprecation warning on every rebuild is gone, plus
+  two treefmt nits.
+- Run: [[https://github.com/cypl0x/dotfiles/actions/runs/40992358744]] on
+  branch =claude/ci-repair=. =main= is untouched until you merge.
 ** [2026-10-30 Fr 03:15] (+95m) — hunting a freeze: remote NixOS /etc files hung Emacs
 While I tested the new TRAMP shell guard, opening =/ssh:localhost:/etc/hostname=
 froze *your* daemon at 100% CPU for about a minute. I'm sorry: I freed it by
@@ -325,7 +351,7 @@ Fall back cleanly when a CLI or key is missing.
 ** DONE git-closure as one idempotent command (×95) → =SPC p G=
 ** DONE peer pull & run per project → =SPC p u=, =SPC p P=, =SPC p h=
 ** ACTIVE inari: TRAMP guard ✔ (deploy pending), remote /nix/store freeze ✔, auto-GC, agents from flake inputs
-** TODO GitHub CI green (known cause: =vellumory= input is =git+file:=, unreachable on runners)
+** ACTIVE GitHub CI green: fix on branch claude/ci-repair, verifying
 ** TODO inari cleanup of non-store data (needs your OK, see 02:30 entry)
 
 * 🛠 How I verify (so you can trust every ✔)
