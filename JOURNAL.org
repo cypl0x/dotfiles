@@ -39,6 +39,20 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:17] (+337m) — your API keys were on disk in plain text
+=doom doctor= warned that savehist was 11.5 MB and could slow startup.
+Reason: unlimited kill ring, 109 kills over 10k chars, the largest 3.2 MB.
+Worse, it held *8 Claude API keys in plain text*, also in
+=read-expression-history= and a register. Now =+perf= saves a filtered
+copy: kills over 64k chars are skipped, and API keys, GitHub tokens, AWS
+key IDs, Slack tokens and private-key blocks are dropped from every saved
+list. Your live kill ring keeps everything. File: 11.5 MB → 3.9 MB, 0 keys,
+9,000 kills, and it loads cleanly. I also caught a bug of my own: the first
+version dropped =kill-ring= from savehist's variable list (a destructive
+=delete-dups=). A regression test covers it now.
+Still on disk: the key in your =*new*= persisted buffer (it holds the goal
+text you pasted) and in the pruned backup
+=persist-buffers.pruned-20261030/=. Your call; I haven't deleted either.
 ** [2026-10-30 Fr 07:10] (+330m) — magit's structural diff works now
 Same pattern as sideline: `difftastic.el` was installed and wired into
 magit's diff menu (=D= dwim diff, =S= show), but the =difft= binary it
