@@ -39,7 +39,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
-** [2026-10-30 Fr 09:32] (+472m) — a pkg-config that always said "enchant"
+** [2026-10-30 Fr 09:31] (+471m) — a pkg-config that always said "enchant"
 After the vicinae find I checked the one PATH entry that beats even
 =~/.nix-profile=: =~/.local/bin=. In it was =pkg-config=, a two-line
 script from Oct 24 that prints enchant's compile flags /whatever you
