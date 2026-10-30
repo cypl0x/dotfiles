@@ -14,6 +14,9 @@
 ;;      Alternatively, press 'gd' (or 'C-c c d') on a module to browse its
 ;;      directory (for easy access to its source code).
 
+
+(add-to-list 'doom-module-load-path "~/dev/Turm-emacs-integration/editor/emacs/doom")
+
 (doom! :input
        ;;bidi              ; (tfel ot) thgir etirw uoy gnipleh
        ;;chinese
@@ -180,6 +183,7 @@
        ;;solidity          ; do you need a blockchain? No.
        swift             ; who asked for emoji variables?
        ;;terra             ; Earth and Moon in alignment for performance.
+       (turm +tree-sitter +evil +session +pg)
        web               ; the tubes
        yaml              ; JSON, but readable
        ;;zig               ; C, but simpler

@@ -451,6 +451,14 @@
 ;; SPC f p opens the dotfiles source instead of the read-only Nix store symlink.
 ;; ~/.config/doom/ is managed by home-manager; edits belong in ~/dotfiles/home/doom/.
 
+;; ---------------------------------------------------------------------------
+;; Turm
+;; ---------------------------------------------------------------------------
+
+(after! turm-mode
+  (setq turm-tx-program (expand-file-name "~/dev/turm-emacs-bin/tx/bin/tx")
+        turm-program (expand-file-name "~/dev/turm-emacs-bin/turm/bin/turm")
+        turm-tree-sitter-directory (expand-file-name "~/dev/turm-emacs-bin/tree-sitter/lib/")))
 
 ;; ---------------------------------------------------------------------------
 ;; Modular configuration — load lisp/ modules
