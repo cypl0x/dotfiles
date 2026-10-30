@@ -11,6 +11,8 @@
 ;;
 ;;; Code:
 
+(require 'cl-lib)
+
 (defvar org-capture-templates)
 (declare-function org-capture-get "org-capture" (prop &optional local))
 
@@ -78,11 +80,118 @@
   (interactive)
   (find-file +vellumory-feedback-file))
 
-(map! :leader :desc "Vellumory feedback" "n V" #'+vellumory/open-feedback)
+;;; Update to the latest commit ───────────────────────────────────────────
+
+(defvar +vellumory-dotfiles "~/dotfiles"
+  "Flake whose `vellumory' input pins the worker.")
+
+(defvar +vellumory-lisp-only-paths '("lisp/" "tests/" "docs/requirements" "README" ".github/")
+  "Changes under these prefixes need no new worker.
+Everything else (worker sources, the manual, packaging) does.")
+
+(defun +vellumory--changes (old new)
+  "Classify files changed between OLD and NEW: (LISP-P . WORKER-P)."
+  (let ((files (split-string (or (+vellumory--git "diff" "--name-only" old new) "")
+                             "\n" t)))
+    (cons (seq-some (lambda (f) (string-prefix-p "lisp/" f)) files)
+          (seq-some (lambda (f)
+                      (not (seq-some (lambda (p) (string-prefix-p p f))
+                                     +vellumory-lisp-only-paths)))
+                    files))))
+
+(defun +vellumory--reload-lisp ()
+  "Re-load every Vellumory feature already loaded, from its rebuilt file."
+  (let ((n 0))
+    (dolist (f features)
+      (when (string-prefix-p "vellumory" (symbol-name f))
+        (when-let* ((file (locate-library (symbol-name f))))
+          (load file nil t)
+          (cl-incf n))))
+    n))
+
+(defun +vellumory--run (name command then)
+  "Run shell COMMAND in buffer *NAME*; call THEN with success (t/nil)."
+  (let ((buf (get-buffer-create (format "*%s*" name))))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (goto-char (point-max))
+        (insert (format "\n$ %s\n" command))))
+    (make-process
+     :name name :buffer buf :noquery t
+     :command (list shell-file-name shell-command-switch command)
+     :sentinel (lambda (proc _)
+                 (unless (process-live-p proc)
+                   (funcall then (zerop (process-exit-status proc))))))))
+
+(defun +vellumory--notify (title body &optional critical)
+  (message "%s: %s" title body)
+  (when (executable-find "notify-send")
+    (apply #'call-process "notify-send" nil 0 nil
+           `("-a" "Emacs · Vellumory" ,@(when critical '("-u" "critical")) ,title ,body))))
+
+;;;###autoload
+(defun +vellumory/update ()
+  "Pull the Vellumory checkout and bring this session up to its latest commit.
+Changed Lisp is rebuilt (`doom sync') and re-loaded in place. If anything
+beyond Lisp changed, the flake input is bumped and the system rebuilt, so the
+worker and manual match; reopen documents to use the new worker. Progress
+and output are in *vellumory-update*."
+  (interactive)
+  (let* ((old (+vellumory--git "rev-parse" "HEAD"))
+         (default-directory (expand-file-name +vellumory-checkout))
+         (dotfiles (expand-file-name +vellumory-dotfiles)))
+    (unless old (user-error "No git checkout at %s" +vellumory-checkout))
+    (+vellumory--run
+     "vellumory-update" "git pull --ff-only"
+     (lambda (ok)
+       (let* ((new (+vellumory--git "rev-parse" "HEAD"))
+              (log (+vellumory--git "log" "--format=%h %s" (concat old ".." new)))
+              (changes (+vellumory--changes old new)))
+         (cond
+          ((not ok)
+           (pop-to-buffer "*vellumory-update*")
+           (+vellumory--notify "Update failed" "git pull did not fast-forward" t))
+          ((equal old new)
+           (+vellumory--notify "Vellumory" (format "Already at %s" (substring new 0 7))))
+          (t
+           (let* ((finish
+                   (lambda (worker-ok)
+                     (+vellumory--notify
+                      (if worker-ok "Vellumory updated" "Vellumory worker update failed")
+                      (format "%s → %s%s\n%s"
+                              (substring old 0 7) (substring new 0 7)
+                              (if (cdr changes) " (new worker: reopen documents)" "")
+                              log)
+                      (not worker-ok))))
+                  (worker
+                   (lambda ()
+                     (if (not (cdr changes))
+                         (funcall finish t)
+                       (+vellumory--run
+                        "vellumory-update"
+                        (format "cd %s && nix flake update vellumory && sudo nixos-rebuild switch --flake .#%s"
+                                (shell-quote-argument dotfiles) (system-name))
+                        finish)))))
+             (if (not (car changes))
+                 (funcall worker)
+               (+vellumory--run
+                "vellumory-update"
+                (format "%s sync -B" (shell-quote-argument
+                                      (expand-file-name "bin/doom" doom-emacs-dir)))
+                (lambda (sync-ok)
+                  (if (not sync-ok)
+                      (progn (pop-to-buffer "*vellumory-update*")
+                             (+vellumory--notify "Update failed" "doom sync failed" t))
+                    (message "Vellumory: re-loaded %d features" (+vellumory--reload-lisp))
+                    (funcall worker)))))))))))))
+
+(map! :leader
+      :desc "Vellumory feedback" "n V" #'+vellumory/open-feedback)
 (map! :after vellumory
       :map vellumory-mode-map
       :localleader
-      :desc "Feedback" "F" #'+vellumory/feedback)
+      :desc "Feedback" "F" #'+vellumory/feedback
+      :desc "Update to latest" "U" #'+vellumory/update)
 
 (provide '+vellumory)
 ;;; +vellumory.el ends here

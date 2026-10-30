@@ -119,5 +119,31 @@
     (should (eq (car (nth 3 tpl)) 'file+headline))
     (should (string-match-p "%a" (nth 4 tpl)))))
 
+
+(defmacro test-lisp--with-two-commits (files &rest body)
+  "Commit FILES on top of a base commit; run BODY with OLD and NEW bound."
+  `(test-lisp--with-repo
+    (let ((old (+vellumory--git "rev-parse" "HEAD")))
+      (dolist (f ,files)
+        (make-directory (file-name-directory (expand-file-name f repo)) t)
+        (write-region "x" nil (expand-file-name f repo)))
+      (process-file "git" nil nil nil "add" "-A")
+      (process-file "git" nil nil nil "-c" "user.name=t" "-c" "user.email=t@t"
+                    "commit" "-q" "-m" "y")
+      (let ((new (+vellumory--git "rev-parse" "HEAD")))
+        ,@body))))
+
+(ert-deftest vellumory/changes-lisp-only-skips-worker ()
+  (test-lisp--with-two-commits '("lisp/vellumory.el" "tests/t.el" "README.org")
+    (should (equal (+vellumory--changes old new) '(t . nil)))))
+
+(ert-deftest vellumory/changes-worker-sources-need-rebuild ()
+  (test-lisp--with-two-commits '("Vellumory/Render.lean")
+    (should (equal (+vellumory--changes old new) '(nil . t)))))
+
+(ert-deftest vellumory/changes-manual-needs-rebuild ()
+  "The Info manual ships with the worker package."
+  (test-lisp--with-two-commits '("docs/vellumory.texi" "lisp/vellumory.el")
+    (should (equal (+vellumory--changes old new) '(t . t)))))
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
