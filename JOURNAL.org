@@ -39,7 +39,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
-** [2026-10-30 Fr 08:14] (+394m) — inari, by its whole history
+** [2026-10-30 Fr 08:11] (+391m) — inari, by its whole history
 inari's atuin holds only 386 commands; mostly you drive it through
 agents (=claude --dangerously-skip-permissions= 21× in =.zsh_history=).
 What you do by hand there is maintenance: garbage collection 17×
