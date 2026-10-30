@@ -67,6 +67,7 @@
     xprop
     xwininfo
     dotool
+    wtype # Wayland virtual-keyboard input, no uinput needed
     wmctrl
 
     # Webcam tools

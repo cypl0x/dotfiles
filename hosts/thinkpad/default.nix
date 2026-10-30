@@ -61,6 +61,11 @@
     extraSetFlags = ["--advertise-routes=192.168.2.0/24"];
   };
 
+  # Synthetic input for dotool (keyboard + mouse), so scripts and agents can
+  # drive the session like a user. /dev/uinput is root-only without this.
+  hardware.uinput.enable = true;
+  users.users.wap.extraGroups = ["uinput"];
+
   # Enable nix-ld for running unpatched dynamic binaries (e.g. Android SDK)
   programs.nix-ld.enable = true;
 
