@@ -124,6 +124,13 @@ With active region, prepend selected text as context."
 
 ;;;; Transient menu — unified AI dispatch ────────────────────────────────────
 
+;; Transient refuses suffixes that are neither defined nor autoloaded, so the
+;; whole menu fails to open while agent-shell is still unloaded. Declare the
+;; commands it lacks cookies for.
+(autoload 'agent-shell-view-acp-logs "agent-shell" nil t)
+(autoload 'agent-shell-open-transcript "agent-shell" nil t)
+(autoload 'agent-shell-show-usage "agent-shell-usage" nil t)
+
 ;; Lazy wrappers for autoload safety in transient.
 (defun +agent/start-claude ()
   "Start Claude." (interactive) (call-interactively #'agent-shell-anthropic-start-claude-code))
@@ -157,7 +164,8 @@ With active region, prepend selected text as context."
      ("T" "Transcript"       agent-shell-open-transcript)
      ("u" "Usage"            agent-shell-show-usage)]
     ["History"
-     ("R" "Recall transcripts"  agent-recall)
+     ("R" "Browse transcripts"  agent-recall-browse)
+     ("/" "Search transcripts"  agent-recall-search-live)
      ("X" "Reindex transcripts" agent-recall-reindex)])
 
 ;;;; monet + agent-shell bridge ──────────────────────────────────────────────
