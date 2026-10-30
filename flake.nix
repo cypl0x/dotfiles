@@ -36,11 +36,11 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Vellumory, the PDF reader for Emacs (home/vellumory.nix). Until it is
-    # public, from the local clone at its testing branch; then
-    # "github:cypl0x/vellumory". With its own nixpkgs, not ours: its worker is
+    # Vellumory, the PDF reader for Emacs (home/vellumory.nix), at its release
+    # tag; to upgrade, change the tag here and the matching :pin in
+    # home/doom/packages.el. With its own nixpkgs, not ours: its worker is
     # built and tested against that one.
-    vellumory.url = "git+file:///home/wap/dev/vellumory?ref=exclude-and-delete-before-public";
+    vellumory.url = "github:cypl0x/vellumory/v0.1.0";
     # AI coding agent CLIs (auto-bumped upstream). Prefer this over stale
     # nixpkgs packages for harnesses like grok/claude-code. Do not set
     # inputs.nixpkgs.follows — keep numtide's pinned nixpkgs so their
