@@ -552,6 +552,25 @@
 (ert-deftest perf/freeze-recorder-off-in-batch ()
   (should-not +perf-freeze-recorder-mode))
 
+(defvar pulsar-pulse-functions)
+(defvar pulsar-pulse-region-functions)
+
+(ert-deftest perf/pulsar-aliases-resolved-only-when-something-changed ()
+  (let ((+perf--pulsar-resolved nil)
+        (pulsar-pulse-functions (list 'a))
+        (pulsar-pulse-region-functions (list 'b))
+        (load-history (list '("x")))
+        (runs 0))
+    (cl-flet ((resolve () (+perf-pulsar-resolve-once-a (lambda () (cl-incf runs)))))
+      (resolve) (resolve)
+      (should (= runs 1))
+      (push '("y") load-history)          ; new code loaded
+      (resolve)
+      (should (= runs 2))
+      (setq pulsar-pulse-functions (list 'a 'c)) ; user replaced the list
+      (resolve) (resolve)
+      (should (= runs 3)))))
+
 
 (ert-deftest perf/savehist-drops-huge-and-secret-kills ()
   (let* ((key (concat "sk-ant-" "api03-" (make-string 40 ?x)))

@@ -164,6 +164,37 @@ duplicates, then SEQUENCE2's that are new."
 (unless noninteractive (+perf-freeze-recorder-mode 1))
 
 
+;;;; pulsar resolves its command aliases once, not per buffer
+
+;; `pulsar-mode' is buffer-local and turned on in every new buffer and after
+;; every major-mode change; each time it calls
+;; `pulsar-resolve-function-aliases', which scans the whole obarray twice
+;; for aliases of ~110 commands: 50 ms in a fresh daemon, 209 ms after some
+;; hours (freeze profile of 2026-10-30, opening *familiar*).  The result
+;; only changes when code loads (new aliases) or the lists are replaced, so
+;; it's computed again only then.
+
+(defvar pulsar-pulse-functions)
+(defvar pulsar-pulse-region-functions)
+
+(defvar +perf--pulsar-resolved nil
+  "(LOAD-HISTORY-LENGTH PULSE-FUNCTIONS REGION-FUNCTIONS) after the last run.")
+
+(defun +perf-pulsar-resolve-once-a (fn)
+  "Around `pulsar-resolve-function-aliases' (FN): skip when nothing changed."
+  (unless (and +perf--pulsar-resolved
+               (= (car +perf--pulsar-resolved) (length load-history))
+               (eq (nth 1 +perf--pulsar-resolved) pulsar-pulse-functions)
+               (eq (nth 2 +perf--pulsar-resolved) pulsar-pulse-region-functions))
+    (funcall fn)
+    (setq +perf--pulsar-resolved (list (length load-history)
+                                       pulsar-pulse-functions
+                                       pulsar-pulse-region-functions))))
+
+(with-eval-after-load 'pulsar
+  (advice-add 'pulsar-resolve-function-aliases :around #'+perf-pulsar-resolve-once-a))
+
+
 ;;;; What savehist writes of the kill ring
 
 ;; kill-ring-max is unlimited on purpose (config.el), and Doom persists the
