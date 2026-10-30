@@ -200,3 +200,11 @@
 ;; (package! kdeconnect)        ;; KDE Connect — not needed in EXWM sessions
 ;; (package! magithub)          ;; superseded by forge
 
+
+;; ---------------------------------------------------------------------------
+;; Vellumory, the PDF reader (:tools vellumory, home/vellumory.nix)
+;; ---------------------------------------------------------------------------
+
+;; Until its repository is public, from the local clone, the source the flake
+;; builds the worker from too; afterwards the module's own recipe suffices.
+(package! vellumory :recipe (:local-repo "/home/wap/dev/vellumory" :files ("lisp/*.el")))

@@ -36,6 +36,11 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Vellumory, the PDF reader for Emacs (home/vellumory.nix). Until it is
+    # public, from the local clone at its testing branch; then
+    # "github:cypl0x/vellumory". With its own nixpkgs, not ours: its worker is
+    # built and tested against that one.
+    vellumory.url = "git+file:///home/wap/dev/vellumory?ref=exclude-and-delete-before-public";
     # AI coding agent CLIs (auto-bumped upstream). Prefer this over stale
     # nixpkgs packages for harnesses like grok/claude-code. Do not set
     # inputs.nixpkgs.follows — keep numtide's pinned nixpkgs so their
@@ -134,7 +139,9 @@
               # Move pre-existing unmanaged dotfiles aside instead of aborting
               # activation when a home.file target already exists on disk.
               backupFileExtension = "bak";
+              extraSpecialArgs = {inherit (inputs) vellumory;};
               sharedModules = [
+                ./home/vellumory.nix
                 ./home/kitty-thinkpad.nix
                 ./home/terminals.nix
                 ./home/yazi.nix
