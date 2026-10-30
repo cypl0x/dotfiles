@@ -163,5 +163,65 @@ duplicates, then SEQUENCE2's that are new."
 
 (unless noninteractive (+perf-freeze-recorder-mode 1))
 
+
+;;;; What savehist writes of the kill ring
+
+;; kill-ring-max is unlimited on purpose (config.el), and Doom persists the
+;; kill ring.  On 2026-10-30 that made savehist 11.5 MB (doom doctor: "may
+;; cause ... odd startup delays"): 8,950 entries, 109 of them over 10 k chars
+;; holding 9.3 MB, the largest 3.2 MB; and 8 Claude API keys in plain text.
+;; Only the saved copy is filtered; the live kill ring keeps everything.
+
+(defvar +perf-savehist-max-kill 65536
+  "Kill-ring entries longer than this many characters are not persisted.")
+
+(defvar +perf-secret-regexp
+  (concat "sk-ant-[a-z0-9]+-[A-Za-z0-9_-]\\{20,\\}"   ; Anthropic
+          "\\|gh[pousr]_[A-Za-z0-9]\\{30,\\}\\|github_pat_[A-Za-z0-9_]\\{30,\\}"
+          "\\|AKIA[0-9A-Z]\\{16\\}"                     ; AWS access key id
+          "\\|xox[abprs]-[A-Za-z0-9-]\\{10,\\}"         ; Slack
+          "\\|-----BEGIN [A-Z ]*PRIVATE KEY-----")
+  "Kill-ring entries matching this are never written to disk.")
+
+(defun +perf-persistable-kills (kills)
+  "KILLS without entries too long or containing secrets."
+  (seq-remove (lambda (s)
+                (or (not (stringp s))
+                    (> (length s) +perf-savehist-max-kill)
+                    (let ((case-fold-search nil))
+                      (string-match-p +perf-secret-regexp s))))
+              kills))
+
+(defvar savehist-minibuffer-history-variables)
+(defvar savehist-additional-variables)
+
+(defun +perf--without-secrets (items)
+  "ITEMS without elements whose printed form contains a secret."
+  (let ((case-fold-search nil))
+    (seq-remove (lambda (x)
+                  (string-match-p +perf-secret-regexp
+                                  (if (stringp x) x (prin1-to-string x))))
+                items)))
+
+(defun +perf-savehist-filter-a (fn &rest args)
+  "Around `savehist-save' (FN): persist filtered copies, never the live values.
+Every list savehist writes (minibuffer histories, registers, ...) loses
+elements containing secrets; the kill ring also loses huge entries."
+  ;; `seq-uniq', not `delete-dups': `append' shares its last list, the live
+  ;; `savehist-additional-variables', and `delete-dups' once dropped kill-ring
+  ;; from it.  Entries may be (VAR . MAX-LENGTH).
+  (let* ((vars (seq-filter (lambda (v) (and (not (eq v 'kill-ring))
+                                           (boundp v) (listp (symbol-value v))))
+                           (seq-uniq (mapcar (lambda (v) (if (consp v) (car v) v))
+                                             (append (bound-and-true-p savehist-minibuffer-history-variables)
+                                                     (bound-and-true-p savehist-additional-variables))))))
+         (vals (mapcar (lambda (v)
+                         (+perf--without-secrets (symbol-value v)))
+                       vars)))
+    ;; The kill ring also loses entries too long to persist.
+    (let ((kill-ring (+perf--without-secrets (+perf-persistable-kills kill-ring))))
+      (cl-progv vars vals (apply fn args)))))
+(advice-add 'savehist-save :around #'+perf-savehist-filter-a)
+
 (provide '+perf)
 ;;; +perf.el ends here

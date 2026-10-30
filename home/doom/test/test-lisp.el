@@ -552,5 +552,51 @@
 (ert-deftest perf/freeze-recorder-off-in-batch ()
   (should-not +perf-freeze-recorder-mode))
 
+
+(ert-deftest perf/savehist-drops-huge-and-secret-kills ()
+  (let* ((key (concat "sk-ant-" "api03-" (make-string 40 ?x)))
+         (gh (concat "ghp_" (make-string 36 ?a)))
+         (kills (list "normal text" (make-string 70000 ?y)
+                      (concat "export KEY=" key) gh "sk-ant- mentioned in prose"
+                      "-----BEGIN OPENSSH PRIVATE KEY-----\nabc")))
+    (should (equal (+perf-persistable-kills kills)
+                   '("normal text" "sk-ant- mentioned in prose")))))
+
+(require 'savehist)
+
+(ert-deftest perf/savehist-filter-leaves-live-kill-ring-alone ()
+  (let ((kill-ring (list "keep" (make-string 70000 ?z)))
+        seen)
+    (+perf-savehist-filter-a (lambda () (setq seen (copy-sequence kill-ring))))
+    (should (equal seen '("keep")))
+    (should (= 2 (length kill-ring)))))
+
+
+(ert-deftest perf/savehist-filters-secrets-in-every-history ()
+  (defvar claude-test-history nil)
+  (let* ((key (concat "sk-ant-" "usr-" (make-string 40 ?k)))
+         (savehist-minibuffer-history-variables '(claude-test-history))
+         (savehist-additional-variables '(register-alist))
+         (claude-test-history (list "(setq x 1)" (format "(setq k %S)" key)))
+         (register-alist (list (cons ?a "plain") (cons ?k key)))
+         (kill-ring nil)
+         seen)
+    (+perf-savehist-filter-a
+     (lambda () (setq seen (list claude-test-history register-alist))))
+    (should (equal seen '(("(setq x 1)") ((?a . "plain")))))
+    ;; Live values untouched.
+    (should (= 2 (length claude-test-history)))
+    (should (= 2 (length register-alist)))))
+
+(ert-deftest perf/savehist-filter-keeps-variable-list-intact ()
+  ;; delete-dups on (append ... savehist-additional-variables) once dropped
+  ;; kill-ring from the live list, so savehist stopped writing it.
+  (let* ((savehist-minibuffer-history-variables '(kill-ring))
+         (savehist-additional-variables (list 'kill-ring '(search-ring . 10)))
+         (kill-ring (list "keep"))
+         (search-ring nil))
+    (+perf-savehist-filter-a #'ignore)
+    (should (equal savehist-additional-variables '(kill-ring (search-ring . 10))))))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
