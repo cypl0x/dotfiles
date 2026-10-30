@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 03:58]
+:UPDATED:  [2026-10-30 Fr 04:05]
 :END:
 
 | Area                          | Status | What changed                                                                             |
@@ -30,11 +30,41 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                   |
 | Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                 |
 | Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                         |
-| inari disk                    | ◐      | 95% → 94% (8.5 GiB); the big wins need your OK, see below                                |
+| inari disk                    | ✔      | 98% → 81% (85 GB free) with your OK; auto-GC under 8 GiB (deploy: nrs on inari) |
 | AI package "familiar"         | ✔ ✦    | v0.2: commit msg, explain, diagnostics, build errors, review, smerge fixes, spend ledger |
 | GitHub CI                     | ✔      | All 6 jobs green on claude/ci-repair (incl. new Emacs Lisp job); merge when ready |
 
 * 📓 Log
+** [2026-10-30 Fr 04:05] (+145m) — the delay you felt in Vellumory, measured; inari breathes again
+*Your report:* commands and window changes in Vellumory (e.g. =SPC w m m=)
+have a noticeable initial delay.
+
+*Evidence:* the CPU profiler I had started after the restart had sampled
+exactly those moments. =vellumory--layout-1= took *12% of all samples*,
+and *30% of that* was in =last=. =(car (last spreads))= sits inside
+=(dolist (spread spreads) …)=, so every layout walks the list once per
+spread. That's O(n²), and your open document has *5,019 spreads* (25,094
+rows). Byte-compiled benchmark of exactly that pattern at n = 5,019:
+*114.8 ms per layout*, with the value hoisted out of the loop: *0.14 ms*.
+
+*Done:* a two-line patch (applies cleanly to =bae0e5e=). It's
+*hot-patched in your session* (reverts on restart unless it lands
+upstream) and filed as a TODO in =~/vault/vellumory-feedback.org= with
+the build, numbers and diff, ready to forward to your inari agent. The
+bigger remaining cost is structural: every window change erases and
+re-inserts all 25k rows.
+
+Also from the same profile: my familiar mode-line segment allocated a
+keymap on every redisplay. Now it's built once (4 µs per evaluation).
+
+*inari:* the disk had dropped to *98%, 12 GB free* (the agents there
+burned ~17 GB in an hour). With your go-ahead I deleted the two stale
+worktree =target/= dirs (54 GB), =~/.cache= (13 GB) and the
+Android/Flutter toolchains (8 GB) after checking that no process had a
+file or working directory inside them. *Now 81%, 85 GB free.* Also
+committed: Nix auto-GCs when a build sees under 8 GiB free (inari only,
+roots untouched). It takes effect after =nrs= on inari, which needs your
+sudo password.
 ** [2026-10-30 Fr 03:58] (+138m) — ⚠ I crashed your Emacs daemon (restored), and CI is green
 *What happened, plainly:*
 - From ~03:47 your daemon repeatedly spun at ~100% CPU and stopped
