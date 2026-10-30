@@ -15,6 +15,7 @@
 (defvar proced-enable-color-flag)
 (defvar proced-format)
 (defvar proced-filter)
+(defvar proced-filter-alist)
 (defvar evil-snipe-disabled-modes)
 
 ;; proced makes these buffer-local, so `setq' here would only reach the
@@ -32,7 +33,10 @@
   "Show only processes whose command line matches REGEXP, like ps aux | rg.
 An empty REGEXP shows all processes again."
   (interactive (list (read-regexp "Command line matches (empty: all)")))
-  (setq proced-filter (if (string-empty-p regexp) 'all `((args . ,regexp))))
+  ;; A named entry in `proced-filter-alist': older proced (Emacs 30) takes
+  ;; only names there, not a list of filters.
+  (setf (alist-get '+proced-grep proced-filter-alist) `((args . ,regexp)))
+  (setq proced-filter (if (string-empty-p regexp) 'all '+proced-grep))
   (proced-update t))
 
 ;; f filters in stock proced; evil-snipe would take it (and s) otherwise.
