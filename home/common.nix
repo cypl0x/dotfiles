@@ -286,21 +286,36 @@
         }
       ];
 
-      initContent = ''
-        # Baseline interactive options previously provided by oh-my-zsh.
-        bindkey -e                                  # emacs keymap
-        setopt auto_cd auto_pushd pushd_ignore_dups pushd_silent
-        setopt hist_verify hist_reduce_blanks interactive_comments
+      initContent = lib.mkMerge [
+        # TRAMP logs in with TERM=dumb and types its own `exec env ... /bin/sh`
+        # into this shell: give it a bare, fast prompt, keep those lines out of
+        # the history, and skip direnv, plugins and highlighting. Local M-x
+        # shell is TERM=dumb too but sets INSIDE_EMACS=...,comint; it keeps the
+        # full setup.
+        (lib.mkOrder 200 ''
+          if [[ $TERM == dumb && $INSIDE_EMACS != *comint* ]]; then
+            unsetopt zle prompt_cr prompt_subst
+            unset HISTFILE
+            PS1='$ '
+            return
+          fi
+        '')
+        ''
+          # Baseline interactive options previously provided by oh-my-zsh.
+          bindkey -e                                  # emacs keymap
+          setopt auto_cd auto_pushd pushd_ignore_dups pushd_silent
+          setopt hist_verify hist_reduce_blanks interactive_comments
 
-        source ${./shell/zsh/aliases.sh}
-        source ${./shell/zsh/completions.sh}
-        source ${./shell/zsh/functions.sh}
+          source ${./shell/zsh/aliases.sh}
+          source ${./shell/zsh/completions.sh}
+          source ${./shell/zsh/functions.sh}
 
-        # Shellfish integration
-        if [ -f ${./shell/shellfishrc} ]; then
-          source ${./shell/shellfishrc}
-        fi
-      '';
+          # Shellfish integration
+          if [ -f ${./shell/shellfishrc} ]; then
+            source ${./shell/shellfishrc}
+          fi
+        ''
+      ];
     };
 
     fzf = {
