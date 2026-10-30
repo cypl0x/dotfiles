@@ -39,6 +39,28 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 09:27] (+467m) — vicinae was never broken; your PATH was
+In July we (an earlier session) filed vicinae under "window never maps,
+upstream bug". Today's history pass found ~40 =nix profile add/remove=
+runs, and your imperative profile held 48 packages. Ten of them also
+come from the declarative config, and =~/.nix-profile/bin= sits /before/
+the declarative profiles on PATH, Hyprland's session PATH included. So
+you were running:
+| command | ran (old profile)  | declared |
+|---------+--------------------+----------|
+| git     | 2.52.0             | 2.55.0   |
+| rio     | 0.2.37             | 0.5.10   |
+| vicinae | 0.20.8             | 0.23.2   |
+| gcc     | 15.2.0             | 15.3.0   |
+Your =SUPER+ALT+Space= ran the 0.20.8 /client/ against the 0.23.2
+/server/. You said yes, so I removed the ten duplicates (=nix profile
+rollback= undoes it). helix (a fork on purpose), browseros, optnix and
+nix-heuristic-gc stay; those aren't declared for you here. Then:
+=vicinae toggle= → the launcher opened fully (screenshot read back).
+Repeated with the old 0.20.8 client from the store: it hangs, no window.
+That's the July bug, reproduced, and its cause shown. 34 packages
+still live only in the profile (affine, keepassxc, rclone, siyuan ×3,
+llm-agents tools …); whether to declare them is yours to decide.
 ** [2026-10-30 Fr 08:44] (+424m) — =SPC o k=: =ps aux | rg …= then =kill N=, in one buffer
 Your history has the same dance 41 times: =ps aux= (sometimes =sudo=)
 piped into =rg -i ssh=, =fzf=, =bat= or =wl-copy= to find a PID, then
