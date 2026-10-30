@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 07:20]
+:UPDATED:  [2026-10-30 Fr 07:10]
 :END:
 
 | Area                          | Status | What changed                                                                                               |
@@ -26,7 +26,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                                     |
 | Vellumory                     | ✔ 🚀   | public release v0.1.0 from GitHub (worker, module, Lisp pinned); SPC m U checks for newer                  |
 | lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                                           |
-| Tests + lint                  | ✔ 🧪   | 73 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                                   |
+| Tests + lint                  | ✔ 🧪   | 75 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check= |
 | Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                                     |
 | Claude Code ↔ Emacs           | ✔ 🔐   | kitty Claude auto-attaches (monet, token enforced) + MCP server =emacs= (definitions, references, outline) |
 | Persistent buffers            | ✔ 🛠    | restore works again (never did); 24 MB junk → 56 KB own text; *new* buffers back                           |
@@ -39,6 +39,25 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:10] (+350m) — the next freeze will explain itself
+I couldn't see inside the two minute-long freezes, and I lost one
+profile myself by reading it. So now there's a *freeze recorder* (=+perf=).
+The CPU profiler keeps sampling, keeps only the last minute while all is
+well, and if Emacs is held up for more than 20 s, it writes what happened
+to =~/.config/emacs/.local/cache/freezes/freeze-…prof= as soon as it
+recovers, and *notifies you*. Open the file with =M-x
+profiler-find-profile=, or just tell me.
+
+Verified end to end with a deliberate 25 s freeze in a throwaway: the
+notification said "frozen for 24 s", and the culprit function showed up in
+63% of the recorded samples. The first version wrote nothing, because I'd
+mixed up two profiler APIs (=profiler-cpu-profile= wraps a variable that
+is empty while running). The end-to-end test caught it, not the unit
+tests. *It's active in your session now.*
+
+Also gave up, for good reasons, on reproducing the slow =gd= headlessly:
+both throwaway attempts blocked at 0% CPU on a prompt, which a window-less
+Emacs can't answer. That was my test setup, not your freeze.
 ** [2026-10-30 Fr 07:20] (+340m) — Emacs spent 14% of its life collecting garbage
 From the profiler I armed in your session: *29% of CPU samples were
 "Automatic GC"*. The counters agree: *4,560 collections in 94 minutes,
