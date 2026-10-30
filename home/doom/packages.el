@@ -179,13 +179,12 @@
 (package! nerd-icons-corfu)    ;; Icons in corfu completion popup
 (package! pulsar)              ;; Pulse current line after big motions
 (package! sideline)            ;; Show info in sideline (diagnostics, blame, etc.)
-(package! sideline-flymake)    ;; Flymake diagnostics in sideline
+(package! sideline-flycheck)   ;; Flycheck diagnostics in sideline (:checkers syntax uses flycheck)
 
 ;; ---------------------------------------------------------------------------
 ;; Nix / system
 ;; ---------------------------------------------------------------------------
 
-(package! envrc)               ;; Buffer-local direnv (critical for NixOS + TRAMP)
 
 ;; ---------------------------------------------------------------------------
 ;; Navigation / discovery

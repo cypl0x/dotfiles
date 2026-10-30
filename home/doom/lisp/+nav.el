@@ -44,10 +44,11 @@
   :hook (prog-mode . sideline-mode)
   :config
   (setq sideline-display-backend-name t
-        sideline-backends-right '(sideline-flymake)))
+        ;; Diagnostics come from flycheck (:checkers syntax), not flymake.
+        sideline-backends-right '(sideline-flycheck)))
 
-(use-package! sideline-flymake
-  :after sideline)
+(use-package! sideline-flycheck
+  :hook (flycheck-mode . sideline-flycheck-setup))
 
 ;;;; elisp-demos — Examples in help ──────────────────────────────────────────
 
@@ -55,12 +56,6 @@
   :after helpful
   :config
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
-
-;;;; envrc — Buffer-local direnv ─────────────────────────────────────────────
-
-(use-package! envrc
-  :config
-  (envrc-global-mode))
 
 ;;;; Discovery transient — Master help menu ──────────────────────────────────
 
