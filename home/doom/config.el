@@ -482,6 +482,7 @@
 (load! "lisp/+dashboard")   ;; Dashboard hub, system overview
 (load! "lisp/+daemon")      ;; SPC q R: doom sync, restart daemon, restore session
 (load! "lisp/+vellumory")   ;; SPC m F: capture Vellumory review feedback
+(load! "lisp/+workflow")    ;; SPC p h/u/P/G: history runs, peer pull, git-closure
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules

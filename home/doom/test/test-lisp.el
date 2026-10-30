@@ -145,5 +145,73 @@
   "The Info manual ships with the worker package."
   (test-lisp--with-two-commits '("docs/vellumory.texi" "lisp/vellumory.el")
     (should (equal (+vellumory--changes old new) '(t . t)))))
+
+
+;;; +workflow
+
+(load (expand-file-name "+workflow" test-lisp-dir) nil t)
+
+(ert-deftest workflow/history-ranks-by-frequency-and-drops-noise ()
+  (cl-letf (((symbol-function 'executable-find) (lambda (p) (when (equal p "atuin") "/bin/atuin")))
+            ((symbol-function 'process-lines)
+             (lambda (&rest _)
+               '("0\tnix develop -c just gpui" "0\tcd .." "0\tgit push" "0\tclear"
+                 "1\tnix develop -c just broken"
+                 "0\tnix develop -c just run-gpui-release ~/vault"
+                 "0\tnix develop -c just run-gpui-release ~/vault" "0\t  " "0\tls -la"))))
+    (should (equal (+workflow-history "/x")
+                   '(("nix develop -c just run-gpui-release ~/vault" . 2)
+                     ("nix develop -c just gpui" . 1))))))
+
+(ert-deftest workflow/history-without-atuin-is-empty ()
+  (cl-letf (((symbol-function 'executable-find) #'ignore))
+    (should-not (+workflow-history "/x"))))
+
+(ert-deftest workflow/ignore-matches-whole-words-only ()
+  (should (string-match-p +workflow-history-ignore "git pull x"))
+  (should-not (string-match-p +workflow-history-ignore "gitk"))
+  (should-not (string-match-p +workflow-history-ignore "just run")))
+
+(ert-deftest workflow/closure-snapshot-replaces-and-copies-path ()
+  (let* ((root (file-name-as-directory (make-temp-file "proj" t)))
+         (fake (expand-file-name "fake-closure" root))
+         (out (expand-file-name (concat (file-name-nondirectory (directory-file-name root))
+                                        ".gcl.txt")
+                                root))
+         (kill-ring nil))
+    (unwind-protect
+        (progn
+          ;; Fake git-closure: writes its --output argument.
+          (write-region "#!/bin/sh\necho snapshot > \"$4\"\n" nil fake)
+          (set-file-modes fake #o755)
+          (write-region "stale" nil out)
+          (write-region "stale" nil (string-remove-suffix ".txt" out))
+          (cl-letf (((symbol-function '+workflow--root) (lambda () root))
+                    (+workflow-closure-program fake))
+            (+workflow/closure-snapshot)
+            (let ((p (get-process "git-closure")))
+              (while (process-live-p p) (accept-process-output p 0.05))
+              (accept-process-output nil 0.05)))
+          (should (equal (with-temp-buffer (insert-file-contents out) (buffer-string))
+                         "snapshot\n"))
+          (should-not (file-exists-p (string-remove-suffix ".txt" out)))
+          (should (equal (car kill-ring) out)))
+      (delete-directory root t))))
+
+
+(ert-deftest workflow/peer-url-prefers-remote-on-peer-host ()
+  (test-lisp--with-repo
+   (process-file "git" nil nil nil "remote" "add" "origin"
+                 "cypl0x@wolfhard.net:/home/cypl0x/dev/emacs-pdf")
+   (should (equal (+workflow--peer-url repo)
+                  "cypl0x@wolfhard.net:/home/cypl0x/dev/emacs-pdf"))))
+
+(ert-deftest workflow/peer-url-falls-back-to-pattern ()
+  (test-lisp--with-repo
+   (process-file "git" nil nil nil "remote" "add" "origin" "git@github.com:x/y")
+   (should (equal (+workflow--peer-url repo)
+                  (format +workflow-peer-format
+                          (file-name-nondirectory (directory-file-name repo)))))))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
