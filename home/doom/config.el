@@ -479,6 +479,7 @@
 (load! "lisp/+persist")     ;; Persistent scratch/new buffers (Sublime-like)
 (load! "lisp/+nav")         ;; Navigation, discovery, help, pulsar
 (load! "lisp/+dashboard")   ;; Dashboard hub, system overview
+(load! "lisp/+daemon")      ;; SPC q R: doom sync, restart daemon, restore session
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules
