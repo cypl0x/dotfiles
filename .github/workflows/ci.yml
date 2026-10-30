@@ -7,6 +7,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# The vellumory input is a local checkout of a private repository, which no
+# runner can fetch; every nix call swaps in a stub with the same interface.
+env:
+  NIX_FLAGS: >-
+    --override-input vellumory path:./ci/vellumory-stub
+    --override-input vellumory/nixpkgs nixpkgs
+    --no-write-lock-file
+
 jobs:
   # Detect which host configs a push actually touches, so we don't spend 30+
   # minutes building a host that didn't change. Note that eval-level errors in
@@ -61,19 +69,43 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Check formatting with treefmt
-        run: nix develop -c make fmt-check
+        run: nix develop $NIX_FLAGS -c make fmt-check NIX_FLAGS="$NIX_FLAGS"
 
       - name: Run statix linter
-        run: nix develop -c make lint-statix
+        run: nix develop $NIX_FLAGS -c make lint-statix
 
       - name: Run deadnix linter
-        run: nix develop -c make lint-deadnix
+        run: nix develop $NIX_FLAGS -c make lint-deadnix
 
       - name: Run shellcheck linter
-        run: nix develop -c make lint-shellcheck
+        run: nix develop $NIX_FLAGS -c make lint-shellcheck
 
       - name: Run flake checks
-        run: nix flake check --all-systems
+        run: nix flake check --all-systems $NIX_FLAGS
+
+  emacs-lisp:
+    name: Emacs Lisp (lint + ERT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      # home/doom/lisp outside Doom: byte-compile with warnings as errors,
+      # then the batch ERT suites. gptel (for familiar) comes from the same
+      # nixpkgs revision flake.lock pins for the system.
+      - name: Lint and test home/doom/lisp
+        run: |
+          rev=$(jq -r '.nodes[.nodes.root.inputs.nixpkgs].locked.rev' flake.lock)
+          nix shell --impure --expr \
+            "((builtins.getFlake \"github:NixOS/nixpkgs/$rev\").legacyPackages.x86_64-linux.emacs-nox.pkgs.withPackages (p: [p.gptel]))" \
+            --command make emacs-check
 
   build-thinkpad:
     name: Build thinkpad configuration
@@ -110,7 +142,7 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build thinkpad configuration
-        run: nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L
+        run: nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L $NIX_FLAGS
 
       - name: Show build info
         run: |
@@ -168,13 +200,13 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Evaluate inari configuration
-        run: nix eval --raw .#nixosConfigurations.inari.config.system.build.toplevel.drvPath
+        run: nix eval --raw .#nixosConfigurations.inari.config.system.build.toplevel.drvPath $NIX_FLAGS
 
       - name: Check what would be built locally
         id: plan
         run: |
           set -euo pipefail
-          nix build .#nixosConfigurations.inari.config.system.build.toplevel \
+          nix build .#nixosConfigurations.inari.config.system.build.toplevel $NIX_FLAGS \
             --dry-run 2>dry-run.log || { cat dry-run.log; exit 1; }
           cat dry-run.log
 
@@ -205,7 +237,7 @@ jobs:
       - name: Build inari configuration
         if: steps.plan.outputs.skip != 'true'
         # --max-jobs 2 caps peak memory; substitution speed is unaffected.
-        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L --max-jobs 2
+        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L --max-jobs 2 $NIX_FLAGS
 
       - name: Show build info
         if: steps.plan.outputs.skip != 'true'

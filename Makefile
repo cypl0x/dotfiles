@@ -3,6 +3,8 @@
 # Variables
 NIXOS_REBUILD ?= nixos-rebuild
 NIX ?= nix
+# Extra flake flags after the subcommand (CI: --override-input for private inputs)
+NIX_FLAGS ?=
 FLAKE ?= .
 ARGS ?= # Extra arguments for nixos-rebuild (e.g. --verbose)
 
@@ -93,7 +95,7 @@ clean: ## Hard cleanup: GC + store optimization
 .PHONY: check
 check: ## Check flake for errors
 	@echo "${GREEN}Checking flake...${RESET}"
-	$(NIX) flake check
+	$(NIX) flake check $(NIX_FLAGS)
 
 .PHONY: show
 show: ## Show flake outputs
@@ -102,12 +104,12 @@ show: ## Show flake outputs
 .PHONY: fmt
 fmt: ## Format all files with treefmt
 	@echo "${GREEN}Formatting all files with treefmt...${RESET}"
-	$(NIX) fmt
+	$(NIX) fmt $(NIX_FLAGS)
 
 .PHONY: fmt-check
 fmt-check: ## Check if all files are formatted with treefmt
 	@echo "${GREEN}Checking file formatting with treefmt...${RESET}"
-	$(NIX) fmt -- --fail-on-change
+	$(NIX) fmt $(NIX_FLAGS) -- --fail-on-change
 
 .PHONY: fmt-nix
 fmt-nix: ## Format only Nix files with alejandra
@@ -171,7 +173,7 @@ lint-fix: ## Auto-fix issues where possible
 	@echo "${GREEN}Auto-fixing with statix...${RESET}"
 	statix fix .
 	@echo "${GREEN}Formatting with alejandra...${RESET}"
-	$(NIX) fmt
+	$(NIX) fmt $(NIX_FLAGS)
 
 .PHONY: qa
 qa: fmt-check lint ## Run all quality assurance checks (format + lint)
