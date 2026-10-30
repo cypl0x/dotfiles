@@ -1,0 +1,53 @@
+#+title: Draft bug report: TRAMP file-name-all-completions is quadratic in directory size
+#+date: [2026-10-30 Fr]
+
+Not sent. To file: =M-x report-emacs-bug= (or tramp-devel), paste below.
+
+* Subject
+TRAMP: file-name-all-completions takes minutes on large remote directories (quadratic seq-union)
+
+* Body
+=tramp-skeleton-file-name-all-completions= (tramp.el, TRAMP 2.8.3-pre,
+Emacs 32.0.50 of 2026-08-08) merges the remote listing with ="./" "../"=
+via =seq-union=:
+
+#+begin_src emacs-lisp
+(seq-union
+ (seq-difference (progn ,@body) '("." ".."))
+ '("./" "../"))
+#+end_src
+
+=seq-union= (seq.el, generic method) reduces with =seq-contains-p= over
+the accumulated result, so it is O(n²) in the number of entries:
+
+#+begin_src emacs-lisp
+;; emacs -Q --batch
+(dolist (n '(2000 4000 8000))
+  (let ((l (mapcar #'number-to-string (number-sequence 1 n)))
+        (t0 (float-time)))
+    (seq-union l '("./" "../"))
+    (message "n=%d: %.2fs" n (- (float-time) t0))))
+;; n=2000: 0.12s   n=4000: 0.51s   n=8000: 2.00s
+#+end_src
+
+On a NixOS host /nix/store has ~80k entries, so listing it takes minutes
+with Emacs at 100% CPU and quitting inhibited in places. It is easy to
+trigger: /etc files on NixOS are symlinks into /nix/store, so opening
+=/ssh:host:/etc/hostname= with projectile (via doom-modeline on
+find-file-hook) lists the parent directories up to /nix/store.
+
+Reproduce (any NixOS host reachable via ssh):
+#+begin_src sh
+emacs -Q --batch --eval '(progn (require (quote tramp))
+  (message "%d" (length (directory-files "/ssh:localhost:/nix/store/"))))'
+#+end_src
+does not finish within 90 s; with a linear union it lists 81,831 entries in ~40 s
+(the rest is transfer and per-entry file properties).
+
+* Suggested fix
+Either append "./" and "../" only when missing (the listing already has no
+duplicates: =(append l (seq-remove (lambda (x) (member x l)) '("./" "../")))=,
+O(n)), or give =seq-union=/=seq-uniq= a hash-table path for long lists with
+=equal= (seq-uniq already has one). The latter is what a local
+workaround does (~/dotfiles/home/doom/lisp/+perf.el), tested against the
+stock algorithm as oracle.
