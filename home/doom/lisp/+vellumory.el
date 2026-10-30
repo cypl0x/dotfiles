@@ -20,6 +20,10 @@
   (expand-file-name "vellumory-feedback.org" org-directory)
   "Org file collecting Vellumory review notes.")
 
+(after! vellumory
+  ;; Pages in the Emacs theme's foreground and background ("theme colours").
+  (setq vellumory-theme 'tint))
+
 (defvar +vellumory-checkout "~/dev/vellumory"
   "The clone Doom builds Vellumory's Lisp from (see packages.el).")
 
