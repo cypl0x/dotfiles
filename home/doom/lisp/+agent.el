@@ -98,20 +98,29 @@ With active region, prepend selected text as context."
   :config
   ;; Claude backend — key from ~/.authinfo (plain text, chmod 600):
   ;;   machine api.anthropic.com login apikey password sk-ant-...
-  (auth-source-forget-all-cached)
-  (auth-source-forget-all-cached)
-  (setq gptel-model 'claude-sonnet-4-6
-        gptel-api-key (auth-source-pick-first-password :host "api.anthropic.com")
+  ;; The key is looked up per request, so editing ~/.authinfo needs no reload.
+  ;; Models come from gptel's own table (with context/cost metadata).
+  (setq gptel-model 'claude-sonnet-5-5
         gptel-backend
         (gptel-make-anthropic "Claude"
           :stream t
-          :key (auth-source-pick-first-password :host "api.anthropic.com")
-          :models '(claude-sonnet-4-6
-                    claude-opus-4-6
-                    claude-haiku-4-5-20251001
-                    claude-sonnet-5-5
-                    claude-opus-5-5))
+          :key #'gptel-api-key-from-auth-source)
         gptel-default-mode 'org-mode))
+
+(defun +agent/set-model ()
+  "Pick the gptel backend and model globally, across all known backends."
+  (interactive)
+  (require 'gptel)
+  (let* ((cands (cl-loop for (name . backend) in gptel--known-backends
+                         nconc (cl-loop for model in (gptel-backend-models backend)
+                                        collect (list (format "%s:%s" name model)
+                                                      backend model))))
+         (pick (assoc (completing-read
+                       (format "Model (now %s): " gptel-model) cands nil t)
+                      cands)))
+    (setq gptel-backend (nth 1 pick)
+          gptel-model (nth 2 pick))
+    (message "gptel → %s" (car pick))))
 
 ;;;; Transient menu — unified AI dispatch ────────────────────────────────────
 
@@ -142,7 +151,7 @@ With active region, prepend selected text as context."
      ("g" "gptel send"       gptel-send)
      ("G" "gptel menu"       gptel-menu)
      ("c" "gptel chat"       gptel)
-     ("m" "Set model"        gptel-set-model)]
+     ("m" "Set model"        +agent/set-model)]
     ["Tools"
      ("t" "ACP traffic"      agent-shell-view-acp-logs)
      ("T" "Transcript"       agent-shell-open-transcript)

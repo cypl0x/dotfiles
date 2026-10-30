@@ -397,7 +397,7 @@ Context syntax: @buffer @region @file:path @var:name @eval:(expr) @mode @buffers
   ["gptel"
    ("g" "gptel send"          gptel-send)
    ("G" "gptel menu"          gptel-menu)
-   ("m" "Set model"           gptel-set-model)])
+   ("m" "Set model"           +agent/set-model)])
 
 ;;;; Keybindings ─────────────────────────────────────────────────────────────
 
