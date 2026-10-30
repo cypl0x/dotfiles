@@ -1,0 +1,38 @@
+#+title: Draft issue for stevemolitor/monet: lock-file auth token is never verified
+#+date: [2026-10-30 Fr]
+
+Not sent. Security-relevant, so it may be better sent privately (e.g. by email
+to the maintainer) than as a public issue.
+
+* Summary
+monet writes an =authToken= into =~/.claude/ide/PORT.lock= (=monet--create-lockfile=),
+but nothing checks it when a client connects. Any local process (other local
+users included) that connects to the localhost port gets the IDE MCP session:
+current selection, open editors, diagnostics, and the ability to open diff
+views for proposed file changes.
+
+* Reproduce (monet ee2e355, emacs-websocket from MELPA)
+1. =M-x monet-start-server= in a project.
+2. With the port from the lock file:
+#+begin_src sh
+curl -si --max-time 2 -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+  -H 'Sec-WebSocket-Protocol: mcp' \
+  -H 'X-Claude-Code-Ide-Authorization: wrong' http://127.0.0.1:PORT/ | head -1
+# HTTP/1.1 101 Switching Protocols
+#+end_src
+
+* Expected
+Claude Code (2.1.226) sends =X-Claude-Code-Ide-Authorization: <authToken>= in
+the WebSocket handshake; connections without the matching token should be
+rejected. (The VS Code / JetBrains extensions reject them.)
+
+* Suggested fix
+websocket.el's server parses the handshake in =websocket-verify-client-headers=
+and then calls =:on-open= synchronously; the raw headers are not kept on the
+websocket object. A local workaround (stash the headers in an advice on
+=websocket-verify-client-headers=, compare in =monet--on-open-server=, close
+otherwise without tearing down the session) is in
+=~/dotfiles/home/doom/lisp/+monet.el=; upstream, monet could check inside its
+own =:on-open= if websocket.el exposed the request headers, or pass a custom
+header validator.
