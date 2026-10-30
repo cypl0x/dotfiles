@@ -18,6 +18,8 @@
 ;;
 ;;; Code:
 
+(defvar server-name)
+
 (defvar +daemon-session-name "restart"
   "Session file name (under `doom-session-file's directory) used across restarts.")
 
@@ -29,6 +31,7 @@
 
 (defun +daemon--relaunch-script (session)
   "Shell script restarting the daemon and restoring SESSION in a new frame."
+  (require 'server)
   (let ((emacs (expand-file-name invocation-name invocation-directory))
         (client (expand-file-name "emacsclient" invocation-directory))
         (name (shell-quote-argument server-name)))
