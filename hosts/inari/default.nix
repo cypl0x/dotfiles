@@ -107,4 +107,14 @@
     cacheName = "cypl0x";
     cachixTokenFile = "/etc/cachix/cypl0x.token";
   };
+
+  # Emergency brake for the disk. Concurrent agent builds filled / from 29 to
+  # 12 GB free within an hour (2026-10-30), with Nextcloud, Paperless and Home
+  # Assistant on the same filesystem. When a build sees less than min-free, Nix
+  # collects dead paths until max-free is available. GC roots (systems, direnv
+  # shells, result links) are never touched; the weekly `nh clean` stays.
+  nix.settings = {
+    min-free = 8 * 1024 * 1024 * 1024; # 8 GiB
+    max-free = 32 * 1024 * 1024 * 1024; # 32 GiB
+  };
 }
