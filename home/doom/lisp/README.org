@@ -831,16 +831,17 @@ Custom entries on the Doom splash screen:
 A standalone package (=lisp/familiar/familiar.el=, built on gptel) plus Doom
 glue. The answer goes where the work is, not into a chat window.
 
-| Key                       | Command                                                    | Tier   |
-|---------------------------+------------------------------------------------------------+--------|
-| =SPC A x=, embark =X=     | =familiar-explain= (region/defun/symbol)                   | Haiku  |
-| =SPC A d=                 | =familiar-explain-diagnostic=                              | Haiku  |
-| =SPC A E=                 | =familiar-explain-compilation-error=                       | Haiku  |
-| =SPC A F=                 | =familiar-fix= → inline smerge conflict                    | Sonnet |
-| =SPC A v=                 | =familiar-review= (staged, else unstaged)                  | Sonnet |
-| =M-g=, =SPC m g= (commit) | =familiar-commit-message=                                  | Haiku  |
-| =SPC A $=, click =✦$=     | =familiar-spend= (ledger)                                  | —      |
-| =SPC A H=                 | =familiar-handoff= → agent-shell / claude-code / clipboard | free   |
+| Key                              | Command                                                               | Tier   |
+|----------------------------------+-----------------------------------------------------------------------+--------|
+| =SPC A x=, embark =X=            | =familiar-explain= (region/defun/symbol)                              | Haiku  |
+| =SPC A d=                        | =familiar-explain-diagnostic=                                         | Haiku  |
+| =SPC A E=                        | =familiar-explain-compilation-error=                                  | Haiku  |
+| =SPC A F=                        | =familiar-fix= → inline smerge conflict                               | Sonnet |
+| =SPC A v=                        | =familiar-review= (staged, else unstaged)                             | Sonnet |
+| =M-g=, =SPC m g= (commit)        | =familiar-commit-message=                                             | Haiku  |
+| =SPC A $=, click =✦$=            | =familiar-spend= (ledger)                                             | —      |
+| =SPC A H=                        | =familiar-handoff= → agent-shell / claude-code / clipboard            | free   |
+| MCP server =emacs= (Claude Code) | =definitions=, =references=, =outline= from Emacs (xref/eglot, imenu) | free   |
 
 =C-u= escalates one tier. Every request is priced (gptel's model table, else
 =familiar-model-prices=) and appended to =familiar-ledger-file=; alerts at

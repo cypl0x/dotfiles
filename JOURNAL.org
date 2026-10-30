@@ -15,28 +15,58 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 05:40]
+:UPDATED:  [2026-10-30 Fr 05:50]
 :END:
 
-| Area                          | Status | What changed                                                                              |
-|-------------------------------+--------+-------------------------------------------------------------------------------------------|
-| Pending work committed        | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts)                                 |
-| =SPC A= AI menu               | ✔ 🛠    | Was *broken* until agent-shell loaded; now always opens                                   |
-| =SPC A m= model picker        | ✔ 🛠    | Called a command that doesn't exist; now a real picker                                    |
-| =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                    |
-| Vellumory                     | ✔ 🚀   | public release v0.1.0 from GitHub (worker, module, Lisp pinned); SPC m U checks for newer |
-| lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                          |
-| Tests + lint                  | ✔ 🧪   | 62 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                  |
-| Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                    |
-| Claude Code ↔ Emacs           | ✔ 🔐   | kitty Claude auto-attaches per project (monet), auth token enforced                       |
-| LSP fallback                  | ✔      | missing server → one quiet notice, not [eglot] errors; nix → nil                          |
-| Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                  |
-| Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                          |
-| inari                         | ✔      | deployed via nrsi (0 bytes): TRAMP guard + auto-GC live, 0 failed units, 82% disk         |
-| AI package "familiar"         | ✔ ✦    | v0.3: + agent hand-off (agent-shell / claude-code / clipboard)                            |
-| GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules          |
+| Area                          | Status | What changed                                                                                               |
+|-------------------------------+--------+------------------------------------------------------------------------------------------------------------|
+| Pending work committed        | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts)                                                  |
+| =SPC A= AI menu               | ✔ 🛠    | Was *broken* until agent-shell loaded; now always opens                                                    |
+| =SPC A m= model picker        | ✔ 🛠    | Called a command that doesn't exist; now a real picker                                                     |
+| =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                                     |
+| Vellumory                     | ✔ 🚀   | public release v0.1.0 from GitHub (worker, module, Lisp pinned); SPC m U checks for newer                  |
+| lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                                           |
+| Tests + lint                  | ✔ 🧪   | 66 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                                   |
+| Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                                     |
+| Claude Code ↔ Emacs           | ✔ 🔐   | kitty Claude auto-attaches (monet, token enforced) + MCP server =emacs= (definitions, references, outline) |
+| LSP fallback                  | ✔      | missing server → one quiet notice, not [eglot] errors; nix → nil                                           |
+| Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                                   |
+| Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                                           |
+| inari                         | ✔      | deployed via nrsi (0 bytes): TRAMP guard + auto-GC live, 0 failed units, 82% disk                          |
+| AI package "familiar"         | ✔ ✦    | v0.3: + agent hand-off (agent-shell / claude-code / clipboard)                                             |
+| GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 05:50] (+250m) — the MCP bridge: agents now ask Emacs, not just grep
+Every Claude Code session (kitty included) now has an MCP server *=emacs=*
+backed by your running Emacs (=familiar-mcp.el=), with three read-only
+tools:
+| Tool          | What it gives the agent                                                        |
+|---------------+--------------------------------------------------------------------------------|
+| =definitions= | semantic go-to-definition: eglot/LSP if running, else etags or Emacs Lisp      |
+| =references=  | semantic find-references from the same backend                                 |
+| =outline=     | the file's structure (functions, types, headings) with line numbers, via imenu |
+
+*Why not through monet's IDE connection?* I checked the Claude Code
+2.1.226 bundle: it passes exactly two IDE tools to the model
+(=mcp__ide__executeCode=, =mcp__ide__getDiagnostics=) and drops the rest.
+Extra tools there would have been invisible, so it's a regular MCP server
+instead, via the =mcp-server-lib= you already had.
+
+*Verified the real way:*
+- The actual stdio script spoke JSON-RPC to your daemon: =initialize=, then
+  =tools/list= (3 tools), then =definitions= of =string-prefix-p=, which
+  resolved to =subr.el:6239=, and =outline= of =+perf.el=.
+- =claude mcp get emacs=: *✔ Connected*.
+- A fresh daemon starts it from the autoload alone.
+
+Bugs found on the way: elisp xref results carry no line number (the
+agent saw =:?:=), so they're now resolved via their marker. And
+=mcp-server-lib-start= errors when started twice (a second Claude, or
+elisp-dev-mcp), so it's now idempotent. 66 tests.
+
+=~/.claude.json= changed via =claude mcp add= (a backup is in my
+scratchpad). Remove it with =claude mcp remove emacs -s user=.
 ** [2026-10-30 Fr 05:40] (+240m) — Claude Code in kitty now sees your Emacs (and only it can)
 *The gap:* you run Claude Code in kitty, and your config enables monet,
 which implements Claude Code's IDE protocol: the agent sees your
