@@ -11,25 +11,120 @@ Newest entries are at the *top* of each section. Every claim here was checked
 against the live system (running daemon, real keystrokes, real servers)
 before it landed. Timestamps are inactive org timestamps, so =C-c .= / agenda
 won't nag you. Relative ages ("+Nm") are measured from the session start at
-[2026-10-30 Fri 01:40].
+[2026-10-30 Fr 01:40].
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fri 02:00]
+:UPDATED:  [2026-10-30 Fr 02:42]
 :END:
 
-| Area                    | Status | What changed                                             |
-|-------------------------+--------+----------------------------------------------------------|
-| Pending work committed  | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts) |
-| =SPC A= AI menu         | ✔ 🛠   | Was *broken* until agent-shell loaded — now always opens  |
-| =SPC A m= model picker  | ✔ 🛠   | Called a command that doesn't exist — now a real picker   |
-| Claude API key          | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=     |
-| Real-input testing      | ✔      | uinput + dotool + wtype + grim: I press keys like you do  |
-| inari disk (95%)        | ⏳     | Removing ~227 GB of stale flake-source snapshots          |
-| AI package "familiar"   | 📐     | Designing — see [[*🔮 Roadmap][Roadmap]]                    |
+| Area                         | Status | What changed                                                   |
+|------------------------------+--------+----------------------------------------------------------------|
+| Pending work committed       | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts)       |
+| =SPC A= AI menu              | ✔ 🛠   | Was *broken* until agent-shell loaded; now always opens         |
+| =SPC A m= model picker       | ✔ 🛠   | Called a command that doesn't exist; now a real picker          |
+| =SPC q R= sync+restart       | ✔ 🚀   | Replaces your 70× =ps auxert{}rg emacs= loop; *you used it at 02:13* |
+| Vellumory latest             | ✔ 🚀   | =bae0e5e=; =SPC m U= updates itself, =SPC m F= captures feedback |
+| lisp/ + snippets/ declarative | ✔     | No more hand-made symlinks; yasnippet error gone                |
+| Tests + lint                 | ✔ 🧪   | 14 batch ERT + 6 live ERT, byte-compile with warnings as errors  |
+| Claude API key               | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=          |
+| Real-input testing           | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9) |
+| inari disk                   | ◐      | 95% → 94% (8.5 GiB); the big wins need your OK, see below        |
+| AI package "familiar"        | 📐     | Next up, see [[*🔮 Roadmap][Roadmap]]                              |
+| GitHub CI                    | ⏳     | Queued after the Emacs work (one known cause found)              |
 
 * 📓 Log
-** [2026-10-30 Fri 01:58] (+18m) — the keyboard never lies
+** [2026-10-30 Fr 02:40] (+60m) — Vellumory: always the latest, and feedback in one key
+You asked for the newest Vellumory to test and review. Its development is
+live: the inari sessions committed at 02:10 and again at 02:21. So instead
+of bumping it by hand each time, there is now a command:
+
+- =SPC m U= (in a Vellumory buffer) / =M-x +vellumory/update= :: pulls
+  =~/dev/vellumory= and looks at /what/ changed. Lisp only → =doom sync=,
+  then every loaded =vellumory*= feature is re-loaded in place (seconds,
+  no restart). Worker, manual or packaging → also =nix flake update
+  vellumory= + =nixos-rebuild switch=. Ends with a desktop notification
+  listing the new commits. *Verified by keys:* =8084d79 → bae0e5e=,
+  full chain, notification shown.
+- =SPC m F= :: captures a TODO into =~/vault/vellumory-feedback.org= with a
+  =vellumory:= link to the exact page/position, the selection as a quote,
+  and the exact build (=branch@commit (dirty)=, worker version). =SPC n V=
+  opens the file. Review sessions become actionable lists.
+- The =Info file 'vellumory' does not exist= error from your =*Messages*=
+  is fixed upstream (8084d79), and the manual ships with the worker now.
+
+Your "opened late" =vellumory-info=: I measured 84 ms cold, 20 ms warm.
+The lookup is three =file-exists-p= calls, so the daemon was most likely busy
+at that moment (it had just restarted). If it recurs: =M-x profiler-start=.
+
+** [2026-10-30 Fr 02:35] (+55m) — tests that bite, lint that's real
+=home/doom/test/=:
+- =run.sh= :: byte-compiles the standalone modules with *warnings as
+  errors*, then 14 ERT tests under =emacs -Q= with tiny Doom shims (no
+  Doom needed, so CI can run it later).
+- =test-live.el= :: 6 read-only ERT tests *inside your daemon*. They check
+  that every transient suffix is callable (the bug class that broke
+  =SPC A=), the leader keys, the gptel key and model, the capture template,
+  and the live links.
+
+They paid for themselves right away. Real bugs caught before you hit them:
+1. Feedback capture crashed if =~/dev/vellumory= is missing (=file-missing=).
+2. =+daemon= read =server-name= before =server.el= was guaranteed loaded.
+3. In =+vellumory/update=, a parallel =let= made the final step's callback
+   a *void variable*. It would have failed exactly at the end of a
+   successful update.
+4. Embarrassing but instructive: my first lint gate was fake-green.
+   =batch-byte-compile= didn't fail the script, and =set -e= is ignored
+   inside =f && g=. Now there's an explicit exit code, and it has been
+   seen failing.
+
+** [2026-10-30 Fr 02:30] (+50m) — inari disk: what worked, what didn't
+- Dead store paths looked like 246 GB, of which 231 GB were 2,453
+  flake-source snapshots (=nix develop= copies the repo, =.lake= included,
+  on every run).
+- I kept the newest snapshot per repo, everything registered in the last 7
+  days, the current system, and your dotfiles snapshot. They are pinned as
+  roots in =~/.cache/gc-keep-20261030/= (delete that dir in a week to let
+  them go). Then I ran =nix-store --gc=: *5,262 paths, 8.5 GiB freed*.
+- *My estimate was wrong:* =auto-optimise-store= hard-links identical files
+  (it saves 27.5 GiB), so near-identical snapshots shared their bytes. NAR
+  sizes counted them thousands of times.
+- *Where the 416 GB really is* (not deleted, your call):
+  | What                                   |  Size | Note                                   |
+  |----------------------------------------+-------+----------------------------------------|
+  | =~/dev/*/target= (cargo)               | ~80 G | minaret-magit 32 G, manual-export 22 G, minaret 12 G |
+  | =/tmp/claude-1000=                     |  28 G | Claude Code scratchpads, some sessions active |
+  | =~/.claude=                            |  29 G | transcripts (agent-recall indexes them!) |
+  | =~/.cache=                             |  13 G |                                        |
+  | =~/.gradle=, =.dartServer=, =.android= |   8 G | Android/Flutter toolchains             |
+  | journald                               | 3.9 G | needs sudo: =journalctl --vacuum-size=500M= |
+** [2026-10-30 Fr 02:20] (+40m) — a confession about testing in your session
+While I ran the capture test, you were reading the Vellumory manual. My
+keystrokes went to your =*info*= window and triggered an Info search.
+Nothing changed, but your cursor in "What makes it fast" may have moved.
+Since then, every UI test runs in a separate =CLAUDE-LAB= frame of the same
+daemon on *workspace 9* (watch it there if you like). The driver refuses to
+type unless that frame has focus.
+
+** [2026-10-30 Fr 02:13] (+33m) — =SPC q R=: you used it before I told you
+=+daemon/sync-and-restart= saves buffers and the persp session, runs
+=doom sync= asynchronously (aborts and shows output if it fails), then a
+detached relauncher waits for the old PID, starts =emacs --daemon= with
+the same server name, and opens a frame on the same Wayland display with
+your workspaces restored. =C-u SPC q R= skips the sync.
+
+I tested it in a /throwaway daemon/ (not yours), with real keys in its
+frame: restarted in 24 s with the frame, buffer and workspace back. Then
+=*Messages*= in your daemon showed =Restarted & restored 02:13:59=: you
+had found and used it on your own. 🎉 (Then you ran =ps aux | rg -i
+emacs=, old habits. 😄)
+
+Also: =lisp/= and =snippets/= are now *declared* in =home/doom.nix=
+(out-of-store links for wap, store copies for other users). The missing
+snippets dir was behind =[yas] … snippets with some errors=. A
+=__module= snippet scaffolds new =lisp/+name.el= files.
+
+** [2026-10-30 Fr 01:58] (+18m) — the keyboard never lies
 I drove your live Emacs with real keystrokes (=dotool=, German layout) and
 took screenshots after each key. The first try already paid off:
 
@@ -49,7 +144,7 @@ menus and checks every suffix: *0 unbound commands left*.
 
 Commits: =363c951=, =156cab8=, =c5330db= (uinput/wtype so input injection works).
 
-** [2026-10-30 Fri 01:48] (+8m) — research: how you actually work
+** [2026-10-30 Fr 01:48] (+8m) — research: how you actually work
 Three parallel investigations (shell history, live Emacs, inari, ecosystem).
 Highlights, with the evidence:
 
@@ -92,7 +187,7 @@ Highlights, with the evidence:
   imenu, tree-sitter, flymake, ediff to Claude Code). *monet* covers the
   same ground but has been quiet since April.
 
-** [2026-10-30 Fri 01:42] (+2m) — clean slate
+** [2026-10-30 Fr 01:42] (+2m) — clean slate
 Committed everything that was pending, as 4 logical commits instead of one
 blob:
 - =77f842f= feat(doom): split config into modular lisp/ files
@@ -128,7 +223,7 @@ I'll only ask you to restart the daemon when one of the limits above
 actually applies, and I'll say which one.
 
 * 🔮 Roadmap
-** NEXT One-key daemon restart (=ps aux|rg emacs= ×70)
+** DONE One-key daemon restart (=ps aux|rg emacs= ×70) → =SPC q R=
 ** TODO "familiar" — an Emacs-first AI/agent package (+ Doom module)
 Unify the six overlapping front-ends behind one coherent, Doom-native
 surface: gptel (API), agent-shell (ACP), and Claude Code over MCP. Hook
@@ -138,6 +233,8 @@ Fall back cleanly when a CLI or key is missing.
 ** TODO git-closure as one idempotent command (×95)
 ** TODO peer pull & run per project (Turm/minaret/marveling)
 ** TODO inari: TRAMP-friendly direnv guard, auto-GC, agents from flake inputs
+** TODO GitHub CI green (known cause: =vellumory= input is =git+file:=, unreachable on runners)
+** TODO inari cleanup of non-store data (needs your OK, see 02:30 entry)
 
 * 🛠 How I verify (so you can trust every ✔)
 - *Preflight:* before touching your running Emacs, I write an entry to the
