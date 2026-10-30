@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 03:00]
+:UPDATED:  [2026-10-30 Fr 03:15]
 :END:
 
 | Area                         | Status | What changed                                                   |
@@ -35,6 +35,37 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                    | ⏳     | Queued after the Emacs work (one known cause found)              |
 
 * 📓 Log
+** [2026-10-30 Fr 03:15] (+95m) — hunting a freeze: remote NixOS /etc files hung Emacs
+While I tested the new TRAMP shell guard, opening =/ssh:localhost:/etc/hostname=
+froze *your* daemon at 100% CPU for about a minute. I'm sorry: I freed it by
+killing TRAMP's ssh. Every step of the hunt after that ran in throwaway
+daemons:
+1. The new zsh guard is innocent: vanilla =emacs -Q= TRAMP works through
+   it, and so do your =+tramp= settings with ssh ControlMaster.
+2. In a throwaway Doom daemon, a =SIGUSR2= backtrace plus an advice trap
+   gave the full chain: =find-file-hook= → doom-modeline → =projectile-project-root=
+   → walks up from =/nix/store/…-etc-hostname= (NixOS =/etc= files are
+   store symlinks) → lists all of remote */nix/store* (81,828 entries) →
+   TRAMP's =file-name-all-completions= merges them with =seq-union=.
+3. =seq-union= is *quadratic* (0.12 s / 0.51 s / 2.0 s for 2k / 4k / 8k
+   entries), so the store would take minutes. I first suspected the ELPA
+   =seq= package that straight installs, but checked: Emacs 32's built-in
+   =seq-union= is the same code. Hypothesis dropped before acting on it.
+
+*Fix* (=lisp/+perf.el=, 5 tests, the stock algorithm as oracle over 200
+random cases): projectile never looks for a root inside =/nix/store=, and
+=seq-union= on lists is linear (80k entries in 0.4 s). *Result:* the open
+takes 1.5 s, and a full remote =/nix/store= completion takes 40 s instead
+of tens of minutes. This affected every =/ssh:inari:/etc/…= file you open.
+No upstream report exists yet. The isolated repro is ready if you want me
+to file it (=M-x report-emacs-bug=).
+
+Also landed: zsh returns early for TRAMP's =TERM=dumb= login shell. That
+means a bare =$ = prompt, no ZLE, *no history file* (71 TRAMP lines had
+leaked into inari's history), and no direnv/plugins. Startup drops from
+0.25 s to 0.13 s. Local =M-x shell= is told apart by
+=INSIDE_EMACS=…,comint= and keeps everything. Active here now; *on inari
+after its next rebuild* (needs your sudo password there).
 ** [2026-10-30 Fr 03:00] (+80m) — your top shell loops are now four keys
 Your four biggest terminal loops, each now a key (counts from atuin):
 | Key       | Replaces                                                   | Count |
@@ -293,7 +324,7 @@ flymake, compile (explain/fix errors), project.el, org, and embark.
 Fall back cleanly when a CLI or key is missing.
 ** DONE git-closure as one idempotent command (×95) → =SPC p G=
 ** DONE peer pull & run per project → =SPC p u=, =SPC p P=, =SPC p h=
-** TODO inari: TRAMP-friendly direnv guard, auto-GC, agents from flake inputs
+** ACTIVE inari: TRAMP guard ✔ (deploy pending), remote /nix/store freeze ✔, auto-GC, agents from flake inputs
 ** TODO GitHub CI green (known cause: =vellumory= input is =git+file:=, unreachable on runners)
 ** TODO inari cleanup of non-store data (needs your OK, see 02:30 entry)
 
