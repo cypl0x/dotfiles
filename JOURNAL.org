@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 05:50]
+:UPDATED:  [2026-10-30 Fr 06:10]
 :END:
 
 | Area                          | Status | What changed                                                                                               |
@@ -37,6 +37,23 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 06:10] (+270m) — why =o= (contents sidebar) is slow, and the 1 ms way around it
+*Measured in your session* on =3824-e09efed-full.pdf= (5,019 spreads, 25,094
+rows): opening or closing the sidebar changes the page window's width, so
+Vellumory *lays out the whole document again*. That's *1,582 ms*, twice per
+toggle. Re-applying the =last= hoist (the restart had removed my hot-patch)
+brings it to *1,260 ms*. The profile of the rest: 92% self time, i.e.
+erasing and re-inserting every row, with no single hotspot left. That's a
+design fix for Vellumory (lay out lazily near the window, or rescale
+instead of rebuilding, or a sidebar that doesn't narrow the page). The
+numbers and ideas are filed under the TODO you already forwarded.
+
+*What works today:* jump instead of opening the sidebar.
+| Key       | What                                                       | Cost (measured)   |
+|-----------+------------------------------------------------------------+-------------------|
+| =O=       | =vellumory-goto-heading=: fuzzy contents in the minibuffer | 0 layouts, *1 ms* |
+| =SPC s i= | =consult-imenu= over the same 3,815 entries (preview)      | index in 12 ms    |
+| =o=       | contents sidebar (tree browsing)                           | 2 × ~1.3 s layout |
 ** [2026-10-30 Fr 05:50] (+250m) — the MCP bridge: agents now ask Emacs, not just grep
 Every Claude Code session (kitty included) now has an MCP server *=emacs=*
 backed by your running Emacs (=familiar-mcp.el=), with three read-only
