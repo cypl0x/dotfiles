@@ -19,6 +19,12 @@
     pkgs.yubikey-personalization
   ];
 
+  # libfido2's 70-u2f.rules also set GROUP="plugdev", a Debian group NixOS
+  # doesn't have: udev logged "Failed to resolve group 'plugdev'" ~1,700 times
+  # per boot.  Access comes from uaccess either way; the group only makes the
+  # rules apply as written.  Nobody needs to be in it.
+  users.groups.plugdev = {};
+
   # CLI / GUI management tools.
   environment.systemPackages = with pkgs; [
     yubikey-manager # `ykman` — configure FIDO2/PIV/OATH applets
