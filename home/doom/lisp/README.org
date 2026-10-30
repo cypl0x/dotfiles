@@ -59,6 +59,13 @@ order.
     ├── +persist.el      Persistent scratch buffers
     ├── +nav.el          Navigation, discovery, help transients
     ├── +dashboard.el    Feature hub, system overview
+    ├── +familiar.el     Doom glue for familiar (AI woven into Emacs)
+    ├── familiar/        Standalone familiar package (gptel-based)
+    ├── +workflow.el     atuin-ranked runs, peer pull, git-closure
+    ├── +daemon.el       SPC q R: sync, restart, restore
+    ├── +vellumory.el    Vellumory feedback, updates, theme
+    ├── +perf.el         Measured performance fixes
+    ├── +usage.el        Opt-in command/key usage counter
     ├── brave-search/    Standalone Brave Search package
     │   └── brave-search.el
     ├── app-launcher.el  Application launcher
@@ -70,13 +77,13 @@ order.
 
 Following Doom Emacs conventions established by hlissner:
 
-| Pattern             | Meaning                                    | Example                   |
-|---------------------+--------------------------------------------+---------------------------|
-| =+module/command=     | Interactive command (for =M-x= / keybinding) | =+prompt/ask=               |
-| =+module-function=    | Public non-interactive function             | =+persist/save-buffer=      |
-| =+module--private=    | Private/internal function                   | =+prompt/--expand-context=  |
-| =+module/name-h=      | Hook function                               | (not used currently)      |
-| =+module/name-a=      | Advice function                             | =+prose/leo-fix-multibyte=  |
+| Pattern            | Meaning                                      | Example                    |
+|--------------------+----------------------------------------------+----------------------------|
+| =+module/command=  | Interactive command (for =M-x= / keybinding) | =+prompt/ask=              |
+| =+module-function= | Public non-interactive function              | =+persist/save-buffer=     |
+| =+module--private= | Private/internal function                    | =+prompt/--expand-context= |
+| =+module/name-h=   | Hook function                                | (not used currently)       |
+| =+module/name-a=   | Advice function                              | =+prose/leo-fix-multibyte= |
 
 The =+= prefix means "belongs to a user/module namespace" (not Doom core).
 
@@ -85,25 +92,28 @@ The =+= prefix means "belongs to a user/module namespace" (not Doom core).
 All bindings under =SPC= (evil leader).  No conflicts with Doom defaults —
 modules append to existing prefixes, never re-create them.
 
-| Key     | Command                   | Module       |
-|---------+---------------------------+--------------|
-| =SPC i=   | AI prompt (with tools)    | +prompt      |
-| =SPC I=   | AI followup               | +prompt      |
-| =SPC '=   | AI prompt transient       | +prompt      |
-| =SPC A=   | Agent shell transient     | +agent       |
-| =SPC D=   | DTT languages menu        | +dtt         |
-| =SPC F=   | Font tools                | +fonts       |
-| =SPC H=   | Feature hub (start here!) | +dashboard   |
-| =SPC I=   | System overview           | +dashboard   |
-| =SPC N=   | NixOS operations          | +nix         |
-| =SPC P=   | Prose writing tools       | +prose       |
-| =SPC R=   | Remote / TRAMP tools      | +tramp       |
-| =SPC ?=   | Help & discovery          | +nav         |
-| =SPC ,=   | Buffer operations         | +nav         |
-| =SPC s b= | Brave web search          | +brave-search |
-| =SPC s B= | Brave search region       | +brave-search |
-| =SPC n r= | Org-roam prefix           | +org-power   |
-| =SPC n v= | Org-ql views              | +org-power   |
+| Key             | Command                                          | Module        |
+|-----------------+--------------------------------------------------+---------------|
+| =SPC i=         | AI prompt (with tools)                           | +prompt       |
+| =SPC I=         | AI followup                                      | +prompt       |
+| =SPC '=         | AI prompt transient                              | +prompt       |
+| =SPC A=         | Agent shell transient                            | +agent        |
+| =SPC D=         | DTT languages menu                               | +dtt          |
+| =SPC F=         | Font tools                                       | +fonts        |
+| =SPC H=         | Feature hub (start here!)                        | +dashboard    |
+| =SPC I=         | System overview                                  | +dashboard    |
+| =SPC N=         | NixOS operations                                 | +nix          |
+| =SPC P=         | Prose writing tools                              | +prose        |
+| =SPC R=         | Remote / TRAMP tools                             | +tramp        |
+| =SPC ?=         | Help & discovery                                 | +nav          |
+| =SPC ,=         | Buffer operations                                | +nav          |
+| =SPC s b=       | Brave web search                                 | +brave-search |
+| =SPC s B=       | Brave search region                              | +brave-search |
+| =SPC n r=       | Org-roam prefix                                  | +org-power    |
+| =SPC n v=       | Org-ql views                                     | +org-power    |
+| =SPC n V=       | Vellumory feedback file                          | +vellumory    |
+| =SPC p h/u/P/G= | History run · peer pull · pull&run · git-closure | +workflow     |
+| =SPC q R=       | Sync, restart, restore                           | +daemon       |
 
 * Modules in Depth
 
@@ -157,28 +167,28 @@ doesn't support.
 
 This module registers 80+ sequences grouped by category:
 
-| Category         | Examples                                      |
-|------------------+-----------------------------------------------|
-| Arrows           | =->= ==>= =<-= =-->= ==>=>=                         |
-| Equality         | ===== =!== ====== =!=== ==/==                        |
-| Pipes            | =\vert>= =<\vert= =\vert\vert>= =<\vert\vert=                          |
-| Logic            | =&&= =\vert\vert= =!!=                               |
-| Haskell          | =::= =:::= =:== ==:==                           |
-| Type theory      | =\\/= =/\\= =<*>= =<+>=                           |
-| Comments         | =//= =///= =/*= =*/= =/**=                        |
-| Brackets         | ={|= |\}= =[|= =|]= =#{=                          |
-| Log badges       | =[TODO]= =[FIXME]= =[ERROR]= =[WARN]=            |
+| Category    | Examples                                      |   |        |     |         |
+|-------------+-----------------------------------------------+---+--------+-----+---------|
+| Arrows      | =->= ==>= =<-= =-->= ==>=>=                   |   |        |     |         |
+| Equality    | ===== =!== ====== =!=== ==/==                 |   |        |     |         |
+| Pipes       | =\vert>= =<\vert= =\vert\vert>= =<\vert\vert= |   |        |     |         |
+| Logic       | =&&= =\vert\vert= =!!=                        |   |        |     |         |
+| Haskell     | =::= =:::= =:== ==:==                         |   |        |     |         |
+| Type theory | =\\/= =/\\= =<*>= =<+>=                       |   |        |     |         |
+| Comments    | =//= =///= =/*= =*/= =/**=                    |   |        |     |         |
+| Brackets    | ={                                            | = | \}= =[ | = = | ]= =#{= |
+| Log badges  | =[TODO]= =[FIXME]= =[ERROR]= =[WARN]=         |   |        |     |         |
 
 Log-level badges (=[TODO]=, =[DEBUG]=, etc.) are registered for =text-mode=
 so they render in org files and logs.
 
 *** Diagnostic Commands
 
-| Command                      | Key       | What it does                         |
-|------------------------------+-----------+--------------------------------------|
-| =+fonts/ligature-showcase=     | =SPC F l=   | Buffer showing all ligatures         |
-| =+fonts/font-info=             | =SPC F i=   | Font config, HarfBuzz status         |
-| =+fonts/apply-maple-features=  | =SPC F a=   | Apply OpenType feature flags         |
+| Command                       | Key       | What it does                 |
+|-------------------------------+-----------+------------------------------|
+| =+fonts/ligature-showcase=    | =SPC F l= | Buffer showing all ligatures |
+| =+fonts/font-info=            | =SPC F i= | Font config, HarfBuzz status |
+| =+fonts/apply-maple-features= | =SPC F a= | Apply OpenType feature flags |
 
 *** Face Tuning
 
@@ -242,12 +252,12 @@ after the last channel closes.
 
 *** Quick Connect Commands
 
-| Command                   | Key       | Destination         |
-|---------------------------+-----------+---------------------|
-| =+tramp/connect-inari=     | =SPC R h=   | =cypl0x@wolfhard.net:~/= |
-| =+tramp/connect-inari-turm= | =SPC R t= | =~/dev/Turm/= on inari |
-| =+tramp/connection-info=   | =SPC R i=   | TRAMP config + status |
-| =+tramp/cleanup=           | =SPC R c=   | Clean all connections |
+| Command                     | Key       | Destination              |
+|-----------------------------+-----------+--------------------------|
+| =+tramp/connect-inari=      | =SPC R h= | =cypl0x@wolfhard.net:~/= |
+| =+tramp/connect-inari-turm= | =SPC R t= | =~/dev/Turm/= on inari   |
+| =+tramp/connection-info=    | =SPC R i= | TRAMP config + status    |
+| =+tramp/cleanup=            | =SPC R c= | Clean all connections    |
 
 ** =+org-power.el= — Knowledge Management
 :PROPERTIES:
@@ -276,12 +286,12 @@ file with a unique ID.  Links between notes create a knowledge graph.
 
 Four templates are configured:
 
-| Key | Template  | Use case                           |
-|-----+-----------+------------------------------------|
-| =d=   | Default   | General note                       |
-| =c=   | Concept   | Definition, properties, examples   |
-| =r=   | Reference | Source, summary, key points, quotes |
-| =t=   | Turm      | Type theory context, proof sketch  |
+| Key | Template  | Use case                            |
+|-----+-----------+-------------------------------------|
+| =d= | Default   | General note                        |
+| =c= | Concept   | Definition, properties, examples    |
+| =r= | Reference | Source, summary, key points, quotes |
+| =t= | Turm      | Type theory context, proof sketch   |
 
 **** Workflow
 
@@ -296,15 +306,15 @@ Four templates are configured:
 
 Agenda items are grouped into sections:
 
-| Group       | Criteria         | Order |
-|-------------+------------------+-------|
-| Urgent      | Priority A       |     1 |
-| In Progress | TODO state STRT  |     2 |
-| Turm        | Tag :turm:       |     3 |
-| Emacs       | Tag :emacs:      |     4 |
-| Research    | Tag :research:   |     5 |
-| Backlog     | Priority B or C  |    10 |
-| Auto        | By category      |    20 |
+| Group       | Criteria        | Order |
+|-------------+-----------------+-------|
+| Urgent      | Priority A      |     1 |
+| In Progress | TODO state STRT |     2 |
+| Turm        | Tag :turm:      |     3 |
+| Emacs       | Tag :emacs:     |     4 |
+| Research    | Tag :research:  |     5 |
+| Backlog     | Priority B or C |    10 |
+| Auto        | By category     |    20 |
 
 *** org-ql: Query Language
 
@@ -339,12 +349,12 @@ When cursor moves onto markup, it reveals the raw syntax:
 Embed content from other org files inline.  Changes to the source propagate
 to all transclusion sites.
 
-| Key             | Command                   |
-|-----------------+---------------------------|
-| =SPC m T a=       | Add transclusion at point |
-| =SPC m T A=       | Add all transclusions     |
-| =SPC m T r=       | Remove transclusion       |
-| =SPC m T t=       | Toggle transclusion mode  |
+| Key         | Command                   |
+|-------------+---------------------------|
+| =SPC m T a= | Add transclusion at point |
+| =SPC m T A= | Add all transclusions     |
+| =SPC m T r= | Remove transclusion       |
+| =SPC m T t= | Toggle transclusion mode  |
 
 ** =+prose.el= — Writing and Prose Tools
 :PROPERTIES:
@@ -446,31 +456,31 @@ Misspelled words (red squiggly underline) can be corrected via:
 
 *** Supported Languages
 
-| Language | Mode         | Key Features                            |
-|----------+--------------+-----------------------------------------|
-| Agda     | agda2-mode   | Holes, case split, refine, auto (Mimer) |
-| Lean 4   | lean4-mode   | Continuous checking, info view, LSP     |
-| Coq      | coq-mode     | Proof General step-through, company-coq |
-| Idris 2  | idris2-mode  | Case split, proof search, add clause    |
-| F*       | fstar-mode   | PG-style interaction, tactic goals      |
+| Language | Mode        | Key Features                            |
+|----------+-------------+-----------------------------------------|
+| Agda     | agda2-mode  | Holes, case split, refine, auto (Mimer) |
+| Lean 4   | lean4-mode  | Continuous checking, info view, LSP     |
+| Coq      | coq-mode    | Proof General step-through, company-coq |
+| Idris 2  | idris2-mode | Case split, proof search, add clause    |
+| F*       | fstar-mode  | PG-style interaction, tactic goals      |
 
 *** Agda Keybindings (=SPC m= localleader)
 
-| Key         | Command                  |
-|-------------+--------------------------|
-| =SPC m l l=   | Load file (type-check)   |
-| =SPC m g ,=   | Goal type + context      |
-| =SPC m g t=   | Goal type only           |
+| Key           | Command                   |
+|---------------+---------------------------|
+| =SPC m l l=   | Load file (type-check)    |
+| =SPC m g ,=   | Goal type + context       |
+| =SPC m g t=   | Goal type only            |
 | =SPC m g .=   | Goal + context + inferred |
-| =SPC m r r=   | Refine                   |
+| =SPC m r r=   | Refine                    |
 | =SPC m r a=   | Auto (Mimer proof search) |
-| =SPC m r SPC= | Give (fill hole)         |
-| =SPC m r c=   | Case split               |
-| =SPC m n n=   | Next goal                |
-| =SPC m n p=   | Previous goal            |
-| =SPC m s s=   | Search about             |
-| =SPC m s d=   | Infer type               |
-| =SPC m s n=   | Normalize                |
+| =SPC m r SPC= | Give (fill hole)          |
+| =SPC m r c=   | Case split                |
+| =SPC m n n=   | Next goal                 |
+| =SPC m n p=   | Previous goal             |
+| =SPC m s s=   | Search about              |
+| =SPC m s d=   | Infer type                |
+| =SPC m s n=   | Normalize                 |
 
 *** Agda Unicode Input
 
@@ -483,13 +493,13 @@ Examples: =\to= → =→=, =\lambda= → =λ=, =\forall= → =∀=, =\Sigma= →
 
 No Emacs setup fully replicates Isabelle/PIDE.  Closest approximations:
 
-| Feature             | PIDE | lean4-mode | agda2-mode | Proof General |
-|---------------------+------+------------+------------+---------------|
-| Continuous checking | Yes  | Yes (LSP)  | No         | No            |
-| Document model      | Yes  | Yes (LSP)  | No         | No            |
-| Interactive holes   | No   | No         | Yes (best) | No            |
-| Case splitting      | Via tactics | Via tactics | Yes (native) | Via tactics |
-| Parallel processing | Yes  | Yes        | No         | Partial       |
+| Feature             | PIDE        | lean4-mode  | agda2-mode   | Proof General |
+|---------------------+-------------+-------------+--------------+---------------|
+| Continuous checking | Yes         | Yes (LSP)   | No           | No            |
+| Document model      | Yes         | Yes (LSP)   | No           | No            |
+| Interactive holes   | No          | No          | Yes (best)   | No            |
+| Case splitting      | Via tactics | Via tactics | Yes (native) | Via tactics   |
+| Parallel processing | Yes         | Yes         | No           | Partial       |
 
 ** =+agent.el= — AI Agent Integration
 :PROPERTIES:
@@ -510,11 +520,11 @@ Three layers of AI integration:
 
 All permission prompts bypassed at three layers:
 
-| Layer              | Setting                                | Effect           |
-|--------------------+----------------------------------------+------------------|
-| Claude Code        | =permissions.defaultMode: bypassPermissions= | No tool prompts |
-| ACP bridge         | =agent-shell-permission-allow-always=    | No ACP prompts   |
-| Initial confirm    | =skipDangerousModePermissionPrompt: true= | No startup prompt |
+| Layer           | Setting                                      | Effect            |
+|-----------------+----------------------------------------------+-------------------|
+| Claude Code     | =permissions.defaultMode: bypassPermissions= | No tool prompts   |
+| ACP bridge      | =agent-shell-permission-allow-always=        | No ACP prompts    |
+| Initial confirm | =skipDangerousModePermissionPrompt: true=    | No startup prompt |
 
 *** gptel Configuration
 
@@ -526,35 +536,35 @@ machine api.anthropic.com login apikey password sk-ant-...
 
 Available models:
 
-| Model                      | Use case                |
-|----------------------------+-------------------------|
-| =claude-sonnet-4-6=         | Default, fast, capable  |
-| =claude-opus-4-6=           | Complex reasoning       |
-| =claude-haiku-4-5-20251001= | Quick, cheap            |
-| =claude-sonnet-5-5=         | Latest generation       |
-| =claude-opus-5-5=           | Latest, most capable    |
+| Model                       | Use case               |
+|-----------------------------+------------------------|
+| =claude-sonnet-4-6=         | Default, fast, capable |
+| =claude-opus-4-6=           | Complex reasoning      |
+| =claude-haiku-4-5-20251001= | Quick, cheap           |
+| =claude-sonnet-5-5=         | Latest generation      |
+| =claude-opus-5-5=           | Latest, most capable   |
 
 *** Agent Shell Ecosystem
 
-| Package                     | Purpose                          |
-|-----------------------------+----------------------------------|
-| =agent-shell=                 | Core ACP-based agent interaction |
-| =agent-recall=                | Search/browse past transcripts   |
-| =agent-shell-attention=       | Modeline indicator for sessions  |
-| =agent-shell-math-renderer=   | LaTeX math in responses          |
-| =ob-agent-shell=              | Org-babel =#+begin_src agent-shell= |
+| Package                     | Purpose                             |
+|-----------------------------+-------------------------------------|
+| =agent-shell=               | Core ACP-based agent interaction    |
+| =agent-recall=              | Search/browse past transcripts      |
+| =agent-shell-attention=     | Modeline indicator for sessions     |
+| =agent-shell-math-renderer= | LaTeX math in responses             |
+| =ob-agent-shell=            | Org-babel =#+begin_src agent-shell= |
 
 *** monet MCP Bridge
 
 =monet-mode= provides IDE tools to Claude Code via WebSocket MCP:
 
-| Tool               | What it does                          |
-|--------------------+---------------------------------------|
+| Tool                | What it does                         |
+|---------------------+--------------------------------------|
 | getCurrentSelection | Read cursor position / selected text |
-| openFile           | Open file in Emacs                    |
-| getDiagnostics     | Read flymake/flycheck errors          |
-| openDiff           | Show diff for accept/reject           |
-| saveDocument       | Save buffer                           |
+| openFile            | Open file in Emacs                   |
+| getDiagnostics      | Read flymake/flycheck errors         |
+| openDiff            | Show diff for accept/reject          |
+| saveDocument        | Save buffer                          |
 
 The =+agent.el= module advises =agent-shell-anthropic-make-claude-client= to
 inject monet environment variables into agent-shell sessions.
@@ -577,13 +587,13 @@ When typing a prompt in the minibuffer, use =@= references to include context:
 
 | Syntax         | Expands to                                    |
 |----------------+-----------------------------------------------|
-| =@buffer=        | Full content of current buffer                |
-| =@region=        | Selected text (active region)                 |
-| =@file:path=     | Content of file at path                       |
-| =@var:name=      | Value of Emacs variable                       |
-| =@eval:(expr)=   | Result of evaluating elisp expression         |
-| =@mode=          | Current major + minor modes                   |
-| =@buffers=       | List of open file-visiting buffers with modes |
+| =@buffer=      | Full content of current buffer                |
+| =@region=      | Selected text (active region)                 |
+| =@file:path=   | Content of file at path                       |
+| =@var:name=    | Value of Emacs variable                       |
+| =@eval:(expr)= | Result of evaluating elisp expression         |
+| =@mode=        | Current major + minor modes                   |
+| =@buffers=     | List of open file-visiting buffers with modes |
 
 Example prompt: =@region Explain this Agda code and suggest improvements=
 
@@ -591,16 +601,16 @@ Example prompt: =@region Explain this Agda code and suggest improvements=
 
 Eight tools are always enabled when using =+prompt/ask=:
 
-| Tool              | What the LLM can do                      |
-|-------------------+------------------------------------------|
-| =read_buffer=       | Read any buffer's contents by name       |
-| =list_buffers=      | See all open buffers with their modes    |
-| =eval_elisp=        | Evaluate arbitrary Emacs Lisp            |
-| =describe_variable= | Get variable value + documentation       |
-| =describe_function= | Get function documentation               |
-| =insert_text=       | Insert text at cursor in any buffer      |
-| =get_modes=         | Get active modes in a buffer             |
-| =web_search=        | Search the web via Brave Search API      |
+| Tool                | What the LLM can do                   |
+|---------------------+---------------------------------------|
+| =read_buffer=       | Read any buffer's contents by name    |
+| =list_buffers=      | See all open buffers with their modes |
+| =eval_elisp=        | Evaluate arbitrary Emacs Lisp         |
+| =describe_variable= | Get variable value + documentation    |
+| =describe_function= | Get function documentation            |
+| =insert_text=       | Insert text at cursor in any buffer   |
+| =get_modes=         | Get active modes in a buffer          |
+| =web_search=        | Search the web via Brave Search API   |
 
 The LLM decides which tools to call based on your prompt.  If you ask
 "what packages do I have loaded?", it will call =eval_elisp= with
@@ -608,21 +618,21 @@ The LLM decides which tools to call based on your prompt.  If you ask
 
 *** Commands
 
-| Key     | Command              | Description                    |
-|---------+----------------------+--------------------------------|
-| =SPC i=   | =+prompt/ask=          | Ask with @context + tools      |
-| =SPC I=   | =+prompt/followup=     | Continue conversation          |
-| =SPC '=   | =+prompt/transient=    | Full dispatch menu             |
+| Key     | Command             | Description               |
+|---------+---------------------+---------------------------|
+| =SPC i= | =+prompt/ask=       | Ask with @context + tools |
+| =SPC I= | =+prompt/followup=  | Continue conversation     |
+| =SPC '= | =+prompt/transient= | Full dispatch menu        |
 
 Additional quick actions in transient:
 
-| Key | Action                | Description                  |
-|-----+-----------------------+------------------------------|
-| =e=   | Explain region        | Explain selected code        |
-| =r=   | Rewrite region        | Rewrite with instruction     |
-| =b=   | Ask about buffer      | Full buffer as context       |
-| =t=   | Generate org table    | Table from description       |
-| =i=   | Insert last response  | Paste AI response at point   |
+| Key | Action               | Description                |
+|-----+----------------------+----------------------------|
+| =e= | Explain region       | Explain selected code      |
+| =r= | Rewrite region       | Rewrite with instruction   |
+| =b= | Ask about buffer     | Full buffer as context     |
+| =t= | Generate org table   | Table from description     |
+| =i= | Insert last response | Paste AI response at point |
 
 ** =+brave-search.el= — Brave Web Search
 :PROPERTIES:
@@ -647,25 +657,25 @@ Free tier: 1,000 searches/month.
 
 *** Search Types
 
-| Command                       | Key       | What                   |
-|-------------------------------+-----------+------------------------|
-| =brave-search=                  | =SPC s b=   | Web search             |
-| =brave-search-region=           | =SPC s B=   | Search selected text   |
-| =brave-search-news-interactive= | =SPC s n=   | News search            |
-| =brave-search-at-point=         |           | Search word at point   |
-| =brave-search-lucky=            |           | Open first result      |
-| =brave-search-with-freshness=   |           | Filter by age          |
-| =brave-search-page-next=        |           | Next page of results   |
-| =brave-search-transient=        | =SPC s v=   | Full dispatch menu     |
+| Command                         | Key       | What                 |
+|---------------------------------+-----------+----------------------|
+| =brave-search=                  | =SPC s b= | Web search           |
+| =brave-search-region=           | =SPC s B= | Search selected text |
+| =brave-search-news-interactive= | =SPC s n= | News search          |
+| =brave-search-at-point=         |           | Search word at point |
+| =brave-search-lucky=            |           | Open first result    |
+| =brave-search-with-freshness=   |           | Filter by age        |
+| =brave-search-page-next=        |           | Next page of results |
+| =brave-search-transient=        | =SPC s v= | Full dispatch menu   |
 
 *** Freshness Filters
 
 | Value | Meaning    |
 |-------+------------|
-| =pd=    | Past day   |
-| =pw=    | Past week  |
-| =pm=    | Past month |
-| =py=    | Past year  |
+| =pd=  | Past day   |
+| =pw=  | Past week  |
+| =pm=  | Past month |
+| =py=  | Past year  |
 
 Custom range: =YYYY-MM-DDtoYYYY-MM-DD=
 
@@ -738,14 +748,14 @@ completion — critical for NixOS users.
 
 *** NixOS Operations
 
-| Command           | Key       | What                    |
-|-------------------+-----------+-------------------------|
-| =+nix/system-info=  | =SPC N i=   | NixOS + Emacs + Doom info |
-| =+nix/repl=         | =SPC N r=   | Nix REPL in vterm       |
-| =+nix/flake-update= | =SPC N u=   | =nix flake update=        |
+| Command             | Key       | What                      |
+|---------------------+-----------+---------------------------|
+| =+nix/system-info=  | =SPC N i= | NixOS + Emacs + Doom info |
+| =+nix/repl=         | =SPC N r= | Nix REPL in vterm         |
+| =+nix/flake-update= | =SPC N u= | =nix flake update=        |
 | =+nix/flake-check=  |           | =nix flake check=         |
 | =+nix/home-switch=  |           | =home-manager switch=     |
-| =+nix/doom-sync=    | =SPC N s=   | =doom sync=               |
+| =+nix/doom-sync=    | =SPC N s= | =doom sync=               |
 
 ** =+nav.el= — Navigation and Discovery
 :PROPERTIES:
@@ -771,19 +781,19 @@ Nix shells.
 
 *** Help Transient (=SPC ?=)
 
-| Group    | Commands                                  |
-|----------+-------------------------------------------|
-| Describe | key, function, variable, face, mode, package |
-| Lookup   | apropos, Doom modules, info manual, library |
+| Group    | Commands                                         |
+|----------+--------------------------------------------------|
+| Describe | key, function, variable, face, mode, package     |
+| Lookup   | apropos, Doom modules, info manual, library      |
 | Navigate | bindings, personal bindings, where-is, which-key |
 
 *** Buffer Transient (=SPC ,=)
 
-| Group    | Commands                                    |
-|----------+---------------------------------------------|
-| Switch   | consult-buffer, ibuffer, project, recent     |
+| Group    | Commands                                       |
+|----------+------------------------------------------------|
+| Switch   | consult-buffer, ibuffer, project, recent       |
 | Actions  | save, save-all, kill, kill-others, new, revert |
-| Navigate | goto-line, outline, imenu, bookmark           |
+| Navigate | goto-line, outline, imenu, bookmark            |
 
 ** =+dashboard.el= — Feature Hub
 :PROPERTIES:
@@ -811,22 +821,100 @@ Custom entries on the Doom splash screen:
 - *Find Knowledge Node* — org-roam node search
 - *NixOS Operations* — opens =SPC N= transient
 
+** =familiar/= + =+familiar.el= — AI Woven Into Emacs
+:PROPERTIES:
+:CUSTOM_ID: familiar
+:END:
+
+A standalone package (=lisp/familiar/familiar.el=, built on gptel) plus Doom
+glue. The answer goes where the work is, not into a chat window.
+
+| Key                       | Command                                   | Tier   |
+|---------------------------+-------------------------------------------+--------|
+| =SPC A x=, embark =X=     | =familiar-explain= (region/defun/symbol)  | Haiku  |
+| =SPC A d=                 | =familiar-explain-diagnostic=             | Haiku  |
+| =SPC A E=                 | =familiar-explain-compilation-error=      | Haiku  |
+| =SPC A F=                 | =familiar-fix= → inline smerge conflict   | Sonnet |
+| =SPC A v=                 | =familiar-review= (staged, else unstaged) | Sonnet |
+| =M-g=, =SPC m g= (commit) | =familiar-commit-message=                 | Haiku  |
+| =SPC A $=, click =✦$=     | =familiar-spend= (ledger)                 | —      |
+
+=C-u= escalates one tier. Every request is priced (gptel's model table, else
+=familiar-model-prices=) and appended to =familiar-ledger-file=; alerts at
+50/80/95% of =familiar-budget=. Fix proposals are resolved with stock smerge
+keys (=SPC g M l= keep, =SPC g M u= reject).
+
+** =+workflow.el= — Shell Loops as Project Commands
+:PROPERTIES:
+:CUSTOM_ID: workflow
+:END:
+
+| Key       | What                                                                  |
+|-----------+-----------------------------------------------------------------------|
+| =SPC p h= | run a command that succeeded here before (atuin), most frequent first |
+| =SPC p u= | =git pull --ff-only= from the peer copy on inari (via magit)          |
+| =SPC p P= | pull, then rerun the last command                                     |
+| =SPC p G= | fresh =NAME.gcl.txt= git-closure snapshot, path copied                |
+
+A remote URL on the peer host wins over =+workflow-peer-format= (vellumory
+lives in =dev/emacs-pdf= on inari).
+
+** =+daemon.el= — Sync, Restart and Restore
+:PROPERTIES:
+:CUSTOM_ID: daemon
+:END:
+
+=SPC q R= saves buffers and the workspace session, runs =doom sync -B=
+(aborting with its output on failure), restarts the daemon under the same
+server name via a detached relauncher, and reopens a frame with the session
+restored. =C-u SPC q R= skips the sync.
+
+** =+vellumory.el= — Reviewing Vellumory
+:PROPERTIES:
+:CUSTOM_ID: vellumory
+:END:
+
+Pages default to theme colours (=vellumory-theme= = =tint=).
+
+| Key       | What                                                       |
+|-----------+------------------------------------------------------------|
+| =SPC m F= | capture feedback: page link, selection, build under test   |
+| =SPC m U= | update: pull, rebuild Lisp and/or worker as needed, notify |
+| =SPC n V= | open =~/vault/vellumory-feedback.org=                      |
+
+** =+perf.el= — Measured Performance Fixes
+:PROPERTIES:
+:CUSTOM_ID: perf
+:END:
+
+Remote NixOS =/etc= files (store symlinks) froze Emacs: projectile listed all
+of remote =/nix/store= and TRAMP merged it with a quadratic =seq-union=.
+Projectile now skips the store, and =seq-union= on lists is linear.
+
+** =+usage.el= — Command Usage Counter (opt-in)
+:PROPERTIES:
+:CUSTOM_ID: usage
+:END:
+
+=M-x +usage-mode= counts commands with the keys that ran them (local file
+only); =M-x +usage/report= lists them by frequency with bound keys.
+
 * Setup Reference
 
 ** System Dependencies (=emacs-deps.nix=)
 
-| Package    | Why                                    |
-|------------+----------------------------------------|
-| =enchant2=   | jinx spell-checker backend             |
-| =pkg-config= | jinx-mod.so compilation                |
-| =graphviz=   | org-roam-graph (=dot= command)           |
-| =ltex-ls=    | eglot-ltex grammar checker             |
-| =cmake=      | vterm native module compilation         |
-| =gcc=        | vterm + jinx compilation               |
-| =gnuplot=    | org-mode plotting                      |
-| =maim=       | org-download clipboard                 |
-| =delta=      | magit-delta syntax-highlighted diffs   |
-| =difftastic= | structural, syntax-aware diffs         |
+| Package      | Why                                  |
+|--------------+--------------------------------------|
+| =enchant2=   | jinx spell-checker backend           |
+| =pkg-config= | jinx-mod.so compilation              |
+| =graphviz=   | org-roam-graph (=dot= command)       |
+| =ltex-ls=    | eglot-ltex grammar checker           |
+| =cmake=      | vterm native module compilation      |
+| =gcc=        | vterm + jinx compilation             |
+| =gnuplot=    | org-mode plotting                    |
+| =maim=       | org-download clipboard               |
+| =delta=      | magit-delta syntax-highlighted diffs |
+| =difftastic= | structural, syntax-aware diffs       |
 
 ** Auth Credentials (=~/.authinfo=)
 
@@ -906,16 +994,16 @@ Fix: =+prose/jinx--setup-nix-env= creates shim script.  Ensure =enchant2= and
 
 * Feature Summary
 
-| Category         | Count |
-|------------------+-------|
-| Modules          |    12 |
-| Packages         |    50 |
-| Keybindings      |    50 |
-| Transient menus  |    10 |
-| gptel tools      |     8 |
-| Diagnostic cmds  |    10 |
-| Workflow cmds    |    20 |
-| Total features   |   160 |
+| Category        | Count |
+|-----------------+-------|
+| Modules         |    12 |
+| Packages        |    50 |
+| Keybindings     |    50 |
+| Transient menus |    10 |
+| gptel tools     |     8 |
+| Diagnostic cmds |    10 |
+| Workflow cmds   |    20 |
+| Total features  |   160 |
 
 * Anthropic Subscription Policy Note
 
@@ -941,18 +1029,31 @@ This configuration accounts for ISO QWERTZ DE keyboard layout.
 
 Existing custom bindings using German keys:
 
-| Key     | Command                  | Rationale                          |
-|---------+--------------------------+------------------------------------|
-| =M-ö=    | =previous-buffer=          | Buffer cycling on DE layout        |
-| =M-ä=    | =next-buffer=              | =ö/ä= replace =[/]= which need shift |
-| =C-ö=    | =doom/decrease-font-size=  | Font resize on DE layout           |
-| =C-ä=    | =doom/increase-font-size=  | =C-M-== is unreachable on QWERTZ    |
-| =C-ü=    | =doom/reset-font-size=     | =ü= sits next to =ö/ä=                |
+| Key   | Command                   | Rationale                            |
+|-------+---------------------------+--------------------------------------|
+| =M-ö= | =previous-buffer=         | Buffer cycling on DE layout          |
+| =M-ä= | =next-buffer=             | =ö/ä= replace =[/]= which need shift |
+| =C-ö= | =doom/decrease-font-size= | Font resize on DE layout             |
+| =C-ä= | =doom/increase-font-size= | =C-M-== is unreachable on QWERTZ     |
+| =C-ü= | =doom/reset-font-size=    | =ü= sits next to =ö/ä=               |
 
 All module keybindings use ASCII characters under =SPC= leader to avoid
 layout conflicts.
 
 * Version History
+
+** v1.1.0 (2026-10-30)
+
+Six new modules and a test suite, see =~/dotfiles/JOURNAL.org= for the story.
+
+- =familiar=: AI in commit buffers, diagnostics, compilation errors, reviews,
+  smerge fixes, with a spend ledger and budget alerts
+- =+workflow=: atuin-ranked project runs, peer pull, git-closure snapshots
+- =+daemon=: =SPC q R= sync → restart → restore
+- =+vellumory=: feedback capture, one-key updates, theme colours
+- =+perf=: remote =/nix/store= freeze fixed; =+usage=: opt-in usage counter
+- Tests: =make emacs-check= (lint with warnings as errors + 47 ERT tests),
+  =test/test-live.el= inside the running session; CI runs the batch suite
 
 ** v1.0.0 (2026-10-25)
 
