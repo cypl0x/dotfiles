@@ -55,5 +55,32 @@ duplicates, then SEQUENCE2's that are new."
             (push elt result))))
       (nreverse result))))
 
+
+;;;; eldoc's command list, in one pass
+
+;; Loading eldoc registers its default commands with one
+;; `eldoc-add-command-completions' call over ~34 prefixes, each scanning the
+;; whole obarray (120k symbols here): 898 ms of every daemon start (measured
+;; 2026-10-30).  One pass testing all prefixes gives the same set, ~11x
+;; faster.  Falls back to the original for few names or when
+;; `completion-regexp-list' would change `all-completions' results.
+
+(declare-function eldoc-add-command "eldoc" (&rest cmds))
+
+(defun +perf-eldoc-add-command-completions-a (fn &rest names)
+  "Around `eldoc-add-command-completions' (FN): one obarray pass for NAMES."
+  (if (or completion-regexp-list (< (length names) 3))
+      (apply fn names)
+    (let ((re (concat "\\`" (regexp-opt names)))
+          (case-fold-search completion-ignore-case)
+          cmds)
+      (mapatoms (lambda (s)
+                  (when (and (commandp s) (string-match-p re (symbol-name s)))
+                    (push (symbol-name s) cmds))))
+      (apply #'eldoc-add-command cmds))))
+
+(advice-add 'eldoc-add-command-completions :around
+            #'+perf-eldoc-add-command-completions-a)
+
 (provide '+perf)
 ;;; +perf.el ends here

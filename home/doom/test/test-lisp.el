@@ -519,5 +519,27 @@
       (dolist (d (file-expand-wildcards (concat (directory-file-name +persist/directory) ".pruned-*")))
         (delete-directory d t)))))
 
+
+(ert-deftest perf/eldoc-command-completions-same-set-as-stock ()
+  "The one-pass version registers exactly what the stock function does."
+  (require 'eldoc)
+  (let ((names '("forward-" "backward-" "next-" "scroll-" "newline" "delete-char"
+                 "move-" "goto-" "self-insert-command"))
+        (collect (lambda () (let (r) (mapatoms (lambda (s) (push (symbol-name s) r))
+                                               eldoc-message-commands)
+                              (sort r #'string<)))))
+    (let* ((eldoc-message-commands (obarray-make))
+           (stock (progn (advice-remove 'eldoc-add-command-completions
+                                        #'+perf-eldoc-add-command-completions-a)
+                         (apply #'eldoc-add-command-completions names)
+                         (funcall collect)))
+           (eldoc-message-commands (obarray-make))
+           (fast (progn (advice-add 'eldoc-add-command-completions :around
+                                    #'+perf-eldoc-add-command-completions-a)
+                        (apply #'eldoc-add-command-completions names)
+                        (funcall collect))))
+      (should (> (length stock) 50))
+      (should (equal stock fast)))))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here

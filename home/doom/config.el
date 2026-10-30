@@ -383,9 +383,15 @@
 ;; binary instead of hard-coding a /nix/store path — reproducible across
 ;; ltex-ls version bumps. stdio, not tcp: the binary is a plain child process.
 (use-package! eglot-ltex
+  ;; A lambda on :hook can't be autoloaded, so without :defer use-package
+  ;; requires eglot-ltex (and with it eglot and eldoc) at startup.
+  :defer t
   :hook (text-mode . (lambda ()
-                       (require 'eglot-ltex)
-                       (eglot-ensure)))
+                       ;; eglot only manages file buffers; don't load it for
+                       ;; *new*/capture buffers.
+                       (when buffer-file-name
+                         (require 'eglot-ltex)
+                         (eglot-ensure))))
   :init
   (setq eglot-ltex-communication-channel 'stdio
         eglot-ltex-server-path
