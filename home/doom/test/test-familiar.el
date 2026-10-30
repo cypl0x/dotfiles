@@ -281,5 +281,43 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
       (familiar-cost 'claude-unknown-9 '(:input 1))
       (should (= warnings 1)))))
 
+
+(ert-deftest familiar/handoff-picks-first-available-target ()
+  (skip-unless test-familiar-available)
+  (let* ((sent nil)
+         (familiar-handoff-targets
+          `((dead :available ignore :send ,(lambda (_) (error "Not me")))
+            (live :available always :send ,(lambda (text) (setq sent text)))
+            (later :available always :send ,(lambda (_) (error "Not me either"))))))
+    (with-temp-buffer
+      (emacs-lisp-mode)
+      (insert "(defun f () 1)\n")
+      (goto-char 3)
+      (should (eq (familiar-handoff "Make it return 2.") 'live)))
+    (should (string-prefix-p "Make it return 2.\n\nIn `" sent))
+    (should (string-match-p "(defun f () 1)" sent))))
+
+(ert-deftest familiar/handoff-context-names-file-and-lines ()
+  (skip-unless test-familiar-available)
+  (let ((file (make-temp-file "familiar-ctx" nil ".el")))
+    (unwind-protect
+        (with-current-buffer (find-file-noselect file)
+          (insert ";; x\n(defun g ()\n  2)\n")
+          (goto-char (point-min)) (forward-line 2)
+          (let ((ctx (familiar-handoff-context)))
+            (should (string-match-p ":2-3`" ctx))
+            (should (string-match-p "(defun g ()" ctx)))
+          (set-buffer-modified-p nil)
+          (kill-buffer))
+      (delete-file file))))
+
+(ert-deftest familiar/handoff-clipboard-fallback ()
+  (skip-unless test-familiar-available)
+  (let ((kill-ring nil))
+    (with-temp-buffer
+      (insert "plain text here\n")
+      (should (eq (familiar-handoff "Explain.") 'clipboard)))
+    (should (string-prefix-p "Explain." (car kill-ring)))))
+
 (provide 'test-familiar)
 ;;; test-familiar.el ends here

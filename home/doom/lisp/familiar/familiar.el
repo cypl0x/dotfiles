@@ -527,6 +527,87 @@ the diagnostics at point.  With prefix arg ESCALATE, use the next model tier."
                    (familiar--propose buf beg end (familiar--unfence response)))))))
 
 
+;;;; Hand-off to agents
+
+(declare-function agent-shell-buffers "ext:agent-shell" ())
+(declare-function agent-shell-insert "ext:agent-shell" (&rest args))
+(declare-function claude-code-buffer-name "ext:claude-code-core" ())
+(declare-function claude-code-send-string "ext:claude-code-core" (string &optional paste-p))
+
+(defcustom familiar-handoff-targets
+  '((agent-shell
+     :available (lambda () (and (fboundp 'agent-shell-buffers) (car (agent-shell-buffers))))
+     :send (lambda (text)
+             (agent-shell-insert :text text :submit t
+                                 :shell-buffer (car (agent-shell-buffers)))))
+    (claude-code
+     :available (lambda () (and (fboundp 'claude-code-buffer-name)
+                                (get-buffer (claude-code-buffer-name))))
+     :send (lambda (text) (claude-code-send-string text t)))
+    (clipboard
+     :available always
+     :send (lambda (text)
+             (kill-new text)
+             (message "familiar: hand-off copied; paste it into your agent"))))
+  "Where `familiar-handoff' sends context, first available first.
+Each entry is (NAME :available PREDICATE :send FUNCTION-OF-TEXT)."
+  :type '(repeat (cons symbol plist)))
+
+(defun familiar--relative (file)
+  (if-let* ((pr (project-current)) (root (project-root pr)))
+      (file-relative-name file root)
+    (abbreviate-file-name file)))
+
+(defun familiar-handoff-context ()
+  "Markdown describing what is at point, for an agent that can open files.
+The region, else the diagnostics at point, else the compilation error at
+point, else the defun or surrounding lines."
+  (cond
+   ((derived-mode-p 'compilation-mode)
+    (let ((msg (buffer-substring-no-properties (line-beginning-position)
+                                               (min (point-max)
+                                                    (save-excursion (forward-line 8) (point))))))
+      (format "The build in `%s` reports:\n```\n%s\n```"
+              (abbreviate-file-name default-directory) (string-trim msg))))
+   (t
+    (pcase-let* ((`(,beg . ,end) (familiar--target-bounds))
+                 (file (and buffer-file-name (familiar--relative buffer-file-name)))
+                 (diags (familiar--diagnostics-at-point))
+                 (where (if file (format "%s:%d-%d" file (line-number-at-pos beg)
+                                         ;; A defun's bounds end after its newline.
+                                         (line-number-at-pos (max beg (1- end))))
+                          (buffer-name))))
+      (concat (format "In `%s`" where)
+              (when diags
+                (concat ", the checker reports:\n"
+                        (mapconcat (lambda (d) (concat "- " d)) diags "\n")))
+              "\n\n" (familiar--fenced (string-trim-right
+                                         (buffer-substring-no-properties beg end))))))))
+
+;;;###autoload
+(defun familiar-handoff (instruction &optional choose)
+  "Hand the context at point and INSTRUCTION to a running coding agent.
+Targets come from `familiar-handoff-targets' (agent-shell, a claude-code
+session for this project, else the clipboard for an agent in a terminal).
+With prefix arg CHOOSE, pick the target.  Costs nothing here: the agent
+does the work."
+  (interactive
+   (list (read-string "Ask the agent: "
+                      (when (familiar--diagnostics-at-point) "Fix this. "))
+         current-prefix-arg))
+  (let* ((available (seq-filter (lambda (tg) (funcall (plist-get (cdr tg) :available)))
+                                familiar-handoff-targets))
+         (target (if (and choose (cdr available))
+                     (assq (intern (completing-read "Hand off to: "
+                                                    (mapcar #'car available) nil t))
+                           available)
+                   (car available)))
+         (text (concat (string-trim instruction) "\n\n" (familiar-handoff-context))))
+    (deactivate-mark)
+    (funcall (plist-get (cdr target) :send) text)
+    (message "familiar: handed to %s" (car target))
+    (car target)))
+
 ;;;; Commit messages
 
 (defconst familiar--commit-system
