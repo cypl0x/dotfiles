@@ -5,6 +5,7 @@
 ;; popups, keys, and the spend counter in the mode line.
 ;;
 ;;   SPC A x / d / F / C / $   explain · explain diagnostic · fix · commit msg · spend
+;;   SPC A E / v               explain the compilation error at point · review diff
 ;;   M-g, SPC m g              in a commit message buffer: write the message
 ;;   X                         embark action on regions, defuns and identifiers
 ;;
@@ -13,6 +14,7 @@
 (add-to-list 'load-path (expand-file-name "lisp/familiar" doom-user-dir))
 
 (dolist (cmd '(familiar-explain familiar-explain-diagnostic familiar-fix
+               familiar-explain-compilation-error familiar-review
                familiar-commit-message familiar-spend familiar-mode-line-mode))
   (autoload cmd "familiar" nil t))
 

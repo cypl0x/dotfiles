@@ -164,6 +164,8 @@ With active region, prepend selected text as context."
      ("d" "Explain diagnostic" familiar-explain-diagnostic)
      ("F" "Fix (smerge)"       familiar-fix)
      ("C" "Commit message"     familiar-commit-message)
+     ("E" "Explain build error" familiar-explain-compilation-error)
+     ("v" "Review diff"        familiar-review)
      ("$" "Spend"              familiar-spend)]
     ["Tools"
      ("t" "ACP traffic"      agent-shell-view-acp-logs)

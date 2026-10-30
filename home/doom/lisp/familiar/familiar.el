@@ -42,6 +42,8 @@
 (declare-function smerge-mode "smerge-mode")
 (declare-function gfm-view-mode "ext:markdown-mode")
 (declare-function project-root "project")
+(declare-function compile-goto-error "compile")
+(declare-function compilation-next-error "compile")
 (defvar flycheck-mode)
 (defvar smerge-mode)
 
@@ -61,7 +63,7 @@
   :type '(alist :key-type symbol :value-type symbol))
 
 (defcustom familiar-task-tiers
-  '((commit . fast) (explain . fast) (diagnostic . fast) (fix . smart))
+  '((commit . fast) (explain . fast) (diagnostic . fast) (fix . smart) (review . smart))
   "Default tier for each task."
   :type '(alist :key-type symbol :value-type symbol))
 
@@ -300,6 +302,8 @@ priced and recorded once it completes.  Returns the model used."
       (let ((inhibit-read-only t))
         (erase-buffer)
         (if (fboundp 'gfm-view-mode) (gfm-view-mode) (special-mode))
+        (when (bound-and-true-p display-line-numbers-mode)
+          (display-line-numbers-mode -1))
         (setq header-line-format (format " ✦ %s" title))))
     (display-buffer buf)
     buf))
@@ -365,6 +369,79 @@ Explain the cause and how to fix it."
        :task 'diagnostic :escalate escalate :stream t
        :system familiar--explain-system
        :callback (familiar--stream-into buf)))))
+
+
+;;;###autoload
+(defun familiar-explain-compilation-error (&optional escalate)
+  "Explain the compilation error at point, with the code at its locus.
+Works in `compilation-mode' buffers and `compilation-minor-mode' (e.g. the
+*run: …* buffers).  With prefix arg ESCALATE, use the next model tier."
+  (interactive "P")
+  (let* ((message-text
+          (buffer-substring-no-properties
+           (line-beginning-position)
+           (save-excursion
+             (let ((start (point)))
+               (condition-case nil (compilation-next-error 1)
+                 (error (goto-char (point-max))))
+               (when (<= (point) start) (goto-char (point-max)))
+               (forward-line -1)
+               (min (line-end-position)
+                    (save-excursion (goto-char start) (forward-line 30) (point)))))))
+         (locus (save-window-excursion
+                  (save-excursion
+                    (condition-case nil (compile-goto-error)
+                      (error (user-error "No compilation error at point")))
+                    (let ((half (/ familiar-context-lines 2)))
+                      (list (familiar--describe-location (point))
+                            (line-number-at-pos)
+                            (familiar--fenced
+                             (buffer-substring-no-properties
+                              (save-excursion (forward-line (- half)) (point))
+                              (save-excursion (forward-line half) (line-end-position)))))))))
+         (buf (familiar--output-buffer (concat "Compilation error in " (car locus)))))
+    (familiar-request
+     (format "The build reports:\n```\n%s\n```\n\nThe code at %s (error on line %d):\n\n%s\n\n\
+Explain the cause and the fix."
+             (string-trim message-text) (nth 0 locus) (nth 1 locus) (nth 2 locus))
+     :task 'diagnostic :escalate escalate :stream t
+     :system familiar--explain-system
+     :callback (familiar--stream-into buf))))
+
+
+;;;; Review
+
+(defconst familiar--review-system
+  "You review a diff as a senior engineer. Report only real problems: bugs, \
+edge cases, races, security, misleading names, missing tests. One bullet each, \
+most severe first, with file and line. If it is fine, say so in one line.")
+
+(defcustom familiar-review-max-chars 60000
+  "Diffs longer than this are truncated before review, to bound cost."
+  :type 'integer)
+
+;;;###autoload
+(defun familiar-review (&optional escalate)
+  "Review the staged changes (or, with nothing staged, the unstaged ones).
+With prefix arg ESCALATE, use the next model tier."
+  (interactive "P")
+  (let* ((staged (familiar--git "diff" "--cached" "--no-color" "--no-ext-diff"))
+         (which (if (string-empty-p (string-trim (or staged ""))) "unstaged" "staged"))
+         (diff (if (equal which "staged") staged
+                 (familiar--git "diff" "--no-color" "--no-ext-diff"))))
+    (when (string-empty-p (string-trim (or diff "")))
+      (user-error "No changes to review"))
+    (when (> (length diff) familiar-review-max-chars)
+      (setq diff (concat (substring diff 0 familiar-review-max-chars)
+                         "\n[… truncated by familiar-review-max-chars]")))
+    (familiar-request
+     (format "Review these %s changes%s:\n\n```diff\n%s\n```" which
+             (if-let* ((p (familiar--project-name))) (format " in %s" p) "")
+             diff)
+     :task 'review :escalate escalate :stream t
+     :system familiar--review-system
+     :callback (familiar--stream-into
+                (familiar--output-buffer (format "Review of %s changes" which))))))
 
 
 ;;;; Fix: proposals as smerge conflicts

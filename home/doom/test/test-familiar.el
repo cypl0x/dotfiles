@@ -172,5 +172,91 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
               (should-not requests)))
         (delete-directory repo t)))))
 
+
+(defmacro test-familiar--in-repo (&rest body)
+  "Run BODY in a fresh git repo with one commit and `repo' bound."
+  `(let* ((repo (file-name-as-directory (make-temp-file "familiar-repo" t)))
+          (default-directory repo))
+     (unwind-protect
+         (progn
+           (dolist (args '(("init" "-q" "-b" "main")
+                           ("-c" "user.name=t" "-c" "user.email=t@t"
+                            "commit" "-q" "--allow-empty" "-m" "start")))
+             (apply #'process-file "git" nil nil nil args))
+           ,@body)
+       (delete-directory repo t))))
+
+(ert-deftest familiar/review-prefers-staged-changes ()
+  (test-familiar--with "Looks fine."
+    (test-familiar--in-repo
+     (write-region "staged\n" nil "a.txt")
+     (process-file "git" nil nil nil "add" "a.txt")
+     (write-region "unstaged\n" nil "b.txt")
+     (process-file "git" nil nil nil "add" "-N" "b.txt")
+     (cl-letf (((symbol-function 'display-buffer) #'ignore))
+       (familiar-review))
+     (let ((prompt (caar requests)))
+       (should (string-match-p "these staged changes" prompt))
+       (should (string-match-p "\\+staged" prompt))
+       (should-not (string-match-p "\\+unstaged" prompt)))
+     ;; Reviews default to the smart tier.
+     (should (eq (nth 1 (car requests)) 'claude-sonnet-5-5)))))
+
+(ert-deftest familiar/review-falls-back-to-unstaged-and-truncates ()
+  (test-familiar--with "ok"
+    (test-familiar--in-repo
+     (write-region "x\n" nil "a.txt")
+     (process-file "git" nil nil nil "add" "a.txt")
+     (process-file "git" nil nil nil "-c" "user.name=t" "-c" "user.email=t@t"
+                   "commit" "-q" "-m" "a")
+     (write-region (make-string 5000 ?y) nil "a.txt")
+     (let ((familiar-review-max-chars 1000))
+       (cl-letf (((symbol-function 'display-buffer) #'ignore))
+         (familiar-review)))
+     (let ((prompt (caar requests)))
+       (should (string-match-p "these unstaged changes" prompt))
+       (should (string-match-p "truncated by familiar-review-max-chars" prompt))
+       (should (< (length prompt) 1300))))))
+
+(ert-deftest familiar/review-refuses-clean-tree ()
+  (test-familiar--with "x"
+    (test-familiar--in-repo
+     (should-error (familiar-review) :type 'user-error)
+     (should-not requests))))
+
+(ert-deftest familiar/explain-compilation-error-sends-message-and-locus ()
+  (test-familiar--with "Undefined variable."
+    (let* ((dir (file-name-as-directory (make-temp-file "familiar-build" t)))
+           (default-directory dir))
+      (unwind-protect
+          (progn
+            (write-region "line one\nline two\n(boom)\nline four\n" nil "src.el")
+            (with-current-buffer (get-buffer-create "*familiar-test-compilation*")
+              (let ((inhibit-read-only t)) (erase-buffer))
+              (setq default-directory dir)
+              (insert "make: building\nsrc.el:3:2: error: void-variable boom\n  more detail\n")
+              (compilation-mode)
+              (compilation--ensure-parse (point-max))
+              (goto-char (point-min)) (forward-line 1)
+              (cl-letf (((symbol-function 'display-buffer) #'ignore))
+                (familiar-explain-compilation-error))
+              (kill-buffer))
+            (let ((prompt (caar requests)))
+              (should (string-match-p "error: void-variable boom" prompt))
+              (should (string-match-p "more detail" prompt))
+              (should (string-match-p "src.el" prompt))
+              (should (string-match-p "error on line 3" prompt))
+              (should (string-match-p "(boom)" prompt))))
+        (delete-directory dir t)))))
+
+(ert-deftest familiar/explain-compilation-error-needs-an-error ()
+  (test-familiar--with "x"
+    (with-temp-buffer
+      (insert "all good\n")
+      (compilation-mode)
+      (goto-char (point-min))
+      (should-error (familiar-explain-compilation-error) :type 'user-error)
+      (should-not requests))))
+
 (provide 'test-familiar)
 ;;; test-familiar.el ends here
