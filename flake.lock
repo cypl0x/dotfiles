@@ -1103,11 +1103,11 @@
         "nixpkgs-2205": "nixpkgs-2205"
       },
       "locked": {
-        "lastModified": 1793320334,
-        "narHash": "sha256-mN1c5bxWraogFB3rkHinWmWDhAZMgtO9OXFP6ksL+2I=",
+        "lastModified": 1793322658,
+        "narHash": "sha256-fjPiOYlOKE5LkRo6/9zCoHSuw+vgboM2JiQUCNI1tm0=",
         "ref": "exclude-and-delete-before-public",
-        "rev": "da6d33afdc6aa2223ba49d3738a08a4b11b1ff7a",
-        "revCount": 12,
+        "rev": "8084d798733f012960c4af6a5470979f67d6b01b",
+        "revCount": 17,
         "type": "git",
         "url": "file:///home/wap/dev/vellumory"
       },
