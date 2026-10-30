@@ -66,6 +66,7 @@ order.
     ├── +vellumory.el    Vellumory feedback, updates, theme
     ├── +perf.el         Measured performance fixes
     ├── +usage.el        Opt-in command/key usage counter
+    ├── +lsp-fallback.el Missing LSP server → quiet fallback
     ├── brave-search/    Standalone Brave Search package
     │   └── brave-search.el
     ├── app-launcher.el  Application launcher
@@ -876,11 +877,11 @@ restored. =C-u SPC q R= skips the sync.
 
 Pages default to theme colours (=vellumory-theme= = =tint=).
 
-| Key       | What                                                       |
-|-----------+------------------------------------------------------------|
-| =SPC m F= | capture feedback: page link, selection, build under test   |
+| Key       | What                                                                      |
+|-----------+---------------------------------------------------------------------------|
+| =SPC m F= | capture feedback: page link, selection, build under test                  |
 | =SPC m U= | is a newer GitHub release than the pinned one out? (tells what to change) |
-| =SPC n V= | open =~/vault/vellumory-feedback.org=                      |
+| =SPC n V= | open =~/vault/vellumory-feedback.org=                                     |
 
 ** =+perf.el= — Measured Performance Fixes
 :PROPERTIES:
@@ -890,6 +891,18 @@ Pages default to theme colours (=vellumory-theme= = =tint=).
 Remote NixOS =/etc= files (store symlinks) froze Emacs: projectile listed all
 of remote =/nix/store= and TRAMP merged it with a quadratic =seq-union=.
 Projectile now skips the store, and =seq-union= on lists is linear.
+
+** =+lsp-fallback.el= — LSP When the Server Exists
+:PROPERTIES:
+:CUSTOM_ID: lsp-fallback
+:END:
+
+A missing language server (e.g. no haskell-language-server) no longer makes
+every buffer of that language report "[eglot] Searching for program: No such
+file". The program is checked at connect time, after envrc applied the
+project's environment, and if it's absent the buffer stays on tree-sitter,
+flycheck and completion with one notice per session. =M-x eglot= is never
+intercepted.
 
 ** =+usage.el= — Command Usage Counter (opt-in)
 :PROPERTIES:
