@@ -82,4 +82,9 @@
     # difftastic.el (config.el: magit diff menu D/S) runs the difft binary
     difftastic
   ];
+
+  # A package list puts no .pc files on pkg-config's path, so jinx (which runs
+  # `pkg-config --cflags --libs enchant-2' from Emacs) found nothing, and a fake
+  # ~/.local/bin/pkg-config that printed enchant's flags for every query stood in.
+  home.sessionVariables.PKG_CONFIG_PATH = "${pkgs.enchant_2.dev}/lib/pkgconfig";
 }
