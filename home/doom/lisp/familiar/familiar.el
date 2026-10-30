@@ -363,7 +363,8 @@ priced and recorded once it completes.  Returns the model used."
 (defconst familiar--explain-system
   "You are an expert pair programmer embedded in the user's editor. Explain \
 concisely and concretely: what the code does, why, and anything surprising or \
-wrong. Use Markdown. No preamble.")
+wrong. You see only the code shown, not the rest of the file: never describe \
+or warn about lines you were not given. Use Markdown. No preamble.")
 
 ;;;###autoload
 (defun familiar-explain (&optional escalate)
@@ -372,10 +373,11 @@ With prefix arg ESCALATE, use the next model tier."
   (interactive "P")
   (pcase-let* ((`(,beg . ,end) (familiar--target-bounds))
                (where (familiar--describe-location beg))
-               (code (buffer-substring-no-properties beg end))
+               (code (familiar--fenced (buffer-substring-no-properties beg end)))
+               ;; Last: displaying the output can change the current buffer.
                (buf (familiar--output-buffer (concat "Explain " where))))
     (deactivate-mark)
-    (familiar-request (format "Explain this code from %s:\n\n%s" where (familiar--fenced code))
+    (familiar-request (format "Explain this code from %s:\n\n%s" where code)
                       :task 'explain :escalate escalate :stream t
                       :system familiar--explain-system
                       :callback (familiar--stream-into buf))))
@@ -389,12 +391,15 @@ With prefix arg ESCALATE, use the next model tier."
                    (user-error "No diagnostic at point"))))
     (pcase-let* ((`(,beg . ,end) (familiar--target-bounds))
                  (where (familiar--describe-location (point)))
+                 (line (line-number-at-pos))
+                 (code (familiar--fenced (buffer-substring-no-properties beg end)))
+                 ;; Last: displaying the output can change the current buffer.
                  (buf (familiar--output-buffer (concat "Diagnostic in " where))))
       (familiar-request
        (format "In %s the checker reports:\n%s\n\nThe code (point is on line %d):\n\n%s\n\n\
 Explain the cause and how to fix it."
                where (mapconcat (lambda (d) (concat "- " d)) diags "\n")
-               (line-number-at-pos) (familiar--fenced (buffer-substring-no-properties beg end)))
+               line code)
        :task 'diagnostic :escalate escalate :stream t
        :system familiar--explain-system
        :callback (familiar--stream-into buf)))))

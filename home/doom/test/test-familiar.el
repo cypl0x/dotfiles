@@ -139,6 +139,19 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
         (should (string-match-p "It returns one." (buffer-string)))
         (should (string-match-p "1000 in / 200 out" header-line-format))))))
 
+(ert-deftest familiar/explain-reads-the-source-before-showing-output ()
+  ;; Showing the output can make another buffer current (seen live: the
+  ;; code fence was labelled with that buffer's mode, "+dashboard").
+  (test-familiar--with "ok"
+    (with-temp-buffer
+      (emacs-lisp-mode)
+      (insert "(defun f () 1)\n")
+      (goto-char 3)
+      (cl-letf (((symbol-function 'display-buffer)
+                 (lambda (&rest _) (set-buffer (get-buffer-create " other")))))
+        (familiar-explain))
+      (should (string-match-p "```emacs-lisp\n(defun f () 1)" (car (car requests)))))))
+
 (ert-deftest familiar/commit-message-from-staged-diff-in-house-style ()
   (test-familiar--with "feat(x): add file"
     (let* ((repo (make-temp-file "familiar-repo" t))
