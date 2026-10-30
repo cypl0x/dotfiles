@@ -1,13 +1,17 @@
 {
   config,
   lib,
+  osConfig ? {},
   ...
 }: let
   # wap edits Doom from the live checkout: lisp/ and snippets/ link straight
   # into ~/dotfiles (out of store), so a saved file is live after `load-file'
   # with no rebuild, and new modules need no hand-made symlink. Other users
-  # have no checkout and get store copies.
-  live = config.home.username == "wap";
+  # have no checkout and get store copies; so does wap on other hosts.
+  live =
+    config.home.username
+    == "wap"
+    && (osConfig.networking.hostName or "") == "thinkpad";
   checkout = path:
     config.lib.file.mkOutOfStoreSymlink
     "${config.home.homeDirectory}/dotfiles/home/doom/${path}";
