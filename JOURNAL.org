@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 02:42]
+:UPDATED:  [2026-10-30 Fr 02:54]
 :END:
 
 | Area                         | Status | What changed                                                   |
@@ -23,17 +23,47 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | Pending work committed       | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts)       |
 | =SPC A= AI menu              | ✔ 🛠   | Was *broken* until agent-shell loaded; now always opens         |
 | =SPC A m= model picker       | ✔ 🛠   | Called a command that doesn't exist; now a real picker          |
-| =SPC q R= sync+restart       | ✔ 🚀   | Replaces your 70× =ps auxert{}rg emacs= loop; *you used it at 02:13* |
-| Vellumory latest             | ✔ 🚀   | =bae0e5e=; =SPC m U= updates itself, =SPC m F= captures feedback |
+| =SPC q R= sync+restart       | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13* |
+| Vellumory latest             | ✔ 🚀   | =bae0e5e=, theme colours default; =SPC m U= update, =SPC m F= feedback |
 | lisp/ + snippets/ declarative | ✔     | No more hand-made symlinks; yasnippet error gone                |
-| Tests + lint                 | ✔ 🧪   | 14 batch ERT + 6 live ERT, byte-compile with warnings as errors  |
+| Tests + lint                 | ✔ 🧪   | 26 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check= |
 | Claude API key               | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=          |
 | Real-input testing           | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9) |
 | inari disk                   | ◐      | 95% → 94% (8.5 GiB); the big wins need your OK, see below        |
-| AI package "familiar"        | 📐     | Next up, see [[*🔮 Roadmap][Roadmap]]                              |
+| AI package "familiar"        | ✔ ✦    | v0.1: commit msg, explain, diagnostics, smerge fixes, spend ledger |
 | GitHub CI                    | ⏳     | Queued after the Emacs work (one known cause found)              |
 
 * 📓 Log
+** [2026-10-30 Fr 02:53] (+73m) — ✦ familiar: an AI that lives where you work
+=lisp/familiar/familiar.el= (exportable like brave-search: own header,
+=defgroup=, =Package-Requires=) + =lisp/+familiar.el= (Doom glue: lazy
+autoloads, =set-popup-rule!=, keys). Built on gptel; *no chat window
+required*.
+
+| Key                       | What                                                         | Tier   |
+|---------------------------+--------------------------------------------------------------+--------|
+| =SPC A x= / embark =X=    | explain region / defun / symbol, streamed into a popup        | Haiku  |
+| =SPC A d=                 | explain the flycheck/flymake diagnostic at point, in context  | Haiku  |
+| =SPC A F=                 | fix → inline *smerge conflict*: =SPC g M l= keep, =SPC g M u= reject, =u= undo | Sonnet |
+| =M-g= / =SPC m g= in commit | write the commit message for the staged diff, in the repo's own style | Haiku |
+| =SPC A $=, click the =✦=  | spend ledger: every request, tokens, exact USD                 | —      |
+=C-u= before any of them escalates one tier (Haiku → Sonnet → Opus).
+
+*Why it's different:* the answer goes where the work is. Fixes are
+conflicts you resolve with the merge keys you already know. Commit
+messages land in the commit buffer. Every call is priced from gptel's model
+table plus the token counts the API returns. A ledger, alerts at 50/80/95%
+of your $10, and a =✦$0.003= in the mode line mean the budget can't
+surprise you.
+
+*Verified for real (your key, $0.0028 total so far):*
+- =familiar-commit-message= wrote the message of its own commit =b86a562=
+  (Haiku: 15,507 in / 93 out = $0.0016).
+- =familiar-fix= on a buggy =demo-average=: float division plus =nil= for
+  empty input, as a smerge proposal (Sonnet: 196 in / 84 out = $0.0012).
+  The buffer =familiar-demo.el= is still in the CLAUDE-LAB frame on ws9;
+  try =SPC g M l=.
+- 12 offline ERT tests (fake =gptel-request=, $0) + live wiring test.
 ** [2026-10-30 Fr 02:40] (+60m) — Vellumory: always the latest, and feedback in one key
 You asked for the newest Vellumory to test and review. Its development is
 live: the inari sessions committed at 02:10 and again at 02:21. So instead
