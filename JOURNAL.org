@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 02:54]
+:UPDATED:  [2026-10-30 Fr 03:00]
 :END:
 
 | Area                         | Status | What changed                                                   |
@@ -28,12 +28,43 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | lisp/ + snippets/ declarative | ✔     | No more hand-made symlinks; yasnippet error gone                |
 | Tests + lint                 | ✔ 🧪   | 26 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check= |
 | Claude API key               | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=          |
+| Shell loops → keys           | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure) |
 | Real-input testing           | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9) |
 | inari disk                   | ◐      | 95% → 94% (8.5 GiB); the big wins need your OK, see below        |
 | AI package "familiar"        | ✔ ✦    | v0.1: commit msg, explain, diagnostics, smerge fixes, spend ledger |
 | GitHub CI                    | ⏳     | Queued after the Emacs work (one known cause found)              |
 
 * 📓 Log
+** [2026-10-30 Fr 03:00] (+80m) — your top shell loops are now four keys
+Your four biggest terminal loops, each now a key (counts from atuin):
+| Key       | Replaces                                                   | Count |
+|-----------+------------------------------------------------------------+-------|
+| =SPC p h= | typing =nix develop -c just …= again                      |  ~300 |
+| =SPC p u= | =git pull cypl0x@…:dev/<project> main=                     |  ~350 |
+| =SPC p P= | both, back to back                                         |  ~150 |
+| =SPC p G= | =rm X.gcl= → =git-closure b .= → =mv X.gcl X.gcl.txt=     |  ~220 |
+
+- =SPC p h= has *no config*. It lists the commands that succeeded in this
+  project's root, most frequent first, straight from atuin, and runs the
+  one you pick as a compilation (=*run: closure*=). In closure it offers
+  =run-gpui-release ~/vault= (72×) first, then =gpui ~/vault= (18×).
+  Verified by keys in the lab frame.
+- =SPC p u= pulls =--ff-only= from the peer through magit. A remote that
+  already points at inari wins, which matters for vellumory: its peer is
+  =dev/emacs-pdf=, not =dev/vellumory=.
+- =SPC p G= replaces the old snapshot itself and puts the path on the kill
+  ring. Tested with the real binary on a throwaway clone; =git-closure
+  verify= passes.
+
+Bugs found while testing for real (none of them visible in unit tests):
+1. =atuin search= /de-duplicates/, so every count was 1 → switched to
+   =atuin history list --cwd=.
+2. magit's sentinel signals "Not inside Git repository" when called from a
+   buffer outside the repo, which silently dropped the "…then run" step.
+   Found with a live probe; the callback now runs before magit's sentinel.
+3. =defvar= doesn't re-initialise on =load-file= (the doom/reload limit
+   from the section below). I re-evaluated it with =makunbound=, so it
+   doesn't need a restart.
 ** [2026-10-30 Fr 02:53] (+73m) — ✦ familiar: an AI that lives where you work
 =lisp/familiar/familiar.el= (exportable like brave-search: own header,
 =defgroup=, =Package-Requires=) + =lisp/+familiar.el= (Doom glue: lazy
@@ -260,8 +291,8 @@ surface: gptel (API), agent-shell (ACP), and Claude Code over MCP. Hook
 into magit (commit messages, PR descriptions, review of hunks), xref,
 flymake, compile (explain/fix errors), project.el, org, and embark.
 Fall back cleanly when a CLI or key is missing.
-** TODO git-closure as one idempotent command (×95)
-** TODO peer pull & run per project (Turm/minaret/marveling)
+** DONE git-closure as one idempotent command (×95) → =SPC p G=
+** DONE peer pull & run per project → =SPC p u=, =SPC p P=, =SPC p h=
 ** TODO inari: TRAMP-friendly direnv guard, auto-GC, agents from flake inputs
 ** TODO GitHub CI green (known cause: =vellumory= input is =git+file:=, unreachable on runners)
 ** TODO inari cleanup of non-store data (needs your OK, see 02:30 entry)
