@@ -24,7 +24,8 @@
 (defvar +workflow-history-ignore
   (concat "\\`\\(?:cd\\|z\\|l\\|ls\\|ll\\|la\\|clear\\|exit\\|pwd\\|rm\\|mv\\|cp\\|cat\\|bat"
           "\\|less\\|man\\|tldr\\|which\\|echo\\|vim?\\|nvim\\|emacs\\|code\\|claude"
-          "\\|git\\|gs\\|glo\\|du\\|df\\|ps\\|kill\\|pkill\\|ping\\|ssh\\|scp\\)\\_>")
+          "\\|git\\|gs\\|glo\\|lg\\|y\\|du\\|df\\|ps\\|kill\\|pkill\\|ping\\|ssh\\|scp\\|mosh"
+          "\\|tmux\\|sudo\\|mkdir\\|touch\\|nix-collect-garbage\\|nh\\)\\_>")
   "Commands never offered as run commands.")
 
 (defvar +workflow-closure-program
