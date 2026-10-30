@@ -78,5 +78,8 @@
 
     # org-roam-graph needs `dot` from graphviz
     graphviz
+
+    # difftastic.el (config.el: magit diff menu D/S) runs the difft binary
+    difftastic
   ];
 }
