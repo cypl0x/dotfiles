@@ -39,6 +39,16 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:19] (+339m) — Claude was reading yesterday's code
+I tested the =familiar= MCP server for real (a JSON-RPC call through the
+same stdio bridge Claude Code uses) and it answered "seq-uniq not found on
+line 215", for a line that had it. The cause: an earlier call had left a
+buffer behind, I edited the file, and Emacs kept answering from the old
+text. Agents edit files on disk all the time, so that would have been
+constant quiet wrongness. Now a stale buffer is reverted first, and if
+you have unsaved edits it refuses rather than guessing. Live call again:
+both =seq-uniq= definitions, correct lines. Test fails without the fix,
+passes with it (80/80).
 ** [2026-10-30 Fr 07:17] (+337m) — your API keys were on disk in plain text
 =doom doctor= warned that savehist was 11.5 MB and could slow startup.
 Reason: unlimited kill ring, 109 kills over 10k chars, the largest 3.2 MB.
