@@ -50,6 +50,14 @@ dry-run: ## Show what would happen (nixos-rebuild dry-build)
 	$(NIXOS_REBUILD) dry-build --flake $(FLAKE)#$(HOST) $(ARGS)
 
 # ============================================================================
+# Emacs
+# ============================================================================
+
+.PHONY: emacs-check
+emacs-check: ## Lint (warnings are errors) and test home/doom/lisp, no Doom needed
+	home/doom/test/run.sh
+
+# ============================================================================
 # Maintenance
 # ============================================================================
 

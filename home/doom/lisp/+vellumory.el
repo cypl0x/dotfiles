@@ -15,6 +15,7 @@
 
 (defvar org-capture-templates)
 (declare-function org-capture-get "org-capture" (prop &optional local))
+(defvar vellumory-theme)
 
 (defvar +vellumory-feedback-file
   (expand-file-name "vellumory-feedback.org" org-directory)
