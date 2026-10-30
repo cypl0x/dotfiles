@@ -1,0 +1,15 @@
+# -*- mode: snippet -*-
+# name: Private Doom lisp/ module (+name.el)
+# key: __module
+# condition: (string-prefix-p "+" (file-name-nondirectory (or buffer-file-name "")))
+# --
+;;; lisp/`(file-name-nondirectory (or buffer-file-name "+module.el"))` --- ${1:One-line summary} -*- lexical-binding: t; -*-
+;;
+;; ${2:What it does and why.}
+;;
+;;; Code:
+
+$0
+
+(provide '`(file-name-base (or buffer-file-name "+module"))`)
+;;; `(file-name-nondirectory (or buffer-file-name "+module.el"))` ends here
