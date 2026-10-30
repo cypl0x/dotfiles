@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 06:50]
+:UPDATED:  [2026-10-30 Fr 07:05]
 :END:
 
 | Area                          | Status | What changed                                                                                               |
@@ -26,10 +26,11 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                                     |
 | Vellumory                     | ✔ 🚀   | public release v0.1.0 from GitHub (worker, module, Lisp pinned); SPC m U checks for newer                  |
 | lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                                           |
-| Tests + lint                  | ✔ 🧪   | 72 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                                   |
+| Tests + lint                  | ✔ 🧪   | 73 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                                   |
 | Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                                     |
 | Claude Code ↔ Emacs           | ✔ 🔐   | kitty Claude auto-attaches (monet, token enforced) + MCP server =emacs= (definitions, references, outline) |
 | Persistent buffers            | ✔ 🛠    | restore works again (never did); 24 MB junk → 56 KB own text; *new* buffers back                           |
+| Startup                       | ✔ ⚡   | 13.0–13.5 s → 11.2–11.9 s (lazy eglot-ltex, one-pass eldoc)                                                |
 | LSP fallback                  | ✔      | missing server → one quiet notice, not [eglot] errors; nix → nil                                           |
 | Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                                   |
 | Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                                           |
@@ -38,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:05] (+325m) — 1.5 s off every daemon start
+Following the 1.0 s "eldoc" line in the startup profile:
+- *It isn't llama.* Its =all-completions= advice is cheap and just showed up
+  in the stack. The cost is eldoc's own command registration: one
+  =all-completions= scan of the 120k-symbol obarray *per prefix* (~34),
+  i.e. 640–900 ms.
+- *Why at startup at all?* Your =config.el= hooks =eglot-ltex= with a
+  /lambda/. use-package can't autoload a lambda, so it expanded to an
+  eager =(require 'eglot-ltex nil nil)= (macroexpanded to be sure). That
+  meant eglot and the ELPA eldoc loaded at every start. Now =:defer t=,
+  and eglot is only loaded for /file/ buffers; for your =*new*= buffers
+  =eglot-ensure= never did anything anyway.
+- When eldoc does load later, =+perf= registers its commands in *one pass*
+  (oracle test: identical set): 22 ms.
+- *Result:* =doom-init-time= 13.0–13.5 s → *11.2–11.9 s*. Opening a text
+  file still brings up eglot/ltex as before.
 ** [2026-10-30 Fr 06:50] (+310m) — sideline finally shows something
 Your =+nav= turned on sideline ("show info alongside code") wired to
 /flymake/, but your syntax checking is /flycheck/: 6 flycheck buffers, 0
