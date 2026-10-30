@@ -271,7 +271,8 @@ They paid for themselves right away. Real bugs caught before you hit them:
   on every run).
 - I kept the newest snapshot per repo, everything registered in the last 7
   days, the current system, and your dotfiles snapshot. They are pinned as
-  roots in =~/.cache/gc-keep-20261030/= (delete that dir in a week to let
+  roots in =~/.local/state/gc-keep-20261030/= (moved there at 04:08 after
+  =~/.cache= was wiped; delete that dir in a week to let
   them go). Then I ran =nix-store --gc=: *5,262 paths, 8.5 GiB freed*.
 - *My estimate was wrong:* =auto-optimise-store= hard-links identical files
   (it saves 27.5 GiB), so near-identical snapshots shared their bytes. NAR
