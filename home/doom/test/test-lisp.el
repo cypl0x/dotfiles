@@ -120,32 +120,25 @@
     (should (string-match-p "%a" (nth 4 tpl)))))
 
 
-(defmacro test-lisp--with-two-commits (files &rest body)
-  "Commit FILES on top of a base commit; run BODY with OLD and NEW bound."
-  `(test-lisp--with-repo
-    (let ((old (+vellumory--git "rev-parse" "HEAD")))
-      (dolist (f ,files)
-        (make-directory (file-name-directory (expand-file-name f repo)) t)
-        (write-region "x" nil (expand-file-name f repo)))
-      (process-file "git" nil nil nil "add" "-A")
-      (process-file "git" nil nil nil "-c" "user.name=t" "-c" "user.email=t@t"
-                    "commit" "-q" "-m" "y")
-      (let ((new (+vellumory--git "rev-parse" "HEAD")))
-        ,@body))))
 
-(ert-deftest vellumory/changes-lisp-only-skips-worker ()
-  (test-lisp--with-two-commits '("lisp/vellumory.el" "tests/t.el" "README.org")
-    (should (equal (+vellumory--changes old new) '(t . nil)))))
 
-(ert-deftest vellumory/changes-worker-sources-need-rebuild ()
-  (test-lisp--with-two-commits '("Vellumory/Render.lean")
-    (should (equal (+vellumory--changes old new) '(nil . t)))))
+(ert-deftest vellumory/latest-release-resolves-annotated-tags ()
+  (should (equal (+vellumory-latest-release
+                  (concat "a573338\trefs/tags/v0.1.0\n"
+                          "7cdddc3\trefs/tags/v0.1.0^{}\n"))
+                 '("v0.1.0" . "7cdddc3"))))
 
-(ert-deftest vellumory/changes-manual-needs-rebuild ()
-  "The Info manual ships with the worker package."
-  (test-lisp--with-two-commits '("docs/vellumory.texi" "lisp/vellumory.el")
-    (should (equal (+vellumory--changes old new) '(t . t)))))
+(ert-deftest vellumory/latest-release-orders-by-version-not-string ()
+  (should (equal (car (+vellumory-latest-release
+                       (concat "aaa\trefs/tags/v0.9.0\n"
+                               "bbb\trefs/tags/v0.10.0\n"
+                               "ccc\trefs/tags/v0.2.1\n"
+                               "ddd\trefs/tags/nightly\n")))
+                 "v0.10.0")))
 
+(ert-deftest vellumory/latest-release-none ()
+  (should-not (+vellumory-latest-release ""))
+  (should-not (+vellumory-latest-release "abc\trefs/heads/main\n")))
 
 ;;; +workflow
 

@@ -879,7 +879,7 @@ Pages default to theme colours (=vellumory-theme= = =tint=).
 | Key       | What                                                       |
 |-----------+------------------------------------------------------------|
 | =SPC m F= | capture feedback: page link, selection, build under test   |
-| =SPC m U= | update: pull, rebuild Lisp and/or worker as needed, notify |
+| =SPC m U= | is a newer GitHub release than the pinned one out? (tells what to change) |
 | =SPC n V= | open =~/vault/vellumory-feedback.org=                      |
 
 ** =+perf.el= — Measured Performance Fixes

@@ -205,6 +205,8 @@
 ;; Vellumory, the PDF reader (:tools vellumory, home/vellumory.nix)
 ;; ---------------------------------------------------------------------------
 
-;; Until its repository is public, from the local clone, the source the flake
-;; builds the worker from too; afterwards the module's own recipe suffices.
-(package! vellumory :recipe (:local-repo "/home/wap/dev/vellumory" :files ("lisp/*.el")))
+;; The module's own recipe tracks GitHub main; pin it to the release the flake
+;; builds the worker from (flake.nix: github:cypl0x/vellumory/v0.1.0).
+(package! vellumory
+  :recipe (:host github :repo "cypl0x/vellumory" :files ("lisp/*.el"))
+  :pin "7cdddc3f917da629063ee3f22f03f7f1f0440042") ; v0.1.0

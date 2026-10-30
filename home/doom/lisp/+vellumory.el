@@ -8,6 +8,10 @@
 ;;   SPC m F   in a Vellumory buffer   capture feedback (`+vellumory/feedback')
 ;;   SPC X V   anywhere                same, via org-capture
 ;;   SPC n V                           open the feedback file
+;;   SPC m U   in a Vellumory buffer   is a newer release out? (`+vellumory/update')
+;;
+;; The config pins a release (flake.nix tag + packages.el :pin); build info and
+;; the release check read the clone Doom built from.
 ;;
 ;;; Code:
 
@@ -25,8 +29,9 @@
   ;; Pages in the Emacs theme's foreground and background ("theme colours").
   (setq vellumory-theme 'tint))
 
-(defvar +vellumory-checkout "~/dev/vellumory"
-  "The clone Doom builds Vellumory's Lisp from (see packages.el).")
+(defvar +vellumory-checkout
+  (expand-file-name "straight/repos/vellumory" (bound-and-true-p doom-local-dir))
+  "The clone Doom builds Vellumory's Lisp from: the pinned release (packages.el).")
 
 (defun +vellumory--git (&rest args)
   (when-let* ((default-directory (file-name-as-directory
@@ -85,48 +90,10 @@
   (interactive)
   (find-file +vellumory-feedback-file))
 
-;;; Update to the latest commit ───────────────────────────────────────────
+;;; Newer releases ─────────────────────────────────────────────────────────
 
-(defvar +vellumory-dotfiles "~/dotfiles"
-  "Flake whose `vellumory' input pins the worker.")
-
-(defvar +vellumory-lisp-only-paths '("lisp/" "tests/" "docs/requirements" "README" ".github/")
-  "Changes under these prefixes need no new worker.
-Everything else (worker sources, the manual, packaging) does.")
-
-(defun +vellumory--changes (old new)
-  "Classify files changed between OLD and NEW: (LISP-P . WORKER-P)."
-  (let ((files (split-string (or (+vellumory--git "diff" "--name-only" old new) "")
-                             "\n" t)))
-    (cons (seq-some (lambda (f) (string-prefix-p "lisp/" f)) files)
-          (seq-some (lambda (f)
-                      (not (seq-some (lambda (p) (string-prefix-p p f))
-                                     +vellumory-lisp-only-paths)))
-                    files))))
-
-(defun +vellumory--reload-lisp ()
-  "Re-load every Vellumory feature already loaded, from its rebuilt file."
-  (let ((n 0))
-    (dolist (f features)
-      (when (string-prefix-p "vellumory" (symbol-name f))
-        (when-let* ((file (locate-library (symbol-name f))))
-          (load file nil t)
-          (cl-incf n))))
-    n))
-
-(defun +vellumory--run (name command then)
-  "Run shell COMMAND in buffer *NAME*; call THEN with success (t/nil)."
-  (let ((buf (get-buffer-create (format "*%s*" name))))
-    (with-current-buffer buf
-      (let ((inhibit-read-only t))
-        (goto-char (point-max))
-        (insert (format "\n$ %s\n" command))))
-    (make-process
-     :name name :buffer buf :noquery t
-     :command (list shell-file-name shell-command-switch command)
-     :sentinel (lambda (proc _)
-                 (unless (process-live-p proc)
-                   (funcall then (zerop (process-exit-status proc))))))))
+(defvar +vellumory-remote "https://github.com/cypl0x/vellumory"
+  "Where Vellumory releases (tags vX.Y.Z) are published.")
 
 (defun +vellumory--notify (title body &optional critical)
   (message "%s: %s" title body)
@@ -134,61 +101,52 @@ Everything else (worker sources, the manual, packaging) does.")
     (apply #'call-process "notify-send" nil 0 nil
            `("-a" "Emacs · Vellumory" ,@(when critical '("-u" "critical")) ,title ,body))))
 
+(defun +vellumory-latest-release (ls-remote-output)
+  "The newest (TAG . COMMIT) in LS-REMOTE-OUTPUT of `git ls-remote --tags'.
+Annotated tags resolve to their commit (the ^{} line)."
+  (let (tags)
+    (dolist (line (split-string ls-remote-output "\n" t))
+      (when (string-match "\\`\\([0-9a-f]+\\)\trefs/tags/\\(v[0-9.]+\\)\\(\\^{}\\)?\\'" line)
+        (let ((sha (match-string 1 line)) (tag (match-string 2 line)))
+          ;; The dereferenced commit wins over the tag object.
+          (if (match-string 3 line)
+              (setf (alist-get tag tags nil nil #'equal) sha)
+            (unless (assoc tag tags) (push (cons tag sha) tags))))))
+    (car (sort tags (lambda (a b) (version< (substring (car b) 1)
+                                            (substring (car a) 1)))))))
+
 ;;;###autoload
 (defun +vellumory/update ()
-  "Pull the Vellumory checkout and bring this session up to its latest commit.
-Changed Lisp is rebuilt (`doom sync') and re-loaded in place. If anything
-beyond Lisp changed, the flake input is bumped and the system rebuilt, so the
-worker and manual match; reopen documents to use the new worker. Progress
-and output are in *vellumory-update*."
+  "Check GitHub for a Vellumory release newer than the one this config pins.
+The dotfiles pin a release (flake.nix: github:cypl0x/vellumory/vX.Y.Z, and the
+matching :pin in packages.el); this tells you what to change, it changes
+nothing itself."
   (interactive)
-  (let* ((old (+vellumory--git "rev-parse" "HEAD"))
-         (default-directory (expand-file-name +vellumory-checkout))
-         (dotfiles (expand-file-name +vellumory-dotfiles)))
-    (unless old (user-error "No git checkout at %s" +vellumory-checkout))
-    (+vellumory--run
-     "vellumory-update" "git pull --ff-only"
-     (lambda (ok)
-       (let* ((new (+vellumory--git "rev-parse" "HEAD"))
-              (log (+vellumory--git "log" "--format=%h %s" (concat old ".." new)))
-              (changes (+vellumory--changes old new)))
-         (cond
-          ((not ok)
-           (pop-to-buffer "*vellumory-update*")
-           (+vellumory--notify "Update failed" "git pull did not fast-forward" t))
-          ((equal old new)
-           (+vellumory--notify "Vellumory" (format "Already at %s" (substring new 0 7))))
-          (t
-           (let* ((finish
-                   (lambda (worker-ok)
-                     (+vellumory--notify
-                      (if worker-ok "Vellumory updated" "Vellumory worker update failed")
-                      (format "%s → %s%s\n%s"
-                              (substring old 0 7) (substring new 0 7)
-                              (if (cdr changes) " (new worker: reopen documents)" "")
-                              log)
-                      (not worker-ok))))
-                  (worker
-                   (lambda ()
-                     (if (not (cdr changes))
-                         (funcall finish t)
-                       (+vellumory--run
-                        "vellumory-update"
-                        (format "cd %s && nix flake update vellumory && sudo nixos-rebuild switch --flake .#%s"
-                                (shell-quote-argument dotfiles) (system-name))
-                        finish)))))
-             (if (not (car changes))
-                 (funcall worker)
-               (+vellumory--run
-                "vellumory-update"
-                (format "%s sync -B" (shell-quote-argument
-                                      (expand-file-name "bin/doom" doom-emacs-dir)))
-                (lambda (sync-ok)
-                  (if (not sync-ok)
-                      (progn (pop-to-buffer "*vellumory-update*")
-                             (+vellumory--notify "Update failed" "doom sync failed" t))
-                    (message "Vellumory: re-loaded %d features" (+vellumory--reload-lisp))
-                    (funcall worker)))))))))))))
+  (let ((pinned (+vellumory--git "rev-parse" "HEAD"))
+        (buf (generate-new-buffer " *vellumory-ls-remote*")))
+    (message "Vellumory: checking %s…" +vellumory-remote)
+    (make-process
+     :name "vellumory-ls-remote" :buffer buf :noquery t
+     :command (list "git" "ls-remote" "--tags" +vellumory-remote)
+     :sentinel
+     (lambda (proc _)
+       (unless (process-live-p proc)
+         (let ((latest (and (zerop (process-exit-status proc))
+                            (+vellumory-latest-release
+                             (with-current-buffer buf (buffer-string))))))
+           (kill-buffer buf)
+           (cond ((not latest)
+                  (+vellumory--notify "Vellumory" "Could not read the releases" t))
+                 ((equal (cdr latest) pinned)
+                  (+vellumory--notify "Vellumory"
+                                      (format "%s is the newest release, and the one in use"
+                                              (car latest))))
+                 (t
+                  (+vellumory--notify
+                   (format "Vellumory %s is out" (car latest))
+                   (format "In use: %s. To upgrade: flake.nix tag → %s, packages.el :pin → %s, then nrs and doom sync."
+                           (if pinned (substring pinned 0 7) "?")
+                           (car latest) (cdr latest)))))))))))
 
 (map! :leader
       :desc "Vellumory feedback" "n V" #'+vellumory/open-feedback)
@@ -196,7 +154,7 @@ and output are in *vellumory-update*."
       :map vellumory-mode-map
       :localleader
       :desc "Feedback" "F" #'+vellumory/feedback
-      :desc "Update to latest" "U" #'+vellumory/update)
+      :desc "Newer release?" "U" #'+vellumory/update)
 
 (provide '+vellumory)
 ;;; +vellumory.el ends here
