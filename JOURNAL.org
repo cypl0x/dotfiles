@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 06:10]
+:UPDATED:  [2026-10-30 Fr 06:35]
 :END:
 
 | Area                          | Status | What changed                                                                                               |
@@ -26,9 +26,10 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                                     |
 | Vellumory                     | ✔ 🚀   | public release v0.1.0 from GitHub (worker, module, Lisp pinned); SPC m U checks for newer                  |
 | lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                                           |
-| Tests + lint                  | ✔ 🧪   | 66 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                                   |
+| Tests + lint                  | ✔ 🧪   | 72 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                                   |
 | Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                                     |
 | Claude Code ↔ Emacs           | ✔ 🔐   | kitty Claude auto-attaches (monet, token enforced) + MCP server =emacs= (definitions, references, outline) |
+| Persistent buffers            | ✔ 🛠    | restore works again (never did); 24 MB junk → 56 KB own text; *new* buffers back                           |
 | LSP fallback                  | ✔      | missing server → one quiet notice, not [eglot] errors; nix → nil                                           |
 | Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                                   |
 | Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                                           |
@@ -37,6 +38,56 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 06:35] (+295m) — your lost =*new*= buffers are back; a freeze; startup, measured
+*=+persist= never restored anything.* It's meant to bring back your
+untitled buffers after a restart, Sublime-style. Lint flagged it, and a
+check in your session confirmed it. =restore-all= bound its variables
+lexically, so each loaded file set globals instead, and *nothing was ever
+restored*. Meanwhile it saved /every/ non-file buffer, every minute, and
+never deleted a file when you killed its buffer: *159 files, 24 MB*. That
+included 61 fake dired buffers, JSON-RPC logs, Vellumory sidebars,
+profiler reports, and a 7 MB TRAMP debug log from my own freeze hunt.
+
+Fixed and applied:
+- Only your own text is kept: =*new*=, =*scratch*=, or buffers you named
+  yourself, in an editable text, prog or fundamental mode.
+- Restore works again.
+- Killing a buffer forgets it.
+- No more Emacs 32 lexical-binding warnings.
+- 152 generated files moved to =persist-buffers.pruned-20261030= (nothing
+  deleted; remove the dir when you like). 7 files kept, 56 KB.
+- *Restored into your running session:* =*new*= … =*new*<5>= and "missing
+  from my Emacs, Doom Emacs and dotfiles configuration in general".
+
+Mistakes I made along the way, so you can trust the rest:
+- I first claimed the junk made startup slow. *It didn't*: startup stayed
+  at 13.4 s after the cleanup, because restore never ran.
+- My batch dry-run briefly re-saved your 5 own-text files. They were
+  byte-identical, a lossless round trip.
+- A throwaway-daemon round trip relabelled 3 files as fundamental; I
+  restored their modes (markdown, turm-ts, org) by hand.
+
+*The second freeze (~8 min, 06:05)*, while you were using TRAMP on inari.
+No signals this time. Reproduced in a throwaway against inari: a project
+file opens in 4.3 s, =/etc/hosts= in 0.8 s, inari's =/tmp= lists 30,049
+entries in 3 s and completes in 11 s. Nothing hung. Your last keys were 8
+global font-size changes; I tested that theory too and *falsified* it
+(no re-layout in a tiled window). Cause still unknown. The *CPU profiler
+is armed in your session*, so if it happens again =M-x profiler-report=
+shows it, and I can read it.
+
+*Startup, measured* (13.5 s; profiled from the first line of init in a
+throwaway):
+| Self time | What                       | Why                                                                                                                                         |
+|-----------+----------------------------+---------------------------------------------------------------------------------------------------------------------------------------------|
+| 2.1 s     | yasnippet                  | Doom /preloads/ "incremental" packages at daemon start (by design, for a fast first use); doom-snippets has 3,012 files                     |
+| 1.0 s     | eldoc                      | =eldoc-add-command-completions= through llama's =all-completions= advice                                                                    |
+| 0.6 s     | =+nav= (yours)             | not yet analysed                                                                                                                            |
+| 0.5 s     | tramp-gvfs (+ TRAMP 0.4 s) | projectile calls =tramp-archive-file-name-p= on the first project lookup; I first blamed my own =+perf= advice, but it only wraps that call |
+Each is a trade-off rather than a bug. The real lever would be
+=doom-incremental-first-idle-timer= (show the frame first, load the rest
+when idle), but that's a judgment call about your workflow, so I haven't
+changed it.
 ** [2026-10-30 Fr 06:10] (+270m) — why =o= (contents sidebar) is slow, and the 1 ms way around it
 *Measured in your session* on =3824-e09efed-full.pdf= (5,019 spreads, 25,094
 rows): opening or closing the sidebar changes the page window's width, so
