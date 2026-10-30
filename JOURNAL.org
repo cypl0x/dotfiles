@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 07:05]
+:UPDATED:  [2026-10-30 Fr 07:20]
 :END:
 
 | Area                          | Status | What changed                                                                                               |
@@ -39,6 +39,23 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:20] (+340m) — Emacs spent 14% of its life collecting garbage
+From the profiler I armed in your session: *29% of CPU samples were
+"Automatic GC"*. The counters agree: *4,560 collections in 94 minutes,
+773 s in total*, ~0.18 s each. That's roughly one pause every 1.2 s on
+average, ~14% of wall time.
+- One collection's cost tracks the live heap (26 MB of strings, 3.6 M vector
+  slots), not the threshold. gcmh raises the threshold to 64 MB only while
+  a command runs; in between it's Emacs' 800 KB. The count only adds up at
+  800 KB (≈3.6 GB allocated, against ≈290 GB at 64 MB).
+- *Ruled out by A/B tests in throwaways:* Vellumory paging (0–1 GCs over 40
+  pages at either threshold) and your remote dired/Lean opens over TRAMP
+  (8 and 4 GCs).
+- *Applied:* =gcmh-low-cons-threshold= 800 KB → *16 MB*, so collections
+  between commands are up to 20× rarer, for at most 16 MB of extra garbage
+  (6 GB of RAM free). Baseline to compare later: 4,567 GCs / 774 s at 06:39.
+- The 8-minute freezes fit a GC storm (≈2,600 collections), but their
+  trigger is still unknown. The profiler stays armed.
 ** [2026-10-30 Fr 07:05] (+325m) — 1.5 s off every daemon start
 Following the 1.0 s "eldoc" line in the startup profile:
 - *It isn't llama.* Its =all-completions= advice is cheap and just showed up
