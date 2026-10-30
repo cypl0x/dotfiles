@@ -21,6 +21,13 @@
 
 (package! rainbow-delimiters)
 
+;; :editor word-wrap's language-aware indent needs dtrt-indent's mode table,
+;; but only :editor whitespace +guess installs it.  Without it word-wrap
+;; tried (require 'dtrt-indent nil t) in every text buffer: a failing search
+;; of ~400 load-path dirs, 46 ms each time.  The library only; no guessing.
+;; Same pin as Doom's whitespace module.
+(package! dtrt-indent :pin "8402da6bcc288709366e0b589fa79e744e877788")
+
 ;; ---------------------------------------------------------------------------
 ;; Save the state of the folding in org-mode
 ;; ---------------------------------------------------------------------------
