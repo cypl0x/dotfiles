@@ -480,6 +480,7 @@
 (load! "lisp/+nav")         ;; Navigation, discovery, help, pulsar
 (load! "lisp/+dashboard")   ;; Dashboard hub, system overview
 (load! "lisp/+daemon")      ;; SPC q R: doom sync, restart daemon, restore session
+(load! "lisp/+vellumory")   ;; SPC m F: capture Vellumory review feedback
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules
