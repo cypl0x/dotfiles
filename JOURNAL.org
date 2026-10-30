@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:47] (+367m) — the model wasn't hallucinating; we were lying to it
+First real end-to-end run of =familiar-explain= against the API ($0.0008
+a call). The explanation was right, but it warned that "line 1
+(=+dashboard=) isn't Elisp". There is no such line. I tightened the
+prompt ("never describe lines you were not given") and it said it again,
+which is when I stopped blaming the model and captured the actual
+request body: the code fence was labelled =```+dashboard=. =familiar=
+labelled the fence with the current buffer's major mode, but only after
+displaying =*familiar*=, and displaying it can make another buffer
+current. The diagnostic command also read its line number at that point.
+Both now read everything from the source first. A test makes display
+switch buffers and fails without the fix. Rerun on your fresh daemon:
+fenced =emacs-lisp=, no phantom line. Total API spend this session: $0.006.
+Lesson I'm keeping: when a model "invents" something twice, capture what
+it was sent before rewriting the prompt.
 ** [2026-10-30 Fr 07:19] (+339m) — Claude was reading yesterday's code
 I tested the =familiar= MCP server for real (a JSON-RPC call through the
 same stdio bridge Claude Code uses) and it answered "seq-uniq not found on
