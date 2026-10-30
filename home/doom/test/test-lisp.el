@@ -541,5 +541,16 @@
       (should (> (length stock) 50))
       (should (equal stock fast)))))
 
+
+(ert-deftest perf/freeze-gap ()
+  (let ((+perf-freeze-threshold 20))
+    (should-not (+perf-freeze-gap 100.0 nil))         ; first tick
+    (should-not (+perf-freeze-gap 102.1 100.0))       ; normal 2 s period
+    (should-not (+perf-freeze-gap 121.0 100.0))       ; 19 s late: below threshold
+    (should (= 28.0 (+perf-freeze-gap 130.0 100.0)))))
+
+(ert-deftest perf/freeze-recorder-off-in-batch ()
+  (should-not +perf-freeze-recorder-mode))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here

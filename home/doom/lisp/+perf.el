@@ -97,5 +97,71 @@ duplicates, then SEQUENCE2's that are new."
 (with-eval-after-load 'gcmh
   (setq gcmh-low-cons-threshold (* 16 1024 1024)))
 
+
+;;;; Freeze recorder: the next long freeze diagnoses itself
+
+;; Twice the session froze at 100% CPU for minutes (2026-10-30), with no way
+;; to look inside while it lasted, and a later profiler report had already
+;; consumed the evidence.  This keeps the CPU profiler sampling, resets its
+;; log every minute while all is well, and when a 2 s timer finds it was
+;; held up for more than `+perf-freeze-threshold' seconds, writes the log
+;; (the freeze plus at most a minute before it) to `+perf-freeze-dir' and
+;; says so.  Open a recording with M-x profiler-find-profile.
+
+(require 'profiler)
+
+(defvar +perf-freeze-threshold 20
+  "Seconds without the timer running that count as a freeze.")
+
+(defvar +perf-freeze-dir (expand-file-name "freezes/" (bound-and-true-p doom-cache-dir))
+  "Where freeze profiles are written.")
+
+(defvar +perf--freeze-last nil "When the freeze timer last ran.")
+(defvar +perf--freeze-ticks 0)
+(defvar +perf--freeze-timer nil)
+
+(defun +perf-freeze-gap (now last)
+  "Seconds NOW lags behind LAST beyond the 2 s period, if a freeze; else nil."
+  (and last (> (- now last 2) +perf-freeze-threshold) (- now last 2)))
+
+(defun +perf--freeze-tick ()
+  (let* ((now (float-time))
+         (gap (+perf-freeze-gap now +perf--freeze-last)))
+    (setq +perf--freeze-last now
+          +perf--freeze-ticks (1+ +perf--freeze-ticks))
+    (unless (profiler-cpu-running-p) (profiler-cpu-start profiler-sampling-interval))
+    (cond
+     (gap
+      (let ((file (expand-file-name (format-time-string "freeze-%Y%m%d-%H%M%S.prof")
+                                    +perf-freeze-dir)))
+        (make-directory +perf-freeze-dir t)
+        ;; `profiler-cpu-profile' wraps the variable that `profiler-stop' fills;
+        ;; the live samples come from the function `profiler-cpu-log'.
+        (when-let* ((log (profiler-cpu-log)))
+          (profiler-write-profile
+           (profiler-make-profile :type 'cpu :timestamp (current-time) :log log)
+           file))
+        (message "Emacs was frozen for %.0f s; profile: %s" gap file)
+        (when (executable-find "notify-send")
+          (call-process "notify-send" nil 0 nil "-a" "Emacs" "-u" "critical"
+                        (format "Emacs was frozen for %.0f s" gap)
+                        (format "CPU profile saved: %s\nM-x profiler-find-profile"
+                                (abbreviate-file-name file))))))
+     ;; Keep only the last minute or so, so a recording shows the freeze.
+     ((zerop (% +perf--freeze-ticks 30))
+      (profiler-cpu-log)))))
+
+(define-minor-mode +perf-freeze-recorder-mode
+  "Record a CPU profile of every freeze longer than `+perf-freeze-threshold'."
+  :global t
+  :group 'convenience
+  (when +perf--freeze-timer (cancel-timer +perf--freeze-timer))
+  (setq +perf--freeze-timer nil +perf--freeze-last nil)
+  (when +perf-freeze-recorder-mode
+    (unless (profiler-cpu-running-p) (profiler-cpu-start profiler-sampling-interval))
+    (setq +perf--freeze-timer (run-with-timer 2 2 #'+perf--freeze-tick))))
+
+(unless noninteractive (+perf-freeze-recorder-mode 1))
+
 (provide '+perf)
 ;;; +perf.el ends here
