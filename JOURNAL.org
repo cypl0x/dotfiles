@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 08:41] (+421m) — the next freeze names its suspect
+The 07:37 recording was honest but useless: 1.8 s of CPU in a freeze of
+over 20 s, so Emacs was /waiting/, and a CPU profile can't see waits.
+Now every recording gets a =.txt= next to it with:
+- the last 20 commands you ran (names only, never keys) and how long ago,
+- every live subprocess (right now: the Turm session, =vellumory serve=,
+  hunspell, the websocket server …),
+- what the echo area said.
+A blocked wait is almost always one of those. I simulated a freeze into my
+scratchpad (no fake alert for you) and read the file back. Commands come
+from a 20-slot ring on =pre-command-hook=, one push per command.
 ** [2026-10-30 Fr 08:29] (+409m) — the real keys, finally
 You said "run it now", and the first try failed quietly: no keys arrived
 anywhere. =dotool= makes a fresh virtual keyboard per call, and
