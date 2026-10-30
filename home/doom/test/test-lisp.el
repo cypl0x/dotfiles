@@ -338,5 +338,95 @@
     (cl-letf (((symbol-function 'file-remote-p) (lambda (&rest _) "/ssh:inari:")))
       (should-not (+lsp-fallback-missing-program '("no-such-language-server-xyz"))))))
 
+
+
+;;; +monet
+
+(load (expand-file-name "+monet" test-lisp-dir) nil t)
+
+(defvar monet-mode nil)        ; special, as when monet is loaded
+(defvar monet--sessions nil)
+(cl-defstruct test-lisp--session directory)
+
+(defmacro test-lisp--with-monet (&rest body)
+  "BODY with a fake monet: `started' collects (KEY DIR)."
+  `(let ((monet--sessions (make-hash-table :test #'equal))
+         (monet-mode t)
+         (started nil))
+     (cl-letf (((symbol-function 'monet--session-directory) #'test-lisp--session-directory)
+               ((symbol-function 'monet-start-server-in-directory)
+                (lambda (key dir)
+                  (push (list key dir) started)
+                  (puthash key (make-test-lisp--session :directory dir) monet--sessions))))
+       ,@body)))
+
+(ert-deftest monet/one-session-per-project ()
+  (test-lisp--with-monet
+   (cl-letf (((symbol-function '+monet--root) (lambda () "/home/u/dev/Turm/")))
+     (+monet-ensure-session-h)
+     (+monet-ensure-session-h))
+   (should (equal started '(("Turm" "/home/u/dev/Turm/"))))))
+
+(ert-deftest monet/unique-keys-for-same-named-projects ()
+  (test-lisp--with-monet
+   (dolist (root '("/a/Turm/" "/b/Turm/"))
+     (cl-letf (((symbol-function '+monet--root) (lambda () root)))
+       (+monet-ensure-session-h)))
+   (should (equal (sort (mapcar #'car started) #'string<) '("Turm" "Turm<2>")))))
+
+(ert-deftest monet/skips-store-home-and-non-projects ()
+  (test-lisp--with-monet
+   (dolist (root (list "/nix/store/abc-x/" (expand-file-name "~") nil))
+     (cl-letf (((symbol-function '+monet--root) (lambda () root)))
+       (+monet-ensure-session-h)))
+   (should-not started)))
+
+(ert-deftest monet/nothing-without-monet-mode ()
+  (test-lisp--with-monet
+   (let ((monet-mode nil))
+     (cl-letf (((symbol-function '+monet--root) (lambda () "/home/u/dev/x/")))
+       (+monet-ensure-session-h)))
+   (should-not started)))
+
+
+(ert-deftest monet/token-check ()
+  (let ((h "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Claude-Code-Ide-Authorization: abc-123\r\nUpgrade: websocket\r\n\r\n"))
+    (should (+monet-token-ok-p h "abc-123"))
+    (should (+monet-token-ok-p (downcase h) "abc-123"))
+    (should-not (+monet-token-ok-p h "abc-12"))   ; no prefix match
+    (should-not (+monet-token-ok-p h "wrong"))
+    (should-not (+monet-token-ok-p "GET / HTTP/1.1\r\n\r\n" "abc-123"))
+    (should-not (+monet-token-ok-p nil "abc-123"))))
+
+(cl-defstruct test-lisp--msession directory auth-token)
+
+(ert-deftest monet/refused-connection-keeps-session ()
+  (let ((+monet--refused (make-hash-table :test #'eq :weakness 'key))
+        (+monet-auto-start-mode nil)
+        (opened nil) (closed nil) (ws (list 'ws)))
+    (cl-letf (((symbol-function 'monet--session-auth-token) #'test-lisp--msession-auth-token)
+              ((symbol-function 'monet--session-directory) #'test-lisp--msession-directory)
+              ((symbol-function 'websocket-close) #'ignore))
+      (let ((s (make-test-lisp--msession :directory "/p/" :auth-token "tok")))
+        (let ((+monet--handshake "x-claude-code-ide-authorization: nope\r\n"))
+          (+monet--check-token-a (lambda (&rest _) (setq opened t)) s ws))
+        (should-not opened)
+        (+monet--on-close-a (lambda (&rest _) (setq closed t)) s ws)
+        (should-not closed)                 ; session survives the impostor
+        (let ((+monet--handshake "x-claude-code-ide-authorization: tok\r\n"))
+          (+monet--check-token-a (lambda (&rest _) (setq opened t)) s ws))
+        (should opened)
+        (+monet--on-close-a (lambda (&rest _) (setq closed t)) s ws)
+        (should closed)))))                  ; a real close goes through
+
+(ert-deftest monet/remote-buffers-have-no-root ()
+  (with-temp-buffer
+    (setq buffer-file-name "/ssh:inari:/home/x/f.el"
+          default-directory "/ssh:inari:/home/x/")
+    (cl-letf (((symbol-function 'file-remote-p) (lambda (&rest _) "/ssh:inari:"))
+              ((symbol-function 'doom-project-root) (lambda (&rest _) "/never/")))
+      (should-not (+monet--root)))
+    (setq buffer-file-name nil)))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here

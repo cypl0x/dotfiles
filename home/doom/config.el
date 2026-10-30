@@ -470,6 +470,7 @@
 (load! "lisp/+perf")        ;; measured fixes: remote /nix/store freeze (TRAMP+projectile)
 (load! "lisp/+usage")       ;; local command/key counts → M-x +usage/report
 (load! "lisp/+lsp-fallback") ;; missing LSP server → quiet fallback, not errors
+(load! "lisp/+monet")       ;; Claude Code in any terminal attaches to this Emacs (token-checked)
 (load! "lisp/+fonts")       ;; Font config, ligatures, face tuning
 (load! "lisp/+tramp")       ;; TRAMP performance, eglot guard, remote tools
 (load! "lisp/+nix")         ;; NixOS integration, nixd, flake ops
