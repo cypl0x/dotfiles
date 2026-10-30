@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 08:29] (+409m) — the real keys, finally
+You said "run it now", and the first try failed quietly: no keys arrived
+anywhere. =dotool= makes a fresh virtual keyboard per call, and
+Hyprland hadn't picked it up before the keys went out. (I read your inari
+tmux panes afterwards to be sure nothing landed there; nothing had.) The
+lab script now uses =dotoold=, one persistent keyboard. Two more lessons
+from the German layout: dotool's =key y= is the /physical/ key, so it
+typed =z=, and Return is called =enter=.
+Then, with real keys in the lab frame:
+- =SPC A x= on a small Collatz function: =*familiar*= opened beside it
+  and explained it correctly (6 → 8 steps). 244 tokens in, 1,091 out.
+- =SPC h X tar RET y=: the which line with gnutar's store path, the
+  examples, and "Copied: tar cf …" in the echo area.
+The answer also claimed =evenp= "isn't in the standard library"; it has
+been in subr since Emacs 31. familiar now tells the model which Emacs
+runs the Emacs Lisp, and the rerun dropped the claim. Spend so far: $0.0072.
 ** [2026-10-30 Fr 08:11] (+391m) — inari, by its whole history
 inari's atuin holds only 386 commands; mostly you drive it through
 agents (=claude --dangerously-skip-permissions= 21× in =.zsh_history=).
