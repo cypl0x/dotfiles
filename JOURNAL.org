@@ -15,26 +15,59 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 04:05]
+:UPDATED:  [2026-10-30 Fr 04:28]
 :END:
 
-| Area                          | Status | What changed                                                                             |
-|-------------------------------+--------+------------------------------------------------------------------------------------------|
-| Pending work committed        | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts)                                |
-| =SPC A= AI menu               | ✔ 🛠   | Was *broken* until agent-shell loaded; now always opens                                  |
-| =SPC A m= model picker        | ✔ 🛠   | Called a command that doesn't exist; now a real picker                                   |
-| =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                   |
-| Vellumory latest              | ✔ 🚀   | =bae0e5e=, theme colours default; =SPC m U= update, =SPC m F= feedback                   |
-| lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                         |
-| Tests + lint                  | ✔ 🧪   | 26 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                 |
-| Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                   |
-| Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                 |
-| Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                         |
-| inari disk                    | ✔      | 98% → 81% (85 GB free) with your OK; auto-GC under 8 GiB (deploy: nrs on inari) |
-| AI package "familiar"         | ✔ ✦    | v0.2: commit msg, explain, diagnostics, build errors, review, smerge fixes, spend ledger |
-| GitHub CI                     | ✔      | All 6 jobs green on claude/ci-repair (incl. new Emacs Lisp job); merge when ready |
+| Area                          | Status | What changed                                                                              |
+|-------------------------------+--------+-------------------------------------------------------------------------------------------|
+| Pending work committed        | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts)                                 |
+| =SPC A= AI menu               | ✔ 🛠    | Was *broken* until agent-shell loaded; now always opens                                   |
+| =SPC A m= model picker        | ✔ 🛠    | Called a command that doesn't exist; now a real picker                                    |
+| =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                    |
+| Vellumory                     | ✔ 🚀   | public release v0.1.0 from GitHub (worker, module, Lisp pinned); SPC m U checks for newer |
+| lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                          |
+| Tests + lint                  | ✔ 🧪   | 26 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                  |
+| Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                    |
+| Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                  |
+| Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                          |
+| inari disk                    | ✔      | 98% → 81% (85 GB free) with your OK; auto-GC under 8 GiB (deploy: nrs on inari)           |
+| AI package "familiar"         | ✔ ✦    | v0.2: commit msg, explain, diagnostics, build errors, review, smerge fixes, spend ledger  |
+| GitHub CI                     | ✔      | All 6 jobs green on claude/ci-repair (incl. new Emacs Lisp job); merge when ready         |
 
 * 📓 Log
+** [2026-10-30 Fr 04:28] (+168m) — Vellumory from GitHub: release v0.1.0, end to end
+You asked for the dotfiles to depend on the public release instead of the
+local clone. Done, with zero extra download on the metered line (checked
+first: the tag pins the same nixpkgs =8ce4ef6= and inputs as before).
+
+| Part                 | Before                                                | Now                                                         |
+|----------------------+-------------------------------------------------------+-------------------------------------------------------------|
+| Worker + manual      | =git+file:///home/wap/dev/vellumory= (testing branch) | =github:cypl0x/vellumory/v0.1.0= (=7cdddc3=)                |
+| Doom module          | same local clone                                      | same GitHub tag                                             |
+| Lisp (Doom/straight) | =:local-repo ~/dev/vellumory=                         | GitHub recipe, =:pin= =7cdddc3= (2.3 MB shallow clone)      |
+| =SPC m U=            | pull + rebuild latest commit                          | /is a newer release out?/ (=git ls-remote=, version-sorted) |
+| Feedback =BUILD=     | local clone's branch@commit                           | =main@7cdddc3, worker 0.1.0=                                |
+| CI                   | stub for the private input                            | builds the real public input; stub removed                  |
+
+To upgrade later: change the tag in =flake.nix= and the =:pin= in
+=packages.el= (=SPC m U= tells you both values), then =nrs= and =doom sync=.
+
+*Restart recommended (your call, when convenient): =C-u SPC q R=.* Here's why
+=doom/reload= can't do it. v0.1.0's Lisp sends a new =rest= request to the
+worker (a memory trim: 528 MB → 158 MB in their measurement). Your session
+still runs the old worker process, which may not understand it. Reloading
+Lisp can't swap a running external process, so a restart is the clean way.
+The current mix (old Lisp, old worker) is consistent, so nothing breaks in
+the meantime.
+
+The O(n²) layout patch (filed in your feedback inbox) still applies to
+v0.1.0 unchanged. My hot-patch disappears with the restart, so forward it
+to the Vellumory agent.
+
+*Where things run* (you asked): all configuration lives in this repo on the
+ThinkPad. inari has its own =~/dotfiles= clone and builds itself, so
+deploying the inari changes (=git pull=, then =nrs= *on inari*) downloads
+over Hetzner's line, never your metered one.
 ** [2026-10-30 Fr 04:05] (+145m) — the delay you felt in Vellumory, measured; inari breathes again
 *Your report:* commands and window changes in Vellumory (e.g. =SPC w m m=)
 have a noticeable initial delay.
