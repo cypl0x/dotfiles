@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 09:49] (+489m) — two noises in the logs, one of them a race at every login
+A health pass over this boot's errors found two things repeating:
+- *swaync started twice at every login.* swaync 0.12 renamed its D-Bus
+  activation file to =org.erikreider.swaync.cc=, so the repo's override,
+  which deletes the /old/ name, quietly stopped doing anything. waybar's
+  widget then activated swaync's systemd unit next to =exec-once = swaync=,
+  and the unit failed 5 times ("An instance … is already running!"). You
+  chose: =exec-once= now starts that unit, so there's one swaync and systemd
+  restarts it if it crashes. The comments that called the unit "inert" are
+  fixed. No rebuild of swaync. Takes effect at your next login.
+- *1,717 udev errors per boot*: libfido2's YubiKey rules want a
+  Debian group, =plugdev=. Access worked anyway (uaccess), but now the group
+  exists: =udevadm verify= shows 0 errors, against 101 for a control copy.
+Side finding: the machine /booted/ at 07:38:44, a minute after the 07:37
+freeze recording, so that freeze ended in a reboot.
 ** [2026-10-30 Fr 09:31] (+471m) — a pkg-config that always said "enchant"
 After the vicinae find I checked the one PATH entry that beats even
 =~/.nix-profile=: =~/.local/bin=. In it was =pkg-config=, a two-line
