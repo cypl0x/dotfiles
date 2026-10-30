@@ -467,6 +467,7 @@
 ;; keybindings, and transient menus.  Evaluate this buffer to load them.
 ;; Modules are loaded in dependency order.
 
+(load! "lisp/+perf")        ;; measured fixes: remote /nix/store freeze (TRAMP+projectile)
 (load! "lisp/+fonts")       ;; Font config, ligatures, face tuning
 (load! "lisp/+tramp")       ;; TRAMP performance, eglot guard, remote tools
 (load! "lisp/+nix")         ;; NixOS integration, nixd, flake ops

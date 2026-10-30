@@ -213,5 +213,52 @@
                   (format +workflow-peer-format
                           (file-name-nondirectory (directory-file-name repo)))))))
 
+
+
+;;; +perf
+
+(defun test-lisp--generic-seq-union (s1 s2 &optional testfn)
+  "The stock algorithm, copied from seq.el, as the oracle."
+  (let* ((accum (lambda (acc elt)
+                  (if (seq-contains-p acc elt testfn) acc (cons elt acc))))
+         (result (seq-reduce accum s2 (seq-reduce accum s1 '()))))
+    (nreverse result)))
+
+(load (expand-file-name "+perf" test-lisp-dir) nil t)
+
+(ert-deftest perf/seq-union-matches-stock-results-and-order ()
+  (random "perf")
+  (dotimes (_ 200)
+    (let ((a (cl-loop repeat (random 150) collect (number-to-string (random 60))))
+          (b (cl-loop repeat (random 150) collect (number-to-string (random 60)))))
+      (should (equal (seq-union a b) (test-lisp--generic-seq-union a b))))))
+
+(ert-deftest perf/seq-union-respects-custom-testfn ()
+  (let ((a (number-sequence 1 100)) (b '(1.0 2.0 500.0)))
+    (should (equal (seq-union a b #'=) (test-lisp--generic-seq-union a b #'=)))))
+
+(ert-deftest perf/seq-union-is-linear ()
+  "The case that froze Emacs: ~80k store entries merged with two dirs."
+  (let ((l (mapcar #'number-to-string (number-sequence 1 80000)))
+        (t0 (float-time)))
+    (should (= (length (seq-union l '("./" "../"))) 80002))
+    (should (< (- (float-time) t0) 1.0))))
+
+(ert-deftest perf/nix-store-p ()
+  (should (+perf-nix-store-p "/nix/store/abc-etc/hosts"))
+  (should (+perf-nix-store-p "/ssh:cypl0x@inari:/nix/store/"))
+  (should (+perf-nix-store-p "/ssh:a|sudo:root@a:/nix/store/x"))
+  (should-not (+perf-nix-store-p "/ssh:inari:/home/nix/store/"))
+  (should-not (+perf-nix-store-p "/etc/hosts"))
+  (should-not (+perf-nix-store-p nil)))
+
+(ert-deftest perf/projectile-root-skipped-in-store ()
+  (let ((called nil))
+    (should-not (+perf-projectile-skip-store-a
+                 (lambda (&rest _) (setq called t) "/root/") "/ssh:h:/nix/store/x/"))
+    (should-not called)
+    (should (equal (+perf-projectile-skip-store-a (lambda (&rest _) "/p/") "/home/u/p/")
+                   "/p/"))))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
