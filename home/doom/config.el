@@ -11,17 +11,7 @@
 ;; UI
 ;; ---------------------------------------------------------------------------
 
-(setq doom-font (font-spec :family "Maple Mono NF" :size 14))
-;; doom/increase-font-size resizes doom-font *and* doom-serif-font /
-;; doom-variable-pitch-font together (see doom-adjust-font-size). Left unset,
-;; those two fall back to whatever the system's serif/variable-pitch face
-;; resolves to — a font that may not exist at every size. If resizing any one
-;; of the three fails, Doom rolls back *all* of them, which is why growing
-;; the font silently no-ops while shrinking (which only needs smaller, more
-;; permissively-matched sizes) keeps working. Pin all three to the same
-;; scalable font so every step in the resize loop succeeds.
-(setq doom-variable-pitch-font (font-spec :family "Maple Mono NF" :size 14))
-(setq doom-serif-font (font-spec :family "Maple Mono NF" :size 14))
+;; Font configuration moved to lisp/+fonts.el (Maple Mono NF, all 5 slots).
 (setq doom-theme 'doom-vibrant)
 (setq display-line-numbers-type t)
 
@@ -460,3 +450,46 @@
 ;; Private config path override
 ;; SPC f p opens the dotfiles source instead of the read-only Nix store symlink.
 ;; ~/.config/doom/ is managed by home-manager; edits belong in ~/dotfiles/home/doom/.
+
+
+;; ---------------------------------------------------------------------------
+;; Modular configuration — load lisp/ modules
+;; ---------------------------------------------------------------------------
+;; Each module is self-contained with its own use-package! declarations,
+;; keybindings, and transient menus.  Evaluate this buffer to load them.
+;; Modules are loaded in dependency order.
+
+(load! "lisp/+fonts")       ;; Font config, ligatures, face tuning
+(load! "lisp/+tramp")       ;; TRAMP performance, eglot guard, remote tools
+(load! "lisp/+nix")         ;; NixOS integration, nixd, flake ops
+(load! "lisp/+org-power")   ;; org-roam, super-agenda, org-ql, org-modern
+(load! "lisp/+prose")       ;; Writing mode, jinx, text stats, readability
+(load! "lisp/+dtt")         ;; Dependently typed language enhancements
+(load! "lisp/+agent")       ;; AI agent integration, gptel, transient
+(load! "lisp/+prompt")      ;; Emacs-centric AI prompt workflow
+(load! "lisp/+brave-search") ;; Brave Web Search API
+(load! "lisp/+persist")     ;; Persistent scratch/new buffers (Sublime-like)
+(load! "lisp/+nav")         ;; Navigation, discovery, help, pulsar
+(load! "lisp/+dashboard")   ;; Dashboard hub, system overview
+
+;; ---------------------------------------------------------------------------
+;; Keymap summary — top-level SPC bindings added by modules
+;; ---------------------------------------------------------------------------
+;;
+;;  SPC i    AI prompt (ask with @context expansion)
+;;  SPC I    AI followup (continue conversation)
+;;  SPC '    AI prompt transient menu
+;;  SPC A    AI agent transient menu (agent-shell)
+;;  SPC D    DTT (proof assistants) menu
+;;  SPC F    Font tools (ligature showcase, font info)
+;;  SPC H    Feature hub (master transient — start here!)
+;;  SPC I    System overview
+;;  SPC N    NixOS operations
+;;  SPC P    Prose writing tools + thesaurus
+;;  SPC R    Remote / TRAMP tools
+;;  SPC ?    Help & discovery transient
+;;  SPC ,    Buffer operations transient
+;;  SPC s b  Brave web search
+;;  SPC n r  Org-roam prefix
+;;  SPC n v  Org-ql views
+;;  SPC n q  Org-ql search

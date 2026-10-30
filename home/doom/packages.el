@@ -52,6 +52,10 @@
 (package! ollama-buddy)
 (package! copilot)
 (package! agent-shell)
+(package! agent-recall)              ;; Search/browse agent-shell transcripts
+(package! agent-shell-attention)     ;; Modeline attention tracker
+(package! agent-shell-math-renderer) ;; LaTeX math rendering in agent-shell
+(package! ob-agent-shell)            ;; Org-babel backend for agent-shell
 (package! aider)             ;; aider.el — CLI pair-programming, drives `aider` on PATH
 
 ;; MCP (Model Context Protocol) tooling
@@ -97,9 +101,8 @@
 (package! multi-vterm
   :recipe (:host github :repo "suonlight/multi-vterm"))
 
-;; ghostel: terminal emulator powered by libghostty-vt (native module, no
-;; toolchain needed — downloads a prebuilt binary on first use).
-(package! ghostel)
+;; ghostel: now provided via Doom's :term ghostel module (init.el).
+;; evil-ghostel still needed as explicit package.
 (package! evil-ghostel)      ;; evil-mode keybindings for ghostel buffers
 
 ;; ---------------------------------------------------------------------------
@@ -134,6 +137,61 @@
 ;; ---------------------------------------------------------------------------
 
 (package! eglot-ltex :recipe (:host github :repo "emacs-languagetool/eglot-ltex"))
+
+;; ---------------------------------------------------------------------------
+;; Org — knowledge management, agenda, visual polish
+;; ---------------------------------------------------------------------------
+
+(package! org-roam)            ;; Zettelkasten: bidirectional links, knowledge graph
+(package! consult-org-roam)    ;; Vertico integration for org-roam
+(package! org-super-agenda)    ;; Group/filter org-agenda into readable sections
+(package! org-ql)              ;; SQL-like query language for org
+(package! org-modern)          ;; Modern visual styling (bullets, tables, tags)
+(package! org-appear)          ;; Auto-reveal markup at point (links, emphasis)
+(package! org-transclusion)    ;; Live embed content from other org files
+(package! org-noter)           ;; Synchronized PDF/document annotation
+(package! org-download)        ;; Paste/drag images into org
+(package! citar)               ;; Citation management with org integration
+(package! citar-org-roam)      ;; Bridge citar + org-roam bibliographic notes
+
+;; ---------------------------------------------------------------------------
+;; Writing / prose
+;; ---------------------------------------------------------------------------
+
+(package! jinx)                ;; Enchant-based spellchecker (faster than flyspell)
+(package! mixed-pitch)         ;; Variable-pitch in prose, fixed-pitch in code
+(package! svg-tag-mode)        ;; Replace text tags with SVG badges
+(package! typst-ts-mode)       ;; Tree-sitter mode for typst
+(package! powerthesaurus)       ;; Thesaurus via powerthesaurus.org
+
+;; ---------------------------------------------------------------------------
+;; AI / LLM — extensions
+;; ---------------------------------------------------------------------------
+
+(package! gptel)               ;; LLM client in any buffer (Claude, GPT, Ollama)
+(package! ob-lean              ;; Org-babel for Lean 4 code blocks
+  :recipe (:host github :repo "0xAX/ob-lean"))
+
+;; ---------------------------------------------------------------------------
+;; Completion / UI
+;; ---------------------------------------------------------------------------
+
+(package! nerd-icons-corfu)    ;; Icons in corfu completion popup
+(package! pulsar)              ;; Pulse current line after big motions
+(package! sideline)            ;; Show info in sideline (diagnostics, blame, etc.)
+(package! sideline-flymake)    ;; Flymake diagnostics in sideline
+
+;; ---------------------------------------------------------------------------
+;; Nix / system
+;; ---------------------------------------------------------------------------
+
+(package! envrc)               ;; Buffer-local direnv (critical for NixOS + TRAMP)
+
+;; ---------------------------------------------------------------------------
+;; Navigation / discovery
+;; ---------------------------------------------------------------------------
+
+(package! elisp-demos)         ;; Inject usage examples into *help* buffers
 
 ;; ---------------------------------------------------------------------------
 ;; Disabled / under evaluation

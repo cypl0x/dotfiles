@@ -1,0 +1,983 @@
+#+title: Doom Emacs Configuration Modules
+#+author: Wolfhard Prell
+#+date: <2026-10-25 So>
+#+startup: overview
+#+options: toc:3 num:t
+
+* Introduction
+
+This document is the complete guide to a modular Doom Emacs configuration
+built for a specific workflow: dependently typed programming, knowledge
+management, AI-assisted editing, remote development, and prose writing.
+
+Every module is self-contained in its own =.el= file under =lisp/=.  Each
+provides =use-package!= declarations, keybindings, transient menus, and
+diagnostic commands.  The modules are loaded by =config.el= in dependency
+order.
+
+** Who is this for?
+
+- Doom Emacs users who want a batteries-included configuration
+- Developers working with proof assistants (Agda, Lean, Coq, Idris, F*)
+- NixOS users who need Emacs tooling integrated with Nix
+- Anyone who wants AI assistance embedded in their editor without context switches
+- Writers who want distraction-free prose tools with spell checking and readability metrics
+
+** Prerequisites
+
+- GNU Emacs 30+ (pgtk build recommended for Wayland)
+- Doom Emacs v2.2+
+- NixOS or Nix package manager (for dependency management)
+- A monospace font with ligature support (Maple Mono NF recommended)
+
+** Quick Start
+
+1. Run =~/.config/emacs/bin/doom sync= to install packages
+2. Run =home-manager switch --flake ~/dotfiles= to install system dependencies
+3. Restart Emacs daemon
+4. Press =SPC H= to open the Feature Hub — the master transient menu
+
+* Architecture
+
+** File Layout
+
+#+begin_example
+~/dotfiles/home/doom/
+├── config.el            Main config — loads all modules
+├── init.el              Doom module selection
+├── packages.el          Package declarations (50+)
+└── lisp/
+    ├── +fonts.el        Font config, ligatures, face tuning
+    ├── +tramp.el        TRAMP performance, eglot guard
+    ├── +nix.el          NixOS integration, nixd, flake ops
+    ├── +org-power.el    org-roam, super-agenda, org-ql, org-modern
+    ├── +prose.el        Writing mode, jinx, text stats, readability
+    ├── +dtt.el          Dependently typed language enhancements
+    ├── +agent.el        AI agent integration, gptel, agent-shell
+    ├── +prompt.el       Emacs-centric AI prompt with tool-use
+    ├── +brave-search.el Brave Web Search (loads brave-search/)
+    ├── +persist.el      Persistent scratch buffers
+    ├── +nav.el          Navigation, discovery, help transients
+    ├── +dashboard.el    Feature hub, system overview
+    ├── brave-search/    Standalone Brave Search package
+    │   └── brave-search.el
+    ├── app-launcher.el  Application launcher
+    ├── functions.el     Utility functions
+    └── README.org       This file
+#+end_example
+
+** Naming Conventions
+
+Following Doom Emacs conventions established by hlissner:
+
+| Pattern             | Meaning                                    | Example                   |
+|---------------------+--------------------------------------------+---------------------------|
+| =+module/command=     | Interactive command (for =M-x= / keybinding) | =+prompt/ask=               |
+| =+module-function=    | Public non-interactive function             | =+persist/save-buffer=      |
+| =+module--private=    | Private/internal function                   | =+prompt/--expand-context=  |
+| =+module/name-h=      | Hook function                               | (not used currently)      |
+| =+module/name-a=      | Advice function                             | =+prose/leo-fix-multibyte=  |
+
+The =+= prefix means "belongs to a user/module namespace" (not Doom core).
+
+** Keymap Overview
+
+All bindings under =SPC= (evil leader).  No conflicts with Doom defaults —
+modules append to existing prefixes, never re-create them.
+
+| Key     | Command                   | Module       |
+|---------+---------------------------+--------------|
+| =SPC i=   | AI prompt (with tools)    | +prompt      |
+| =SPC I=   | AI followup               | +prompt      |
+| =SPC '=   | AI prompt transient       | +prompt      |
+| =SPC A=   | Agent shell transient     | +agent       |
+| =SPC D=   | DTT languages menu        | +dtt         |
+| =SPC F=   | Font tools                | +fonts       |
+| =SPC H=   | Feature hub (start here!) | +dashboard   |
+| =SPC I=   | System overview           | +dashboard   |
+| =SPC N=   | NixOS operations          | +nix         |
+| =SPC P=   | Prose writing tools       | +prose       |
+| =SPC R=   | Remote / TRAMP tools      | +tramp       |
+| =SPC ?=   | Help & discovery          | +nav         |
+| =SPC ,=   | Buffer operations         | +nav         |
+| =SPC s b= | Brave web search          | +brave-search |
+| =SPC s B= | Brave search region       | +brave-search |
+| =SPC n r= | Org-roam prefix           | +org-power   |
+| =SPC n v= | Org-ql views              | +org-power   |
+
+* Modules in Depth
+
+** =+fonts.el= — Font Configuration and Ligatures
+:PROPERTIES:
+:CUSTOM_ID: fonts
+:END:
+
+*** Overview
+
+Configures all five Doom font slots for Maple Mono NF and registers a
+comprehensive ligature table.  Maple Mono NF v7.9 supports 130+ ligature
+sequences via the =calt= (contextual alternates) OpenType feature.
+
+*** Doom Font Slots
+
+Doom provides five font variables.  This module sets all of them:
+
+#+begin_src emacs-lisp
+doom-font                ;; Default + fixed-pitch face
+doom-big-font            ;; For presentations (doom-big-font-mode)
+doom-variable-pitch-font ;; For mixed-pitch-mode in prose
+doom-serif-font          ;; For fixed-pitch-serif face
+doom-symbol-font         ;; Fallback for Unicode symbols (NO size!)
+#+end_src
+
+*Important:* Never set =:size= on =doom-symbol-font=.  It locks ALL symbol
+rendering to that size.  The font cascade handles sizing automatically.
+
+*** Ligatures: How They Work
+
+Emacs renders ligatures through three layers:
+
+1. *HarfBuzz* — the text shaping engine compiled into Emacs (pgtk).  It knows
+   how to compose multi-character sequences into single glyphs IF the font has
+   the appropriate OpenType lookup tables.
+
+2. *=ligature.el=* — registers character sequences in Emacs'
+   =composition-function-table=.  Without this registration, Emacs doesn't even
+   attempt ligature composition.  Doom's =:ui ligatures= module loads this.
+
+3. *The font itself* — Maple Mono NF stores ligature rules in its =calt=
+   feature.  When HarfBuzz encounters a registered sequence, it queries the
+   font's GSUB table and renders the ligature glyph.
+
+*There are no font-specific ligature tables in Doom.* The same sequences are
+sent to HarfBuzz regardless of font.  The font simply ignores sequences it
+doesn't support.
+
+*** Registered Ligature Sequences
+
+This module registers 80+ sequences grouped by category:
+
+| Category         | Examples                                      |
+|------------------+-----------------------------------------------|
+| Arrows           | =->= ==>= =<-= =-->= ==>=>=                         |
+| Equality         | ===== =!== ====== =!=== ==/==                        |
+| Pipes            | =\vert>= =<\vert= =\vert\vert>= =<\vert\vert=                          |
+| Logic            | =&&= =\vert\vert= =!!=                               |
+| Haskell          | =::= =:::= =:== ==:==                           |
+| Type theory      | =\\/= =/\\= =<*>= =<+>=                           |
+| Comments         | =//= =///= =/*= =*/= =/**=                        |
+| Brackets         | ={|= |\}= =[|= =|]= =#{=                          |
+| Log badges       | =[TODO]= =[FIXME]= =[ERROR]= =[WARN]=            |
+
+Log-level badges (=[TODO]=, =[DEBUG]=, etc.) are registered for =text-mode=
+so they render in org files and logs.
+
+*** Diagnostic Commands
+
+| Command                      | Key       | What it does                         |
+|------------------------------+-----------+--------------------------------------|
+| =+fonts/ligature-showcase=     | =SPC F l=   | Buffer showing all ligatures         |
+| =+fonts/font-info=             | =SPC F i=   | Font config, HarfBuzz status         |
+| =+fonts/apply-maple-features=  | =SPC F a=   | Apply OpenType feature flags         |
+
+*** Face Tuning
+
+The module customizes faces for the doom-vibrant theme:
+
+- *Comments*: italic (Maple Mono NF has a beautiful italic variant)
+- *Keywords*: bold (makes control flow pop visually)
+- *Line numbers*: dimmed to 60% foreground
+- *Current line number*: full brightness + bold
+
+** =+tramp.el= — Remote Editing Performance
+:PROPERTIES:
+:CUSTOM_ID: tramp
+:END:
+
+*** The Problem
+
+Out of the box, Doom Emacs + TRAMP is unusably slow for remote editing.
+Three issues compound:
+
+1. *Wrong method*: Default =scp= opens a new SSH connection per file operation
+2. *No multiplexing*: Each TRAMP operation = full SSH handshake
+3. *eglot-ltex*: Hooks into =text-mode-hook= → tries to spawn =ltex-ls= on
+   remote machine → blocks Emacs for 30 seconds
+
+*** The Fix
+
+This module applies six optimizations:
+
+#+begin_src emacs-lisp
+tramp-default-method    "ssh"   ;; Persistent shell, not per-file scp
+tramp-use-connection-share nil  ;; Let ~/.ssh/config handle ControlMaster
+tramp-verbose           1      ;; Errors only (default 3 = noisy)
+remote-file-name-inhibit-cache 600 ;; Cache file attrs 10 min (default 10s)
+remote-file-name-inhibit-locks t   ;; No lock files on remote
+tramp-connection-timeout 10    ;; Fast timeout (SSH connects instantly)
+#+end_src
+
+Additionally:
+- *VC disabled on remote*: Prevents =git status= probe on every file open
+- *eglot blocked on remote*: =defadvice!= around =eglot-ensure= checks
+  =file-remote-p= and skips for remote buffers
+- *recentf excludes TRAMP*: No background stat-ing of remote files
+
+*** SSH Configuration
+
+The module expects =~/.ssh/config= to handle ControlMaster globally:
+
+#+begin_src text
+Host *
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 600
+    Compression yes
+    ServerAliveInterval 30
+#+end_src
+
+This means one SSH handshake, then all subsequent operations multiplex over
+the existing connection.  ControlPersist keeps the master alive for 10 minutes
+after the last channel closes.
+
+*** Quick Connect Commands
+
+| Command                   | Key       | Destination         |
+|---------------------------+-----------+---------------------|
+| =+tramp/connect-inari=     | =SPC R h=   | =cypl0x@wolfhard.net:~/= |
+| =+tramp/connect-inari-turm= | =SPC R t= | =~/dev/Turm/= on inari |
+| =+tramp/connection-info=   | =SPC R i=   | TRAMP config + status |
+| =+tramp/cleanup=           | =SPC R c=   | Clean all connections |
+
+** =+org-power.el= — Knowledge Management
+:PROPERTIES:
+:CUSTOM_ID: org-power
+:END:
+
+*** org-roam: Zettelkasten
+
+org-roam provides bidirectional linking between notes.  Every note is a
+file with a unique ID.  Links between notes create a knowledge graph.
+
+**** Directory Structure
+
+#+begin_example
+~/notes/
+├── roam/               org-roam root
+│   ├── concepts/       Concept notes (definitions, properties)
+│   ├── refs/           Reference notes (papers, books, URLs)
+│   ├── turm/           Turm language notes
+│   └── daily/          Daily journal
+├── inbox.org           Quick capture inbox
+└── bibliography.bib    BibTeX references
+#+end_example
+
+**** Capture Templates
+
+Four templates are configured:
+
+| Key | Template  | Use case                           |
+|-----+-----------+------------------------------------|
+| =d=   | Default   | General note                       |
+| =c=   | Concept   | Definition, properties, examples   |
+| =r=   | Reference | Source, summary, key points, quotes |
+| =t=   | Turm      | Type theory context, proof sketch  |
+
+**** Workflow
+
+1. =SPC n r f= → find existing node or create new
+2. =SPC n r i= → insert link to node at point
+3. =SPC n r b= → toggle backlinks buffer (see what links here)
+4. =SPC n r g= → visualize knowledge graph (needs =graphviz=)
+5. =SPC n r t= → jump to today's daily note
+6. =SPC n r s= → full-text search across all notes (via consult)
+
+*** org-super-agenda: Grouped Views
+
+Agenda items are grouped into sections:
+
+| Group       | Criteria         | Order |
+|-------------+------------------+-------|
+| Urgent      | Priority A       |     1 |
+| In Progress | TODO state STRT  |     2 |
+| Turm        | Tag :turm:       |     3 |
+| Emacs       | Tag :emacs:      |     4 |
+| Research    | Tag :research:   |     5 |
+| Backlog     | Priority B or C  |    10 |
+| Auto        | By category      |    20 |
+
+*** org-ql: Query Language
+
+Three saved views:
+
+- *Recent TODOs*: TODO items with timestamps in last 7 days
+- *Turm Tasks*: TODO items tagged :turm:, sorted by priority
+- *Stale TODOs*: TODO items with no timestamp in 30 days
+
+Access via =SPC n v= (views) or =SPC n q= (custom query).
+
+*** org-modern: Visual Polish
+
+Replaces plain-text org markup with modern visual elements:
+
+- Stars → filled/hollow circles (◉ ○ ◈ ◇ ▸)
+- TODO/DONE → colored badges with white text
+- Priority A/B/C → colored badges
+- List bullets → typographic symbols (➤ – •)
+- Tables → subtle borders
+
+*** org-appear: Auto-Reveal Markup
+
+When cursor moves onto markup, it reveals the raw syntax:
+
+- =*bold*= shows as *bold* normally, shows =*bold*= when cursor enters
+- Links show display text normally, show =[[url][text]]= when editing
+- LaTeX fragments auto-reveal on entry
+
+*** org-transclusion: Live Content Embedding
+
+Embed content from other org files inline.  Changes to the source propagate
+to all transclusion sites.
+
+| Key             | Command                   |
+|-----------------+---------------------------|
+| =SPC m T a=       | Add transclusion at point |
+| =SPC m T A=       | Add all transclusions     |
+| =SPC m T r=       | Remove transclusion       |
+| =SPC m T t=       | Toggle transclusion mode  |
+
+** =+prose.el= — Writing and Prose Tools
+:PROPERTIES:
+:CUSTOM_ID: prose
+:END:
+
+*** jinx: Fast Spell Checking
+
+jinx uses the Enchant library (not Ispell/Hunspell directly).  It's faster
+than flyspell because it uses overlays rather than the font-lock mechanism.
+
+**** NixOS Setup
+
+jinx compiles a native module (=jinx-mod.so=) on first use.  On NixOS, this
+requires special handling because:
+
+1. =pkg-config= is =pkgconf= on NixOS (different binary name)
+2. Enchant headers live in a =-dev= store path not on =PKG_CONFIG_PATH=
+3. =enchant-2.pc= has transitive glib deps that can't resolve without full
+   dev closure
+
+The module solves this by creating a shim =pkg-config= script at
+=~/.local/bin/pkg-config= that returns direct =-I/-L/-l= flags pointing to
+the nix store paths.  This shim is added to both =PATH= and =exec-path=.
+
+**** Configuration
+
+- Languages: =en_US de_DE= (English + German)
+- Misspelling face: red wavy underline
+- Safe wrapper: =+prose/jinx-mode-safe= catches compilation failure to prevent
+  cascading errors that would disable font-lock
+
+*** Writing Mode
+
+=+prose/writing-mode= combines multiple settings for focused writing:
+
+- Wide margins (8 columns each side)
+- Increased line spacing
+- No line numbers
+- No highlight-line
+- jinx enabled
+- mixed-pitch enabled
+- org-modern enabled (in org buffers)
+
+Toggle: =SPC P w=
+
+*** Reading Mode
+
+=+prose/reading-mode= hides all diagnostic overlays:
+
+- Disables flycheck, flymake, flyspell, jinx, sideline
+- Disables eglot inlay hints
+- Hides line numbers
+
+Toggle: =SPC P r=
+
+*** Text Statistics
+
+=+prose/text-stats= (=SPC P s=) shows for buffer or region:
+
+- Word count, character count (total + non-space)
+- Line count, sentence count, paragraph count
+- Reading time (~238 wpm), writing time (~40 wpm), speaking time (~150 wpm)
+
+*** Word Frequency
+
+=+prose/word-frequency= (=SPC P f=) shows top 100 most-used words with counts.
+
+*** Readability Metrics
+
+=+prose/readability= (=SPC P R=) calculates:
+
+- *Flesch Reading Ease* (0-100, higher = easier)
+- *Flesch-Kincaid Grade Level* (US grade equivalent)
+- Human-readable grade description
+
+*** Leo Translation Fix
+
+=leo-translate-word= had broken umlaut rendering (ä ö ü displayed as garbage).
+Root cause: leo.el's XML parser toggles multibyte twice (no-op) instead of
+decoding UTF-8 after gzip decompression.
+
+Fixed via =defadvice!= that intercepts =toggle-enable-multibyte-characters= calls
+and replaces them with proper =decode-coding-region= + =set-buffer-multibyte=.
+
+*** Spell Correction: Mouse + Keyboard
+
+Misspelled words (red squiggly underline) can be corrected via:
+
+- =RET= on the word (normal mode)
+- Left-click on the word
+- =SPC P j= (jinx-correct)
+- =M-$= (flyspell-correct-at-point)
+
+** =+dtt.el= — Dependently Typed Languages
+:PROPERTIES:
+:CUSTOM_ID: dtt
+:END:
+
+*** Supported Languages
+
+| Language | Mode         | Key Features                            |
+|----------+--------------+-----------------------------------------|
+| Agda     | agda2-mode   | Holes, case split, refine, auto (Mimer) |
+| Lean 4   | lean4-mode   | Continuous checking, info view, LSP     |
+| Coq      | coq-mode     | Proof General step-through, company-coq |
+| Idris 2  | idris2-mode  | Case split, proof search, add clause    |
+| F*       | fstar-mode   | PG-style interaction, tactic goals      |
+
+*** Agda Keybindings (=SPC m= localleader)
+
+| Key         | Command                  |
+|-------------+--------------------------|
+| =SPC m l l=   | Load file (type-check)   |
+| =SPC m g ,=   | Goal type + context      |
+| =SPC m g t=   | Goal type only           |
+| =SPC m g .=   | Goal + context + inferred |
+| =SPC m r r=   | Refine                   |
+| =SPC m r a=   | Auto (Mimer proof search) |
+| =SPC m r SPC= | Give (fill hole)         |
+| =SPC m r c=   | Case split               |
+| =SPC m n n=   | Next goal                |
+| =SPC m n p=   | Previous goal            |
+| =SPC m s s=   | Search about             |
+| =SPC m s d=   | Infer type               |
+| =SPC m s n=   | Normalize                |
+
+*** Agda Unicode Input
+
+The Agda input method provides the richest Unicode input in any editor.
+Toggle it globally with =SPC D u= — useful for typing type theory in org-mode.
+
+Examples: =\to= → =→=, =\lambda= → =λ=, =\forall= → =∀=, =\Sigma= → =Σ=
+
+*** PIDE Comparison
+
+No Emacs setup fully replicates Isabelle/PIDE.  Closest approximations:
+
+| Feature             | PIDE | lean4-mode | agda2-mode | Proof General |
+|---------------------+------+------------+------------+---------------|
+| Continuous checking | Yes  | Yes (LSP)  | No         | No            |
+| Document model      | Yes  | Yes (LSP)  | No         | No            |
+| Interactive holes   | No   | No         | Yes (best) | No            |
+| Case splitting      | Via tactics | Via tactics | Yes (native) | Via tactics |
+| Parallel processing | Yes  | Yes        | No         | Partial       |
+
+** =+agent.el= — AI Agent Integration
+:PROPERTIES:
+:CUSTOM_ID: agent
+:END:
+
+*** Architecture
+
+Three layers of AI integration:
+
+1. *agent-shell* — Claude Code CLI via ACP protocol.  Uses Max subscription.
+   Agent-centric: you switch to agent buffer.
+2. *gptel* — Claude API in any buffer.  Uses API billing ($).
+   Emacs-centric: AI comes to you.
+3. *+prompt* — Custom layer on top of gptel with context expansion and tool-use.
+
+*** Permission Model
+
+All permission prompts bypassed at three layers:
+
+| Layer              | Setting                                | Effect           |
+|--------------------+----------------------------------------+------------------|
+| Claude Code        | =permissions.defaultMode: bypassPermissions= | No tool prompts |
+| ACP bridge         | =agent-shell-permission-allow-always=    | No ACP prompts   |
+| Initial confirm    | =skipDangerousModePermissionPrompt: true= | No startup prompt |
+
+*** gptel Configuration
+
+Backend: Claude (Anthropic API).  Key from =~/.authinfo=:
+
+#+begin_example
+machine api.anthropic.com login apikey password sk-ant-...
+#+end_example
+
+Available models:
+
+| Model                      | Use case                |
+|----------------------------+-------------------------|
+| =claude-sonnet-4-6=         | Default, fast, capable  |
+| =claude-opus-4-6=           | Complex reasoning       |
+| =claude-haiku-4-5-20251001= | Quick, cheap            |
+| =claude-sonnet-5-5=         | Latest generation       |
+| =claude-opus-5-5=           | Latest, most capable    |
+
+*** Agent Shell Ecosystem
+
+| Package                     | Purpose                          |
+|-----------------------------+----------------------------------|
+| =agent-shell=                 | Core ACP-based agent interaction |
+| =agent-recall=                | Search/browse past transcripts   |
+| =agent-shell-attention=       | Modeline indicator for sessions  |
+| =agent-shell-math-renderer=   | LaTeX math in responses          |
+| =ob-agent-shell=              | Org-babel =#+begin_src agent-shell= |
+
+*** monet MCP Bridge
+
+=monet-mode= provides IDE tools to Claude Code via WebSocket MCP:
+
+| Tool               | What it does                          |
+|--------------------+---------------------------------------|
+| getCurrentSelection | Read cursor position / selected text |
+| openFile           | Open file in Emacs                    |
+| getDiagnostics     | Read flymake/flycheck errors          |
+| openDiff           | Show diff for accept/reject           |
+| saveDocument       | Save buffer                           |
+
+The =+agent.el= module advises =agent-shell-anthropic-make-claude-client= to
+inject monet environment variables into agent-shell sessions.
+
+** =+prompt.el= — Emacs-Centric AI Prompt
+:PROPERTIES:
+:CUSTOM_ID: prompt
+:END:
+
+*** Philosophy
+
+=+prompt= is the Emacs-centric counterpart to agent-shell's agent-centric approach.
+Instead of switching to an agent buffer, you ask questions from wherever you are.
+The AI can read your buffers, evaluate elisp, and insert text — all through
+gptel's tool-use framework.
+
+*** Context Expansion Syntax
+
+When typing a prompt in the minibuffer, use =@= references to include context:
+
+| Syntax         | Expands to                                    |
+|----------------+-----------------------------------------------|
+| =@buffer=        | Full content of current buffer                |
+| =@region=        | Selected text (active region)                 |
+| =@file:path=     | Content of file at path                       |
+| =@var:name=      | Value of Emacs variable                       |
+| =@eval:(expr)=   | Result of evaluating elisp expression         |
+| =@mode=          | Current major + minor modes                   |
+| =@buffers=       | List of open file-visiting buffers with modes |
+
+Example prompt: =@region Explain this Agda code and suggest improvements=
+
+*** Tool-Use: LLM Reads/Writes Emacs
+
+Eight tools are always enabled when using =+prompt/ask=:
+
+| Tool              | What the LLM can do                      |
+|-------------------+------------------------------------------|
+| =read_buffer=       | Read any buffer's contents by name       |
+| =list_buffers=      | See all open buffers with their modes    |
+| =eval_elisp=        | Evaluate arbitrary Emacs Lisp            |
+| =describe_variable= | Get variable value + documentation       |
+| =describe_function= | Get function documentation               |
+| =insert_text=       | Insert text at cursor in any buffer      |
+| =get_modes=         | Get active modes in a buffer             |
+| =web_search=        | Search the web via Brave Search API      |
+
+The LLM decides which tools to call based on your prompt.  If you ask
+"what packages do I have loaded?", it will call =eval_elisp= with
+=(length package-alist)= or similar.
+
+*** Commands
+
+| Key     | Command              | Description                    |
+|---------+----------------------+--------------------------------|
+| =SPC i=   | =+prompt/ask=          | Ask with @context + tools      |
+| =SPC I=   | =+prompt/followup=     | Continue conversation          |
+| =SPC '=   | =+prompt/transient=    | Full dispatch menu             |
+
+Additional quick actions in transient:
+
+| Key | Action                | Description                  |
+|-----+-----------------------+------------------------------|
+| =e=   | Explain region        | Explain selected code        |
+| =r=   | Rewrite region        | Rewrite with instruction     |
+| =b=   | Ask about buffer      | Full buffer as context       |
+| =t=   | Generate org table    | Table from description       |
+| =i=   | Insert last response  | Paste AI response at point   |
+
+** =+brave-search.el= — Brave Web Search
+:PROPERTIES:
+:CUSTOM_ID: brave-search
+:END:
+
+*** Overview
+
+Full Brave Web Search API client.  Supports web, news, image, video search,
+freshness filters, pagination, safe search, extra snippets, and result
+filtering.  Results rendered as org-mode with clickable links.
+
+*** API Key
+
+Stored in =~/.authinfo=:
+
+#+begin_example
+machine api.search.brave.com login apikey password YOUR_KEY
+#+end_example
+
+Free tier: 1,000 searches/month.
+
+*** Search Types
+
+| Command                       | Key       | What                   |
+|-------------------------------+-----------+------------------------|
+| =brave-search=                  | =SPC s b=   | Web search             |
+| =brave-search-region=           | =SPC s B=   | Search selected text   |
+| =brave-search-news-interactive= | =SPC s n=   | News search            |
+| =brave-search-at-point=         |           | Search word at point   |
+| =brave-search-lucky=            |           | Open first result      |
+| =brave-search-with-freshness=   |           | Filter by age          |
+| =brave-search-page-next=        |           | Next page of results   |
+| =brave-search-transient=        | =SPC s v=   | Full dispatch menu     |
+
+*** Freshness Filters
+
+| Value | Meaning    |
+|-------+------------|
+| =pd=    | Past day   |
+| =pw=    | Past week  |
+| =pm=    | Past month |
+| =py=    | Past year  |
+
+Custom range: =YYYY-MM-DDtoYYYY-MM-DD=
+
+*** Programmatic API
+
+#+begin_src emacs-lisp
+;; Basic search
+(brave-search-web "emacs doom" :count 5)
+
+;; News from past week
+(brave-search-news "nix flake" 10)
+
+;; With freshness filter
+(brave-search-web "type theory" :freshness "pm" :extra-snippets t)
+
+;; Specific result types only
+(brave-search-web "lean4 prover" :result-filter "web,news")
+#+end_src
+
+*** HTML Entity Handling
+
+All results pass through =brave-search--decode-entities= which converts:
+- Named entities: =&amp;= =&lt;= =&gt;= =&quot;= =&#x27;= =&apos;=
+- Numeric entities: =&#NNN;= and =&#xHHH;=
+- Strips remaining HTML tags
+
+** =+persist.el= — Persistent Scratch Buffers
+:PROPERTIES:
+:CUSTOM_ID: persist
+:END:
+
+*** The Problem
+
+Emacs loses content of non-file-visiting buffers (=*scratch*=, =*new*=, etc.)
+when the daemon restarts.  Sublime Text solved this in version 2 — every
+buffer is auto-saved and restored, even unsaved ones.
+
+*** How It Works
+
+1. Every 60 seconds, all non-file-visiting buffers with content are saved
+   to =~/.config/emacs/.local/cache/persist-buffers/=
+2. On startup, persisted buffers are restored with their content and mode
+3. When a persisted buffer is killed, its persistence file is removed
+4. On =kill-emacs=, all buffers are saved one final time
+
+*** Excluded Buffers
+
+Internal buffers are excluded via pattern matching:
+
+- =*Messages*=, =*Completions*=, =*Help*=, =*Compile*=
+- =*Backtrace*=, =*Warnings*=, =*straight*=, =*doom*=
+- Space-prefixed buffers (internal)
+- =*Minibuf*=, =*Echo Area*=
+- =*agent-shell*=, =*Claude*= (managed by agent-shell)
+
+*** Manual Save
+
+=SPC b P= — force-save all persistable buffers immediately.
+
+** =+nix.el= — NixOS Integration
+:PROPERTIES:
+:CUSTOM_ID: nix
+:END:
+
+*** nixd as Nix LSP
+
+The module configures =nixd= (when available) as the Nix LSP server instead
+of =nil=.  nixd provides NixOS option completion and home-manager option
+completion — critical for NixOS users.
+
+*** NixOS Operations
+
+| Command           | Key       | What                    |
+|-------------------+-----------+-------------------------|
+| =+nix/system-info=  | =SPC N i=   | NixOS + Emacs + Doom info |
+| =+nix/repl=         | =SPC N r=   | Nix REPL in vterm       |
+| =+nix/flake-update= | =SPC N u=   | =nix flake update=        |
+| =+nix/flake-check=  |           | =nix flake check=         |
+| =+nix/home-switch=  |           | =home-manager switch=     |
+| =+nix/doom-sync=    | =SPC N s=   | =doom sync=               |
+
+** =+nav.el= — Navigation and Discovery
+:PROPERTIES:
+:CUSTOM_ID: nav
+:END:
+
+*** pulsar: Visual Navigation Feedback
+
+After large jumps (page scroll, bookmark, window switch, heading navigation),
+the current line briefly pulses.  This provides instant visual feedback of
+where you landed.
+
+*** sideline: Inline Diagnostics
+
+Flymake diagnostics appear in the sideline (right margin) alongside the
+relevant code line, similar to VS Code's inline error display.
+
+*** envrc: Buffer-Local Direnv
+
+Each buffer gets its own direnv environment based on the nearest =.envrc=.
+Critical for NixOS projects where different directories have different
+Nix shells.
+
+*** Help Transient (=SPC ?=)
+
+| Group    | Commands                                  |
+|----------+-------------------------------------------|
+| Describe | key, function, variable, face, mode, package |
+| Lookup   | apropos, Doom modules, info manual, library |
+| Navigate | bindings, personal bindings, where-is, which-key |
+
+*** Buffer Transient (=SPC ,=)
+
+| Group    | Commands                                    |
+|----------+---------------------------------------------|
+| Switch   | consult-buffer, ibuffer, project, recent     |
+| Actions  | save, save-all, kill, kill-others, new, revert |
+| Navigate | goto-line, outline, imenu, bookmark           |
+
+** =+dashboard.el= — Feature Hub
+:PROPERTIES:
+:CUSTOM_ID: dashboard
+:END:
+
+*** The Hub (=SPC H=)
+
+Master transient linking to all module menus.  Start here.
+
+Groups: AI Agents, Knowledge, Proof Assistants, System, Writing, Help.
+
+*** System Overview (=SPC I=)
+
+Shows: Emacs version, Doom version, host, buffer/process counts,
+AI session counts (agent-shell + monet), proof assistant buffer counts,
+TRAMP connection status.
+
+*** Dashboard Sections
+
+Custom entries on the Doom splash screen:
+
+- *Open Feature Hub* — opens =SPC H=
+- *Start AI Agent* — launches agent-shell Claude session
+- *Find Knowledge Node* — org-roam node search
+- *NixOS Operations* — opens =SPC N= transient
+
+* Setup Reference
+
+** System Dependencies (=emacs-deps.nix=)
+
+| Package    | Why                                    |
+|------------+----------------------------------------|
+| =enchant2=   | jinx spell-checker backend             |
+| =pkg-config= | jinx-mod.so compilation                |
+| =graphviz=   | org-roam-graph (=dot= command)           |
+| =ltex-ls=    | eglot-ltex grammar checker             |
+| =cmake=      | vterm native module compilation         |
+| =gcc=        | vterm + jinx compilation               |
+| =gnuplot=    | org-mode plotting                      |
+| =maim=       | org-download clipboard                 |
+| =delta=      | magit-delta syntax-highlighted diffs   |
+| =difftastic= | structural, syntax-aware diffs         |
+
+** Auth Credentials (=~/.authinfo=)
+
+#+begin_example
+machine api.anthropic.com login apikey password sk-ant-...
+machine api.search.brave.com login apikey password BSAV...
+machine api.github.com login USERNAME^forge password GITHUB_TOKEN
+#+end_example
+
+=chmod 600 ~/.authinfo= — plain text, not in dotfiles repo.
+
+** Claude Code Settings (=~/.claude/settings.json=)
+
+Key settings:
+
+#+begin_src json
+{
+  "permissions": { "defaultMode": "bypassPermissions" },
+  "skipDangerousModePermissionPrompt": true,
+  "effortLevel": "high"
+}
+#+end_src
+
+** SSH (=~/.ssh/config=)
+
+Global ControlMaster for all hosts:
+
+#+begin_src text
+Host *
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 600
+    Compression yes
+#+end_src
+
+* Troubleshooting
+
+** Org-mode looks like fundamental mode (no colors)
+
+Cause: jinx compilation failure cascading into font-lock death.
+
+Fix: =M-: (global-font-lock-mode 1)= then revert buffer.
+
+Prevention: =+prose/jinx-mode-safe= wraps jinx in =condition-case=.
+
+** eglot timeout on startup
+
+#+begin_example
+[eglot] Timed out after 30 seconds
+#+end_example
+
+Cause: =eglot-ltex= trying to start =ltex-ls= for org/text buffers.
+
+Fix: Already mitigated by =+tramp/eglot-ensure-no-remote= for remote.
+For local: ltex-ls startup is slow (~5s) but should succeed if binary
+is on PATH.
+
+** SPC w / SPC s bindings wiped
+
+Cause: =map!= with =(:prefix ("w" . "window"))= re-creates prefix, wiping
+Doom's bindings.
+
+Fix: Use =(:prefix "w")= (string only, no dotted pair).  Already fixed.
+
+** gptel: authentication_error
+
+Cause: Wrong model IDs.  API model names differ from Claude Code model names.
+
+Fix: Use =claude-sonnet-4-6= not =claude-sonnet-4-20250514=.  Already fixed.
+
+** jinx: Compilation of jinx-mod.so failed
+
+Cause: NixOS — =pkg-config= not found, or enchant headers not on include path.
+
+Fix: =+prose/jinx--setup-nix-env= creates shim script.  Ensure =enchant2= and
+=pkg-config= in =emacs-deps.nix=.
+
+* Feature Summary
+
+| Category         | Count |
+|------------------+-------|
+| Modules          |    12 |
+| Packages         |    50 |
+| Keybindings      |    50 |
+| Transient menus  |    10 |
+| gptel tools      |     8 |
+| Diagnostic cmds  |    10 |
+| Workflow cmds    |    20 |
+| Total features   |   160 |
+
+* Anthropic Subscription Policy Note
+
+As of April 4, 2026, Anthropic blocks subscription OAuth tokens in
+third-party tools.  Claude Max/Pro subscriptions work ONLY through:
+
+- claude.ai (web)
+- Claude Code CLI (=claude= command)
+- Claude mobile apps
+
+Third-party harnesses (OpenClaw, OpenCode, elisp implementations) that
+piggyback on subscription credentials are blocked.
+
+*For gptel and +prompt:* Requires separate Anthropic API billing.
+$5/month gets 1M+ tokens.  Key in =~/.authinfo=.
+
+*For agent-shell:* Uses Claude Code CLI which uses Max subscription.
+No API billing needed.
+
+* Keyboard Layout Notes
+
+This configuration accounts for ISO QWERTZ DE keyboard layout.
+
+Existing custom bindings using German keys:
+
+| Key     | Command                  | Rationale                          |
+|---------+--------------------------+------------------------------------|
+| =M-ö=    | =previous-buffer=          | Buffer cycling on DE layout        |
+| =M-ä=    | =next-buffer=              | =ö/ä= replace =[/]= which need shift |
+| =C-ö=    | =doom/decrease-font-size=  | Font resize on DE layout           |
+| =C-ä=    | =doom/increase-font-size=  | =C-M-== is unreachable on QWERTZ    |
+| =C-ü=    | =doom/reset-font-size=     | =ü= sits next to =ö/ä=                |
+
+All module keybindings use ASCII characters under =SPC= leader to avoid
+layout conflicts.
+
+* Version History
+
+** v1.0.0 (2026-10-25)
+
+Initial release.  12 modules, 50 packages, 160 features.
+
+- TRAMP performance: =scp= → =ssh=, eglot guard, SSH ControlMaster
+- Org power: org-roam, super-agenda, org-ql, org-modern, org-appear
+- AI integration: gptel with 8 tools, +prompt with @context, agent-shell ecosystem
+- Brave Search: full API client with org-mode output
+- Persistent buffers: Sublime-style auto-save/restore
+- Font: Maple Mono NF ligatures (130+ sequences)
+- DTT: Unified Agda/Lean/Coq/Idris/F* keybindings
+- NixOS: nixd LSP, flake ops, system info
+- Prose: jinx (NixOS-safe), writing mode, readability metrics, leo umlaut fix
+- Navigation: pulsar, sideline, envrc, help/buffer transients
+
+* Acknowledgments
+
+- hlissner — Doom Emacs framework and conventions
+- tecosaur — Doom Emacs literate config inspiration
+- karthink — gptel, the foundation for AI-in-Emacs
+- xenodium — agent-shell and ACP ecosystem
+- stevemolitor — monet MCP bridge for Emacs
+
+* License
+
+GPL-3.0-or-later
+

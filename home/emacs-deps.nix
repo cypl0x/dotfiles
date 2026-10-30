@@ -71,5 +71,12 @@
     libtool
     gnumake
     gcc
+
+    # jinx spell-checker (lisp/+prose.el) — runtime + build deps for jinx-mod.so
+    enchant2
+    pkg-config     # jinx build finds enchant via pkg-config
+
+    # org-roam-graph needs `dot` from graphviz
+    graphviz
   ];
 }
