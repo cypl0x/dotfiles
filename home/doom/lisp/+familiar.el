@@ -19,6 +19,11 @@
                familiar-commit-message familiar-spend familiar-mode-line-mode))
   (autoload cmd "familiar" nil t))
 
+;; MCP bridge for agents (claude mcp add ... emacs-mcp-stdio.sh
+;; --init-function=familiar-mcp-start); see familiar-mcp.el.
+(autoload 'familiar-mcp-start "familiar-mcp")
+(autoload 'familiar-mcp-stop "familiar-mcp")
+
 (after! familiar
   ;; Show the budget against what the key is actually charged with.
   (setq familiar-budget 10.0))

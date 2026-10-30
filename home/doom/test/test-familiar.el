@@ -319,5 +319,48 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
       (should (eq (familiar-handoff "Explain.") 'clipboard)))
     (should (string-prefix-p "Explain." (car kill-ring)))))
 
+
+;;; familiar-mcp (tool functions; the MCP wiring is tested live)
+
+(load (expand-file-name "../lisp/familiar/familiar-mcp"
+                        (file-name-directory (or load-file-name buffer-file-name)))
+      nil t)
+
+(defmacro test-familiar--with-elisp-file (content &rest body)
+  "Write CONTENT to a temp .el file bound to `file' and run BODY."
+  `(let ((file (make-temp-file "familiar-mcp" nil ".el" ,content)))
+     (cl-letf (((symbol-function 'mcp-server-lib-tool-throw)
+                (lambda (msg) (error "%s" msg))))
+       (unwind-protect (progn ,@body)
+         (when-let* ((b (find-buffer-visiting file))) (kill-buffer b))
+         (delete-file file)))))
+
+(ert-deftest familiar-mcp/definitions-via-elisp-xref ()
+  (test-familiar--with-elisp-file
+   ";;; x -*- lexical-binding: t -*-\n(defun my-f (s)\n  (string-trim s))\n"
+   (let ((out (familiar-mcp-definitions file "3" "string-trim")))
+     (should (string-match-p "\\[definitions via elisp\\]" out))
+     ;; A real line, not "?": elisp locations are resolved via markers.
+     (should (string-match-p "subr\\(-x\\)?\\.el:[0-9]+: (defun string-trim)" out)))))
+
+(ert-deftest familiar-mcp/outline-lists-definitions-with-lines ()
+  (test-familiar--with-elisp-file
+   ";;; x -*- lexical-binding: t -*-\n(defun alpha () 1)\n\n(defvar beta 2)\n(defun gamma () 3)\n"
+   (let ((out (familiar-mcp-outline file)))
+     (should (string-match-p "^2: .*alpha" out))
+     (should (string-match-p "^5: .*gamma" out)))))
+
+(ert-deftest familiar-mcp/errors-are-reported ()
+  (test-familiar--with-elisp-file
+   "(defun a () 1)\n"
+   (should-error (familiar-mcp-definitions file "0" "a"))
+   (should-error (familiar-mcp-definitions file "1" "nonexistent-xyz"))
+   (should-error (familiar-mcp-outline "/nonexistent/file.el"))))
+
+(ert-deftest familiar-mcp/tool-specs-are-read-only ()
+  (dolist (spec familiar-mcp--tools)
+    (should (fboundp (car spec)))
+    (should (plist-get (cdr spec) :read-only))))
+
 (provide 'test-familiar)
 ;;; test-familiar.el ends here
