@@ -190,6 +190,9 @@ Add it to `familiar-model-prices'." model)))
 
 ;;;; Mode line
 
+(defvar familiar--mode-line-map (make-mode-line-mouse-map 'mouse-1 #'familiar-spend)
+  "Built once: the segment is evaluated on every redisplay.")
+
 (defun familiar--mode-line ()
   (when familiar-budget
     (let ((spent (familiar-spent)))
@@ -199,7 +202,7 @@ Add it to `familiar-model-prices'." model)))
                               (t 'shadow))
                   'help-echo (format "familiar: $%.4f of $%.2f spent — mouse-1: details"
                                      spent familiar-budget)
-                  'local-map (make-mode-line-mouse-map 'mouse-1 #'familiar-spend)))))
+                  'local-map familiar--mode-line-map))))
 
 (defconst familiar--mode-line-construct '(:eval (familiar--mode-line)))
 
