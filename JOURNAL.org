@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 09:32] (+472m) — a pkg-config that always said "enchant"
+After the vicinae find I checked the one PATH entry that beats even
+=~/.nix-profile=: =~/.local/bin=. In it was =pkg-config=, a two-line
+script from Oct 24 that prints enchant's compile flags /whatever you
+ask/. =pkg-config --modversion zlib= answered with enchant flags, so any
+build in your shell (meson, autotools, Rust =-sys= crates) would have got
+the wrong flags without an error, and its =-L= path was already stale. It
+existed because jinx (spell checking) needs enchant through pkg-config,
+and a Nix package list doesn't put =.pc= files on pkg-config's path.
+Now the session sets =PKG_CONFIG_PATH= to enchant's =.pc= dir
+(=emacs-deps.nix=, next to the packages it serves), and the fake is
+renamed to =~/.local/bin/.pkg-config.fake-20261030=. Checked three ways:
+a clean login shell, your daemon, and compiling =jinx-mod.c= for real.
+Also there: =grok= and =agent= symlinks into a =~/.grok= that no longer
+exists. Harmless (zsh skips them), but yours to delete.
 ** [2026-10-30 Fr 09:27] (+467m) — vicinae was never broken; your PATH was
 In July we (an earlier session) filed vicinae under "window never maps,
 upstream bug". Today's history pass found ~40 =nix profile add/remove=
