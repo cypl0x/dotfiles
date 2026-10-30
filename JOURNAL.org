@@ -50,6 +50,8 @@ command line, empty for all), =oc=/=om= sort, =m= marks, =x= kills.
 Two things the live daemon caught that tests alone wouldn't have:
 proced's settings are buffer-local (my first =setq= reached nothing), and
 evil-snipe had taken =f=. Both fixed, 2 new tests (90 total).
+Then CI (Emacs 30) failed: older proced wants the filter as a /name/.
+The regexp now lives as a named =+proced-grep= filter; CI green again.
 ** [2026-10-30 Fr 08:41] (+421m) — the next freeze names its suspect
 The 07:37 recording was honest but useless: 1.8 s of CPU in a freeze of
 over 20 s, so Emacs was /waiting/, and a CPU profile can't see waits.
