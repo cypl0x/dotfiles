@@ -25,7 +25,7 @@
 ;; ---------------------------------------------------------------------------
 
 ;; Must be set before org loads.
-(setq org-directory "~/notes/")
+(setq org-directory "~/vault/")
 
 ;; ---------------------------------------------------------------------------
 ;; Keep the folding state

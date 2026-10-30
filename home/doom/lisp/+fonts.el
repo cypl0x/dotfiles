@@ -21,10 +21,10 @@
 
 ;;;; Font Slots ──────────────────────────────────────────────────────────────
 
-(setq doom-font                (font-spec :family "Maple Mono NF" :size 14 :weight 'regular)
+(setq doom-font                (font-spec :family "Maple Mono NF" :size 16 :weight 'regular)
       doom-big-font            (font-spec :family "Maple Mono NF" :size 20 :weight 'regular)
-      doom-variable-pitch-font (font-spec :family "Maple Mono NF" :size 14 :weight 'regular)
-      doom-serif-font          (font-spec :family "Maple Mono NF" :size 14 :weight 'regular)
+      doom-variable-pitch-font (font-spec :family "Maple Mono NF" :size 16 :weight 'regular)
+      doom-serif-font          (font-spec :family "Maple Mono NF" :size 16 :weight 'regular)
       doom-symbol-font         (font-spec :family "Maple Mono NF"))
 
 ;; When a proper variable-pitch font is installed, uncomment to use it for
