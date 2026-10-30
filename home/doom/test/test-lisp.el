@@ -428,5 +428,96 @@
       (should-not (+monet--root)))
     (setq buffer-file-name nil)))
 
+
+
+;;; +persist (booted against a temporary cache dir, never the real one)
+
+(defvar doom-cache-dir)
+(let ((doom-cache-dir (file-name-as-directory (make-temp-file "persist-cache" t))))
+  (load (expand-file-name "+persist" test-lisp-dir) nil t))
+
+(defmacro test-lisp--persist-buffer (name mode content &rest body)
+  "Run BODY with `buf', a buffer NAME in MODE holding CONTENT."
+  `(let ((buf (generate-new-buffer ,name)))
+     (unwind-protect
+         (progn (with-current-buffer buf (funcall ,mode)
+                  (let ((inhibit-read-only t)) (insert ,content)))
+                ,@body)
+       (let ((kill-buffer-hook nil)) (kill-buffer buf)))))
+
+(ert-deftest persist/keeps-the-users-own-text ()
+  (dolist (case '(("*new*" fundamental-mode) ("*new*<3>" text-mode)
+                  ("*scratch*" lisp-interaction-mode) ("my notes" org-mode)))
+    (test-lisp--persist-buffer (car case) (cadr case) "x"
+      (should (+persist/--should-persist-p buf)))))
+
+(ert-deftest persist/skips-generated-buffers ()
+  (dolist (case '(("*Brave: doom*" org-mode) ("*tramp/ssh localhost*" fundamental-mode)
+                  ("*vellumory-update*" fundamental-mode) ("CAPTURE-todo.org" org-mode)
+                  ("acp-client-stderr(x)" fundamental-mode) ("dev" dired-mode)
+                  ("*new*" special-mode)))
+    (test-lisp--persist-buffer (car case) (cadr case) "x"
+      (should-not (+persist/--should-persist-p buf)))))
+
+(ert-deftest persist/skips-read-only-and-empty ()
+  (test-lisp--persist-buffer "notes" 'text-mode "x"
+    (with-current-buffer buf (setq buffer-read-only t))
+    (should-not (+persist/--should-persist-p buf)))
+  (test-lisp--persist-buffer "notes" 'text-mode ""
+    (should-not (+persist/--should-persist-p buf))))
+
+(ert-deftest persist/killing-a-buffer-forgets-it ()
+  (add-hook 'kill-buffer-hook #'+persist/--forget-killed-h)
+  (let ((buf (generate-new-buffer "*new*")))
+    (with-current-buffer buf (insert "keep me"))
+    (+persist/save-buffer buf)
+    (let ((file (+persist/--file-for-buffer (buffer-name buf))))
+      (should (file-exists-p file))
+      (kill-buffer buf)
+      (should-not (file-exists-p file)))))
+
+
+(defun test-lisp--write-persisted (name mode content)
+  (let ((buf (generate-new-buffer name)))
+    (with-current-buffer buf (funcall mode) (let ((inhibit-read-only t)) (insert content)))
+    ;; Write the file the way save does, but for any buffer (incl. junk).
+    (with-temp-file (+persist/--file-for-buffer name)
+      (insert (format "(setq +persist/--name %S)\n(setq +persist/--mode '%s)\n(setq +persist/--content %S)\n"
+                      name mode content)))
+    (let ((kill-buffer-hook nil)) (kill-buffer buf))))
+
+(ert-deftest persist/restore-restores-own-text-and-skips-junk ()
+  (let ((+persist/directory (file-name-as-directory (make-temp-file "persist" t))))
+    (test-lisp--write-persisted "*new*<7>" 'text-mode "my thoughts")
+    (test-lisp--write-persisted "*Brave: x*" 'org-mode "results")
+    (unwind-protect
+        (progn
+          (+persist/restore-all)
+          (should (equal (with-current-buffer "*new*<7>" (buffer-string)) "my thoughts"))
+          (should-not (get-buffer "*Brave: x*"))
+          ;; The loaded values stay dynamic, not leaked into globals.
+          (should-not +persist/--name))
+      (when (get-buffer "*new*<7>") (let ((kill-buffer-hook nil)) (kill-buffer "*new*<7>")))
+      (delete-directory +persist/directory t))))
+
+(ert-deftest persist/prune-moves-junk-keeps-own-text ()
+  (let ((+persist/directory (file-name-as-directory (make-temp-file "persist" t))))
+    (test-lisp--write-persisted "*new*" 'fundamental-mode "keep")
+    (test-lisp--write-persisted "*tramp/ssh localhost*" 'fundamental-mode "log")
+    (test-lisp--write-persisted "dev" 'dired-mode "listing")
+    (unwind-protect
+        (progn
+          (should (= 2 (+persist/prune)))
+          (should (equal (mapcar #'file-name-nondirectory
+                                 (directory-files +persist/directory nil "\\.el\\'"))
+                         '("_new_.el")))
+          (should (= 2 (length (directory-files
+                                (car (file-expand-wildcards
+                                      (concat (directory-file-name +persist/directory) ".pruned-*")))
+                                nil "\\.el\\'")))))
+      (delete-directory +persist/directory t)
+      (dolist (d (file-expand-wildcards (concat (directory-file-name +persist/directory) ".pruned-*")))
+        (delete-directory d t)))))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
