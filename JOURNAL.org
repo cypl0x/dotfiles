@@ -1,0 +1,150 @@
+#+title: ⚡ The Excelsior Journal — building the best Emacs + NixOS in existence
+#+author: Claude (Opus 5.5), for Wolfhard
+#+startup: overview
+#+todo: TODO NEXT ACTIVE | DONE DROPPED
+
+#+begin_quote
+/"The best way to predict the future is to build it — one verified commit at a time."/
+#+end_quote
+
+Newest entries are at the *top* of each section. Every claim here was checked
+against the live system (running daemon, real keystrokes, real servers)
+before it landed. Timestamps are inactive org timestamps, so =C-c .= / agenda
+won't nag you. Relative ages ("+Nm") are measured from the session start at
+[2026-10-30 Fri 01:40].
+
+* 🧭 Where we stand — the scoreboard
+:PROPERTIES:
+:UPDATED:  [2026-10-30 Fri 02:00]
+:END:
+
+| Area                    | Status | What changed                                             |
+|-------------------------+--------+----------------------------------------------------------|
+| Pending work committed  | ✔      | 4 logical commits (modular lisp/, Vellumory, Turm, fonts) |
+| =SPC A= AI menu         | ✔ 🛠   | Was *broken* until agent-shell loaded — now always opens  |
+| =SPC A m= model picker  | ✔ 🛠   | Called a command that doesn't exist — now a real picker   |
+| Claude API key          | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=     |
+| Real-input testing      | ✔      | uinput + dotool + wtype + grim: I press keys like you do  |
+| inari disk (95%)        | ⏳     | Removing ~227 GB of stale flake-source snapshots          |
+| AI package "familiar"   | 📐     | Designing — see [[*🔮 Roadmap][Roadmap]]                    |
+
+* 📓 Log
+** [2026-10-30 Fri 01:58] (+18m) — the keyboard never lies
+I drove your live Emacs with real keystrokes (=dotool=, German layout) and
+took screenshots after each key. The first try already paid off:
+
+- *Bug 1:* =SPC A= did not open at all: =Suffix command
+  agent-shell-view-acp-logs is not defined or autoloaded=. Transient checks
+  every suffix when it builds the menu, and three agent-shell commands have
+  no autoload cookie. So the menu only worked /after/ something else had
+  loaded agent-shell. Batch tests would never catch this, because they
+  load everything first.
+- *Bug 2:* =SPC A m= → =gptel-set-model=, which doesn't exist in gptel
+  0.9.9.6 (it was in your =*Messages*= too).
+- *Bug 3:* =R= pointed at =agent-recall=, also nonexistent → now
+  =agent-recall-browse= plus =/= for live search.
+
+I also wrote a small auditor that parses all 7 of your =transient-define-prefix=
+menus and checks every suffix: *0 unbound commands left*.
+
+Commits: =363c951=, =156cab8=, =c5330db= (uinput/wtype so input injection works).
+
+** [2026-10-30 Fri 01:48] (+8m) — research: how you actually work
+Three parallel investigations (shell history, live Emacs, inari, ecosystem).
+Highlights, with the evidence:
+
+*** Your terminal habits (atuin, last 4000 commands)
+| Pattern                                              | Count | Emacs-first answer                  |
+|------------------------------------------------------+-------+-------------------------------------|
+| =ps aux \vert rg -i emacs= / =pkill emacs= / =emacs --daemon= | 70/26/46 | one command: sync → restart daemon → restore frames |
+| =ssh cypl0x@wolfhard.net=                            |   138 | TRAMP + remote terminal on one key  |
+| =nix develop= (+ =-c just …=)                        | 136+113 | =envrc= per buffer; =compile= runner |
+| =git pull <peer>:…/Turm main= (and minaret, marveling) | 132/111/97 | magit remote + one-key "pull & run" |
+| =git-closure b .= → =mv/rm Turm.gcl.txt=             | 95/64 | single idempotent command           |
+| =git log \vert wl-copy=                              |    58 | magit log → kill-ring/clipboard     |
+| =df -h=, =nh clean=                                  | 50/12 | =+nix= disk report                  |
+| =tldr=                                               |    35 | in-Emacs tldr/man lookup            |
+
+*** Your Emacs (live daemon, Emacs 32.0.50 pgtk, 79 Doom modules)
+- AI packages loaded: gptel, claude-code(+monet), agent-shell, aider,
+  copilot, mcp, elisp-dev-mcp — /six/ overlapping AI front-ends.
+- =*Messages*= errors: the gptel/transient bugs above (fixed), yasnippet
+  JIT errors, =doom-version= void, Vellumory info manual missing.
+- No key-frequency data yet (=keyfreq= off), so key-binding choices so
+  far rely on shell history.
+
+*** inari (Hetzner AX41, NixOS 26.11, 12 cores, 62 GiB)
+- *Disk 95% full.* The cause: 2,453 dead =*-source= store paths, 231 GB.
+  These are flake snapshots that every =nix develop= / =nix run= of a local
+  repo copies (≈0.42 GB each, because they include =.lake= build trees).
+- You edit there via TRAMP (71 TRAMP bootstrap lines in =~/.zsh_history=).
+  The =TERM=dumb= prompt guard is in place. The direnv hook still runs
+  unconditionally and slows down TRAMP.
+- Agents are launched as =nix run github:sadjow/claude-code-nix=, which
+  fetches every time.
+
+*** The ecosystem (Oct 2026)
+- Upstream Doom has =:tools llm= (in =doomemacs/modules=): gptel,
+  gptel-quick, gptel-magit, ob-gptel on =SPC o l=. It does /not/ include
+  agents, ACP, or MCP. That's the gap.
+- Strongest bridges: *gptel* + gptel-agent + mcp.el (API side), *agent-shell*
+  via ACP (24 agents), *claude-code-ide.el* (MCP server exposing xref,
+  imenu, tree-sitter, flymake, ediff to Claude Code). *monet* covers the
+  same ground but has been quiet since April.
+
+** [2026-10-30 Fri 01:42] (+2m) — clean slate
+Committed everything that was pending, as 4 logical commits instead of one
+blob:
+- =77f842f= feat(doom): split config into modular lisp/ files
+- =93fc843= feat(vellumory): add Vellumory PDF reader
+- =cc9140d= feat(doom): enable Turm module from local checkout
+- =dea2d73= feat(doom): bump fonts to 16, move org-directory to ~/vault
+
+* 🔬 How =doom/reload= works — and where it stops
+Source: =~/.config/emacs/lisp/lib/config.el:76= (Doom =59cdaa32=, 2026-10-02).
+
+1. =require=s all incremental packages, then runs =doom sync -B -e= in a
+   compilation buffer (=doom-reload-command=).
+2. On success, inside =(with-doom-context 'reload …)=: runs
+   =doom-before-reload-hook=, calls =general-auto-unbind-keys=, re-runs
+   =startup--load-user-init-file=, then =doom-after-reload-hook=.
+
+*What it can't do* (why a restart is sometimes unavoidable):
+- *Nothing is ever unloaded.* Removed packages, hooks, advice, timers, and
+  minor modes keep running until a restart.
+- =defvar= / =defcustom= never re-initialise an already-bound variable.
+- =use-package :config= of an already-loaded feature only re-runs if the
+  form is re-evaluated (=after!= on a loaded feature runs immediately).
+  Mostly fine, but state accumulates (duplicate hook entries, double advice).
+- Native-compiled =.eln= of changed packages stays mapped in memory.
+- Doom's own docstring: /"save yourself the headache and simply run 'doom
+  sync' outside of Emacs and restart. That will always work."/
+
+*How we work around it:* your =lisp/+*.el= are live symlinks into this repo
+(not Nix store copies), so for those files a plain =load-file= is enough,
+with no reload or rebuild. =config.el=, =init.el=, and =packages.el= are
+Nix-store links: they need =nrs=, then =doom sync=, then reload/restart.
+I'll only ask you to restart the daemon when one of the limits above
+actually applies, and I'll say which one.
+
+* 🔮 Roadmap
+** NEXT One-key daemon restart (=ps aux|rg emacs= ×70)
+** TODO "familiar" — an Emacs-first AI/agent package (+ Doom module)
+Unify the six overlapping front-ends behind one coherent, Doom-native
+surface: gptel (API), agent-shell (ACP), and Claude Code over MCP. Hook
+into magit (commit messages, PR descriptions, review of hunks), xref,
+flymake, compile (explain/fix errors), project.el, org, and embark.
+Fall back cleanly when a CLI or key is missing.
+** TODO git-closure as one idempotent command (×95)
+** TODO peer pull & run per project (Turm/minaret/marveling)
+** TODO inari: TRAMP-friendly direnv guard, auto-GC, agents from flake inputs
+
+* 🛠 How I verify (so you can trust every ✔)
+- *Preflight:* before touching your running Emacs, I write an entry to the
+  =*Claude Preflight*= side window and the echo area: timestamp, ETA, what
+  I'm testing, how, and the expected result. A ✔/✘ line follows.
+- *Real input:* =dotool= through =/dev/uinput=, German layout, in the real
+  frame. Then =grim= screenshots, which I read back to see what happened.
+- *Desktop notifications* (swaync) for things worth knowing while you're
+  on workspace 1/2.
+- *Commits:* small, one logical change each. =nrs= after Nix changes.
