@@ -39,6 +39,19 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 08:14] (+394m) — inari, by its whole history
+inari's atuin holds only 386 commands; mostly you drive it through
+agents (=claude --dangerously-skip-permissions= 21× in =.zsh_history=).
+What you do by hand there is maintenance: garbage collection 17×
+(=nix-collect-garbage=, =nh clean=, =nix-store --gc=), =df -h= 59×,
+=journalctl=/=systemctl=. The GC part is now automatic: =min-free= 8 GiB
+and =max-free= 32 GiB are live, plus the weekly =nh-clean= timer; disk at
+82%.
+The 76 =exec env TERM='dumb' …= lines in =.zsh_history= weren't you;
+they were TRAMP logging in. The zsh guard stops that now. I checked with
+a TRAMP-style login carrying a tagged command: bare =$ = prompt, nothing
+in =.zsh_history= or atuin. The old lines are from before the deploy;
+I left them (your file).
 ** [2026-10-30 Fr 07:59] (+379m) — three habits, one key: =SPC h X=
 Your whole atuin history (1,993 commands) says: =tldr= 78×, =man= 58×
 (17 of them with =GROFF_NO_SGR=1=), =which -a= 56×. Same question each
