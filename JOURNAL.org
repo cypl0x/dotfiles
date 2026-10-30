@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 07:06]
+:UPDATED:  [2026-10-30 Fr 07:10]
 :END:
 
 | Area                          | Status | What changed                                                                                               |
@@ -39,6 +39,13 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:10] (+330m) — magit's structural diff works now
+Same pattern as sideline: `difftastic.el` was installed and wired into
+magit's diff menu (=D= dwim diff, =S= show), but the =difft= binary it
+runs was never installed, so both entries failed. Now it's in
+=emacs-deps.nix= (10.6 MB download, size checked in the binary cache's
+narinfo first). Verified: a structural Emacs Lisp diff renders in Emacs.
+Your running session already finds it.
 ** [2026-10-30 Fr 07:05] (+325m) — the next freeze will explain itself
 I couldn't see inside the two minute-long freezes, and I lost one
 profile myself by reading it. So now there's a *freeze recorder* (=+perf=).
