@@ -863,6 +863,26 @@ keys (=SPC g M l= keep, =SPC g M u= reject).
 A remote URL on the peer host wins over =+workflow-peer-format= (vellumory
 lives in =dev/emacs-pdf= on inari).
 
+** =+tldr.el= — What Is This Command
+:PROPERTIES:
+:CUSTOM_ID: tldr
+:END:
+
+=tldr= (78×), =man= (58×) and =which -a= (56×) in atuin are one question.
+=SPC h X= answers it in one buffer: every executable the name resolves to
+(store target shown), the tldr examples, and the man page. The default is
+the command at point, or the first word of a shell line.
+
+| Key (in the buffer) | What                                             |
+|---------------------+--------------------------------------------------|
+| =y=, =RET=          | copy the example on this line, ={{placeholders}}= kept |
+| =K=                 | man page                                         |
+| =q=                 | quit                                             |
+
+Pages come from tealdeer's cache (=~/.cache/tealdeer=): no package, no
+network. The cache is never updated from Emacs (metered link); run
+=tldr --update= yourself.
+
 ** =+daemon.el= — Sync, Restart and Restore
 :PROPERTIES:
 :CUSTOM_ID: daemon

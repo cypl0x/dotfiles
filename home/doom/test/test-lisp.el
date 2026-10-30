@@ -140,6 +140,76 @@
   (should-not (+vellumory-latest-release ""))
   (should-not (+vellumory-latest-release "abc\trefs/heads/main\n")))
 
+
+;;; +tldr
+
+(load (expand-file-name "+tldr" test-lisp-dir) nil t)
+
+(defmacro test-lisp--with-tldr (&rest body)
+  "BODY with a temp tldr cache (tar in linux and common, git in common)
+and a temp exec-path where bin/tar links to store/tar."
+  `(let* ((root (make-temp-file "tldr" t))
+          (+tldr-pages-dir (file-name-as-directory (expand-file-name "pages" root)))
+          (bin (expand-file-name "bin" root))
+          (store (expand-file-name "store" root))
+          (exec-path (list bin store)))
+     (unwind-protect
+         (progn
+           (dolist (d '("linux" "common")) (make-directory (expand-file-name d +tldr-pages-dir) t))
+           (with-temp-file (expand-file-name "linux/tar.md" +tldr-pages-dir)
+             (insert "# tar\n\n> Linux tar.\n\n- Create:\n\n`tar cf {{a.tar}} {{file}}`\n"))
+           (with-temp-file (expand-file-name "common/tar.md" +tldr-pages-dir) (insert "# tar\n"))
+           (with-temp-file (expand-file-name "common/git.md" +tldr-pages-dir) (insert "# git\n"))
+           (make-directory bin) (make-directory store)
+           (with-temp-file (expand-file-name "tar" store) (insert "#!/bin/sh\n"))
+           (set-file-modes (expand-file-name "tar" store) #o755)
+           (make-symbolic-link (expand-file-name "tar" store) (expand-file-name "tar" bin))
+           ,@body)
+       (delete-directory root t))))
+
+(ert-deftest tldr/linux-page-wins-and-names-are-unique ()
+  (test-lisp--with-tldr
+   (should (string-suffix-p "linux/tar.md" (+tldr-page-file "tar")))
+   (should (string-suffix-p "common/git.md" (+tldr-page-file "git")))
+   (should-not (+tldr-page-file "nope"))
+   (should (equal (sort (+tldr-commands) #'string<) '("git" "tar")))))
+
+(ert-deftest tldr/which-lists-every-match-with-its-target ()
+  (test-lisp--with-tldr
+   (let ((hits (+tldr-which "tar")))
+     (should (= 2 (length hits)))
+     (should (string-suffix-p "bin/tar" (car (car hits))))
+     (should (string-suffix-p "store/tar" (cdr (car hits))))
+     (should-not (+tldr-which "git")))))
+
+(ert-deftest tldr/lookup-shows-which-and-copies-examples ()
+  (test-lisp--with-tldr
+   (cl-letf (((symbol-function 'pop-to-buffer) #'set-buffer))
+     (+tldr/lookup "tar"))
+   (unwind-protect
+       (with-current-buffer "*tldr: tar*"
+         (should (string-match-p "y/RET: copy example" (buffer-string)))
+         (should (string-match-p "which: .*bin/tar\n    → .*store/tar" (buffer-string)))
+         (should (string-match-p "Linux tar" (buffer-string)))
+         ;; Point starts on the first example.
+         (should (equal (+tldr-example-at-point) "tar cf {{a.tar}} {{file}}"))
+         (let ((kill-ring nil)) (+tldr/copy-example) (should (equal (car kill-ring) "tar cf {{a.tar}} {{file}}"))))
+     (kill-buffer "*tldr: tar*"))))
+
+(ert-deftest tldr/missing-page-says-so-without-updating ()
+  (test-lisp--with-tldr
+   (cl-letf (((symbol-function 'pop-to-buffer) #'set-buffer))
+     (+tldr/lookup "git"))
+   (unwind-protect
+       (with-current-buffer "*tldr: git*"
+         (should (string-match-p "not on PATH" (buffer-string))))
+     (kill-buffer "*tldr: git*"))
+   (cl-letf (((symbol-function 'pop-to-buffer) #'set-buffer))
+     (+tldr/lookup "nope"))
+   (unwind-protect
+       (with-current-buffer "*tldr: nope*"
+         (should (string-match-p "No tldr page for nope" (buffer-string))))
+     (kill-buffer "*tldr: nope*"))))
 ;;; +workflow
 
 (load (expand-file-name "+workflow" test-lisp-dir) nil t)
