@@ -473,6 +473,7 @@
 (load! "lisp/+org-power")   ;; org-roam, super-agenda, org-ql, org-modern
 (load! "lisp/+prose")       ;; Writing mode, jinx, text stats, readability
 (load! "lisp/+dtt")         ;; Dependently typed language enhancements
+(load! "lisp/+familiar")    ;; familiar: AI woven into magit, flycheck, smerge, embark
 (load! "lisp/+agent")       ;; AI agent integration, gptel, transient
 (load! "lisp/+prompt")      ;; Emacs-centric AI prompt workflow
 (load! "lisp/+brave-search") ;; Brave Web Search API

@@ -69,6 +69,16 @@
   (should (string-prefix-p (expand-file-name "~/dotfiles/")
                            (file-truename test-live-lisp-dir))))
 
+
+(ert-deftest live/familiar-wired ()
+  (require 'familiar)
+  (require 'git-commit)
+  (should (eq (lookup-key git-commit-mode-map (kbd "M-g")) 'familiar-commit-message))
+  (should (member familiar--mode-line-construct global-mode-string))
+  (should (eq (familiar--model 'commit) 'claude-haiku-5-5))
+  ;; The real backend knows the price, so spend is never silently zero.
+  (should (> (familiar-cost (familiar--model 'commit) '(:input 1000)) 0)))
+
 (defun test-live-run ()
   "Run live tests; return a summary string."
   (let ((stats (ert-run-tests "\\`live/" #'ignore)))

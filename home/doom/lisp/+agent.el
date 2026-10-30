@@ -159,6 +159,12 @@ With active region, prepend selected text as context."
      ("G" "gptel menu"       gptel-menu)
      ("c" "gptel chat"       gptel)
      ("m" "Set model"        +agent/set-model)]
+    ["✦ familiar"
+     ("x" "Explain"            familiar-explain)
+     ("d" "Explain diagnostic" familiar-explain-diagnostic)
+     ("F" "Fix (smerge)"       familiar-fix)
+     ("C" "Commit message"     familiar-commit-message)
+     ("$" "Spend"              familiar-spend)]
     ["Tools"
      ("t" "ACP traffic"      agent-shell-view-acp-logs)
      ("T" "Transcript"       agent-shell-open-transcript)

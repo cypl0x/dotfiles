@@ -22,7 +22,8 @@
 
 ;; Let tests use real third-party packages from Doom's build when present.
 (let ((build (car (file-expand-wildcards
-                   (expand-file-name ".local/straight/build-*" doom-emacs-dir)))))
+                   (expand-file-name (concat ".local/straight/build-" emacs-version)
+                                     doom-emacs-dir)))))
   (when build
     (dolist (pkg '("gptel" "transient" "compat" "cond-let" "llama"))
       (let ((dir (expand-file-name pkg build)))
