@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 04:58]
+:UPDATED:  [2026-10-30 Fr 05:20]
 :END:
 
 | Area                          | Status | What changed                                                                              |
@@ -31,11 +31,36 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | LSP fallback                  | ✔      | missing server → one quiet notice, not [eglot] errors; nix → nil                          |
 | Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                  |
 | Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                          |
-| inari disk                    | ✔      | 98% → 81% (85 GB free) with your OK; auto-GC under 8 GiB (deploy: nrs on inari)           |
+| inari                         | ✔      | deployed via nrsi (0 bytes): TRAMP guard + auto-GC live, 0 failed units, 82% disk         |
 | AI package "familiar"         | ✔ ✦    | v0.3: + agent hand-off (agent-shell / claude-code / clipboard)                            |
-| GitHub CI                     | ✔      | All 6 jobs green on claude/ci-repair (incl. new Emacs Lisp job); merge when ready         |
+| GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules          |
 
 * 📓 Log
+** [2026-10-30 Fr 05:20] (+220m) — merged, deployed, 0 bytes over the metered line
+- *Merged:* =main= fast-forwarded by 52 commits and pushed; =claude/ci-repair=
+  deleted. One other branch was left alone on purpose: a Jules bot README
+  branch from January whose PR #1 you had closed unmerged.
+- *Deployed inari with =nrsi=, no password:* it logs in as =root= by SSH
+  key, so no sudo prompt. Before running it I read nixos-rebuild-ng's
+  source to be sure your metered line was safe: with build host = target
+  host it skips the closure copy entirely (=case (x, y) if x == y:
+  return=). I pre-built the system on inari first, so =nrsi= only
+  activated it. *Data used: 0 bytes* (61.67 GB before and after).
+- *Caught before it shipped:* the closure diff of the pre-built system
+  showed the live =lisp/= links would also have applied to /wap on inari/,
+  who has no checkout there, so they'd have dangled. Now gated on the
+  ThinkPad (=a93df5f=).
+- *Verified after:* 0 failed units. Activation also started services that
+  were declared but weren't running (authentik, linkwarden, paperless,
+  postgresql, libvirtd); all =active=. =min-free= is live in =nix.conf=,
+  the TRAMP guard is line 1 of =.zshrc=, and 84 GB are free.
+- *CI gap fixed:* the inari build was /skipped/ for =home/doom.nix=, which
+  inari's users import. The path filter now covers every shared home
+  module (=common.nix=, =doom/**=, =shell/**=, =emacs-deps.nix=, …).
+- *Why not passwordless sudo on inari?* Agents run there as =cypl0x= with
+  =--dangerously-skip-permissions=, so passwordless =nixos-rebuild= would
+  mean passwordless root for them. Root by key from your laptop (=nrsi=)
+  is the safer path, and now it's documented.
 ** [2026-10-30 Fr 04:58] (+198m) — familiar hands off to your agents
 =SPC A H= (=familiar-handoff=) sends an instruction plus what's at point
 to a coding agent: the region, else the checker diagnostics, else the
