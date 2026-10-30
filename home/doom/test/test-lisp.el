@@ -299,5 +299,44 @@
      (should (equal (alist-get "C-x C-f" (alist-get 'find-file m) nil nil #'equal) 2))
      (should (equal (alist-get "SPC ." (alist-get 'find-file m) nil nil #'equal) 1)))))
 
+
+
+;;; +lsp-fallback
+
+(load (expand-file-name "+lsp-fallback" test-lisp-dir) nil t)
+
+(defun test-lisp--connect (contact &optional command)
+  "Run the advice with CONTACT; return (CALLED . MESSAGES)."
+  (let (called msgs (+lsp-fallback--noticed nil) (this-command command))
+    (cl-letf (((symbol-function 'message)
+               (lambda (fmt &rest args) (push (apply #'format fmt args) msgs))))
+      (+lsp-fallback-connect-a (lambda (&rest _) (setq called t) 'server)
+                               '(haskell-ts-mode) 'project 'class contact '("haskell"))
+      (+lsp-fallback-connect-a (lambda (&rest _) (setq called t) 'server)
+                               '(haskell-ts-mode) 'project 'class contact '("haskell")))
+    (cons called msgs)))
+
+(ert-deftest lsp-fallback/missing-server-is-skipped-with-one-notice ()
+  (let ((r (test-lisp--connect '("no-such-language-server-xyz" "--lsp"))))
+    (should-not (car r))
+    (should (= 1 (length (cdr r))))
+    (should (string-match-p "no-such-language-server-xyz" (cadr r)))))
+
+(ert-deftest lsp-fallback/installed-server-connects ()
+  (should (car (test-lisp--connect (list (executable-find "sh"))))))
+
+(ert-deftest lsp-fallback/explicit-eglot-is-never-intercepted ()
+  (should (car (test-lisp--connect '("no-such-language-server-xyz") 'eglot))))
+
+(ert-deftest lsp-fallback/tcp-and-odd-contacts-pass-through ()
+  (should-not (+lsp-fallback-missing-program '("localhost" 6008)))
+  (should-not (+lsp-fallback-missing-program '(eglot-lsp-server)))
+  (should-not (+lsp-fallback-missing-program nil)))
+
+(ert-deftest lsp-fallback/remote-directories-are-left-to-eglot ()
+  (let ((default-directory "/ssh:inari:/home/"))
+    (cl-letf (((symbol-function 'file-remote-p) (lambda (&rest _) "/ssh:inari:")))
+      (should-not (+lsp-fallback-missing-program '("no-such-language-server-xyz"))))))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
