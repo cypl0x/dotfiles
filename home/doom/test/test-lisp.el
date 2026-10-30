@@ -260,5 +260,51 @@
     (should (equal (+perf-projectile-skip-store-a (lambda (&rest _) "/p/") "/home/u/p/")
                    "/p/"))))
 
+
+
+;;; +usage
+
+(load (expand-file-name "+usage" test-lisp-dir) nil t)
+
+(defmacro test-lisp--with-usage (&rest body)
+  `(let ((+usage-file (make-temp-file "usage" nil ".eld"))
+         (+usage--counts (make-hash-table :test #'eq)))
+     (delete-file +usage-file)
+     (unwind-protect (progn ,@body)
+       (when (file-exists-p +usage-file) (delete-file +usage-file)))))
+
+(defun test-lisp--run-command (cmd keys &optional via-mx)
+  (cl-letf (((symbol-function 'this-command-keys-vector) (lambda () keys)))
+    (let ((this-command cmd)
+          (real-this-command (if via-mx 'execute-extended-command cmd)))
+      (+usage--record-h))))
+
+(ert-deftest usage/off-by-default ()
+  (should-not +usage-mode))
+
+(ert-deftest usage/counts-commands-by-invocation ()
+  (test-lisp--with-usage
+   (test-lisp--run-command 'magit-status [32 103 103])
+   (test-lisp--run-command 'magit-status [32 103 103])
+   (test-lisp--run-command 'magit-status [?\M-x] t)
+   (test-lisp--run-command 'self-insert-command [?a])
+   (let ((m (+usage--merged)))
+     (should (equal (sort (copy-sequence (alist-get 'magit-status m))
+                          (lambda (a b) (string< (car a) (car b))))
+                    '(("M-x" . 1) ("SPC g g" . 2))))
+     (should-not (assq 'self-insert-command m)))))
+
+(ert-deftest usage/save-merges-across-sessions ()
+  (test-lisp--with-usage
+   (test-lisp--run-command 'find-file [?\C-x ?\C-f])
+   (+usage-save)
+   (should (zerop (hash-table-count +usage--counts)))
+   (test-lisp--run-command 'find-file [?\C-x ?\C-f])
+   (test-lisp--run-command 'find-file [32 46])
+   (+usage-save)
+   (let ((m (+usage--read)))
+     (should (equal (alist-get "C-x C-f" (alist-get 'find-file m) nil nil #'equal) 2))
+     (should (equal (alist-get "SPC ." (alist-get 'find-file m) nil nil #'equal) 1)))))
+
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
