@@ -82,5 +82,20 @@ duplicates, then SEQUENCE2's that are new."
 (advice-add 'eldoc-add-command-completions :around
             #'+perf-eldoc-add-command-completions-a)
 
+
+;;;; Fewer, not shorter, garbage collections
+
+;; One collection here takes ~0.18 s whatever the threshold; its cost grows
+;; with the live heap (26 MB strings, 3.6 M vector slots on 2026-10-30).
+;; gcmh raises the threshold to 64 MB only while a command runs; between
+;; commands it stays at Emacs's 800 KB, where timers, process output and
+;; idle work allocate.  That session logged 4,560 collections in 94 minutes,
+;; 773 s of GC, ~14% of wall time; at 64 MB that count would have meant
+;; ~290 GB allocated, at 800 KB ~3.6 GB, so they ran at the low threshold.
+;; 16 MB makes those up to 20x rarer for at most 16 MB more garbage.
+(defvar gcmh-low-cons-threshold)
+(with-eval-after-load 'gcmh
+  (setq gcmh-low-cons-threshold (* 16 1024 1024)))
+
 (provide '+perf)
 ;;; +perf.el ends here
