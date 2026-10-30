@@ -42,10 +42,18 @@
   (mcp-server-lib-tool-throw (apply #'format fmt args)))
 
 (defun familiar-mcp--buffer (file)
-  "A live buffer visiting FILE, without displaying it."
-  (let ((path (expand-file-name file)))
+  "A live buffer visiting FILE as it is on disk, without displaying it.
+Agents edit files on disk and quote lines from there, so a buffer left
+behind by an earlier call is reverted first; one with unsaved edits is
+refused, as its lines may not match."
+  (let* ((path (expand-file-name file))
+         (buf (find-buffer-visiting path)))
     (unless (file-readable-p path) (familiar-mcp--throw "Cannot read %s" path))
-    (or (find-buffer-visiting path) (find-file-noselect path t))))
+    (when (and buf (not (verify-visited-file-modtime buf)))
+      (if (buffer-modified-p buf)
+          (familiar-mcp--throw "%s has unsaved changes in Emacs and changed on disk" path)
+        (with-current-buffer buf (revert-buffer t t t))))
+    (or buf (find-file-noselect path t))))
 
 (defun familiar-mcp--goto (line symbol)
   "Move to LINE (1-based string or number) and onto SYMBOL there."

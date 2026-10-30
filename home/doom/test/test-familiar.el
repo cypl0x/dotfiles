@@ -357,6 +357,20 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
    (should-error (familiar-mcp-definitions file "1" "nonexistent-xyz"))
    (should-error (familiar-mcp-outline "/nonexistent/file.el"))))
 
+(ert-deftest familiar-mcp/reads-the-file-as-on-disk ()
+  ;; An agent edits the file after an earlier call left a buffer behind.
+  (test-familiar--with-elisp-file
+   "(defun alpha () 1)\n"
+   (familiar-mcp-outline file)
+   (with-temp-file file (insert "\n\n(defun beta () 2)\n"))
+   (set-file-times file (time-add nil 5))
+   (should (string-match-p "^3: .*beta" (familiar-mcp-outline file)))
+   ;; Unsaved edits in Emacs and a newer file on disk: refuse, don't guess.
+   (with-current-buffer (find-buffer-visiting file) (insert ";; edit\n"))
+   (set-file-times file (time-add nil 10))
+   (should-error (familiar-mcp-outline file))
+   (with-current-buffer (find-buffer-visiting file) (set-buffer-modified-p nil))))
+
 (ert-deftest familiar-mcp/tool-specs-are-read-only ()
   (dolist (spec familiar-mcp--tools)
     (should (fboundp (car spec)))
