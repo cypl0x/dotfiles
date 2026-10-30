@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 06:35]
+:UPDATED:  [2026-10-30 Fr 06:50]
 :END:
 
 | Area                          | Status | What changed                                                                                               |
@@ -38,6 +38,20 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 06:50] (+310m) — sideline finally shows something
+Your =+nav= turned on sideline ("show info alongside code") wired to
+/flymake/, but your syntax checking is /flycheck/: 6 flycheck buffers, 0
+flymake in the live session. So sideline ran everywhere and never showed
+a thing. Now it uses =sideline-flycheck= (one 749 KB package, setup per
+its own commentary). Verified with a real shellcheck finding: "Iterating
+over ls output is fragile. Use globs." appears at the line's end. Active in
+your session (load path added by hand, since a package installed after
+startup isn't on it until a restart; that's the =doom/reload= limit again).
+
+Also removed: =+nav= loaded envrc eagerly and switched it on at startup.
+That duplicates Doom's =:tools direnv=, which does it lazily on the first
+file and deliberately before mode hooks, so LSP servers see the project's
+nix environment.
 ** [2026-10-30 Fr 06:35] (+295m) — your lost =*new*= buffers are back; a freeze; startup, measured
 *=+persist= never restored anything.* It's meant to bring back your
 untitled buffers after a restart, Sublime-style. Lint flagged it, and a
