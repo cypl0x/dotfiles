@@ -619,6 +619,23 @@ and a temp exec-path where bin/tar links to store/tar."
     (should-not (+perf-freeze-gap 121.0 100.0))       ; 19 s late: below threshold
     (should (= 28.0 (+perf-freeze-gap 130.0 100.0)))))
 
+
+(ert-deftest perf/freeze-context-names-commands-processes-and-echo ()
+  (let ((+perf--freeze-commands (make-ring 20))
+        (proc (make-process :name "claude-freeze-probe" :command '("sleep" "5")
+                            :noquery t)))
+    (unwind-protect
+        (progn
+          (dolist (cmd '(find-file magit-status))
+            (let ((this-command cmd)) (+perf--freeze-note-command-h)))
+          (cl-letf (((symbol-function 'current-message) (lambda () "Contacting host…")))
+            (let ((text (+perf-freeze-context 42.0)))
+              (should (string-match-p "Frozen for 42 s" text))
+              ;; Newest first.
+              (should (string-match-p "magit-status\n.*find-file" text))
+              (should (string-match-p "claude-freeze-probe \\[run\\] sleep 5" text))
+              (should (string-match-p "Echo area: Contacting host…" text)))))
+      (delete-process proc))))
 (ert-deftest perf/freeze-recorder-off-in-batch ()
   (should-not +perf-freeze-recorder-mode))
 

@@ -109,6 +109,7 @@ duplicates, then SEQUENCE2's that are new."
 ;; says so.  Open a recording with M-x profiler-find-profile.
 
 (require 'profiler)
+(require 'ring)
 
 (defvar +perf-freeze-threshold 20
   "Seconds without the timer running that count as a freeze.")
@@ -124,6 +125,34 @@ duplicates, then SEQUENCE2's that are new."
   "Seconds NOW lags behind LAST beyond the 2 s period, if a freeze; else nil."
   (and last (> (- now last 2) +perf-freeze-threshold) (- now last 2)))
 
+;; A CPU profile is blind to waits: the 07:37 freeze of 2026-10-30 held
+;; Emacs for over 20 s with 1.8 s of samples, so it was blocked on a
+;; process, the network or a file.  Each recording gets a .txt beside it:
+;; the last commands (names only, never keys), the live subprocesses and
+;; the echo area, which is what the wait was most likely about.
+
+(defvar +perf--freeze-commands (make-ring 20)
+  "Recent (TIME . COMMAND) pairs, newest first.")
+
+(defun +perf--freeze-note-command-h ()
+  (when (symbolp this-command)
+    (ring-insert +perf--freeze-commands (cons (float-time) this-command))))
+
+(defun +perf-freeze-context (gap)
+  "What Emacs was doing around a freeze of GAP seconds, as text."
+  (let ((now (float-time)))
+    (concat
+     (format "Frozen for %.0f s, recovered %s\n\nLast commands (seconds ago):\n"
+             gap (format-time-string "%F %T"))
+     (mapconcat (lambda (c) (format "  %6.0f  %s" (- now (car c)) (cdr c)))
+                (ring-elements +perf--freeze-commands) "\n")
+     "\n\nLive processes:\n"
+     (mapconcat (lambda (p)
+                  (format "  %s [%s] %s" (process-name p) (process-status p)
+                          (string-join (ensure-list (process-command p)) " ")))
+                (process-list) "\n")
+     (format "\n\nEcho area: %s\n" (or (current-message) "")))))
+
 (defun +perf--freeze-tick ()
   (let* ((now (float-time))
          (gap (+perf-freeze-gap now +perf--freeze-last)))
@@ -135,6 +164,9 @@ duplicates, then SEQUENCE2's that are new."
       (let ((file (expand-file-name (format-time-string "freeze-%Y%m%d-%H%M%S.prof")
                                     +perf-freeze-dir)))
         (make-directory +perf-freeze-dir t)
+        ;; Before our own message replaces the echo area.
+        (write-region (+perf-freeze-context gap) nil
+                      (concat (file-name-sans-extension file) ".txt") nil 'silent)
         ;; `profiler-cpu-profile' wraps the variable that `profiler-stop' fills;
         ;; the live samples come from the function `profiler-cpu-log'.
         (when-let* ((log (profiler-cpu-log)))
@@ -145,7 +177,7 @@ duplicates, then SEQUENCE2's that are new."
         (when (executable-find "notify-send")
           (call-process "notify-send" nil 0 nil "-a" "Emacs" "-u" "critical"
                         (format "Emacs was frozen for %.0f s" gap)
-                        (format "CPU profile saved: %s\nM-x profiler-find-profile"
+                        (format "Profile and context saved: %s (.txt)\nM-x profiler-find-profile"
                                 (abbreviate-file-name file))))))
      ;; Keep only the last minute or so, so a recording shows the freeze.
      ((zerop (% +perf--freeze-ticks 30))
@@ -157,7 +189,9 @@ duplicates, then SEQUENCE2's that are new."
   :group 'convenience
   (when +perf--freeze-timer (cancel-timer +perf--freeze-timer))
   (setq +perf--freeze-timer nil +perf--freeze-last nil)
+  (remove-hook 'pre-command-hook #'+perf--freeze-note-command-h)
   (when +perf-freeze-recorder-mode
+    (add-hook 'pre-command-hook #'+perf--freeze-note-command-h)
     (unless (profiler-cpu-running-p) (profiler-cpu-start profiler-sampling-interval))
     (setq +perf--freeze-timer (run-with-timer 2 2 #'+perf--freeze-tick))))
 
