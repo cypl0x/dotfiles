@@ -22,7 +22,10 @@ tests() {
 }
 
 case "${1:-all}" in
-  lint) lint ;;
-  test) tests ;;
-  all) lint; tests ;;
+lint) lint ;;
+test) tests ;;
+all)
+  lint
+  tests
+  ;;
 esac
