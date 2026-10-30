@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 08:44] (+424m) — =SPC o k=: =ps aux | rg …= then =kill N=, in one buffer
+Your history has the same dance 41 times: =ps aux= (sometimes =sudo=)
+piped into =rg -i ssh=, =fzf=, =bat= or =wl-copy= to find a PID, then
+=kill N=. Emacs ships the whole loop as /proced/, but its defaults hide
+it: only your own processes, no command lines, never refreshing. Now
+=SPC o k= shows every user's processes with full command lines, in
+colour, refreshing while visible. =f= is the =| rg= step (regexp on the
+command line, empty for all), =oc=/=om= sort, =m= marks, =x= kills.
+Two things the live daemon caught that tests alone wouldn't have:
+proced's settings are buffer-local (my first =setq= reached nothing), and
+evil-snipe had taken =f=. Both fixed, 2 new tests (90 total).
 ** [2026-10-30 Fr 08:41] (+421m) — the next freeze names its suspect
 The 07:37 recording was honest but useless: 1.8 s of CPU in a freeze of
 over 20 s, so Emacs was /waiting/, and a CPU profile can't see waits.
