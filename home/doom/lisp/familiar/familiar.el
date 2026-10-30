@@ -298,10 +298,16 @@ priced and recorded once it completes.  Returns the model used."
                             (line-end-position))))))))
 
 (defun familiar--describe-location (beg)
-  (format "%s (%s, line %d%s)"
+  (format "%s (%s, line %d%s%s)"
           (if buffer-file-name (file-name-nondirectory buffer-file-name) (buffer-name))
           (string-remove-suffix "-mode" (symbol-name major-mode))
           (line-number-at-pos beg)
+          ;; Emacs Lisp runs in this Emacs, and models judge it by older
+          ;; ones (one called `evenp' "not in the standard library"; it is in
+          ;; subr since Emacs 31).
+          (if (derived-mode-p 'emacs-lisp-mode)
+              (format ", Emacs %s" emacs-version)
+            "")
           (if-let* ((p (familiar--project-name))) (format ", project %s" p) "")))
 
 (defun familiar--fenced (text)

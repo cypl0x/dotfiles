@@ -152,6 +152,15 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
         (familiar-explain))
       (should (string-match-p "```emacs-lisp\n(defun f () 1)" (car (car requests)))))))
 
+(ert-deftest familiar/elisp-location-names-the-emacs-version ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (should (string-match-p (concat ", Emacs " (regexp-quote emacs-version))
+                            (familiar--describe-location (point)))))
+  (with-temp-buffer
+    (text-mode)
+    (should-not (string-match-p "Emacs" (familiar--describe-location (point))))))
+
 (ert-deftest familiar/commit-message-from-staged-diff-in-house-style ()
   (test-familiar--with "feat(x): add file"
     (let* ((repo (make-temp-file "familiar-repo" t))
