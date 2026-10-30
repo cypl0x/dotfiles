@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 03:37]
+:UPDATED:  [2026-10-30 Fr 03:58]
 :END:
 
 | Area                          | Status | What changed                                                                             |
@@ -32,9 +32,48 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                         |
 | inari disk                    | ◐      | 95% → 94% (8.5 GiB); the big wins need your OK, see below                                |
 | AI package "familiar"         | ✔ ✦    | v0.2: commit msg, explain, diagnostics, build errors, review, smerge fixes, spend ledger |
-| GitHub CI                     | ⏳ 🔧  | Fixed on branch claude/ci-repair (stub for private input + Emacs job); run in progress   |
+| GitHub CI                     | ✔      | All 6 jobs green on claude/ci-repair (incl. new Emacs Lisp job); merge when ready |
 
 * 📓 Log
+** [2026-10-30 Fr 03:58] (+138m) — ⚠ I crashed your Emacs daemon (restored), and CI is green
+*What happened, plainly:*
+- From ~03:47 your daemon repeatedly spun at ~100% CPU and stopped
+  answering. The first spin coincided with me running =org-table-align=
+  over two big org files /inside your daemon/, which was a mistake in
+  itself. The later spins happened with none of my code running.
+  Cause still unknown.
+- =SIGUSR2= (debug-on-event) only showed where it happened to land
+  (undo-tree's post-GC hook, measured innocent: ~0 ms). gdb can't attach
+  here (=ptrace_scope=1=).
+- At 03:52 I sent =SIGINT=, assuming a daemon treats it like =C-g=. *It
+  terminated the daemon.* I didn't verify that assumption first, and I'm
+  sorry.
+- *Damage check:* exit hooks ran. Your workspace session was autosaved at
+  03:52:46, persist buffers at 03:40, and there were no auto-save files of
+  yours. The only one was my own lab garbage, which I deleted. *No unsaved
+  edits lost.*
+- *Restored:* daemon restarted (=--daemon=server=), frame back on ws3 with
+  =3824-e09efed-full.pdf= and workspaces =main=, =#1= and =#2=. Buffers my
+  tests had opened are closed.
+- *Now:* the Emacs CPU profiler is running, so if the spin returns, =M-x
+  profiler-report= shows the culprit instead of me guessing. New standing
+  rules (saved to memory): no signals to your daemon, no heavy evals inside
+  it (use =emacs --batch=), and no key injection while you're active.
+  Separately, keys typed while =M-x= hadn't opened landed in
+  =closure/README.org= in the lab frame (reverted, never saved). The lab
+  driver now refuses to type outside a minibuffer.
+
+*CI — all six jobs green* on =claude/ci-repair=
+([[https://github.com/cypl0x/dotfiles/actions/runs/40993438999][run 40993438999]]):
+Lint and Check, thinkpad build, inari build, docs, *and the new Emacs Lisp
+job*. That job immediately found a real bug: with an older gptel (nixpkgs'
+2026-07-15 snapshot), familiar recorded every request as *$0*. Fixed with a
+fallback price table and a one-time warning. =main= is untouched; merge
+when you like:
+: git switch main && git merge --ff-only claude/ci-repair && git push
+
+*Opt-in now:* =+usage-mode= (you switched it off right after I enabled
+it, so it no longer auto-starts).
 ** [2026-10-30 Fr 03:37] (+117m) — familiar learns builds and reviews; CI gets unstuck
 *familiar v0.2:*
 - =SPC A E= :: explain the *compilation error at point*: in =*compilation*=
@@ -351,7 +390,7 @@ Fall back cleanly when a CLI or key is missing.
 ** DONE git-closure as one idempotent command (×95) → =SPC p G=
 ** DONE peer pull & run per project → =SPC p u=, =SPC p P=, =SPC p h=
 ** ACTIVE inari: TRAMP guard ✔ (deploy pending), remote /nix/store freeze ✔, auto-GC, agents from flake inputs
-** ACTIVE GitHub CI green: fix on branch claude/ci-repair, verifying
+** DONE GitHub CI green on claude/ci-repair (merge pending your OK)
 ** TODO inari cleanup of non-store data (needs your OK, see 02:30 entry)
 
 * 🛠 How I verify (so you can trust every ✔)
