@@ -67,6 +67,7 @@ order.
     ├── +perf.el         Measured performance fixes
     ├── +usage.el        Opt-in command/key usage counter
     ├── +lsp-fallback.el Missing LSP server → quiet fallback
+    ├── +monet.el        Claude Code in any terminal attaches to Emacs
     ├── brave-search/    Standalone Brave Search package
     │   └── brave-search.el
     ├── app-launcher.el  Application launcher
@@ -904,6 +905,17 @@ file". The program is checked at connect time, after envrc applied the
 project's environment, and if it's absent the buffer stays on tree-sitter,
 flycheck and completion with one notice per session. =M-x eglot= is never
 intercepted.
+
+** =+monet.el= — Claude Code in Any Terminal Sees This Emacs
+:PROPERTIES:
+:CUSTOM_ID: monet
+:END:
+
+One monet session per project you visit, so Claude Code started in kitty
+attaches automatically (=autoConnectIde=) and sees your selection and
+diagnostics, and shows its edits as diffs in Emacs. The lock file's auth token
+is enforced (monet itself never checks it); after a Claude exits the project
+is offered again. =M-x monet-list-sessions=, =M-x +monet-auto-start-mode=.
 
 ** =+usage.el= — Command Usage Counter (opt-in)
 :PROPERTIES:

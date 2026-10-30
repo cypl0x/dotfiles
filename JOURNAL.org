@@ -15,7 +15,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 
 * 🧭 Where we stand — the scoreboard
 :PROPERTIES:
-:UPDATED:  [2026-10-30 Fr 05:20]
+:UPDATED:  [2026-10-30 Fr 05:40]
 :END:
 
 | Area                          | Status | What changed                                                                              |
@@ -26,8 +26,9 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | =SPC q R= sync+restart        | ✔ 🚀   | Replaces your 70× =ps aux \vert rg emacs= loop; *you used it at 02:13*                    |
 | Vellumory                     | ✔ 🚀   | public release v0.1.0 from GitHub (worker, module, Lisp pinned); SPC m U checks for newer |
 | lisp/ + snippets/ declarative | ✔      | No more hand-made symlinks; yasnippet error gone                                          |
-| Tests + lint                  | ✔ 🧪   | 55 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                  |
+| Tests + lint                  | ✔ 🧪   | 62 batch ERT + 7 live ERT, lint = warnings as errors, =make emacs-check=                  |
 | Claude API key                | ✔      | Validated (free endpoints, $0 spent), in =~/.authinfo=                                    |
+| Claude Code ↔ Emacs           | ✔ 🔐   | kitty Claude auto-attaches per project (monet), auth token enforced                       |
 | LSP fallback                  | ✔      | missing server → one quiet notice, not [eglot] errors; nix → nil                          |
 | Shell loops → keys            | ✔ 🚀   | SPC p h (atuin-ranked runs) · u (peer pull) · P (both) · G (git-closure)                  |
 | Real-input testing            | ✔      | uinput + dotool + grim, in a dedicated =CLAUDE-LAB= frame (ws 9)                          |
@@ -36,6 +37,34 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules          |
 
 * 📓 Log
+** [2026-10-30 Fr 05:40] (+240m) — Claude Code in kitty now sees your Emacs (and only it can)
+*The gap:* you run Claude Code in kitty, and your config enables monet,
+which implements Claude Code's IDE protocol: the agent sees your
+selection and flycheck diagnostics, opens files in Emacs, and shows its
+edits as *diffs in Emacs*. But monet only announces itself (lock file in
+=~/.claude/ide/=) when Claude is started /from/ Emacs. So kitty's Claude
+never found Emacs, even though =autoConnectIde= is already on in
+=~/.claude.json= (checked in the CLI bundle and your config).
+
+*Now* (=lisp/+monet.el=): every project you visit gets a session, and
+Claude Code started there attaches by itself. *Verified with the real
+CLI:* =claude= started in =~/dev/closure= attached within *2 seconds*,
+no prompt sent, no cost.
+
+*Security, found by testing rather than assuming:* monet writes an auth
+token into the lock file but *never checks it*. A connection with a
+wrong token still got "101 Switching Protocols". That's harmless while
+sessions are short-lived, but not with always-on sessions on a laptop
+with three user accounts. From the CLI bundle: Claude Code sends
+=X-Claude-Code-Ide-Authorization=. So the handshake is now checked, and
+impostors are refused without killing the real session. Live test: wrong
+token refused, session intact; right token accepted. After each Claude
+exits, the project is re-offered (monet ends a session on disconnect).
+62 batch tests.
+
+Also confirmed: *you restarted the daemon* in the meantime. Vellumory
+v0.1.0's Lisp (with the new =rest= memory trim) is what's loaded now, so
+that item is closed.
 ** [2026-10-30 Fr 05:20] (+220m) — merged, deployed, 0 bytes over the metered line
 - *Merged:* =main= fast-forwarded by 52 commits and pushed; =claude/ci-repair=
   deleted. One other branch was left alone on purpose: a Jules bot README
