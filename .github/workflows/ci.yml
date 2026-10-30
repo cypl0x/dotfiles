@@ -7,14 +7,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# The vellumory input is a local checkout of a private repository, which no
-# runner can fetch; every nix call swaps in a stub with the same interface.
-env:
-  NIX_FLAGS: >-
-    --override-input vellumory path:./ci/vellumory-stub
-    --override-input vellumory/nixpkgs nixpkgs
-    --no-write-lock-file
-
 jobs:
   # Detect which host configs a push actually touches, so we don't spend 30+
   # minutes building a host that didn't change. Note that eval-level errors in
@@ -69,19 +61,19 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Check formatting with treefmt
-        run: nix develop $NIX_FLAGS -c make fmt-check NIX_FLAGS="$NIX_FLAGS"
+        run: nix develop -c make fmt-check
 
       - name: Run statix linter
-        run: nix develop $NIX_FLAGS -c make lint-statix
+        run: nix develop -c make lint-statix
 
       - name: Run deadnix linter
-        run: nix develop $NIX_FLAGS -c make lint-deadnix
+        run: nix develop -c make lint-deadnix
 
       - name: Run shellcheck linter
-        run: nix develop $NIX_FLAGS -c make lint-shellcheck
+        run: nix develop -c make lint-shellcheck
 
       - name: Run flake checks
-        run: nix flake check --all-systems $NIX_FLAGS
+        run: nix flake check --all-systems
 
   emacs-lisp:
     name: Emacs Lisp (lint + ERT)
@@ -142,7 +134,7 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build thinkpad configuration
-        run: nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L $NIX_FLAGS
+        run: nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L
 
       - name: Show build info
         run: |
@@ -200,13 +192,13 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Evaluate inari configuration
-        run: nix eval --raw .#nixosConfigurations.inari.config.system.build.toplevel.drvPath $NIX_FLAGS
+        run: nix eval --raw .#nixosConfigurations.inari.config.system.build.toplevel.drvPath
 
       - name: Check what would be built locally
         id: plan
         run: |
           set -euo pipefail
-          nix build .#nixosConfigurations.inari.config.system.build.toplevel $NIX_FLAGS \
+          nix build .#nixosConfigurations.inari.config.system.build.toplevel \
             --dry-run 2>dry-run.log || { cat dry-run.log; exit 1; }
           cat dry-run.log
 
@@ -237,7 +229,7 @@ jobs:
       - name: Build inari configuration
         if: steps.plan.outputs.skip != 'true'
         # --max-jobs 2 caps peak memory; substitution speed is unaffected.
-        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L --max-jobs 2 $NIX_FLAGS
+        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L --max-jobs 2
 
       - name: Show build info
         if: steps.plan.outputs.skip != 'true'
