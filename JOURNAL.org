@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-10-30 Fr 07:59] (+379m) — three habits, one key: =SPC h X=
+Your whole atuin history (1,993 commands) says: =tldr= 78×, =man= 58×
+(17 of them with =GROFF_NO_SGR=1=), =which -a= 56×. Same question each
+time: /what is this command and how do I use it/. Now =SPC h X= answers
+it inside Emacs, defaulting to the command at point (or the first word of
+a shell line):
+- every executable the name resolves to, with its =/nix/store= target
+  (the part =which -a= was really for on NixOS),
+- the tldr examples, read straight from tealdeer's cache (6,642 pages),
+  so no package, no network, no subprocess,
+- =y= or =RET= copies the example under the cursor, =K= opens the man
+  page. Those are the keys evil already uses for yank and lookup.
+I first bound =w= and =m=, then checked in your live daemon: evil's
+normal state shadowed both, so the keys changed. 4 new tests (86 total).
+Your tldr cache is 56 days old; =tldr --update= when you're not metered.
 ** [2026-10-30 Fr 07:53] (+373m) — new buffers open 40× faster
 The freeze recorder caught one at 07:37. As a diagnosis it says little:
 1.8 s of CPU in a freeze of over 20 s means Emacs was mostly /waiting/
