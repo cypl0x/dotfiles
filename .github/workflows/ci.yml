@@ -149,6 +149,9 @@ jobs:
           name: cypl0x
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
+      - name: Show effective substituters
+        run: nix config show | grep -E '^(substituters|trusted-public-keys|trusted-users|extra-substituters) '
+
       - name: Build thinkpad configuration
         run: nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L
 
