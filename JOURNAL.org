@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 14:22] — inari's sshd still takes passwords (your call: left as is)
+Recorded so it isn't lost. =PasswordAuthentication = false= in
+=modules/system/security.nix= doesn't stop passwords: sshd's
+=KbdInteractiveAuthentication= defaults to yes, so PAM asks for the password
+instead. On the boot of 2026-10-30, inari saw 44,122 failed root logins (root
+itself is safe: =prohibit-password=) and 498 for =admin=. fabian logged in by
+password 13 times in July, raphael once on 2026-08-15; every login since used
+a key, and every account has one. =modules/services/fail2ban.nix= exists but
+isn't imported on inari. You decided to leave it; to close it later:
+=services.openssh.settings.KbdInteractiveAuthentication = false;= (it applies
+to the thinkpad too), after telling fabian and raphael.
 ** [2026-10-30 Fr 09:49] (+489m) — two noises in the logs, one of them a race at every login
 A health pass over this boot's errors found two things repeating:
 - *swaync started twice at every login.* swaync 0.12 renamed its D-Bus
