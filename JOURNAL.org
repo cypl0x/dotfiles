@@ -39,6 +39,16 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 18:50] — =SPC A F=: the review's finding, fixed by familiar
+Closing the loop on the review: =SPC A F= in the throwaway =greet.el=, with
+"coerce name to a string before upcase" typed into the =Fix:= prompt. familiar
+proposed =(upcase (format "%s" name))= inline as an smerge conflict, smerge on,
+current version above, proposal below. Accepted (through emacsclient, since
+=C-c ^= is a dead key on your layout) and run: =(greet 98 t)= → "Hello 98"
+(was "Hello 66"), =(greet nil t)= → "Hello NIL" (was an error). Buffer
+reverted afterwards. My own slip on the way: shell quoting turned "bob" into a
+symbol in one check; I re-ran it properly in batch Emacs. Real-key coverage:
+=SPC A x/v/F=, =SPC h X=, =SPC o k=, magit =M-g=. API spend: $0.0162.
 ** [2026-11-03 Di 18:48] — =SPC A v=: a review worth reading
 Same throwaway repo, real keys: =SPC A v= reviewed the staged =greet= change and
 found three real things: =shout= upcases only the name (the docstring's "upcase
