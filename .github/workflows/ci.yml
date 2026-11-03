@@ -129,6 +129,18 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      # Some ubuntu-latest runners have a 72 GB root and no /mnt: 47 GB free
+      # after the step above, while the closure is ~43 GiB unpacked (run
+      # 41689476635 failed there; the 145 GB ones pass). Remove what the
+      # action leaves behind.
+      - name: Free more disk space
+        run: |
+          sudo rm -rf /usr/share/swift /usr/lib/jvm /usr/local/share/powershell \
+            /usr/local/share/chromium /usr/local/lib/node_modules /usr/share/miniconda \
+            /usr/local/julia* /usr/share/kotlinc /opt/microsoft /opt/google /opt/az \
+            /opt/pipx /opt/hostedtoolcache /usr/local/share/vcpkg /usr/local/aws-cli
+          df -h /
+
       - name: Checkout repository
         uses: actions/checkout@v5
 
