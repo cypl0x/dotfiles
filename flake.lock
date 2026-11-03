@@ -1103,17 +1103,17 @@
         "nixpkgs-2205": "nixpkgs-2205"
       },
       "locked": {
-        "lastModified": 1793328920,
-        "narHash": "sha256-vITN0GEHY5mZ83+WvTsltJD8vvxM+l5JBlutgXt7l6s=",
+        "lastModified": 1793732471,
+        "narHash": "sha256-YVhdOdOCrs/BGpxD5ZFS7QrW2BsbuOBxbDwhpGedWko=",
         "owner": "cypl0x",
         "repo": "vellumory",
-        "rev": "7cdddc3f917da629063ee3f22f03f7f1f0440042",
+        "rev": "4e97a8c9011009311dd96461341033be6fa718ad",
         "type": "github"
       },
       "original": {
         "owner": "cypl0x",
-        "ref": "v0.1.0",
         "repo": "vellumory",
+        "rev": "4e97a8c9011009311dd96461341033be6fa718ad",
         "type": "github"
       }
     }

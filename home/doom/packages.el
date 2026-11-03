@@ -212,7 +212,7 @@
 ;; ---------------------------------------------------------------------------
 
 ;; The module's own recipe tracks GitHub main; pin it to the release the flake
-;; builds the worker from (flake.nix: github:cypl0x/vellumory/v0.1.0).
+;; builds the worker from (flake.nix: github:cypl0x/vellumory/4e97a8c).
 (package! vellumory
   :recipe (:host github :repo "cypl0x/vellumory" :files ("lisp/*.el"))
-  :pin "7cdddc3f917da629063ee3f22f03f7f1f0440042") ; v0.1.0
+  :pin "4e97a8c9011009311dd96461341033be6fa718ad") ; main after v0.1.2
