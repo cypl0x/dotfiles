@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 14:24] — a 58-hour "freeze" was your laptop sleeping; the real one was in turm-graph
+On waking today the recorder reported "frozen for 208409 s" (58 h) with a
+critical alert. That was a suspend: a wall-clock timer can't tell sleep from
+a freeze. It now reads the kernel's count of completed suspends
+(=/sys/power/suspend_stats/success=) each tick; a gap with a new suspend in it
+is ignored. A test fails without the fix; it runs live now; the false
+recording is gone from =freezes/=.
+The other recording, Oct 30 08:04 (from before the context files), /was/ a
+freeze: 135 s of CPU in =turm-graph-declarations= →
+=turm-graph--buffer-items= (=turm-graph.el:498=), which calls =syntax-ppss=
+once per declaration match, plus 41% garbage collection. That's your
+turm-mode code, so I've only noted it here; the profile is
+=freezes/freeze-20261030-080400.prof= (=M-x profiler-find-profile=).
+*Heads-up:* the metered plan is down to 3.34 GB (4%). No downloads from me
+until it resets.
 ** [2026-11-03 Di 14:22] — inari's sshd still takes passwords (your call: left as is)
 Recorded so it isn't lost. =PasswordAuthentication = false= in
 =modules/system/security.nix= doesn't stop passwords: sshd's
