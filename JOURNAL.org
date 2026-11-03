@@ -39,6 +39,18 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 18:56] — =SPC A H=: handing off, without touching your agents or clipboard
+Handoff tries agent-shell, then a claude-code session for the project, then the
+clipboard. Only the clipboard was available, so I saved yours (22 bytes) first.
+=SPC A H= on the shellcheck warning, =RET= on the pre-filled "Fix this.": the
+clipboard got the instruction, =diag.sh:1-4=, the checker's message and the
+code, ready to paste into an agent in a terminal. Yours was restored and
+compared byte for byte afterwards.
+The first try didn't go cleanly: the second key arrived as =<up>= (cause
+unknown), so =A= and =H= landed as plain evil keys and put an "H" into the
+throwaway =diag.sh=. Reverted. The retry checked each key in =recent-keys=
+before sending the next. Every familiar command is now tested with real keys:
+=SPC A x/v/F/d/H=, plus =SPC h X=, =SPC o k=, magit =M-g=.
 ** [2026-11-03 Di 18:54] — =SPC A d=: explaining a checker's complaint
 A throwaway =diag.sh= looping over =$(ls *.txt)=, with shellcheck complaining
 ("Iterating over ls output is fragile"). Point on it, =SPC A d=: familiar
