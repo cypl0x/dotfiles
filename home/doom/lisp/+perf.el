@@ -153,10 +153,31 @@ duplicates, then SEQUENCE2's that are new."
                 (process-list) "\n")
      (format "\n\nEcho area: %s\n" (or (current-message) "")))))
 
+;; A suspended laptop looks like a freeze to a wall-clock timer: on
+;; 2026-11-03 the recorder reported "frozen for 208409 s" after a 58-hour
+;; sleep.  The kernel counts completed suspends; a gap during which the
+;; count changed was sleep, not Emacs.
+
+(defvar +perf-suspend-count-file "/sys/power/suspend_stats/success"
+  "Kernel counter of completed suspends; nil to treat every gap as a freeze.")
+
+(defvar +perf--suspend-count nil "The suspend count at the last tick.")
+
+(defun +perf--suspend-count ()
+  "Completed suspends so far, or nil when unknown."
+  (and +perf-suspend-count-file
+       (ignore-errors
+         (with-temp-buffer
+           (insert-file-contents +perf-suspend-count-file)
+           (string-to-number (buffer-string))))))
+
 (defun +perf--freeze-tick ()
   (let* ((now (float-time))
-         (gap (+perf-freeze-gap now +perf--freeze-last)))
+         (suspends (+perf--suspend-count))
+         (gap (and (or (null suspends) (eql suspends +perf--suspend-count))
+                   (+perf-freeze-gap now +perf--freeze-last))))
     (setq +perf--freeze-last now
+          +perf--suspend-count suspends
           +perf--freeze-ticks (1+ +perf--freeze-ticks))
     (unless (profiler-cpu-running-p) (profiler-cpu-start profiler-sampling-interval))
     (cond

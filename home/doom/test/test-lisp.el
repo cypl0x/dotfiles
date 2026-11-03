@@ -661,6 +661,33 @@ and a temp exec-path where bin/tar links to store/tar."
               (should (string-match-p "claude-freeze-probe \\[run\\] sleep 5" text))
               (should (string-match-p "Echo area: Contacting host…" text)))))
       (delete-process proc))))
+
+(ert-deftest perf/freeze-recorder-ignores-suspend ()
+  (let* ((dir (make-temp-file "freezes" t))
+         (counter (make-temp-file "suspends" nil nil "3\n"))
+         (+perf-freeze-dir (file-name-as-directory dir))
+         (+perf-suspend-count-file counter)
+         (+perf--suspend-count nil)
+         (+perf--freeze-last nil)
+         (+perf--freeze-ticks 1)
+         (inhibit-message t))
+    (cl-letf (((symbol-function 'executable-find) #'ignore)
+              ((symbol-function 'profiler-cpu-running-p) (lambda () t))
+              ((symbol-function 'profiler-cpu-log) #'ignore))
+      (unwind-protect
+          (progn
+            (+perf--freeze-tick)                        ; first tick
+            ;; 30 s later, the laptop slept in between.
+            (setq +perf--freeze-last (- (float-time) 30))
+            (with-temp-file counter (insert "4\n"))
+            (+perf--freeze-tick)
+            (should-not (directory-files dir nil "\\.txt\\'"))
+            ;; 30 s later, no suspend: a real freeze.
+            (setq +perf--freeze-last (- (float-time) 30))
+            (+perf--freeze-tick)
+            (should (= 1 (length (directory-files dir nil "\\.txt\\'")))))
+        (delete-directory dir t)
+        (delete-file counter)))))
 (ert-deftest perf/freeze-recorder-off-in-batch ()
   (should-not +perf-freeze-recorder-mode))
 
