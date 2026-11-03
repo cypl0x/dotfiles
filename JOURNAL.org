@@ -39,6 +39,19 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 21:06] — Vellumory 4e97a8c: window changes on a 7,438-page PDF in 61 ms
+- The Vellumory agent on inari fixed both ThinkPad reports (OCR on busy
+  runners: 3443fc9; full re-layout on every window change: 4e97a8c). With
+  your data plan recharged, the flake and Doom now pin 4e97a8c (a8be1a1);
+  v0.1.2 was 11 commits behind it.
+- =nrs= built the worker locally, every check green including OCR; =doom sync=
+  moved the Elisp. *No daemon restart*: new .elc loaded, old worker stopped,
+  =vellumory-reload= in the four open PDFs (same pages kept).
+  =doom/reload= alone wouldn't do it: it doesn't reload packages already
+  loaded, and it can't touch the worker process.
+- Measured =vellumory--layout= on the 7,438-page review sheet: *61 ms*
+  (first call 510 ms, warm-up). Before: 1,582 ms on 5,019 pages. That's about
+  25× faster on a bigger book. (Not quite like for like: this run had no window.)
 ** [2026-11-03 Di 18:59] — =SPC A E= and =SPC A $=: every familiar command now tested with real keys
 - =SPC A $= opened the spend ledger: time, task, model, tokens, cost per call
   (today's four tests: commit $0.00004 … review $0.0079).
