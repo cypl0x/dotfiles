@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 18:59] — =SPC A E= and =SPC A $=: every familiar command now tested with real keys
+- =SPC A $= opened the spend ledger: time, task, model, tokens, cost per call
+  (today's four tests: commit $0.00004 … review $0.0079).
+- =SPC A E= took two false starts on my side: I looked in =*compilation*=,
+  but your config compiles through *ghostel's compile view*, into
+  =*compilation*<commit-lab>=. That view derives from =compilation-mode=, so
+  familiar works there unchanged: on the error line (=diag.sh:2:10=), =SPC A E=
+  jumped to the source line, explained the problem and gave the glob-loop fix.
+  (dotool also has no key called "dollar"; = on your layout is =shift+4=.)
+Real-key coverage, complete: =SPC A x/v/F/d/H/E/$=, magit =M-g=, =SPC h X=,
+=SPC o k=. API spend for all of it: $0.0170.
 ** [2026-11-03 Di 18:56] — =SPC A H=: handing off, without touching your agents or clipboard
 Handoff tries agent-shell, then a claude-code session for the project, then the
 clipboard. Only the clipboard was available, so I saved yours (22 bytes) first.
