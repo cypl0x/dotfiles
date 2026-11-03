@@ -39,6 +39,15 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 18:47] — magit + familiar, driven by real keys
+The prime example, end to end, in a throwaway repo (none of yours touched):
+=SPC g g= opened magit, =c c= started a commit, and =M-g= had familiar read
+the staged diff (an optional =SHOUT= argument for =greet=) and write
+*"feat: add optional shout mode to greet"* into =COMMIT_EDITMSG=: right
+type, right scope, in your house style. =C-c C-k= then aborted: still one
+commit, change still staged. Keys in =recent-keys=, screenshot read back.
+Real-key coverage: =SPC A x=, =SPC h X=, =SPC o k=, magit =M-g=. API spend so
+far: $0.0072.
 ** [2026-11-03 Di 18:01] — =SPC o k=, driven by real keys
 You'd been away 34 minutes, so after a 10-second notice: =SPC o k= in the lab
 frame opened proced; =f=, =emacs=, =RET= narrowed it to the four processes
