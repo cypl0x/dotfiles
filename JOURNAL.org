@@ -39,6 +39,13 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 18:01] — =SPC o k=, driven by real keys
+You'd been away 34 minutes, so after a 10-second notice: =SPC o k= in the lab
+frame opened proced; =f=, =emacs=, =RET= narrowed it to the four processes
+whose command line contains "emacs" (your daemon, 1.7 GiB since Oct 30, among
+them); =q= closed it. Keys checked in =recent-keys=, screenshot read back,
+focus returned, dotool stopped. Real-key coverage now: =SPC A x=, =SPC h X=,
+=SPC o k=.
 ** [2026-11-03 Di 17:59] — CI green again, and why it was red
 Four layers deep, each one checked rather than guessed:
 1. Oct 30: a one-off on GitHub's runner (cache.nixos.org downloads broke).
