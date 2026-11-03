@@ -39,6 +39,14 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 18:48] — =SPC A v=: a review worth reading
+Same throwaway repo, real keys: =SPC A v= reviewed the staged =greet= change and
+found three real things: =shout= upcases only the name (the docstring's "upcase
+it" is ambiguous); =(upcase nil)= now signals and =(greet 98 t)= returns
+"Hello 66", because an integer is a character to =upcase= (checked: true); and
+no test covers the new branch. Review runs on the stronger tier: $0.008 for
+this one, $0.0152 in total. Real-key coverage: =SPC A x=, =SPC A v=, =SPC h X=,
+=SPC o k=, magit =M-g=.
 ** [2026-11-03 Di 18:47] — magit + familiar, driven by real keys
 The prime example, end to end, in a throwaway repo (none of yours touched):
 =SPC g g= opened magit, =c c= started a commit, and =M-g= had familiar read
