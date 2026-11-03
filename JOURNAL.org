@@ -39,6 +39,16 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 18:54] — =SPC A d=: explaining a checker's complaint
+A throwaway =diag.sh= looping over =$(ls *.txt)=, with shellcheck complaining
+("Iterating over ls output is fragile"). Point on it, =SPC A d=: familiar
+explained the cause (word splitting, a second glob pass, ls output is for
+humans, an extra process) and gave the glob-loop fix. The first press said "No
+diagnostic at point": re-visiting the file had started eglot, and while it
+connected the diagnostics were briefly empty. The retry passed. (Elisp was
+the first idea, but Doom deliberately turns the Emacs Lisp checkers down for
+non-package files.) Real-key coverage: =SPC A x/v/F/d=, =SPC h X=, =SPC o k=,
+magit =M-g=. API spend: $0.0166.
 ** [2026-11-03 Di 18:50] — =SPC A F=: the review's finding, fixed by familiar
 Closing the loop on the review: =SPC A F= in the throwaway =greet.el=, with
 "coerce name to a string before upcase" typed into the =Fix:= prompt. familiar
