@@ -54,7 +54,7 @@ Four layers deep, each one checked rather than guessed:
    line into the user nix.conf, which resets every =extra-substituters=. The
    caches now go on the =nix build= command line instead.
 Result: all six jobs green on =24e0c64=, codex copied from cache.numtide.com
-in seconds, thinkpad build done in about 20 minutes.
+in seconds, the whole thinkpad job done in 9½ minutes (16:49–16:58 UTC).
 ** [2026-11-03 Di 15:31] — CI red because of a Vellumory test, not this config
 The thinkpad build in CI failed twice. On Oct 30 the cause was transient
 (cache.nixos.org downloads broke on the runner). Today it was real, but not
