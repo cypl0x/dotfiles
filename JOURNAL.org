@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 17:59] — CI green again, and why it was red
+Four layers deep, each one checked rather than guessed:
+1. Oct 30: a one-off on GitHub's runner (cache.nixos.org downloads broke).
+2. Today: cypl0x.cachix.org had dropped Vellumory, Emacs 32 and codex, so CI
+   rebuilt them. Vellumory's OCR check failed once, then passed all 27 checks
+   on the next runner: *flaky, not broken* (noted in vellumory-feedback.org).
+   CI's own push daemon re-cached Vellumory and Emacs along the way.
+3. Then the runner was shut down mid-compile, twice, both times while
+   compiling *codex*, which Numtide's cache has prebuilt with the exact same
+   output path. Your hosts use that cache; CI didn't.
+4. My first fix (extra-substituters in the installer's config) changed nothing.
+   A diagnostic step showed why: cachix-action writes a plain =substituters=
+   line into the user nix.conf, which resets every =extra-substituters=. The
+   caches now go on the =nix build= command line instead.
+Result: all six jobs green on =24e0c64=, codex copied from cache.numtide.com
+in seconds, thinkpad build done in about 20 minutes.
 ** [2026-11-03 Di 15:31] — CI red because of a Vellumory test, not this config
 The thinkpad build in CI failed twice. On Oct 30 the cause was transient
 (cache.nixos.org downloads broke on the runner). Today it was real, but not
