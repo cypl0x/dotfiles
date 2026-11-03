@@ -39,6 +39,19 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-03 Di 15:31] — CI red because of a Vellumory test, not this config
+The thinkpad build in CI failed twice. On Oct 30 the cause was transient
+(cache.nixos.org downloads broke on the runner). Today it was real, but not
+in this config: vellumory-0.1.0 had dropped out of cypl0x.cachix.org, the
+runner rebuilt it, and one of Vellumory's own build-time tests failed there:
+=FAIL: OCR text missing=. The identical derivation builds and passes on the
+thinkpad. You chose to push the local build (7 MB, the only missing path) to
+cachix: refused, =403=: the local cachix token has no write access to cypl0x
+(CI pushes with its own secret). So CI stays red until Vellumory is cached
+again or the OCR check is fixed. The finding is in
+=~/vault/vellumory-feedback.org= (inbox, top) for you to forward.
+*Security:* checking the cachix config, my redaction missed and printed that
+token into this session's local log (nothing external). Please rotate it.
 ** [2026-11-03 Di 14:24] — a 58-hour "freeze" was your laptop sleeping; the real one was in turm-graph
 On waking today the recorder reported "frozen for 208409 s" (58 h) with a
 critical alert. That was a suspend: a wall-clock timer can't tell sleep from
