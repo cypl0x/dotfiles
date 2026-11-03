@@ -137,11 +137,6 @@ jobs:
         with:
           extra-conf: |
             experimental-features = nix-command flakes
-            # Same caches as the hosts (modules/system/nix-common.nix). Without
-            # them CI compiled codex from source (llm-agents.nix, cached on
-            # cache.numtide.com) and the runner was shut down mid-build.
-            extra-substituters = https://cache.numtide.com https://nix-community.cachix.org
-            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
 
       - name: Setup Cachix
         uses: cachix/cachix-action@v16
@@ -149,11 +144,17 @@ jobs:
           name: cypl0x
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Show effective substituters
-        run: nix config show | grep -E '^(substituters|trusted-public-keys|trusted-users|extra-substituters) '
-
       - name: Build thinkpad configuration
-        run: nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L
+        # Same caches as the hosts (modules/system/nix-common.nix).  On the
+        # command line because cachix-action writes a plain `substituters'
+        # line to the user nix.conf, which resets extra-substituters from the
+        # installer's extra-conf; the runner user is trusted, so these apply.
+        # Without them CI compiled codex (prebuilt on cache.numtide.com) and
+        # the runner was shut down mid-build.
+        run: >-
+          nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L
+          --option extra-substituters 'https://cache.numtide.com https://nix-community.cachix.org'
+          --option extra-trusted-public-keys 'niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs='
 
       - name: Show build info
         run: |
@@ -203,11 +204,6 @@ jobs:
         with:
           extra-conf: |
             experimental-features = nix-command flakes
-            # Same caches as the hosts (modules/system/nix-common.nix). Without
-            # them CI compiled codex from source (llm-agents.nix, cached on
-            # cache.numtide.com) and the runner was shut down mid-build.
-            extra-substituters = https://cache.numtide.com https://nix-community.cachix.org
-            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
 
       - name: Setup Cachix
         uses: cachix/cachix-action@v16
