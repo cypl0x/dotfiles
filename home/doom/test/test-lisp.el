@@ -905,6 +905,34 @@ and a temp exec-path where bin/tar links to store/tar."
     (insert "\")\n(mess")
     (should (eq (+completion-context) 'code))))
 
+(ert-deftest completion/prose-looks-up-what-was-typed ()
+  ;; orderless asks the table with "": looking that up collected every
+  ;; word of every Org buffer and froze Emacs for minutes.
+  (let (asked)
+    (cl-letf (((symbol-function '+completion--words)
+               (lambda (input) (push input asked) (list "Word" "World"))))
+      (with-temp-buffer
+        (text-mode)
+        (insert "Some text. W")
+        (should-not (+completion-prose-capf))   ; one letter: nothing yet
+        (insert "or")
+        (let ((table (nth 2 (+completion-prose-capf))))
+          (should (equal (all-completions "" table) '("Word" "World")))
+          (should (equal (all-completions "Worl" table) '("World")))
+          (insert "l")
+          (all-completions "" table)
+          (should (equal (reverse asked) '("Wor" "Worl"))))))))
+
+(defvar cape-dabbrev-buffer-function)
+(ert-deftest completion/prose-words-only ()
+  (cl-letf (((symbol-function 'cape--dabbrev-list)
+             (lambda (_) (cons nil '("Work*" "WordMap" "Word" "API"))))
+            ((symbol-function 'cape--dict-list)
+             (lambda (_) (cons nil '("Word" "Wort" "Word's")))))
+    (let ((cape-dabbrev-buffer-function #'ignore))
+      (should (equal (+completion--words "Wo")
+                     '("Word" "API" "Wort" "Word's"))))))
+
 (defmacro test-usage--with-fresh (&rest body)
   `(let* ((+usage-file (make-temp-file "usage" nil ".eld"))
           (+usage-sequence-file (make-temp-file "useq" nil ".eld"))

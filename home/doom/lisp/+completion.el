@@ -26,6 +26,9 @@
 (declare-function org-roam-complete-link-at-point "ext:org-roam-mode" ())
 (declare-function pcomplete-completions-at-point "pcomplete" ())
 (defvar cape-dict-file)
+(defvar cape-dabbrev-buffer-function)
+(declare-function cape--dabbrev-list "ext:cape" (input))
+(declare-function cape--dict-list "ext:cape" (input))
 
 (defvar +completion-dict-files
   (seq-filter #'file-exists-p
@@ -39,8 +42,57 @@
   (when +completion-dict-files
     (setq cape-dict-file +completion-dict-files)))
 
+(defun +completion--word-buffers ()
+  "Buffers whose words prose completion offers.
+From the minibuffer, the buffers on screen: the M-ß prompt asks about them."
+  (if (minibufferp)
+      (delete-dups (mapcar #'window-buffer
+                           (window-list (window-frame (minibuffer-selected-window)) 'nomini)))
+    (ensure-list (funcall cape-dabbrev-buffer-function))))
+
+(defun +completion--words (input)
+  "Words starting with INPUT: from buffers first, then the dictionaries.
+One list without duplicates (`cape-capf-super' keeps a word once per source)."
+  (let ((buffers (+completion--word-buffers))
+        (case-fold-search nil))
+    (seq-filter
+     ;; Prose words only: dabbrev also brings code tokens (Work*, WordMap).
+     (lambda (w) (string-match-p "\\`[[:alpha:]]\\(?:[[:lower:]'-]*\\|[[:upper:]]*\\)\\'" w))
+     (delete-dups
+      (append (cdr (dlet ((cape-dabbrev-buffer-function (lambda () buffers)))
+                     (cape--dabbrev-list input)))
+              (cdr (cape--dict-list input)))))))
+
+(defun +completion-prose-capf ()
+  "Complete words in prose (Org/Markdown/text, comments, strings, prompts).
+Recomputed as the input grows, so a longer prefix still finds words past
+the dictionaries' first `cape-dict-limit' matches.  The words are looked up
+for the text typed, not the string the completion style asks with:
+orderless asks with \"\", and dabbrev took 30 s collecting every word of
+every Org buffer (11,448 of them, duplicate check quadratic)."
+  (when (or (minibufferp) (eq (+completion-context) 'prose))
+    (when-let* ((bounds (bounds-of-thing-at-point 'word))
+                ((<= (+ (car bounds) 2) (point))))
+      (let ((beg (copy-marker (car bounds))) input words)
+        (list beg (point)
+              (lambda (string pred action)
+                (let ((typed (with-current-buffer (marker-buffer beg)
+                               (buffer-substring-no-properties beg (max beg (point))))))
+                  (unless (equal typed input)
+                    (setq input typed
+                          words (and (length> typed 1) (+completion--words typed))))
+                  (complete-with-action action words string pred)))
+              :exclusive 'no
+              :company-kind (lambda (_) 'text))))))
+
 (defun +completion--prose ()
-  (list (cape-capf-super #'cape-dict #'cape-dabbrev)))
+  (list #'+completion-prose-capf))
+
+;; corfu completes as you type, but in Org nothing offered words: Org's
+;; capfs are keywords, tags and src blocks only.
+(add-hook 'text-mode-hook
+          (defun +completion-prose-h ()
+            (add-hook 'completion-at-point-functions #'+completion-prose-capf 90 t)))
 
 (defun +completion-context ()
   "What point is in, for choosing completion sources: a symbol."
