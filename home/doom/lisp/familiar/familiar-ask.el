@@ -94,9 +94,8 @@ included when the prompt shows them: \"my last command\" means that.  When \
 they want a command, put it at their prompt with insert_at_prompt (never run \
 it) and explain it in a line.
 
-Reply in Org markup, never Markdown (this conversation is an Org buffer): \
-~code~ inline, /italic/, *bold*, #+begin_src blocks with the language, \
-- for lists; no ``` fences, no **bold**, no # headings.  Lead with the answer; be brief."
+Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
+``` fences with the language for blocks.  Lead with the answer; be brief."
   "System prompt for `familiar-ask'."
   :type 'string :group 'familiar)
 
@@ -422,9 +421,9 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
                 gptel-include-tool-results 'auto
                 ;; Shown, it's mostly empty blocks; the answer is what matters.
                 gptel-include-reasoning nil
-                ;; The model writes Org (see `familiar-ask-system'); gptel's
-                ;; Markdown converter dropped the closing / of short answers.
-                gptel-org-convert-response nil
+                ;; Models write Markdown however asked (Haiku did); gptel
+                ;; converts it.  Asking for Org *and* converting garbles both.
+                gptel-org-convert-response t
                 gptel-prompt-prefix-alist '((org-mode . "** "))
                 gptel-response-prefix-alist '((org-mode . "")))
     (familiar-ask-mode 1)
@@ -448,10 +447,35 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
     (familiar-ask--setup buf)))
 
 (defun familiar-ask--after-response (_beg _end)
-  "Save the conversation.
+  "Save the conversation (next tick: after the converter flush below).
 gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
-  (let ((save-silently t) (inhibit-message t)) (save-buffer)))
+  (let ((buf (current-buffer)))
+    (run-at-time 0 nil (lambda ()
+                         (when (buffer-live-p buf)
+                           (with-current-buffer buf
+                             (let ((save-silently t) (inhibit-message t)) (save-buffer))))))))
 
+
+;; gptel's streaming Markdown→Org converter holds back a trailing `*' (or
+;; backtick) until more text shows whether it's emphasis or bold, and never
+;; flushes it when the answer ends there: "*Magit*" became "/Magit".  Feed
+;; it a final newline when the response is done and insert what comes out.
+;; Added after the converter's own cleanup, so it runs first (add-hook
+;; prepends) while the converter's buffer still exists.
+(defun familiar-ask--flush-converter-a (convert start-marker)
+  (let ((converter (funcall convert start-marker)) flush)
+    (setq flush
+          (lambda (beg end)
+            (when (and (equal beg (marker-position start-marker))
+                       (eq (current-buffer) (marker-buffer start-marker)))
+              (remove-hook 'gptel-post-response-functions flush)
+              (let ((tail (string-trim-right (or (ignore-errors (funcall converter "\n")) "")
+                                             "\n")))
+                (unless (string-empty-p tail)
+                  (save-excursion (goto-char end) (insert tail)))))))
+    (add-hook 'gptel-post-response-functions flush)
+    converter))
+(advice-add 'gptel--stream-convert-markdown->org :around #'familiar-ask--flush-converter-a)
 ;; Spend: every turn of an ask conversation lands in familiar's ledger.
 (defun familiar-ask--record-a (tokens &optional _tokens-full)
   (when (and tokens (bound-and-true-p familiar-ask-mode))
@@ -482,11 +506,12 @@ KIND is `command', `keys', `elisp' or `shell'."
       (save-excursion
         (goto-char (car bounds))
         (while (re-search-forward
-                "^[ \t]*#\\+begin_src[ \t]+\\([^ \t\n]+\\).*\n\\(\\(?:.*\n\\)*?\\)[ \t]*#\\+end_src\\|~\\([^~\n]+\\)~"
+                "^[ \t]*#\\+begin_src[ \t]+\\([^ \t\n]+\\).*\n\\(\\(?:.*\n\\)*?\\)[ \t]*#\\+end_src\\|\\([~=]\\)\\([^~=\n]+\\)\\3"
                 (cdr bounds) t)
           (let ((lang (match-string-no-properties 1))
                 (body (match-string-no-properties 2))
-                (code (match-string-no-properties 3)))
+                ;; ~code~ from the model, =code= from gptel's Markdown conversion.
+                (code (match-string-no-properties 4)))
             (cond
              (lang
               (cond ((member lang '("elisp" "emacs-lisp"))

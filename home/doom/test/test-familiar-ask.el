@@ -267,7 +267,7 @@
 Buffer: x
 #+end_context
 
-Use ~forward-word~ or press ~C-f~; ~n~ is a variable.
+Use ~forward-word~ or press =C-f=; ~n~ is a variable.
 
 #+begin_src emacs-lisp
 (setq test-familiar-ask--applied 'yes)
@@ -305,5 +305,17 @@ du -sh .
             (familiar-ask--apply (nth 2 sugg))            ; the elisp block
             (should (eq test-familiar-ask--applied 'yes))))
       (kill-buffer origin-buf))))
+
+(ert-deftest familiar-ask/converter-flushes-a-trailing-marker ()
+  ;; gptel held back the final "*" of "*Magit*" forever: "/Magit".
+  (skip-unless (and test-familiar-available (require 'gptel-org nil t)))
+  (with-temp-buffer
+    (org-mode)
+    (let* ((start (point-marker))
+           (convert (gptel--stream-convert-markdown->org start)))
+      (insert (funcall convert "*Ma") (funcall convert "git*"))
+      (run-hook-with-args 'gptel-post-response-functions
+                          (marker-position start) (point-max))
+      (should (equal (buffer-string) "/Magit/")))))
 
 ;;; test-familiar-ask.el ends here
