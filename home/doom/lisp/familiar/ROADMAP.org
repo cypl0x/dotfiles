@@ -45,7 +45,10 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
    Done: M-ß, familiar-request (OpenAI, Atuin, tasks); SPC A j searches agent-shell
    and Claude Code transcripts alongside (they keep their own files).  Open:
    MCP sampling.
-4. [ ] MCP sampling: servers that ask the client for a completion get one
+4. [-] Deferred (2026-11-04): MCP sampling.  None of the servers in use asks for it
+   (github, nixos-mcp: checked their code), and mcp.el answers server requests
+   synchronously in its process filter, so it would need a patch there and a
+   blocking model call.  Take it up when a server needs it.  Was: servers that ask the client for a completion get one
    from familiar (budgeted, ledgered, asks first).
 5. [X] Emacs as an ACP agent (=familiar-acp.el=, command =familiar-acp=): editors and tools speaking ACP drive a
    familiar conversation (the inverse of agent-shell).
