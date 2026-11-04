@@ -877,3 +877,30 @@ and a temp exec-path where bin/tar links to store/tar."
         (executing-kbd-macro "abc"))
     (+usage--record-h)
     (should (zerop (hash-table-count +usage--counts)))))
+
+;;; +completion
+
+(load (expand-file-name "../lisp/+completion" (file-name-directory (or load-file-name buffer-file-name))) nil t)
+
+(ert-deftest completion/context-in-org ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "* Heading :wo")
+    (should (eq (+completion-context) 'org-tag))
+    (insert "\n#+TIT")
+    (should (eq (+completion-context) 'org-keyword))
+    (insert "\nSee [[id:ab")
+    (should (eq (+completion-context) 'org-link))
+    (insert "\nplain words hö")
+    (should (eq (+completion-context) 'prose))
+    (insert "\n#+begin_src emacs-lisp\n(mess")
+    (save-excursion (insert "\n#+end_src\n"))
+    (should (eq (+completion-context) 'org-src))))
+
+(ert-deftest completion/context-in-code ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert "(defun f () \"a docstring wo")
+    (should (eq (+completion-context) 'prose))
+    (insert "\")\n(mess")
+    (should (eq (+completion-context) 'code))))

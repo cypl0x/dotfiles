@@ -502,6 +502,7 @@
 (load! "lisp/+format")       ;; SPC c f: Org tidy (C-u canonical), eglot, indent
 (load! "lisp/+vocab")        ;; leo lookups → org-fc cards; SPC l r review, SPC l v file
 (load! "lisp/+docs")         ;; SPC h /: every own command; learning path, Info manual
+(load! "lisp/+completion")   ;; C-SPC: completion sources by context (links, tags, words, code)
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules
