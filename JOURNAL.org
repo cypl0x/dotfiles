@@ -39,6 +39,11 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 00:10] — A review of what you wrote
+- =SPC P v=: one report on a text: LanguageTool's findings by rule with
+  their explanation, misspellings, the longest sentences, and how easy
+  it reads (German measured as German).  Every line jumps there.
+
 ** [2026-11-05 Do 00:05] — Code that tells you what can change
 - In Rust, a binding that can change is now underlined and an unsafe
   operation stands out, straight from rust-analyzer.  Semantic tokens
