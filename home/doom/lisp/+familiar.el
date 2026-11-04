@@ -32,7 +32,9 @@
 (map! "M-ß" #'familiar-ask
       ;; rename-buffer, plus a name suggested from the contents.
       :leader :desc "Rename buffer (suggests)" "b R" #'familiar-rename-buffer)
-(set-popup-rule! "^\\*familiar-ask\\*$" :side 'right :size 0.45 :select nil :quit nil :ttl nil)
+(set-popup-rule! "^\\*familiar-ask\\*$" :side 'right :size 0.45 :select nil :quit nil :ttl nil
+  ;; Doom popups skip other-window; this one is a conversation: SPC w w reaches it.
+  :parameters '((no-other-window . nil)))
 (set-popup-rule! "^\\*familiar-ask prompt\\*$" :size 0.3 :select t :quit nil)
 
 ;; MCP bridge for agents (claude mcp add ... emacs-mcp-stdio.sh
@@ -43,6 +45,10 @@
 (after! familiar
   ;; Show the budget against what the key is actually charged with.
   (setq familiar-budget 10.0)
+  ;; Your call (2026-11-04): M-ß runs every tool, eval_elisp included, without
+  ;; asking.  Text the model reads could steer it; set to 'auto to approve
+  ;; evals and edits one by one again.
+  (setq familiar-ask-confirm-tools nil)
   ;; Hand off to agent-shell even when none runs: start one (+agent.el), the
   ;; prompt waits until it's ready.  Clipboard stays as the last resort.
   (setf (alist-get 'agent-shell familiar-handoff-targets)
@@ -51,7 +57,8 @@
                       (agent-shell-insert :text text :submit t
                                           :shell-buffer (+agent-shell-buffer))))))
 
-(set-popup-rule! "^\\*familiar\\*$" :size 0.35 :select nil :quit t :ttl nil)
+(set-popup-rule! "^\\*familiar\\*$" :size 0.35 :select nil :quit t :ttl nil
+  :parameters '((no-other-window . nil)))  ; an answer to read: SPC w w reaches it
 (set-popup-rule! "^\\*familiar spend\\*$" :size 0.4 :select t :quit t)
 
 ;; The spend counter loads familiar (and so gptel); do it when Emacs is idle
@@ -59,6 +66,23 @@
 (defun +familiar-mode-line-h ()
   (run-with-idle-timer 3 nil #'familiar-mode-line-mode 1))
 (add-hook 'doom-after-init-hook #'+familiar-mode-line-h)
+
+;; `?' at an empty shell prompt asks, as Atuin's `?' does in zsh (ghostel runs
+;; zsh itself, so Atuin's own works there).  Elsewhere `?' is just `?'.
+(defun +familiar/shell-question-mark ()
+  "At an empty eshell or shell prompt, `familiar-ask'; else insert ?."
+  (interactive)
+  (if (and (eobp)
+           (cond ((derived-mode-p 'eshell-mode)
+                  (= (point) (marker-position eshell-last-output-end)))
+                 ((derived-mode-p 'comint-mode)
+                  (when-let* ((proc (get-buffer-process (current-buffer))))
+                    (= (point) (marker-position (process-mark proc)))))))
+      (call-interactively #'familiar-ask)
+    (self-insert-command 1 ??)))
+
+(map! :after eshell :map eshell-mode-map :i "?" #'+familiar/shell-question-mark)
+(map! :after shell :map shell-mode-map :i "?" #'+familiar/shell-question-mark)
 
 (after! git-commit
   (map! :map git-commit-mode-map

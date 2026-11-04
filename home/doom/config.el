@@ -371,7 +371,8 @@
   :hook (ghostel-mode . evil-ghostel-mode))
 
 (with-eval-after-load 'eshell
-  (load! "lisp/functions"))
+  ;; home/shell/eshell/functions.el, linked here by home/common.nix.
+  (load! "eshell/functions"))
 
 ;; ---------------------------------------------------------------------------
 ;; Language Server (LSP)

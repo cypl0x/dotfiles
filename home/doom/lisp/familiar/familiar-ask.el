@@ -44,6 +44,14 @@
   "Where conversations are saved, one Org file each."
   :type 'directory :group 'familiar)
 
+(defcustom familiar-ask-confirm-tools 'auto
+  "Whether tool calls wait for your approval: t, nil (never), or auto.
+auto asks for eval_elisp and replace_in_buffer only.  nil lets the model run
+any elisp unasked, so text it reads (a web page, a mail) could steer it."
+  :type '(choice (const :tag "Tool decides" auto) (const :tag "Always" t)
+                 (const :tag "Never" nil))
+  :group 'familiar)
+
 (defcustom familiar-ask-context-lines 30
   "Lines around point sent along when there is no region or defun."
   :type 'natnum :group 'familiar)
@@ -66,6 +74,12 @@ with the tools: edit buffers in place so it is undoable, never write files \
 unless asked, then say in one line what you did.  When the context shows an \
 active minibuffer and the user wants its input changed, use \
 set_minibuffer.
+
+In a shell or terminal buffer (eshell, shell, a terminal emulator) the text \
+above point is the user's latest commands and their output, exit codes \
+included when the prompt shows them: \"my last command\" means that.  When \
+they want a command, put it at their prompt with insert_at_prompt (never run \
+it) and explain it in a line.
 
 Reply in Org markup, never Markdown (this conversation is an Org buffer): \
 ~code~ inline, /italic/, *bold*, #+begin_src blocks with the language, \
@@ -144,6 +158,9 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
                    (if (bound-and-true-p evil-state) (format ", evil %s state" evil-state) "")
                    (if-let* ((thing (thing-at-point 'symbol t))) (format ", on `%s'" thing) ""))
            (when-let* ((proj (familiar--project-name))) (format "Project: %s\n" proj))
+           (when (derived-mode-p 'eshell-mode 'comint-mode 'ghostel-mode 'vterm-mode 'eat-mode)
+             (format "Asked at a shell prompt (%s, directory %s): put any command at the prompt with insert_at_prompt, don't only show it\n"
+                     major-mode (abbreviate-file-name default-directory)))
            (when-let* ((mb (plist-get origin :minibuffer)))
              (and (buffer-live-p mb) (familiar-ask--minibuffer-context mb)))
            (format "Other windows: %s\n"
@@ -164,6 +181,32 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
 
 (defun familiar-ask--get-buffer (name)
   (or (get-buffer name) (error "No buffer named %s" name)))
+
+(declare-function ghostel-paste-string "ext:ghostel" (string))
+(declare-function comint-delete-input "comint" ())
+(defvar eshell-last-output-end)
+
+(defun familiar-ask-insert-at-prompt (text)
+  "Put TEXT at the prompt (or point) of the buffer asked from; don't run it."
+  (let* ((origin familiar-ask--origin)
+         (buf (plist-get origin :buffer)))
+    (unless (buffer-live-p buf) (error "The buffer asked from is gone"))
+    (with-current-buffer buf
+      (cond ((derived-mode-p 'ghostel-mode)
+             ;; A bracketed paste: the shell edits it like typed input.
+             (ghostel-paste-string text))
+            ((derived-mode-p 'eshell-mode)
+             (goto-char (point-max))
+             (delete-region eshell-last-output-end (point-max))
+             (insert text))
+            ((derived-mode-p 'comint-mode)
+             (goto-char (point-max))
+             (comint-delete-input)
+             (insert text))
+            (t (save-excursion
+                 (goto-char (plist-get origin :point))
+                 (insert text)))))
+    (format "Inserted into %s, not run" (buffer-name buf))))
 
 (defvar familiar-ask-tools
   (list
@@ -252,6 +295,11 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
                     (format "Replaced in %s (undo with u / C-/ there)" buffer))))
     :confirm t)
    (gptel-make-tool
+    :name "insert_at_prompt" :category "familiar"
+    :description "Put TEXT (usually a shell command) where the user asked from, without running it, like Atuin's insert: at the prompt of a shell or terminal buffer (replacing what is typed there), else at point. Undoable."
+    :args '((:name "text" :type string :description "Command or text to insert"))
+    :function (lambda (text) (familiar-ask-insert-at-prompt text)))
+   (gptel-make-tool
     :name "set_minibuffer" :category "familiar"
     :description "Replace the input of the minibuffer the user asked from (e.g. write orderless syntax into an M-x prompt). Only when the context shows an active minibuffer."
     :args '((:name "text" :type string :description "New minibuffer input"))
@@ -322,6 +370,7 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
                 gptel-system-prompt familiar-ask-system
                 gptel-tools familiar-ask-tools
                 gptel-use-tools t
+                gptel-confirm-tool-calls familiar-ask-confirm-tools
                 gptel-cache t
                 gptel-include-tool-results 'auto
                 ;; Shown, it's mostly empty blocks; the answer is what matters.

@@ -190,4 +190,36 @@
           (kill-buffer b))
         (delete-directory familiar-ask-directory t)))))
 
+(ert-deftest familiar-ask/confirm-setting-reaches-the-conversation ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-ask-confirm-tools nil))
+    (with-temp-buffer
+      (cl-letf (((symbol-function 'gptel-mode) #'ignore))
+        (familiar-ask--setup (current-buffer)))
+      (should (local-variable-p 'gptel-confirm-tool-calls))
+      (should (null gptel-confirm-tool-calls)))))
+
+(ert-deftest familiar-ask/insert-at-prompt-in-eshell-replaces-input ()
+  (skip-unless test-familiar-available)
+  (require 'eshell)
+  (let ((eshell-buffer-name "*familiar-ask-eshell-test*")
+        (eshell-history-file-name nil))
+    (with-current-buffer (eshell t)
+      (unwind-protect
+          (progn
+            (goto-char (point-max))
+            (insert "half-typed")
+            (let ((familiar-ask--origin (list :buffer (current-buffer) :point (point))))
+              (funcall (test-familiar-ask--tool "insert_at_prompt") "ls -la"))
+            (should (equal (buffer-substring eshell-last-output-end (point-max)) "ls -la")))
+        (let ((kill-buffer-query-functions nil)) (kill-buffer))))))
+
+(ert-deftest familiar-ask/insert-at-prompt-elsewhere-inserts-at-point ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (insert "ab")
+    (let ((familiar-ask--origin (list :buffer (current-buffer) :point 2)))
+      (funcall (test-familiar-ask--tool "insert_at_prompt") "X"))
+    (should (equal (buffer-string) "aXb"))))
+
 ;;; test-familiar-ask.el ends here
