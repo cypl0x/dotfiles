@@ -152,4 +152,6 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE Unicode: \omega → ω in prose (cape-tex), SPC i u picker with chars (801852a)
 ** DONE familiar-prompts: own templates + Fabric 265 patterns, @p:NAME, pipes (4599942)
 ** DONE Org /commands (e8c0698), Org by example SPC m ? (eb3457c, 50 entries), Org ligatures (e0f3898), AI capture SPC m C (1fd0953)
+** DONE C-S-SPC AI completions ranked + explained (ff9333a); Copilot-like ghost text via minuet (7dec0c1); real keys verified
+** DONE Bug found on the way: freeze recorder errored every 30 s (profiler log export overflow); now turns itself off (a7003a8)
 ** TODO "familiar-ask jumps directly into fresh multiline prompt": ambiguous, C-M-ß may cover it

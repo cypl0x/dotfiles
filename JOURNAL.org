@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 22:01] — Code that writes itself along with you
+- Pause while coding and the next bit appears in grey; =TAB= takes it,
+  =M-RET= takes a line (minuet with Claude's fast model).
+- =C-S-SPC= asks for completions at point, best first, each with a line
+  on why it fits beside the popup.
+- Both tried with real keys; two bugs found that way and fixed (a popup
+  that closed itself, ghost text that never showed).
+- And a quiet one: the freeze recorder had been failing every 30 s
+  because Emacs couldn't read its own CPU profile; it now steps aside
+  with one message.
+
 ** [2026-11-04 Mi 21:42] — Org learns new tricks; prompts get a library
 - Type =/= in Org: =/table5x2=, =/code=, =/todo=, =/date= … become the real
   thing (5x2 = columns×rows, as Org itself asks).
