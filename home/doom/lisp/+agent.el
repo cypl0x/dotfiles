@@ -170,7 +170,7 @@ A started shell lives until you kill its buffer."
       ("m" "Set model"        +agent/set-model)]]
     [["✦ familiar"
       ("?" "Ask anything"       familiar-ask)
-      ("N" "Ask: new conversation" familiar-ask-new)
+      ("+" "Ask: follow-up"     familiar-ask-continue)
       ("." "Anticipate next"    +usage/anticipate)
       ("A" "Ask: earlier"       familiar-ask-sessions)
       ("x" "Explain"            familiar-explain)

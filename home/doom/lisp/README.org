@@ -51,8 +51,9 @@ The answer pops up on the right and already knows where you were (buffer,
 point, region, mode), so "explain this" or "make this tail recursive"
 needs no copy-paste.  Follow up by typing at the end of the answer and
 pressing =RET=.  Try: in an Org buffer, "When to use ~ and when =?".
-=@fast= in the prompt is cheaper, =@deep= thinks harder; =SPC A N= starts
-a fresh conversation.  [[#familiar-ask][Reference]]
+=@fast= in the prompt is cheaper, =@deep= thinks harder.  Each ask starts a
+fresh conversation (earlier turns aren't paid for again); =@follow-up=
+continues the last one, =@echo= answers in the echo area.  [[#familiar-ask][Reference]]
 
 ** 2. The AI menu: =SPC A=
 
@@ -968,18 +969,20 @@ suggestions from them.
 :END:
 
 =M-ß= (one chord on a German keyboard; unbound everywhere else) asks a
-long-lived conversation from any buffer, the minibuffer and non-file
+fresh conversation from any buffer, the minibuffer and non-file
 buffers included.  A folded =#+begin_context= block carries where you
 were: buffer, modes, point, region or nearby lines, an active minibuffer's
 prompt, input and candidates, and for shells the prompt itself.
 
 | Key / command         | What                                                    |
 |-----------------------+---------------------------------------------------------|
-| =M-ß=                   | ask; =RET= at the end of the answer for a follow-up       |
-| =SPC A N=, =SPC u M-ß=    | ask in a fresh conversation                             |
+| =M-ß=                   | ask, fresh; =RET= at the end of the answer for a follow-up |
+| =@follow-up=, =SPC A +=, =SPC u M-ß= | ask in the last conversation              |
+| =@echo=                 | short answer in the echo area, no window                |
+| =C-SPC= (in the prompt) | complete =@keywords=, presets, words (also as you type) |
 | =C-r= (in the prompt)   | pick an earlier prompt                                  |
 | =C-c '= (in the prompt) | edit the prompt in an Org buffer: =C-c C-c= send, =C-c C-k= keep |
-| =@fast= =@smart= =@deep=  | model for this turn (completion with =M-TAB=)             |
+| =@fast= =@smart= =@deep=  | model for this turn                                     |
 | =C-c C-e=               | copy the conversation as Markdown or Org                |
 | =SPC A A=               | reopen an earlier conversation                          |
 | =?= at a shell prompt   | ask from eshell/shell; the command lands on the prompt  |

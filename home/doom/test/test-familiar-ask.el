@@ -106,9 +106,9 @@
                 (should (eq gptel-model (alist-get familiar-ask-tier familiar-models)))
                 (should (string-match-p "^\\*\\* What is this\\?  \\[[^]]+\\]\n#\\+begin_context" (buffer-string)))
                 (should (string-prefix-p (expand-file-name familiar-ask-directory) buffer-file-name))
-                ;; The same conversation takes the next question.
+                ;; @follow-up: the same conversation takes the next question.
                 (setq familiar-ask--origin (familiar-ask--capture))
-                (should (eq (familiar-ask "And this?") buf))
+                (should (eq (familiar-ask "And this? @follow-up") buf))
                 (should (= 2 (how-many "^\\*\\* " (point-min) (point-max)))))))
         (when-let* ((b (get-buffer familiar-ask--buffer-name)))
           (with-current-buffer b (set-buffer-modified-p nil))
@@ -159,7 +159,7 @@
               (insert "** q\nanswer\n\n" tail))
             (test-familiar-ask--in "x POINT\n"
               (setq familiar-ask--origin (familiar-ask--capture))
-              (with-current-buffer (familiar-ask "next")
+              (with-current-buffer (familiar-ask "next" 'follow-up)
                 (should (= 2 (how-many "^\\*\\*" (point-min) (point-max))))
                 (should (string-match-p "answer\n\n\\*\\* next  \\[" (buffer-string))))))
         (kill-buffer familiar-ask--buffer-name)))))
@@ -329,3 +329,106 @@ du -sh .
       (kill-buffer mb))))
 
 ;;; test-familiar-ask.el ends here
+
+(ert-deftest familiar-ask/keywords-are-taken-out ()
+  (skip-unless test-familiar-available)
+  (should (equal (familiar-ask--keywords "what is this @echo") '("what is this" echo)))
+  (should (equal (familiar-ask--keywords "@follow-up and then?") '("and then?" follow-up)))
+  (should (equal (car (familiar-ask--keywords "mail me@echo.org")) "mail me@echo.org"))
+  (should (equal (familiar-ask--keywords "@fast quick") '("@fast quick"))))
+
+(defmacro test-familiar-ask--asking (&rest body)
+  "BODY with sends and windows faked, in a throwaway conversation directory."
+  `(let ((familiar-ask-directory (make-temp-file "familiar-ask" t))
+         (familiar-ask--buffer-name "*familiar-ask-test*")
+         (displayed nil))
+     (cl-letf (((symbol-function 'gptel-send) #'ignore)
+               ((symbol-function 'display-buffer) (lambda (b &rest _) (push b displayed) nil)))
+       (unwind-protect
+           (test-familiar-ask--in "text POINT\n" ,@body)
+         (dolist (b (buffer-list))
+           (when (string-prefix-p "*familiar-ask-test*" (buffer-name b))
+             (with-current-buffer b (set-buffer-modified-p nil))
+             (kill-buffer b)))
+         (delete-directory familiar-ask-directory t)))))
+
+(ert-deftest familiar-ask/each-ask-is-fresh-by-default ()
+  ;; Following up re-sent every earlier turn and its context: costly.
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--asking
+   (let* ((familiar-ask-follow-up nil)
+          (first (familiar-ask "one"))
+          (second (familiar-ask "two")))
+     (should-not (eq first second))
+     (with-current-buffer second
+       (should (= 1 (how-many "^\\*\\* " (point-min) (point-max)))))
+     (should (eq (familiar-ask "three @follow-up") second))
+     (let ((familiar-ask-follow-up t))
+       (should (eq (familiar-ask "four") second))
+       (should-not (eq (familiar-ask "five @new") second))))))
+
+(ert-deftest familiar-ask/a-saved-idle-conversation-is-closed-not-kept ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--asking
+   (let ((first (familiar-ask "one")))
+     (with-current-buffer first (let ((save-silently t)) (save-buffer)))
+     (familiar-ask "two")
+     (should-not (buffer-live-p first))
+     ;; Unsaved (still streaming): kept, renamed.
+     (let ((second (get-buffer familiar-ask--buffer-name)))
+       (familiar-ask "three")
+       (should (buffer-live-p second))
+       (should (string-prefix-p "*familiar-ask (old)*" (buffer-name second)))))))
+
+(ert-deftest familiar-ask/echo-shows-no-window-and-answers-in-the-echo-area ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--asking
+   (let ((buf (familiar-ask "what is this? @echo")))
+     (should-not displayed)
+     (with-current-buffer buf
+       (should familiar-ask--echo)
+       (should (string-match-p "^\\*\\* what is this\\?  \\[" (buffer-string)))
+       (should (string-match-p "echo area" (buffer-string)))
+       (goto-char (point-max))
+       (insert "#+begin_tool (x)\nresult\n#+end_tool\nIt is a *test*.\n\n** ")
+       (cl-letf (((symbol-function 'save-buffer) #'ignore)
+                 ((symbol-function 'run-at-time) (lambda (_ _ f) (funcall f))))
+         (let (shown)
+           (cl-letf (((symbol-function 'message)
+                      (lambda (fmt &rest args) (setq shown (apply #'format fmt args)))))
+             (familiar-ask--after-response nil nil))
+           (should (equal (substring-no-properties shown) "It is a *test*."))
+           (should-not familiar-ask--echo)))))
+   (should (familiar-ask "and a window this time"))
+   (should displayed)))
+
+(ert-deftest familiar-ask/answers-open-from-the-window-asked-from ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--asking
+   (let ((win (selected-window)) seen)
+     (cl-letf (((symbol-function 'display-buffer)
+                (lambda (&rest _) (setq seen (selected-window)) nil)))
+       (familiar-ask "q" t (plist-put (familiar-ask--capture) :window win)))
+     (should (eq seen win)))))
+
+(ert-deftest familiar-ask/prompt-completes-keywords ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (insert "explain @fo")
+    (let ((capf (familiar-ask--keywords-capf)))
+      (should (member "follow-up" (all-completions "fo" (nth 2 capf))))
+      (should (string-match-p "continue" (funcall (plist-get (nthcdr 3 capf) :annotation-function)
+                                                  "follow-up"))))))
+
+(ert-deftest familiar-ask/asked-from-a-minibuffer-shows-again-after-it-exits ()
+  ;; Leaving M-x undid the popup (`read-minibuffer-restore-windows').
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--asking
+   (let ((minibuffer-exit-hook nil))
+     (cl-letf (((symbol-function 'run-at-time) (lambda (_ _ f &rest args) (apply f args))))
+       (let ((buf (familiar-ask "q" t (plist-put (familiar-ask--capture) :minibuffer (current-buffer)))))
+         (should (equal displayed (list buf)))
+         (should (= 1 (length minibuffer-exit-hook)))
+         (run-hooks 'minibuffer-exit-hook)
+         (should (equal displayed (list buf buf)))
+         (should-not minibuffer-exit-hook))))))

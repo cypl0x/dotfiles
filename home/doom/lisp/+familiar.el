@@ -29,6 +29,7 @@
 (autoload 'familiar-ask "familiar-ask" nil t)
 (autoload 'familiar-ask-sessions "familiar-ask" nil t)
 (autoload 'familiar-ask-new "familiar-ask" nil t)
+(autoload 'familiar-ask-continue "familiar-ask" nil t)
 (map! "M-ß" #'familiar-ask
       ;; rename-buffer, plus a name suggested from the contents.
       :leader :desc "Rename buffer (suggests)" "b R" #'familiar-rename-buffer)
@@ -36,6 +37,15 @@
   ;; Doom popups skip other-window; this one is a conversation: SPC w w reaches it.
   :parameters '((no-other-window . nil)))
 (set-popup-rule! "^\\*familiar-ask prompt\\*$" :size 0.3 :select t :quit nil)
+
+;; The prompt completes words too (+completion.el), as you type: corfu turns
+;; itself on only in minibuffers that already have their own capfs, which
+;; the prompt gets later in its setup.
+(after! familiar-ask
+  (add-to-list 'familiar-ask-prompt-capfs #'+completion-prose-capf t)
+  (add-hook 'familiar-ask-prompt-setup-hook
+            (defun +familiar-ask-corfu-h ()
+              (when (fboundp 'corfu-mode) (corfu-mode 1)))))
 
 ;; MCP bridge for agents (claude mcp add ... emacs-mcp-stdio.sh
 ;; --init-function=familiar-mcp-start); see familiar-mcp.el.
