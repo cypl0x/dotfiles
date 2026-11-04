@@ -858,7 +858,9 @@ du -sh .
 to wait for N lines and get them parsed; familiar-request faked by FAKE."
   (declare (indent 1))
   `(test-mcp-http--with
-    (let ((familiar-acp--sessions (make-hash-table :test #'equal)) (out "") cbs)
+    (let ((familiar-acp--sessions (make-hash-table :test #'equal)) (out "") cbs
+          (familiar-acp-sessions-directory (or (bound-and-true-p test-acp--dir)
+                                               (make-temp-file "acp-sessions" t))))
       (cl-letf (((symbol-function 'familiar-request)
                  (lambda (prompt &rest args)
                    (push (list prompt (plist-get args :callback)) cbs)
@@ -1053,6 +1055,43 @@ to wait for N lines and get them parsed; familiar-request faked by FAKE."
           (with-timeout (3 (error "no result")) (while (not result) (accept-process-output nil 0.05)))
           (should (string-match-p "declined" result))
           (should-not (string-match-p "terminal/create" out)))))))
+
+(defvar test-acp--dir nil "Sessions directory shared by two connections in one test.")
+
+(ert-deftest familiar-acp/a-session-is-loaded-again-on-a-new-connection ()
+  (skip-unless test-familiar-available)
+  (let* ((test-acp--dir (make-temp-file "acp-sessions" t)) sid prompts)
+    (unwind-protect
+        (progn
+          ;; First connection: one turn, which is kept.
+          (test-acp--session (lambda (cb) (run-at-time 0 nil (lambda () (funcall cb "Paris." nil) (funcall cb t nil))))
+            (funcall say '((jsonrpc . "2.0") (id . 1) (method . "session/new") (params . ((cwd . "/proj")))))
+            (setq sid (alist-get 'sessionId (alist-get 'result (car (funcall lines 1)))))
+            (funcall say `((jsonrpc . "2.0") (id . 2) (method . "session/prompt")
+                           (params . ((sessionId . ,sid) (prompt . [((type . "text") (text . "Capital of France?"))])))))
+            (should (equal "end_turn" (alist-get 'stopReason (alist-get 'result (nth 2 (funcall lines 3)))))))
+          (should (file-exists-p (expand-file-name (concat sid ".eld") test-acp--dir)))
+          ;; Second connection: loaded, replayed, and it continues from there.
+          (test-acp--session (lambda (cb) (run-at-time 0 nil (lambda () (funcall cb "Berlin." nil) (funcall cb t nil))))
+            (funcall say `((jsonrpc . "2.0") (id . 1) (method . "session/load")
+                           (params . ((sessionId . ,sid) (cwd . "/proj") (mcpServers . [])))))
+            (let ((got (funcall lines 3)))
+              (should (equal (mapcar (lambda (m) (alist-get 'sessionUpdate (alist-get 'update (alist-get 'params m))))
+                                     (seq-take got 2))
+                             '("user_message_chunk" "agent_message_chunk")))
+              (should (equal (alist-get 'text (alist-get 'content (alist-get 'update (alist-get 'params (nth 1 got)))))
+                             "Paris."))
+              (should (equal (alist-get 'id (nth 2 got)) 1)))  ; the response, after the replay
+            (funcall say `((jsonrpc . "2.0") (id . 2) (method . "session/prompt")
+                           (params . ((sessionId . ,sid) (prompt . [((type . "text") (text . "And Germany?"))])))))
+            (funcall lines 5)
+            (setq prompts (car (car cbs)))
+            (should (equal prompts '("Capital of France?" "Paris." "And Germany?"))))
+          ;; Unknown sessions are an error.
+          (test-acp--session #'ignore
+            (funcall say '((jsonrpc . "2.0") (id . 1) (method . "session/load") (params . ((sessionId . "sess_nope")))))
+            (should (alist-get 'error (car (funcall lines 1))))))
+      (delete-directory test-acp--dir t))))
 
 (provide 'familiar-ask-test)
 ;;; familiar-ask-test.el ends here

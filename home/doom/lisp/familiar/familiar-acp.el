@@ -26,8 +26,9 @@
 ;; Tools, when the client offers them: read_file (fs/read_text_file) and
 ;; write_file (fs/write_text_file, after session/request_permission), shown
 ;; as tool_call updates; run_command (terminal/create, wait_for_exit, output,
-;; release; also asks first), the terminal shown in the tool call.  Not
-;; yet: session/load.
+;; release; also asks first), the terminal shown in the tool call.
+;; session/load: sessions are kept (`familiar-acp-sessions-directory') and
+;; replayed to the client that loads them.
 ;;
 ;;; Code:
 
@@ -61,6 +62,10 @@ user agrees there; otherwise show changes instead of claiming them."
   "System prompt; the session's working directory is appended.")
 
 (defconst familiar-acp-protocol-version 1)
+
+(defcustom familiar-acp-sessions-directory (locate-user-emacs-file "familiar-acp/")
+  "Where sessions are kept so a client can load them again (session/load)."
+  :type 'directory)
 
 (defvar familiar-acp--server nil "The listening process.")
 (defvar familiar-acp--sessions (make-hash-table :test #'equal)
@@ -285,7 +290,8 @@ The terminal is shown in tool call ID while it runs, and released after."
         `((protocolVersion . ,familiar-acp-protocol-version)
           ;; Only what's supported: the spec reads an omitted capability as
           ;; unsupported, and agent-shell listed false ones as available.
-          (agentCapabilities . ((promptCapabilities . ((embeddedContext . t)))))
+          (agentCapabilities . ((loadSession . t)
+                                (promptCapabilities . ((embeddedContext . t)))))
           (agentInfo . ((name . "familiar") (title . "familiar (Emacs)")
                         (version . ,(or (ignore-errors
                                           (with-temp-buffer
@@ -299,6 +305,7 @@ The terminal is shown in tool call ID while it runs, and released after."
          (puthash sid (list :cwd (alist-get 'cwd params) :turns nil :process proc)
                   familiar-acp--sessions)
          (familiar-acp--result proc id `((sessionId . ,sid)))))
+      ("session/load" (familiar-acp--load proc id params))
       ("session/prompt" (familiar-acp--prompt proc id params))
       ("session/cancel" (familiar-acp--cancel (alist-get 'sessionId params)))
       ((and method (guard id))
@@ -336,6 +343,7 @@ The terminal is shown in tool call ID while it runs, and released after."
                                                 (append turns (list answer))
                                               (plist-get s :turns)))
                              familiar-acp--sessions))
+                  (when (equal reason "end_turn") (familiar-acp--save sid))
                   (familiar-acp--result proc id `((stopReason . ,reason))))
                 (run-at-time 0 nil (lambda () (when (buffer-live-p buf) (kill-buffer buf))))))
              (familiar-task-tiers (cons (cons 'acp familiar-acp-tier) familiar-task-tiers)))
@@ -386,6 +394,43 @@ The terminal is shown in tool call ID while it runs, and released after."
                  (familiar-acp--cancel sid)
                  (remhash sid familiar-acp--sessions)))
              familiar-acp--sessions)))
+
+;;;; Sessions kept, and loaded again
+
+(defun familiar-acp--session-file (sid)
+  (expand-file-name (concat (replace-regexp-in-string "[^[:alnum:]_-]" "_" sid) ".eld")
+                    familiar-acp-sessions-directory))
+
+(defun familiar-acp--save (sid)
+  "Keep session SID's directory and turns, so it can be loaded again."
+  (when-let* ((session (gethash sid familiar-acp--sessions)))
+    (make-directory familiar-acp-sessions-directory t)
+    (with-file-modes #o600
+      (let ((print-length nil) (print-level nil))
+        (with-temp-file (familiar-acp--session-file sid)
+          (prin1 (list :cwd (plist-get session :cwd) :turns (plist-get session :turns))
+                 (current-buffer)))))))
+
+(defun familiar-acp--load (proc id params)
+  "session/load: replay the kept conversation, then take the session over."
+  (let* ((sid (alist-get 'sessionId params))
+         (file (familiar-acp--session-file (or sid ""))))
+    (if (not (and sid (file-readable-p file)))
+        (familiar-acp--error proc id -32602 (format "No session %s to load" sid))
+      (let* ((kept (with-temp-buffer (insert-file-contents file) (read (current-buffer))))
+             (n 0))
+        (cl-loop for text in (plist-get kept :turns)
+                 for user = t then (not user)
+                 do (familiar-acp--notify
+                     proc "session/update"
+                     `((sessionId . ,sid)
+                       (update . ((sessionUpdate . ,(if user "user_message_chunk" "agent_message_chunk"))
+                                  (messageId . ,(format "%s_%d" sid (cl-incf n)))
+                                  (content . ((type . "text") (text . ,text))))))))
+        (puthash sid (list :cwd (or (alist-get 'cwd params) (plist-get kept :cwd))
+                           :turns (plist-get kept :turns) :process proc)
+                 familiar-acp--sessions)
+        (familiar-acp--result proc id (make-hash-table))))))
 
 ;;;; Commands
 
