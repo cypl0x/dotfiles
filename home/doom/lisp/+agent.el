@@ -175,6 +175,7 @@ A started shell lives until you kill its buffer."
       ("." "Anticipate next"    +usage/anticipate)
       ("A" "Ask: earlier"       familiar-ask-sessions)
       ("j" "History: all turns" familiar-history)
+      ("p" "Review my prompts"  familiar-rate-prompts)
       ("x" "Explain"            familiar-explain)
       ("d" "Explain diagnostic" familiar-explain-diagnostic)
       ("F" "Fix (smerge)"       familiar-fix)

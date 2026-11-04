@@ -12,6 +12,9 @@
 (when test-familiar-available
   (load (expand-file-name "../familiar-ask"
                           (file-name-directory (or load-file-name buffer-file-name)))
+        nil t)
+  (load (expand-file-name "../familiar-rate"
+                          (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
 (defun test-familiar-ask--tool (name)
@@ -569,6 +572,56 @@ answered \"one \" \"two\" in chunks; BODY sees the buffer, the request in
               ((symbol-function 'familiar-ask) (lambda (&rest args) (setq asked args))))
       (familiar-ask-transient-send '("--where=replace")))
     (should (equal asked '("fix this @replace @new" nil (:buffer x))))))
+
+(ert-deftest familiar-rate/live-rating-shows-after-the-prompt-unless-stale ()
+  (skip-unless test-familiar-available)
+  (let (asked reply)
+    (cl-letf (((symbol-function 'familiar-request)
+               (lambda (text &rest args)
+                 (setq asked (cons text args))
+                 (setq reply (plist-get args :callback))))
+              ((symbol-function 'active-minibuffer-window) (lambda () (selected-window)))
+              ((symbol-function 'minibufferp) (lambda (&rest _) t))
+              ((symbol-function 'minibuffer-contents-no-properties) #'buffer-string))
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (insert "fix the thing @inline")
+        (familiar-rate--live (current-buffer))
+        ;; Directives out; a background request, not in the history.
+        (should (equal (car asked) "fix the thing"))
+        (should (plist-get (cdr asked) :silent))
+        ;; The same text isn't asked twice.
+        (setq asked nil)
+        (familiar-rate--live (current-buffer))
+        (should-not asked)
+        (funcall reply "```json\n{\"score\": 2, \"tip\": \"Say which thing\"}\n```" nil)
+        (should (equal (overlay-get familiar-rate--overlay 'after-string)
+                       "   ★★☆☆☆ Say which thing"))
+        ;; Typed on before the answer came: it's not shown.
+        (familiar-rate--show nil)
+        (insert " now")
+        (funcall reply "{\"score\": 5, \"tip\": \"\"}" nil)
+        (should-not (overlay-get familiar-rate--overlay 'after-string))))))
+
+(ert-deftest familiar-rate/review-shows-only-findings-about-real-prompts ()
+  (skip-unless test-familiar-available)
+  (let* ((familiar-ask-history '("fix it" "explain this @fast" "fix it" "explain this"))
+         (prompts (familiar-rate--collect))
+         (answer '(:summary "Short prompts."
+                   :patterns ((:prompts (1 2) :issue "Terse" :suggestion "Say more" :template "Fix {what}")
+                              (:prompts (1 9) :issue "Invented"))
+                   :ratings ((:prompt 1 :score 1 :why "Vague" :better "Fix the failing test")
+                             (:prompt 7 :score 1 :why "Not a prompt of yours"))))
+         (org (familiar-rate--render answer prompts)))
+    ;; Newest first, each once, directives out, counted.
+    (should (equal prompts '(("fix it" . 2) ("explain this" . 2))))
+    ;; Quotes come from the history, not from the model.
+    (should (string-match-p "^: \\[1\\] fix it   (×2)$" org))
+    (should (string-match-p "^: \\[2\\] explain this   (×2)$" org))
+    (should (string-match-p "Fix {what}" org))
+    ;; A pattern citing one real prompt and a rating citing none: dropped.
+    (should-not (string-match-p "Invented\\|Not a prompt" org))
+    (should (string-match-p "2 findings dropped" org))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"

@@ -260,14 +260,15 @@ Add it to `familiar-model-prices'." model)))
     (when escalate (setq pos (min (1+ pos) (1- (length tiers)))))
     (alist-get (nth pos tiers) familiar-models)))
 
-(cl-defun familiar-request (prompt &key task system escalate stream callback tools model backend)
+(cl-defun familiar-request (prompt &key task system escalate stream callback tools model backend silent)
   "Send PROMPT for TASK with SYSTEM prompt; call CALLBACK like `gptel-request'.
 The model comes from TASK's tier (one higher when ESCALATE), unless MODEL
 \(on BACKEND) is given.  The request is priced and recorded once it
 completes.  TOOLS (gptel tools) are offered; when the model calls them, the
 streamed segment ends (`t') with the calls in INFO's :tool-use and
-:stop-reason \"tool_use\", before gptel runs them and continues.  Returns the
-model used."
+:stop-reason \"tool_use\", before gptel runs them and continues.  SILENT: a
+background request, priced but not kept in the history, failing quietly.
+Returns the model used."
   (let* ((model (or model (familiar--model task escalate)))
          (gptel-backend (or backend familiar-backend gptel-backend))
          (gptel-model model)
@@ -285,7 +286,7 @@ model used."
             (let* ((tokens (plist-get info :tokens))
                    (cost (and tokens (familiar--record model task tokens))))
               ;; One Org history of every turn (familiar-history.el).
-              (when (fboundp 'familiar-history-record)
+              (when (and (not silent) (fboundp 'familiar-history-record))
                 (familiar-history-record
                  :prompt (familiar-history-prompt-text prompt) :answer answer
                  :task task :model model :tokens tokens :cost cost
@@ -293,7 +294,7 @@ model used."
                                   (format "%s %S" (plist-get call :name) (plist-get call :args)))
                                 (plist-get info :tool-use))))
               (setq answer "")))
-          (when (null response)
+          (when (and (null response) (not silent))
             (funcall familiar-notify-function "familiar: request failed"
                      (or (plist-get info :status) "no response")))
           (funcall callback response info))))

@@ -21,6 +21,7 @@ Emacs 29.1+, gptel 0.9.9+.  Optional: [[https://github.com/laurynas-biveinis/mcp
 | =familiar-atuin.el=      | the server behind Atuin's AI (=/api/cli/chat=)                       |
 | =familiar-acp.el=        | familiar as an ACP agent: editors launch =familiar-acp=, Emacs answers |
 | =familiar-a2a.el=        | A2A 1.0 agent (card, /a2a) and client (=@agent= in M-ß delegates)      |
+| =familiar-rate.el=       | prompts rated as you type them; =familiar-rate-prompts= reviews your habits, quoting only your prompts |
 
 * Setup
 
