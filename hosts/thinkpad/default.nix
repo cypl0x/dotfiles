@@ -51,7 +51,29 @@
   nix = {
     settings = {
       trusted-users = ["root" "@wheel"];
+      # inari fetches a build's inputs from the caches itself: only the
+      # results come over this (metered) link.
+      builders-use-substitutes = true;
     };
+    # Heavy builds (Turm) on inari (64 GB, 12 cores; hosts/inari: nix.sshServe):
+    # the nix-daemon logs in as nix-ssh with this machine's SSH host key.  2
+    # jobs at a time: agents work there.  If inari is unreachable, builds stay
+    # local.
+    distributedBuilds = true;
+    buildMachines = [
+      {
+        hostName = "wolfhard.net";
+        sshUser = "nix-ssh";
+        sshKey = "/etc/ssh/ssh_host_ed25519_key";
+        # ssh-keyscan -t ed25519 wolfhard.net, base64
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUlJYzlzYWttQ0o4TXVsYUJMZnk0VmEyVkdZNW5QemJZam03KzkxbUdjelMK";
+        protocol = "ssh-ng";
+        system = "x86_64-linux";
+        maxJobs = 2;
+        speedFactor = 4;
+        supportedFeatures = ["big-parallel" "kvm" "nixos-test" "benchmark"];
+      }
+    ];
   };
 
   # Tailscale subnet router for the friend's LAN where Tuya devices live.

@@ -117,4 +117,16 @@
     min-free = 8 * 1024 * 1024 * 1024; # 8 GiB
     max-free = 32 * 1024 * 1024 * 1024; # 32 GiB
   };
+
+  # Remote builder for the thinkpad (hosts/thinkpad: nix.buildMachines): its
+  # nix-daemon logs in as nix-ssh with the thinkpad's SSH host key and builds
+  # here (64 GB, 12 cores) what is too heavy there (Turm). trusted: it may
+  # build derivations it sends; only that one key is accepted.
+  nix.sshServe = {
+    enable = true;
+    protocol = "ssh-ng";
+    write = true;
+    trusted = true;
+    keys = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHyCUFbGbkwJcXy/Wybm2Y5DzQ8Y1nVZFYK2Fx0E7PTb root@thinkpad"];
+  };
 }
