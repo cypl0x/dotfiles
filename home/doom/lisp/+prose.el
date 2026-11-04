@@ -547,6 +547,119 @@ readability, each finding a button to go there."
         (special-mode))
       (pop-to-buffer (current-buffer)))))
 
+;;;; Improve — a sentence rewritten, the change shown word by word ────────────
+
+;; SPC P i: the region, or the sentence at point, rewritten toward a goal
+;; you pick (grammar only, clearer, shorter, ...) by familiar's smart tier.
+;; The proposal shows before and after with the changed words marked (smerge's
+;; word refinement); C-c C-c applies it as one undoable change, g asks again,
+;; q keeps yours.  The language stays (German stays German), and so do the
+;; meaning, voice and Org/Markdown markup.
+
+(declare-function familiar-request "familiar" (prompt &rest args))
+(declare-function smerge-refine-regions "smerge-mode" (beg1 end1 beg2 end2 props-c &optional preproc props-r props-a))
+
+(defconst +prose-improve-goals
+  '("fix grammar and spelling only"
+    "make it clearer"
+    "make it shorter"
+    "make it more formal"
+    "make it friendlier"
+    "use simpler words")
+  "Goals offered by `+prose/improve' (any other text works too).")
+
+(defconst +prose--improve-system
+  "You edit prose. Rewrite the given text toward the goal. Keep its language \
+(German stays German), its meaning, its voice, and any Org or Markdown markup \
+and links. Change only what the goal asks for. Reply with only the rewritten \
+text: no quotes, no explanation.")
+
+(defvar-local +prose--improve nil "(BUFFER BEG END GOAL ORIGINAL PROPOSAL) shown here.")
+
+(defun +prose--improve-bounds ()
+  (if (use-region-p)
+      (cons (region-beginning) (region-end))
+    (save-excursion
+      (let ((end (progn (forward-sentence) (point)))
+            (beg (progn (backward-sentence) (point))))
+        (cons beg end)))))
+
+(defun +prose--improve-show (state)
+  "Show STATE's original and proposal, the changes marked."
+  (with-current-buffer (get-buffer-create "*prose improve*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (remove-overlays)
+      (pcase-let ((`(,_buf ,_beg ,_end ,goal ,original ,proposal) state))
+        (insert (propertize (format "Goal: %s\n\n" goal) 'face 'bold)
+                (propertize "Before\n" 'face 'font-lock-comment-face))
+        (let ((b1 (point)))
+          (insert original)
+          (let ((e1 (point)))
+            (insert "\n\n" (propertize "After\n" 'face 'font-lock-comment-face))
+            (let ((b2 (point)))
+              (insert proposal)
+              (smerge-refine-regions b1 e1 b2 (point) nil nil
+                                     '((face . smerge-refined-removed))
+                                     '((face . smerge-refined-added))))))
+        (insert (substitute-command-keys
+                 "\n\n\\<+prose-improve-mode-map>\\[+prose-improve-apply] apply · \\[+prose-improve-again] try again · \\[quit-window] keep yours\n"))))
+    (+prose-improve-mode)                ; (it resets buffer-local variables)
+    (setq +prose--improve state)
+    (goto-char (point-min))
+    (display-buffer (current-buffer))))
+
+(defun +prose--improve-ask (buf beg end goal)
+  (let ((original (with-current-buffer buf (buffer-substring-no-properties beg end))))
+    (message "Rewriting (%s)…" goal)
+    (familiar-request
+     (format "Goal: %s\n\nText:\n%s" goal original)
+     :task 'fix :system +prose--improve-system
+     :callback
+     (lambda (response _info)
+       (when (stringp response)
+         (+prose--improve-show
+          (list buf beg end goal original (string-trim response))))))))
+
+;;;###autoload
+(defun +prose/improve (goal)
+  "Rewrite the region or the sentence at point toward GOAL; show the change."
+  (interactive (list (completing-read "Improve: " +prose-improve-goals nil nil nil nil
+                                      (car +prose-improve-goals))))
+  (pcase-let ((`(,beg . ,end) (+prose--improve-bounds)))
+    (deactivate-mark)
+    (+prose--improve-ask (current-buffer) (copy-marker beg) (copy-marker end t) goal)))
+
+(defun +prose-improve-apply ()
+  "Put the proposal in place of the original (one undo takes it back)."
+  (interactive)
+  (pcase-let ((`(,buf ,beg ,end ,_goal ,original ,proposal) +prose--improve))
+    (with-current-buffer buf
+      (unless (equal (buffer-substring-no-properties beg end) original)
+        (user-error "The text changed meanwhile; ask again (g)"))
+      (save-excursion
+        (goto-char beg)
+        (delete-region beg end)
+        (insert proposal)))
+    (quit-window t)
+    (message "Applied (undo takes it back)")))
+
+(defun +prose-improve-again ()
+  "Ask for another proposal."
+  (interactive)
+  (pcase-let ((`(,buf ,beg ,end ,goal . ,_) +prose--improve))
+    (+prose--improve-ask buf beg end goal)))
+
+(defvar +prose-improve-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'+prose-improve-apply)
+    (define-key map "g" #'+prose-improve-again)
+    (define-key map "q" #'quit-window)
+    map))
+
+(define-derived-mode +prose-improve-mode special-mode "Improve"
+  "A rewrite proposal: C-c C-c applies it, g asks again, q keeps yours.")
+
 (map! :leader
       (:prefix ("P" . "prose")
        :desc "Writing mode"      "w" #'+prose/writing-mode
@@ -555,6 +668,7 @@ readability, each finding a button to go there."
        :desc "Word frequency"    "f" #'+prose/word-frequency
        :desc "Readability"       "R" #'+prose/readability
        :desc "Review the text"   "v" #'+prose/review
+       :desc "Improve sentence"  "i" #'+prose/improve
        :desc "Jinx correct"      "j" #'jinx-correct
        :desc "Jinx correct all"  "J" #'jinx-correct-all
        :desc "Leo translate"     "l" #'leo-translate-word))

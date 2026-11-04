@@ -1506,6 +1506,29 @@ and a temp exec-path where bin/tar links to store/tar."
         (should (string-match-p "1 sentence over 25 words" (buffer-string)))
         (should (string-match-p "Flesch reading ease" (buffer-string))))
       (kill-buffer "*prose review*"))))
+
+(ert-deftest prose/improve-shows-the-change-and-applies-it ()
+  (with-temp-buffer
+    (text-mode)
+    ;; One space after a sentence, as this config sets it.
+    (setq-local sentence-end-double-space nil)
+    (insert "First one. This are a sentense with errors. Last one.")
+    (goto-char 15)
+    (let (asked)
+      (cl-letf (((symbol-function 'familiar-request)
+                 (lambda (prompt &rest args)
+                   (setq asked prompt)
+                   (funcall (plist-get args :callback) "This is a sentence with errors." nil)))
+                ((symbol-function 'display-buffer) #'ignore))
+        (+prose/improve "fix grammar and spelling only"))
+      ;; The sentence at point only, with the goal.
+      (should (string-match-p "Goal: fix grammar.*\n\nText:\nThis are a sentense with errors\\.\\'" asked))
+      (with-current-buffer "*prose improve*"
+        (should (string-match-p "Before\nThis are a sentense with errors\\.\n\nAfter\nThis is a sentence with errors\\." (buffer-string)))
+        ;; Changed words marked.
+        (should (seq-some (lambda (o) (overlay-get o 'face)) (overlays-in (point-min) (point-max))))
+        (+prose-improve-apply)))
+    (should (equal (buffer-string) "First one. This is a sentence with errors. Last one."))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
