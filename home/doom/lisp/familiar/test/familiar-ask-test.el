@@ -15,6 +15,9 @@
         nil t)
   (load (expand-file-name "../familiar-rate"
                           (file-name-directory (or load-file-name buffer-file-name)))
+        nil t)
+  (load (expand-file-name "../familiar-prompts"
+                          (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
 (defun test-familiar-ask--tool (name)
@@ -622,6 +625,67 @@ answered \"one \" \"two\" in chunks; BODY sees the buffer, the request in
     ;; A pattern citing one real prompt and a rating citing none: dropped.
     (should-not (string-match-p "Invented\\|Not a prompt" org))
     (should (string-match-p "2 findings dropped" org))))
+
+(defmacro test-familiar-prompts--with (&rest body)
+  "BODY with a library of one own prompt and two Fabric patterns."
+  `(let* ((root (make-temp-file "familiar-prompts" t))
+          (familiar-prompts-directory (expand-file-name "mine" root))
+          (familiar-prompts-fabric-directory (expand-file-name "fabric" root))
+          (familiar-prompts--cache nil))
+     (unwind-protect
+         (progn
+           (make-directory familiar-prompts-directory t)
+           (dolist (p '(("summarize" . "# IDENTITY and PURPOSE\n\nYou are a summarizer. More.\n\n# INPUT:\n\nINPUT:")
+                        ("improve_writing" . "# IDENTITY and PURPOSE\n\nYou improve writing.\n\nINPUT:")))
+             (make-directory (expand-file-name (car p) familiar-prompts-fabric-directory) t)
+             (with-temp-file (expand-file-name (concat (car p) "/system.md") familiar-prompts-fabric-directory)
+               (insert (cdr p))))
+           (with-temp-file (expand-file-name "letter.md" familiar-prompts-directory)
+             (insert "Write a letter to {{who}} about: {{input}}"))
+           ,@body)
+       (delete-directory root t))))
+
+(ert-deftest familiar-prompts/library-yours-and-fabric-with-purposes ()
+  (skip-unless test-familiar-available)
+  (test-familiar-prompts--with
+   (should (equal (mapcar #'car (familiar-prompts)) '("letter" "improve_writing" "summarize")))
+   (should (equal (plist-get (cdr (assoc "summarize" (familiar-prompts))) :purpose)
+                  "You are a summarizer."))
+   (should (string-match-p "★" (familiar-prompts--annotate "letter")))
+   ;; {{var}} asked for, {{input}} is what was typed; else it goes after.
+   (cl-letf (((symbol-function 'read-string) (lambda (&rest _) "Ada")))
+     (should (equal (familiar-prompts--fill "Write a letter to {{who}} about: {{input}}" "tea")
+                    "Write a letter to Ada about: tea")))
+   (should (equal (familiar-prompts--fill "Do X.\nINPUT:\n" "tea") "Do X.\nINPUT:\n\ntea"))
+   ;; @p:NAME completes in the prompt.
+   (with-temp-buffer
+     (insert "please @p:sum")
+     (should (equal (all-completions "sum" (nth 2 (familiar-prompts-capf))) '("summarize"))))))
+
+(ert-deftest familiar-prompts/one-applies-several-compose-like-pipes ()
+  (skip-unless test-familiar-available)
+  (test-familiar-prompts--with
+   (let (sent chain)
+     (cl-letf (((symbol-function 'familiar-ask--send)
+                (lambda (prompt &rest _) (setq sent prompt)))
+               ((symbol-function 'familiar-ask--context) (lambda (_) "CONTEXT"))
+               ((symbol-function 'familiar-request)
+                (lambda (prompt &rest args)
+                  (push prompt chain)
+                  (funcall (plist-get args :callback) (format "out%d" (length chain)) nil))))
+       (with-temp-buffer
+         ;; One: its instructions, then what was typed; a heading of its name.
+         (familiar-ask "these notes @p:summarize")
+         (should (string-prefix-p "these notes → summarize\n#+begin_src markdown\n# IDENTITY" sent))
+         (should (string-match-p "INPUT:\n\nthese notes\n#\\+end_src\\'" sent))
+         ;; Two: the first runs on what was typed and the context, the
+         ;; last gets its output.
+         (familiar-ask "fix @p:improve_writing @p:summarize")
+         (should (equal (length chain) 1))
+         (should (string-match-p "You improve writing.\n\nINPUT:\n\nfix\n\nCONTEXT\\'" (car chain)))
+         (should (string-match-p "INPUT:\n\nout1\n#\\+end_src\\'" sent))
+         (should (string-prefix-p "fix → improve_writing → summarize\n" sent))
+         (should-error (familiar-ask "x @p:nope") :type 'user-error))))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"

@@ -1124,15 +1124,19 @@ add tools for this turn (`familiar-ask-turn-tools-functions'); MODEL
           (progn (delete-region (point) (point-max)) (insert " "))
         (delete-region (point) (point-max))
         (insert "\n\n** "))
-      (let ((lines (split-string (string-trim prompt) "\n")))
+      (let ((lines (split-string (string-trim prompt) "\n"))
+            (turn (point)))
         ;; Heading: the first line, stamped; the rest of the prompt below it.
         (insert (car lines) (format-time-string "  [%F %a %R]") "\n"
                 (mapconcat (lambda (l) (concat l "\n")) (cdr lines) "")
-                context "\n"))
-      ;; Context folded: it's for the model, you saw it already.
-      (save-excursion
-        (when (re-search-backward "^#\\+begin_context" nil t)
-          (org-fold-hide-block-toggle t)))
+                context "\n")
+        ;; Blocks folded: the context, a library prompt's instructions
+        ;; (familiar-prompts.el); they're for the model, you know them.
+        (save-excursion
+          (goto-char turn)
+          (while (re-search-forward "^#\\+begin_" nil t)
+            (org-fold-hide-block-toggle t)
+            (re-search-forward "^#\\+end_" nil t))))
       (goto-char (point-max)))
     (with-current-buffer buf (setq familiar-ask--echo echo))
     (if echo

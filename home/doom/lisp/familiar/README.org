@@ -22,6 +22,7 @@ Emacs 29.1+, gptel 0.9.9+.  Optional: [[https://github.com/laurynas-biveinis/mcp
 | =familiar-acp.el=        | familiar as an ACP agent: editors launch =familiar-acp=, Emacs answers |
 | =familiar-a2a.el=        | A2A 1.0 agent (card, /a2a) and client (=@agent= in M-ß delegates)      |
 | =familiar-rate.el=       | prompts rated as you type them; =familiar-rate-prompts= reviews your habits, quoting only your prompts |
+| =familiar-prompts.el=    | a prompt library: yours ({{vars}}) and Fabric's 266 patterns; =@p:NAME= in M-ß, several compose like pipes |
 
 * Setup
 

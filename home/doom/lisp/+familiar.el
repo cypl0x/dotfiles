@@ -32,6 +32,8 @@
 (autoload 'familiar-ask-continue "familiar-ask" nil t)
 (autoload 'familiar-ask-compose "familiar-ask" nil t)
 (autoload 'familiar-rate-prompts "familiar-rate" nil t)
+(autoload 'familiar-prompts-insert "familiar-prompts" nil t)
+(autoload 'familiar-prompts-update "familiar-prompts" nil t)
 (map! "M-ß" #'familiar-ask
       "C-M-ß" #'familiar-ask-compose          ; straight into the multi-line prompt
       ;; rename-buffer, plus a name suggested from the contents.
@@ -50,7 +52,9 @@
 
 ;; M-ß prompts are rated as you pause typing (familiar-rate.el).
 (after! familiar-ask
-  (require 'familiar-rate))
+  (require 'familiar-rate)
+  ;; @p:NAME: your prompts and Fabric's patterns (familiar-prompts.el).
+  (require 'familiar-prompts))
 
 (after! familiar-ask
   ;; RET sends at the end of a conversation in insert state too: evil's RET
