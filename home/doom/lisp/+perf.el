@@ -171,6 +171,21 @@ duplicates, then SEQUENCE2's that are new."
            (insert-file-contents +perf-suspend-count-file)
            (string-to-number (buffer-string))))))
 
+(defun +perf--cpu-log ()
+  "The CPU profiler's samples so far (the profiler starts a new log), or nil.
+Exporting them can fail (\"Stack overflow in equal\" on some object in a
+sampled backtrace; seen on Emacs 32.0.50).  The C log is then never freed,
+so every later export fails too: the recorder turns itself off, once, and
+says so, instead of an error every 30 seconds.  A restart clears it."
+  (condition-case err
+      (profiler-cpu-log)
+    (error
+     (+perf-freeze-recorder-mode -1)
+     (profiler-cpu-stop)
+     (message "Freeze recorder off: Emacs can't read its CPU profile any more (%s); restarting Emacs clears it"
+              (error-message-string err))
+     nil)))
+
 (defun +perf--freeze-tick ()
   (let* ((now (float-time))
          (suspends (+perf--suspend-count))
@@ -190,7 +205,7 @@ duplicates, then SEQUENCE2's that are new."
                       (concat (file-name-sans-extension file) ".txt") nil 'silent)
         ;; `profiler-cpu-profile' wraps the variable that `profiler-stop' fills;
         ;; the live samples come from the function `profiler-cpu-log'.
-        (when-let* ((log (profiler-cpu-log)))
+        (when-let* ((log (+perf--cpu-log)))
           (profiler-write-profile
            (profiler-make-profile :type 'cpu :timestamp (current-time) :log log)
            file))
@@ -202,7 +217,7 @@ duplicates, then SEQUENCE2's that are new."
                                 (abbreviate-file-name file))))))
      ;; Keep only the last minute or so, so a recording shows the freeze.
      ((zerop (% +perf--freeze-ticks 30))
-      (profiler-cpu-log)))))
+      (+perf--cpu-log)))))
 
 (define-minor-mode +perf-freeze-recorder-mode
   "Record a CPU profile of every freeze longer than `+perf-freeze-threshold'."

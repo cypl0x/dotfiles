@@ -688,6 +688,19 @@ and a temp exec-path where bin/tar links to store/tar."
             (should (= 1 (length (directory-files dir nil "\\.txt\\'")))))
         (delete-directory dir t)
         (delete-file counter)))))
+
+(ert-deftest perf/freeze-recorder-turns-off-when-the-profile-cant-be-read ()
+  ;; Emacs 32.0.50: once exporting the CPU log fails, it fails every time.
+  (let ((+perf-freeze-recorder-mode t) stopped msg)
+    (cl-letf (((symbol-function 'profiler-cpu-log) (lambda () (error "Stack overflow in equal")))
+              ((symbol-function 'profiler-cpu-stop) (lambda () (setq stopped t)))
+              ((symbol-function '+perf-freeze-recorder-mode)
+               (lambda (arg) (setq +perf-freeze-recorder-mode (> arg 0))))
+              ((symbol-function 'message) (lambda (fmt &rest args) (setq msg (apply #'format fmt args)))))
+      (should-not (+perf--cpu-log))
+      (should-not +perf-freeze-recorder-mode)
+      (should stopped)
+      (should (string-match-p "Freeze recorder off.*Stack overflow in equal" msg)))))
 (ert-deftest perf/freeze-recorder-off-in-batch ()
   (should-not +perf-freeze-recorder-mode))
 
