@@ -1054,3 +1054,32 @@ and a temp exec-path where bin/tar links to store/tar."
       (funcall (car timers))
       (should (= gc-cons-threshold 800000))
       (should-not +perf--gc-restore))))
+
+(ert-deftest completion/minibuffer-resume-puts-the-input-back ()
+  (let ((+minibuffer--last nil) got)
+    (defalias 'test-minibuffer--cmd (lambda () (interactive) (setq got (read-string "x: "))))
+    ;; Closing a minibuffer remembers its command and input.
+    (with-temp-buffer
+      (insert "half a question")
+      (let ((current-minibuffer-command 'test-minibuffer--cmd))
+        (+minibuffer-remember-h)))
+    (should (equal (plist-get +minibuffer--last :input) "half a question"))
+    ;; The resume itself isn't remembered as the thing to resume.
+    (with-temp-buffer
+      (let ((current-minibuffer-command '+minibuffer/resume)) (+minibuffer-remember-h)))
+    (should (eq (plist-get +minibuffer--last :command) 'test-minibuffer--cmd))
+    ;; Reopened: the same command, its input back in place.  (Batch
+    ;; read-string reads stdin: a stand-in runs the minibuffer setup.)
+    (cl-letf (((symbol-function 'read-string)
+               (lambda (&rest _)
+                 (with-temp-buffer (insert "old")
+                   (run-hooks 'minibuffer-setup-hook)
+                   (buffer-string)))))
+      (+minibuffer/resume))
+    (should (equal got "half a question"))
+    ;; Vertico sessions go to vertico-repeat.
+    (let (repeated)
+      (cl-letf (((symbol-function 'vertico-repeat) (lambda () (interactive) (setq repeated t))))
+        (setq +minibuffer--last '(:command find-file :input "~/x" :vertico t))
+        (+minibuffer/resume))
+      (should repeated))))

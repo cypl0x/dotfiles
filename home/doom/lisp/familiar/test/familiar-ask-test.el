@@ -1236,5 +1236,19 @@ prompt turns and the callback)."
                            '("ask_agent_self"))))
         (familiar-mcp-http-stop)))))
 
+(ert-deftest familiar-ask/abandoned-prompts-are-kept-in-the-history ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-ask-history nil))
+    (with-temp-buffer
+      (setq-local familiar-ask--prompt-p t)
+      (insert "  half a question  ")
+      (familiar-ask--keep-prompt-h)
+      ;; Sent after all: read-string adds it too, and it stays once.
+      (familiar-ask--keep-prompt-h))
+    (should (equal familiar-ask-history '("half a question")))
+    ;; Other minibuffers are not M-ß's.
+    (with-temp-buffer (insert "find-file input") (familiar-ask--keep-prompt-h))
+    (should (equal familiar-ask-history '("half a question")))))
+
 (provide 'familiar-ask-test)
 ;;; familiar-ask-test.el ends here

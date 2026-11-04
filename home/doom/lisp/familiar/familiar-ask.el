@@ -716,6 +716,18 @@ From the minibuffer, for the buffer the prompt is about."
           (setq prompt (replace-regexp-in-string re "" prompt)))))
     (cons (string-trim prompt) found)))
 
+(defvar-local familiar-ask--prompt-p nil "Non-nil in the minibuffer reading a prompt.")
+
+(defun familiar-ask--keep-prompt-h ()
+  "Keep the prompt in `familiar-ask-history' however its minibuffer closes.
+Sent prompts were kept anyway; abandoned ones (C-g) were lost.  A prompt
+equal to the newest one isn't added again (`add-to-history')."
+  (when familiar-ask--prompt-p
+    (let ((text (string-trim (minibuffer-contents-no-properties))))
+      (unless (string-empty-p text)
+        (add-to-history 'familiar-ask-history text)))))
+(add-hook 'minibuffer-exit-hook #'familiar-ask--keep-prompt-h)
+
 (defun familiar-ask--read ()
   "Read a prompt, with history and @keyword completion."
   (minibuffer-with-setup-hook
@@ -724,6 +736,7 @@ From the minibuffer, for the buffer the prompt is about."
         (add-hook 'completion-at-point-functions #'familiar-ask--keywords-capf nil t)
         (dolist (capf (reverse familiar-ask-prompt-capfs))
           (add-hook 'completion-at-point-functions capf 50 t))
+        (setq-local familiar-ask--prompt-p t)
         (run-hooks 'familiar-ask-prompt-setup-hook))
     (prog1 (read-string (format "Ask (%s): " (alist-get familiar-ask-tier familiar-models))
                         (prog1 familiar-ask--draft (setq familiar-ask--draft nil))

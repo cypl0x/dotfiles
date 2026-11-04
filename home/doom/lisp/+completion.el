@@ -25,6 +25,7 @@
 (declare-function org-at-heading-p "org" (&optional invisible-not-ok))
 (declare-function org-roam-complete-link-at-point "ext:org-roam-mode" ())
 (declare-function pcomplete-completions-at-point "pcomplete" ())
+(require 'map)
 (defvar cape-dict-file)
 (defvar cape-dabbrev-buffer-function)
 (declare-function cape--dabbrev-list "ext:cape" (input))
@@ -139,6 +140,38 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
 (add-hook 'minibuffer-setup-hook
           (defun +minibuffer-bar-cursor-h ()
             (setq-local cursor-type 'bar)))
+
+;; SPC ': reopen the last minibuffer with what was in it.  `vertico-repeat'
+;; did that for completion sessions only; M-ß's prompt (a plain
+;; read-string) and other prompts were gone after C-g.
+(defvar +minibuffer--last nil
+  "The last minibuffer closed: plist (:command CMD :input TEXT :vertico BOOL).")
+
+(defun +minibuffer-remember-h ()
+  "Remember the minibuffer being closed, for `+minibuffer/resume'."
+  (let ((cmd current-minibuffer-command))
+    (when (and (commandp cmd)
+               (not (memq cmd '(+minibuffer/resume vertico-repeat vertico-repeat-last))))
+      (setq +minibuffer--last
+            (list :command cmd
+                  :input (minibuffer-contents-no-properties)
+                  :vertico (and (bound-and-true-p vertico--input) t))))))
+(add-hook 'minibuffer-exit-hook #'+minibuffer-remember-h)
+
+(defun +minibuffer/resume ()
+  "Reopen the last minibuffer with its input.
+Completion sessions through `vertico-repeat' (candidate position too);
+others (M-ß's prompt, plain prompts) by running their command again with
+the input put back."
+  (interactive)
+  (pcase-let (((map :command :input :vertico) +minibuffer--last))
+    (cond ((null command) (user-error "No minibuffer to reopen yet"))
+          ((and vertico (fboundp 'vertico-repeat)) (call-interactively #'vertico-repeat))
+          (t (minibuffer-with-setup-hook
+                 (lambda () (delete-minibuffer-contents) (insert input))
+               (call-interactively command))))))
+
+(map! :leader :desc "Reopen last minibuffer" "'" #'+minibuffer/resume)
 
 (provide '+completion)
 ;;; +completion.el ends here
