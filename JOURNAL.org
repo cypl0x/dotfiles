@@ -39,6 +39,18 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 21:43] — Org learns new tricks; prompts get a library
+- Type =/= in Org: =/table5x2=, =/code=, =/todo=, =/date= … become the real
+  thing (5x2 = columns×rows, as Org itself asks).
+- =SPC m ?= — Org by example: 50 "how do I …" answers, each a working
+  example from the manual, insertable, with the manual one key away.
+- =SPC m C= — write a few headings, and AI files each one under the
+  heading it belongs to.  It only picks places; your words go in as written.
+- Arrows and ≠ ligate in Org now, without touching table pipes or stars.
+- =\omega= completes to ω while you write; =SPC i u= finds any character.
+- M-ß has a prompt library: =@p:summarize=, 265 Fabric patterns plus your
+  own, chained like pipes: =@p:improve_writing @p:summarize=.
+
 ** [2026-11-04 Mi 21:25] — Org that keeps itself tidy, prompts that get better
 - =SPC c f= in Org now follows two conventions people already use
   (alphapapa's blank-line rules and markdownlint's): one blank line

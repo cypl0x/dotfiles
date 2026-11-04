@@ -149,4 +149,7 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE [#B] Prompt rating: live (stars + tip) and review grounded in real prompts (dae0456)
 ** DONE [#B] SPC c f Org convention: unpackaged + markdownlint blank lines, lower-case keywords (89628fe); 869 files checked
 ** DONE [#B] Org style lint: 10 rules in org-lint + flycheck checker +org-lint (9c392ff)
+** DONE Unicode: \omega → ω in prose (cape-tex), SPC i u picker with chars (801852a)
+** DONE familiar-prompts: own templates + Fabric 265 patterns, @p:NAME, pipes (4599942)
+** DONE Org /commands (e8c0698), Org by example SPC m ? (eb3457c, 50 entries), Org ligatures (e0f3898), AI capture SPC m C (1fd0953)
 ** TODO "familiar-ask jumps directly into fresh multiline prompt": ambiguous, C-M-ß may cover it
