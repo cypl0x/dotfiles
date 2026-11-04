@@ -1201,6 +1201,32 @@ and a temp exec-path where bin/tar links to store/tar."
                      '((9 info "Trailing whitespace, and 3 more like it (M-x org-lint lists them)"))))
       (should (seq-find (lambda (f) (eq (nth 1 f) 'warning)) found)))))
 
+
+(ert-deftest completion/tex-names-complete-to-unicode-shown-in-the-popup ()
+  (cl-flet ((capf-in (mode text)
+              (with-temp-buffer
+                (funcall mode)
+                (insert text)
+                (+completion-tex-capf))))
+    (pcase-let ((`(,beg ,end ,table . ,props) (capf-in #'org-mode "the angle \\omeg")))
+      (should (= (- end beg) 5))           ; \\omeg
+      (should (member "\\omega" (all-completions "\\omeg" table)))
+      ;; The character itself shows beside the name.
+      (should (string-match-p "ω" (funcall (plist-get props :annotation-function) "\\omega"))))
+    ;; Where \omega means \omega: Org math, LaTeX; and _/^ aren't triggers.
+    (should-not (capf-in #'org-mode "math \\(\\omeg"))
+    (should-not (capf-in #'latex-mode "\\omeg"))
+    (should-not (capf-in #'org-mode "an _underlin"))))
+
+(ert-deftest completion/unicode-picker-shows-the-character-first ()
+  (let ((cands (+unicode--candidates)))
+    (should (member "ω  GREEK SMALL LETTER OMEGA  U+03C9" cands))
+    ;; Combining marks get a base to sit on.
+    (should (member "◌́  COMBINING ACUTE ACCENT  U+0301" cands))
+    (should (= (+unicode--char "ω  GREEK SMALL LETTER OMEGA  U+03C9") ?ω))
+    (with-temp-buffer
+      (+unicode/insert ?ω 3)
+      (should (equal (buffer-string) "ωωω")))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))

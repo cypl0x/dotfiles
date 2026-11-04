@@ -311,5 +311,94 @@ a reopened one keeps its edits."
       "C-'" #'+minibuffer/older
       "C-\"" #'+minibuffer/newer)
 
+
+;;;; Unicode
+
+;; \omega in prose completes to ω, the character shown next to each name in
+;; the popup: `cape-tex', the table of the TeX input method.  Backslash
+;; names only (its ^ and _ forms would fire on Org's _underline_ and x^2),
+;; and not where \omega is meant: LaTeX buffers, Org's math and src blocks.
+(declare-function cape-tex "ext:cape-char" (&optional interactive))
+(declare-function org-element-context "org-element" (&optional element))
+(declare-function org-element-type "org-element-ast" (node &optional anonymous))
+
+(defun +completion--count (regexp string)
+  "How many times REGEXP matches in STRING."
+  (let ((n 0) (start 0))
+    (while (string-match regexp string start)
+      (setq n (1+ n) start (match-end 0)))
+    n))
+
+(defun +completion--org-math-p ()
+  "Whether point is in Org math: \\(...\\), \\[...\\], $...$ or a LaTeX environment,
+closed or still being typed.  (A bare \\name parses as a LaTeX fragment too.)"
+  (let ((before (buffer-substring-no-properties (line-beginning-position) (point))))
+    (or (> (+completion--count "\\\\[([]" before) (+completion--count "\\\\[])]" before))
+        (cl-oddp (+completion--count "\\$" before))
+        (eq (org-element-type (org-element-context)) 'latex-environment))))
+
+(defun +completion-tex-capf ()
+  "Complete a Unicode character from its TeX name (\\omega → ω) in prose."
+  (when (and (looking-back "\\\\[[:alpha:]]+" (line-beginning-position))
+             (not (derived-mode-p 'tex-mode 'latex-mode 'LaTeX-mode))
+             (not (and (derived-mode-p 'org-mode)
+                       (or (+completion--org-math-p) (org-in-src-block-p t)))))
+    (require 'cape-char)
+    (cape-tex)))
+
+(add-hook 'text-mode-hook
+          (defun +completion-tex-h ()
+            (add-hook 'completion-at-point-functions #'+completion-tex-capf 70 t)))
+
+;; SPC i u: every Unicode character by name, the character first, like
+;; `nerd-icons-insert' (`insert-char' showed names only).  Recently
+;; inserted ones come first (history); C-x 8 RET is still `insert-char'.
+(defvar +unicode-history nil "Characters inserted with `+unicode/insert'.")
+(defvar +unicode--candidates nil "Cached candidates of `+unicode/insert'.")
+
+(defun +unicode--candidates ()
+  "\"C  NAME  U+XXXX\" for each named character, built once."
+  (or +unicode--candidates
+      (setq +unicode--candidates
+            (let (cands)
+              (maphash (lambda (name char)
+                         (push (format "%s%s  %s  U+%04X"
+                                       ;; A combining mark needs a base to show.
+                                       (if (memq (get-char-code-property char 'general-category)
+                                                 '(Mn Me))
+                                           "◌" "")
+                                       (char-to-string char) name char)
+                               cands))
+                       (ucs-names))
+              cands))))
+
+(defun +unicode--char (cand)
+  "The character of candidate CAND."
+  (and (string-match "U\\+\\([[:xdigit:]]+\\)\\'" cand)
+       (string-to-number (match-string 1 cand) 16)))
+
+(defun +unicode/insert (char &optional count)
+  "Insert CHAR (COUNT times), picked by name with the character shown."
+  (interactive
+   (let ((cands (+unicode--candidates)))
+     (list (or (+unicode--char
+                (completing-read
+                 "Unicode: "
+                 (lambda (str pred action)
+                   (if (eq action 'metadata)
+                       `(metadata (category . unicode-char)
+                                  (annotation-function
+                                   . ,(lambda (c)
+                                        (when-let* ((ch (+unicode--char c))
+                                                    (script (aref char-script-table ch)))
+                                          (format "   %s" script)))))
+                     (complete-with-action action cands str pred)))
+                 nil t nil '+unicode-history))
+               (user-error "No character"))
+           (prefix-numeric-value current-prefix-arg))))
+  (insert (make-string (or count 1) char)))
+
+(map! :leader :desc "Unicode (char shown)" "i u" #'+unicode/insert)
+
 (provide '+completion)
 ;;; +completion.el ends here
