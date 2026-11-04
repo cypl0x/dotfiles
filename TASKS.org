@@ -40,7 +40,7 @@ describe/buffer_text/list_buffers/apropos, set_minibuffer); RET follow-ups,
 S-RET newline; C-u fresh; @fast/@smart/@deep + capf; history; C-c ' edit
 buffer (C-c C-c / C-c C-k keep); familiar-ask-sessions; cache; ledger.
 Live: Haiku answered via eval_elisp (approved by me), cache hit 2000 tok.
-** TODO Real-key test in M-x ("exclude X include Y" → set_minibuffer)
+** DONE Real-key test in M-x ("exclude X include Y" → set_minibuffer)
 M-ß in a buffer + follow-up + SPC A N: done with execute-kbd-macro in the
 lab frame (919f353). M-x case still open: a macro ending inside the
 minibuffer would wait for real input.
