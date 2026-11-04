@@ -59,7 +59,9 @@ ghostel (real zsh). Emacs shells: ? at empty eshell/shell prompt → M-ß,
 insert_at_prompt tool, shell hint in context. Read the user's 34 Atuin AI
 questions (ai_sessions.db) for the use cases.
 Research `?' in zsh (Atuin AI); test; bring into Emacs.
-* TODO C-SPC context-sensitive completion (e.g. org)              :completion:
+* DONE C-SPC context-sensitive completion (e.g. org)              :completion:
+700317e + follow-up: +completion/dwim; org links/keywords/tags/src/prose,
+code; cape-dict word lists (en+de from hunspell). Real-key test passed.
 * DONE leo vocabulary collection + Anki-like review               :prose:
 59f54bf: leo lookups → org-fc double cards in ~/vault/vocabulary.org; SPC l r
 review, SPC l v file. Live card made + found by awk index. Review UI not
