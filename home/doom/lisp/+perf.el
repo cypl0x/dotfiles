@@ -331,5 +331,63 @@ elements containing secrets; the kill ring also loses huge entries."
 
 (with-eval-after-load 'doom-modeline
   (advice-add 'doom-modeline-vcs-icon :filter-args #'+perf-modeline-icon-a))
+
+;;;; The first frame of the daemon
+
+;; Profiled 2026-11-04 in a throwaway daemon: the first frame took 0.76 s
+;; (a second one 0.43 s).  Of that, 104 ms were garbage collection while
+;; the frame was built, and 57 ms Doom's dashboard looking up the keys of
+;; its seven menu entries with `where-is-internal' over every keymap, on
+;; every draw.  The theme (78 ms) and the display connection (93 ms) stay:
+;; a daemon can't load a theme before it has a display.
+
+(defvar gcmh-mode)
+(defvar gcmh-high-cons-threshold)
+(defvar +perf--gc-restore nil "The GC threshold to restore once idle after a new frame.")
+(defun +perf-frame-without-gc-a (fn &rest args)
+  "Build and show a frame (FN) before collecting garbage: at idle, after.
+Binding the threshold around FN only moved the GC (104 ms grew to 254)
+to just after, still before the frame was drawn."
+  ;; Two frames within the second: the first one's value is the one to restore.
+  (unless +perf--gc-restore
+    (setq +perf--gc-restore (if (bound-and-true-p gcmh-mode) gcmh-high-cons-threshold gc-cons-threshold)
+          gc-cons-threshold most-positive-fixnum)
+    (run-with-idle-timer 1 nil (lambda ()
+                                 (setq gc-cons-threshold +perf--gc-restore
+                                       +perf--gc-restore nil))))
+  (apply fn args))
+(advice-add 'server-create-window-system-frame :around #'+perf-frame-without-gc-a)
+
+(defvar +perf--where-is-cache (make-hash-table :test #'eq)
+  "COMMAND → its first global key, for the dashboard menu.")
+
+(defun +perf-dashboard-keys-once-a (fn &rest args)
+  "Run the dashboard menu (FN) with its key lookups remembered."
+  (let ((where-is (symbol-function 'where-is-internal)))
+    (cl-letf (((symbol-function 'where-is-internal)
+               (lambda (cmd &optional maps firstonly &rest rest)
+                 ;; Only the slow one: all keymaps (MAPS nil).  The dashboard's
+                 ;; own maps are small, and keymaps make poor hash keys.
+                 (if (and firstonly (null maps) (symbolp cmd))
+                     (with-memoization (gethash cmd +perf--where-is-cache)
+                       (apply where-is cmd maps firstonly rest))
+                   (apply where-is cmd maps firstonly rest)))))
+      (apply fn args))))
+(advice-add '+dashboard-widget-shortmenu :around #'+perf-dashboard-keys-once-a)
+;; Bindings changed: look again.
+(add-hook 'doom-after-reload-hook (lambda () (clrhash +perf--where-is-cache)))
+
+(defvar +dashboard-menu-sections)
+(defun +perf-dashboard-warm-h ()
+  "Look the dashboard's keys up while the daemon waits for its first frame."
+  (when (and (daemonp) (boundp '+dashboard-menu-sections))
+    (run-with-idle-timer
+     1 nil (lambda ()
+             (dolist (section +dashboard-menu-sections)
+               (let ((action (plist-get (cdr section) :action)))
+                 (when (fboundp action)
+                   (puthash action (where-is-internal action nil t) +perf--where-is-cache))))))))
+(add-hook 'doom-after-init-hook #'+perf-dashboard-warm-h)
+
 (provide '+perf)
 ;;; +perf.el ends here

@@ -1041,3 +1041,16 @@ and a temp exec-path where bin/tar links to store/tar."
        (should (equal shown '("next-line 3")))
        (test-usage--run 'evil-undo 'next-line 'next-line 'next-line)
        (should (equal shown '("next-line 3")))))))
+
+(ert-deftest perf/new-frames-collect-garbage-only-once-idle ()
+  (let ((gc-cons-threshold 800000) (+perf--gc-restore nil) timers
+        (gcmh-mode nil))
+    (cl-letf (((symbol-function 'run-with-idle-timer)
+               (lambda (_ _ f) (push f timers))))
+      (+perf-frame-without-gc-a (lambda () (should (= gc-cons-threshold most-positive-fixnum))))
+      ;; A second frame before idle doesn't take the raised value for normal.
+      (+perf-frame-without-gc-a #'ignore)
+      (should (= 1 (length timers)))
+      (funcall (car timers))
+      (should (= gc-cons-threshold 800000))
+      (should-not +perf--gc-restore))))
