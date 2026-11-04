@@ -44,7 +44,7 @@ Live: Haiku answered via eval_elisp (approved by me), cache hit 2000 tok.
 M-ß in a buffer + follow-up + SPC A N: done with execute-kbd-macro in the
 lab frame (919f353). M-x case still open: a macro ending inside the
 minibuffer would wait for real input.
-** TODO Suggestions applicable with one key ($ / ! / RET) from the answer
+** DONE Suggestions applicable with one key: C-c ! / C-c $ (familiar-ask-apply)
 ** DONE Picker over previous prompts: C-r in the prompt (d185743)
 ** DONE Export: C-c C-e copies as Markdown or Org (d185743, a25af0c)
 ** DONE Header line: model, prompts, cost, start; stamped headings (d185743)
