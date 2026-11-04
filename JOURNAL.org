@@ -39,6 +39,13 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 23:55] — Your tailnet and NixOS, from Emacs
+- =SPC o n=: your Tailscale peers, how each is reached (direct or relay),
+  files and shells there in one key, a settings menu, the daemon log.
+- =SPC N b= rebuilds the system (nrs) and then shows what changed, package
+  by package.  =SPC N u= updates /one/ flake input; it used to update all
+  of them, ~35 GB on this link, one keystroke away.
+
 ** [2026-11-04 Mi 23:49] — M-x that knows where you are; German checked as German
 - =M-x= now opens with what you run through M-x in this mode first (in
   Org: org-modern-mode, pretty markup, reading mode ...).

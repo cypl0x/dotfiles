@@ -161,3 +161,6 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE [#C] context-sensitive M-x: ranked by this mode + last command, weighted by M-x share (+usage.el)
 ** DONE [#C] context-sensitive Org transient: Casual org menu, SPC m m (23822a9)
 ** DONE [#C] Org Roam manual: companion Info for this config (SPC n r ?), upstream SPC n r M
+** DONE research: Tailscale in Emacs (SPC o n peers, settings transient, log) (e15f692)
+** DONE research: Nix: SPC N u one input only (was full update!), SPC N b nrs + closure diff (2b81ff8)
+** DONE LanguageTool: language auto + motherTongue de-DE (was en-US for all) (d96df38)
