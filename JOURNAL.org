@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 15:03] — One history of every AI turn, glo, and an "Emacs AI" box
+- *Every AI turn in one Org history* (your pick for the harness):
+  M-ß, =ß= in the shell, OpenAI clients, explain/review/commit messages —
+  question, answer, model, tokens, cost, and for M-ß a link back to the
+  conversation.  =SPC A j= searches it all; =C-c C-r= on a turn asks it
+  again.  Monthly files, private (0600).
+- *Writegood's "Switch to active voice"* marks are gone, as you asked;
+  weasel words and doubled words are still flagged.
+- *=glo=*, your one-liner made into a real tool for every user on the
+  ThinkPad and inari: refs coloured like git's own, author column that
+  lines up, =+added -deleted= per commit, =--no-stat=, =--color=, paging
+  like =git log=, zsh completion.  Shellcheck runs every time it's built.
+- *=ß= says "Emacs AI"* now, so it can't be mistaken for Atuin's =?=.
+  Atuin hard-codes the label; =ß= uses a copy of the same binary with
+  those eight bytes swapped (no rebuild, nothing downloaded).
+
 ** [2026-11-04 Mi 13:41] — ß in your shell asks Emacs
 As you asked: Atuin stays as it is, and =ß= does what Atuin's =?= does.
 - =ß= at an empty prompt opens Atuin's own AI box (same TUI, same keys:
