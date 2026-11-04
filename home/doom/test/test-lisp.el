@@ -1370,6 +1370,31 @@ and a temp exec-path where bin/tar links to store/tar."
               (+nix-develop--envrc-a (lambda () (setq original t))))
             (should original)))
       (delete-directory root t))))
+
+(load (expand-file-name "+zoxide" test-lisp-dir) nil t)
+
+(ert-deftest zoxide/ranking-in-emacs-and-visits-feed-it ()
+  (let ((+zoxide-program "zoxide") (+zoxide--last-added nil) (noninteractive nil) started)
+    (cl-letf (((symbol-function 'process-lines)
+               (lambda (&rest _) '(" 274.0 /home/u/dotfiles" "   6.2 /home/u/dev/minaret")))
+              ((symbol-function 'start-process)
+               (lambda (&rest args) (push (last args) started))))
+      ;; Best first, abbreviated, score shown.
+      (let ((process-environment (cons "HOME=/home/u" process-environment)))
+        (should (equal (mapcar #'cdr (+zoxide--candidates)) '("/home/u/dotfiles" "/home/u/dev/minaret"))))
+      ;; Visits are added once each; remote ones not.
+      (let ((default-directory "/tmp/"))
+        (+zoxide-add-h) (+zoxide-add-h))
+      (should (equal started '(("/tmp/"))))
+      (let ((default-directory "/ssh:host:/srv/"))
+        (+zoxide-add-h))
+      (should (= (length started) 1))
+      ;; Picking a directory opens find-file there.
+      (let (dir)
+        (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) (car (car (+zoxide--candidates)))))
+                  ((symbol-function 'call-interactively) (lambda (&rest _) (setq dir default-directory))))
+          (+zoxide/find))
+        (should (equal dir "/home/u/dotfiles/"))))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
