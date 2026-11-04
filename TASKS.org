@@ -145,5 +145,8 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE [#B] C-M-ß multi-line prompt + editor polish: header, M-p/M-n, C-c C-q (bed7f27)
 ** DONE [#B] Directives: @model (55373a2), @inline + @replace (6f2f46b), @transient (643596d); live-verified
 ** DONE [#B] SPC ' ring + C-' / C-" cycling (f31a067); real-key test pending (user active)
-** TODO [#B] completion in Org ~code~ / Markdown backticks
+** DONE [#B] completion in Org ~code~ / =verbatim= / Markdown backticks: Emacs Lisp names, commands first (791661f)
+** DONE [#B] Prompt rating: live (stars + tip) and review grounded in real prompts (dae0456)
+** DONE [#B] SPC c f Org convention: unpackaged + markdownlint blank lines, lower-case keywords (89628fe); 869 files checked
+** DONE [#B] Org style lint: 10 rules in org-lint + flycheck checker +org-lint (9c392ff)
 ** TODO "familiar-ask jumps directly into fresh multiline prompt": ambiguous, C-M-ß may cover it

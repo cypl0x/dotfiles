@@ -39,6 +39,19 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 21:25] — Org that keeps itself tidy, prompts that get better
+- =SPC c f= in Org now follows two conventions people already use
+  (alphapapa's blank-line rules and markdownlint's): one blank line
+  between headings, around tables, lists and blocks; =#+keywords= in lower
+  case.  Tried on 869 Org files: not a word changed, and a second run
+  changes nothing.
+- A style linter for Org, markdownlint-like: ten rules, in =M-x org-lint=
+  and live as you write (flycheck), quiet: many of a kind show once.
+- Inside =~code~= in Org (and =`code`= in Markdown) completion offers
+  Emacs commands and functions, not dictionary words.
+- Pause while typing an M-ß prompt and it gets stars and a tip;
+  =SPC A p= reviews all your prompts, quoting only what you wrote.
+
 ** [2026-11-04 Mi 21:02] — M-ß takes directions: @model, @inline, @replace, @transient
 - =@model= picks who answers this one turn: any model of any gptel
   backend, or a coding agent already running (agent-shell gets the prompt
