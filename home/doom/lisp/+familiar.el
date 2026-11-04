@@ -26,7 +26,14 @@
 
 (after! familiar
   ;; Show the budget against what the key is actually charged with.
-  (setq familiar-budget 10.0))
+  (setq familiar-budget 10.0)
+  ;; Hand off to agent-shell even when none runs: start one (+agent.el), the
+  ;; prompt waits until it's ready.  Clipboard stays as the last resort.
+  (setf (alist-get 'agent-shell familiar-handoff-targets)
+        (list :available (lambda () (locate-library "agent-shell"))
+              :send (lambda (text)
+                      (agent-shell-insert :text text :submit t
+                                          :shell-buffer (+agent-shell-buffer))))))
 
 (set-popup-rule! "^\\*familiar\\*$" :size 0.35 :select nil :quit t :ttl nil)
 (set-popup-rule! "^\\*familiar spend\\*$" :size 0.4 :select t :quit t)

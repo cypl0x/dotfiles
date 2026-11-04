@@ -1,0 +1,55 @@
+#+title: Tasks (from the user's /goal list, 2026-11-04)
+#+startup: overview
+
+Kept up to date by Claude while implementing, so the plan survives context
+compaction. Source of truth for the user's wishes: the /goal text of
+2026-11-04 (also in an Emacs buffer in the daemon). General rule from it:
+research first, never guess, verify everything (real keys in the live
+instance, preflight message first), best-in-class defaults.
+
+* Order of work
+Cheap, concrete fixes first; then the central ask command (biggest item),
+which the anticipate / Atuin-like / howdoi items build on.
+
+* TODO SPC A: transient in columns like magit                     :agent:
+Groups are stacked in one column; nest them as rows of columns.
+* TODO SPC A a: spin up an agent-shell when none exists           :agent:
+Long-lived until closed manually.
+* TODO familiar-handoff outside a project                         :agent:
+"claude-code-normalize-project-root: Current directory is not part of a
+project" for "Can you reformat this org buffer?".
+* TODO Central ask command (C-M-? or better key)                  :agent:big:
+Atuin-AI experience one key away, anywhere (incl. minibuffer, non-file
+buffers). Full context by default (buffer, region, point, modes, open
+buffers) + tools to introspect / eval elisp; streaming popup with tool
+calls (results folded); follow-ups (RET send, S-RET newline) without
+re-sending context; long-lived session; prompt history via vertico;
+raise prompt to a multiline buffer (C-c C-c / C-c C-k, revivable, mode
+known to the model); in-prompt model/option syntax with completion;
+metadata + timestamps; revisitable result buffers; export transcript;
+edits through Emacs (undoable), never writing files by default.
+Minibuffer case: "exclude X include Y" in M-x writes orderless syntax into
+the *running* minibuffer; "How do I …" only suggests (RET / $ / ! to apply).
+* TODO Anticipate command (LLM optional)                          :agent:
+Predict next edits / commands / searches from context.
+* TODO Atuin and Atuin AI integration                             :shell:
+Research `?' in zsh (Atuin AI); test; bring into Emacs.
+* TODO C-SPC context-sensitive completion (e.g. org)              :completion:
+* TODO leo vocabulary collection + Anki-like review               :prose:
+* TODO README.org learning path for all custom workflows (+ Info) :docs:
+* TODO Discoverability of own additions                           :docs:
+* TODO org-modern: richer, colours matching org                   :org:
+Markdown currently looks richer than org.
+* TODO org-fmt / org-format command                               :org:
+* TODO Rename buffer by its contents                              :misc:
+* TODO Screenshots: clipboard + default dir, pasteable via M-y     :desktop:
+Rofi clipboard history shows "[ binary data ]"; Emacs M-y excludes images.
+Browser in Emacs: dired-like, preview at point, thumbnails, newest first.
+* TODO Record usage for later AI workflow suggestions             :usage:
+(+usage.el exists; check what it records.)
+
+* Done
+* Still waiting on the user (older items)
+- Rotate the cachix token; 34 profile-only packages; first-frame startup;
+  delete persist-buffers.pruned-20261030/; inari GC keep-roots after
+  2026-11-06; swaync/plugdev check after next login.

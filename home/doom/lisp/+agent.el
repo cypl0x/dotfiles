@@ -23,18 +23,25 @@ With active region, prepend selected text as context."
            (read-string "Ask agent: "
                         (when initial
                           (concat "Context:\n" initial "\n\nQuestion: "))))))
-  (let* ((shell-buf (or (seq-find
-                          (lambda (b)
-                            (with-current-buffer b
-                              (derived-mode-p 'agent-shell-mode)))
-                          (buffer-list))
-                         (error "No agent-shell buffer found")))
-         (buf-name (buffer-name shell-buf)))
-    (with-current-buffer shell-buf
-      (goto-char (point-max))
-      (insert prompt)
-      (agent-shell-submit))
-    (message "Sent to %s" buf-name)))
+  (let ((shell-buf (+agent-shell-buffer)))
+    ;; Queued until the session is ready when the shell was just started.
+    (agent-shell-insert :text prompt :submit t :no-focus t :shell-buffer shell-buf)
+    (message "Sent to %s" (buffer-name shell-buf))))
+
+(defun +agent-shell-buffer ()
+  "The most recent agent-shell buffer; start a Claude one if none runs.
+A started shell lives until you kill its buffer."
+  (require 'agent-shell)
+  (or (seq-find (lambda (b) (with-current-buffer b (derived-mode-p 'agent-shell-mode)))
+                (buffer-list))
+      (progn
+        (require 'agent-shell-anthropic)
+        (message "Starting a Claude agent-shell…")
+        (agent-shell--start :config (agent-shell-anthropic-make-claude-code-config)
+                            :no-focus t :new-session t
+                            ;; `prompt' (the default) would wait for a session
+                            ;; pick nobody is asked for in the background.
+                            :session-strategy 'new))))
 
 ;;;; Send buffer/region to agent ─────────────────────────────────────────────
 
@@ -141,41 +148,43 @@ With active region, prepend selected text as context."
 (defun +agent/send-reg ()
   "Send region." (interactive) (call-interactively #'agent-shell-send-region))
 
+;; Groups nested in a vector become columns (as in magit's dispatch), so the
+;; menu is two rows of three columns instead of one screen-high stack.
 (transient-define-prefix +agent/transient ()
     "AI Agent dispatch menu."
-    ["Agent Shell"
-     ("s" "Start Claude"     +agent/start-claude)
-     ("S" "Switch buffer"    +agent/switch-buf)
-     ("l" "List sessions"    +agent/list-sessions)
-     ("h" "Help menu"        +agent/help)]
-    ["Quick Actions"
-     ("a" "Ask (minibuffer)" +agent/quick-ask)
-     ("e" "Explain region"   +agent/explain-region)
-     ("f" "Fix region"       +agent/fix-region)
-     ("b" "Send buffer"      +agent/send-buffer)
-     ("r" "Send region"      +agent/send-reg)]
-    ["gptel (inline LLM)"
-     ("g" "gptel send"       gptel-send)
-     ("G" "gptel menu"       gptel-menu)
-     ("c" "gptel chat"       gptel)
-     ("m" "Set model"        +agent/set-model)]
-    ["✦ familiar"
-     ("x" "Explain"            familiar-explain)
-     ("d" "Explain diagnostic" familiar-explain-diagnostic)
-     ("F" "Fix (smerge)"       familiar-fix)
-     ("C" "Commit message"     familiar-commit-message)
-     ("E" "Explain build error" familiar-explain-compilation-error)
-     ("v" "Review diff"        familiar-review)
-     ("H" "Hand off to agent"  familiar-handoff)
-     ("$" "Spend"              familiar-spend)]
-    ["Tools"
-     ("t" "ACP traffic"      agent-shell-view-acp-logs)
-     ("T" "Transcript"       agent-shell-open-transcript)
-     ("u" "Usage"            agent-shell-show-usage)]
-    ["History"
-     ("R" "Browse transcripts"  agent-recall-browse)
-     ("/" "Search transcripts"  agent-recall-search-live)
-     ("X" "Reindex transcripts" agent-recall-reindex)])
+    [["Agent Shell"
+      ("s" "Start Claude"     +agent/start-claude)
+      ("S" "Switch buffer"    +agent/switch-buf)
+      ("l" "List sessions"    +agent/list-sessions)
+      ("h" "Help menu"        +agent/help)]
+     ["Quick Actions"
+      ("a" "Ask (minibuffer)" +agent/quick-ask)
+      ("e" "Explain region"   +agent/explain-region)
+      ("f" "Fix region"       +agent/fix-region)
+      ("b" "Send buffer"      +agent/send-buffer)
+      ("r" "Send region"      +agent/send-reg)]
+     ["gptel (inline LLM)"
+      ("g" "gptel send"       gptel-send)
+      ("G" "gptel menu"       gptel-menu)
+      ("c" "gptel chat"       gptel)
+      ("m" "Set model"        +agent/set-model)]]
+    [["✦ familiar"
+      ("x" "Explain"            familiar-explain)
+      ("d" "Explain diagnostic" familiar-explain-diagnostic)
+      ("F" "Fix (smerge)"       familiar-fix)
+      ("C" "Commit message"     familiar-commit-message)
+      ("E" "Explain build error" familiar-explain-compilation-error)
+      ("v" "Review diff"        familiar-review)
+      ("H" "Hand off to agent"  familiar-handoff)
+      ("$" "Spend"              familiar-spend)]
+     ["Tools"
+      ("t" "ACP traffic"      agent-shell-view-acp-logs)
+      ("T" "Transcript"       agent-shell-open-transcript)
+      ("u" "Usage"            agent-shell-show-usage)]
+     ["History"
+      ("R" "Browse transcripts"  agent-recall-browse)
+      ("/" "Search transcripts"  agent-recall-search-live)
+      ("X" "Reindex transcripts" agent-recall-reindex)]])
 
 ;;;; monet + agent-shell bridge ──────────────────────────────────────────────
 

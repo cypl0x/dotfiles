@@ -553,7 +553,9 @@ the diagnostics at point.  With prefix arg ESCALATE, use the next model tier."
                                  :shell-buffer (car (agent-shell-buffers)))))
     (claude-code
      :available (lambda () (and (fboundp 'claude-code-buffer-name)
-                                (get-buffer (claude-code-buffer-name))))
+                                ;; Signals "not part of a project" outside one.
+                                (when-let* ((name (ignore-errors (claude-code-buffer-name))))
+                                  (get-buffer name))))
      :send (lambda (text) (claude-code-send-string text t)))
     (clipboard
      :available always
