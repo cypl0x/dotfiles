@@ -48,7 +48,7 @@ minibuffer would wait for real input.
 ** DONE Picker over previous prompts: C-r in the prompt (d185743)
 ** DONE Export: C-c C-e copies as Markdown or Org (d185743, a25af0c)
 ** DONE Header line: model, prompts, cost, start; stamped headings (d185743)
-** TODO "How do I" vs imperative: verify behaviour on the use-case list
+** DONE "How do I" vs imperative: verified (question: no change; instruction: undoable edit + mode switch)
 ** DONE Approvals: user chose none (familiar-ask-confirm-tools nil, 8e72fd9)
 
 * DONE Anticipate command (LLM optional)                          :agent:
