@@ -1429,6 +1429,32 @@ and a temp exec-path where bin/tar links to store/tar."
           (+usage-save-events)
           (should (equal (alist-get "org-mode" (plist-get (+usage--events-read) :time) nil nil #'equal) 40.0)))
       (delete-file +usage-events-file))))
+
+(defvar vertico-sort-function nil)
+(defvar vertico-sort-override-function nil)
+
+(ert-deftest usage/m-x-ranks-what-you-run-here-first ()
+  (let ((scores (make-hash-table :test #'equal))
+        (vertico-sort-function (lambda (cs) (sort (copy-sequence cs) #'string<))))
+    (puthash "org-todo" 5 scores)
+    (puthash "org-refile" 9 scores)
+    ;; Ranked ones first, highest first; the rest in vertico's order.
+    (should (equal (funcall (+usage--mx-sort scores)
+                            (list "zap-to-char" "org-todo" "find-file" "org-refile"))
+                   '("org-refile" "org-todo" "find-file" "zap-to-char"))))
+  ;; Set up only in M-x's minibuffer, from this mode's evidence.
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'minibuffer-selected-window) #'selected-window)
+              ((symbol-function '+usage-anticipations)
+               (lambda (_last _mode _n) '((next-line 500 0 500) (forward-word 3 0 3))))
+              ((symbol-function '+usage--merged)
+               (lambda () '((next-line ("j" . 4000)) (forward-word ("M-x" . 3))))))
+      (let ((this-command 'find-file)) (+usage-mx-setup-h))
+      (should-not (local-variable-p 'vertico-sort-override-function))
+      (let ((this-command 'execute-extended-command)) (+usage-mx-setup-h))
+      ;; next-line: run by keys only, so not ranked despite its count.
+      (should (equal (funcall vertico-sort-override-function '("abc" "next-line" "forward-word"))
+                     '("forward-word" "abc" "next-line"))))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))

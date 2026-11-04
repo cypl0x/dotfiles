@@ -9,6 +9,7 @@
 ;;   M-x +usage/report   commands by frequency, with keys used and keys bound
 ;;   M-x +usage/suggest  familiar reads the counts and suggests keys and shortcuts
 ;;   M-x +usage/time     time per mode, cancelled prompts and key prefixes
+;;   M-x                 commands you run here (this mode, after this command) first
 ;;   SPC A .             anticipate: likely next commands here (C-u: ask the model)
 ;;   coach               after 12 j/l/DEL... in a row, the bigger steps bound
 ;;                       here, in the echo area (`+usage-coach' nil: off)
@@ -470,5 +471,62 @@ keys KIND (a string) and (WHAT . NAME), what being minibuffer or prefix.")
       (org-mode)
       (view-mode)
       (pop-to-buffer (current-buffer)))))
+
+;;;; M-x, ranked for where you are
+;;
+;; From the task list: a context-sensitive M-x, the commands that matter
+;; here at the top.  When M-x (or M-S-x) opens, the commands you actually
+;; run in this major mode, and after the command you just ran, come first,
+;; best first (`+usage-anticipations': the same evidence as SPC A .); the
+;; rest follow in vertico's usual order (history, then length).  Keys show
+;; through marginalia as before.  Nothing is sent anywhere.
+
+(defvar vertico-sort-function)
+(defvar vertico-sort-override-function)
+
+(defcustom +usage-mx-ranked 300
+  "How many commands M-x ranks by context (the rest keep vertico's order)."
+  :type 'natnum :group 'convenience)
+
+(defun +usage--mx-sort (scores)
+  "A vertico sort: commands with SCORES first, highest first, then the rest
+in vertico's own order."
+  (lambda (cands)
+    (let* ((base (if vertico-sort-function (funcall vertico-sort-function cands) cands))
+           ranked rest)
+      (dolist (c base)
+        (if (gethash c scores) (push c ranked) (push c rest)))
+      (nconc (sort ranked (lambda (a b) (> (gethash a scores) (gethash b scores))))
+             (nreverse rest)))))
+
+(defun +usage-mx-setup-h ()
+  "In M-x's minibuffer: rank by this context (see above)."
+  (when (and (memq this-command '(execute-extended-command execute-extended-command-for-buffer))
+             (boundp 'vertico-sort-override-function))
+    (let* ((buf (window-buffer (minibuffer-selected-window)))
+           (scores (make-hash-table :test #'equal)))
+      ;; How you reach each command: a context score counts in proportion to
+      ;; your M-x share for it, so motions you run by keys (next-line,
+      ;; evil-append) don't crowd M-x, and what you run through M-x does.
+      (let ((via (make-hash-table :test #'eq)))
+        (pcase-dolist (`(,cmd . ,hows) (+usage--merged))
+          (let ((total (apply #'+ (mapcar #'cdr hows)))
+                (mx (or (cdr (assoc "M-x" hows)) 0)))
+            (puthash cmd (/ mx (+ total 1.0)) via)))
+        (pcase-dolist (`(,cmd ,score . ,_)
+                       (+usage-anticipations +usage--last (buffer-local-value 'major-mode buf)
+                                             +usage-mx-ranked))
+          (let ((share (gethash cmd via 0)))
+            ;; A habit, not the odd M-x: a quarter of its uses at least.  And
+            ;; never the minibuffer's own commands (some ran inside M-x's
+            ;; minibuffer and were counted as by M-x).
+            (when (and (>= share 0.25)
+                       (not (string-match-p "\\`\\(?:execute-extended-command\\|exit-minibuffer\\|abort-\\|minibuffer-\\|vertico-\\|keyboard-\\)"
+                                            (symbol-name cmd))))
+              (puthash (symbol-name cmd) (* score share) scores)))))
+      (when (> (hash-table-count scores) 0)
+        (setq-local vertico-sort-override-function (+usage--mx-sort scores))))))
+
+(add-hook 'minibuffer-setup-hook #'+usage-mx-setup-h)
 (provide '+usage)
 ;;; +usage.el ends here
