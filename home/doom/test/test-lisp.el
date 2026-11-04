@@ -1529,6 +1529,37 @@ and a temp exec-path where bin/tar links to store/tar."
         (should (seq-some (lambda (o) (overlay-get o 'face)) (overlays-in (point-min) (point-max))))
         (+prose-improve-apply)))
     (should (equal (buffer-string) "First one. This is a sentence with errors. Last one."))))
+
+(load (expand-file-name "+pide" test-lisp-dir) nil t)
+
+(ert-deftest pide/outline-follows-point-and-caches-the-index ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert "(defun alpha () 1)\n\n(defun beta () 2)\n\n(defvar gamma 3)\n")
+    (goto-char (point-min))
+    (search-forward "beta")
+    (let ((+pide--index-cache nil) (calls 0))
+      (cl-letf* ((real (symbol-function 'imenu--make-index-alist))
+                 ((symbol-function 'imenu--make-index-alist)
+                  (lambda (&rest a) (cl-incf calls) (apply real a))))
+        (+pide--outline-refresh (current-buffer))
+        (+pide--outline-refresh (current-buffer))
+        ;; Built once while the text is the same.
+        (should (= calls 1))
+        (with-current-buffer "*pide outline*"
+          (should (string-match-p "alpha" (buffer-string)))
+          (should (string-match-p "gamma" (buffer-string)))
+          ;; The entry point is in is highlighted.
+          (goto-char (point-min))
+          (search-forward "beta")
+          (should (eq (get-text-property (1- (point)) 'face) 'highlight)))
+        (goto-char (point-max))
+        (insert "(defun delta () 4)\n")
+        (+pide--outline-refresh (current-buffer))
+        (should (= calls 2))
+        (with-current-buffer "*pide outline*"
+          (should (string-match-p "delta" (buffer-string))))))
+    (kill-buffer "*pide outline*")))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
