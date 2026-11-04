@@ -1474,6 +1474,38 @@ and a temp exec-path where bin/tar links to store/tar."
       (should (equal (nth 4 (nth 1 rows)) "direct 65.1.1.1:41641"))
       (should (equal (nth 5 (nth 1 rows)) "← in use"))
       (should (string-match-p "days ago" (nth 3 (nth 2 rows)))))))
+
+(load (expand-file-name "+prose" test-lisp-dir) nil t)
+
+(ert-deftest prose/review-language-readability-and-long-sentences ()
+  ;; Language by its commonest words; umlauts count as vowels.
+  (should (equal (+prose--language "Das ist nicht der Fall und die Sache ist gut.") "de"))
+  (should (equal (+prose--language "This is not the case and that is fine.") "en"))
+  (should (= (+prose--syllables "Mädchen") 2))
+  ;; Amstad for German, Flesch for English: short plain sentences read easy.
+  (should (> (car (+prose--readability "Ich gehe heim. Das ist gut." "de")) 60))
+  (should (> (car (+prose--readability "I go home. That is good." "en")) 80))
+  (with-temp-buffer
+    (text-mode)
+    (insert "Short one.  "
+            (mapconcat #'identity (make-list 30 "word") " ") ".  Another short one.")
+    (let ((long (seq-filter (lambda (s) (> (nth 2 s) 25)) (+prose--sentences (point-min) (point-max)))))
+      (should (= (length long) 1))
+      (should (= (nth 2 (car long)) 30)))
+    ;; The report: LanguageTool's findings by rule, the long sentence, the score.
+    (cl-letf (((symbol-function 'flymake-diagnostics)
+               (lambda (&rest _) (list 'd1 'd2)))
+              ((symbol-function 'flymake-diagnostic-text)
+               (lambda (d) (if (eq d 'd1) "LTeX [EN_A_VS_AN]: Use 'an'." "LTeX [EN_A_VS_AN]: Use 'an' again.")))
+              ((symbol-function 'flymake-diagnostic-beg) (lambda (_) 1))
+              ((symbol-function 'pop-to-buffer) #'ignore))
+      (dlet ((flymake-mode t))
+        (+prose/review))
+      (with-current-buffer "*prose review*"
+        (should (string-match-p "EN_A_VS_AN +2" (buffer-string)))
+        (should (string-match-p "1 sentence over 25 words" (buffer-string)))
+        (should (string-match-p "Flesch reading ease" (buffer-string))))
+      (kill-buffer "*prose review*"))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))

@@ -10,6 +10,10 @@
 
 (unless (fboundp 'map!)
   (defmacro map! (&rest _) "Ignore keybindings in tests." nil))
+(unless (fboundp 'use-package!)
+  (defmacro use-package! (&rest _) "Ignore package setup in tests." nil))
+(unless (fboundp 'add-hook!)
+  (defmacro add-hook! (&rest _) "Ignore Doom hooks in tests." nil))
 (unless (fboundp 'custom-set-faces!)
   (defmacro custom-set-faces! (&rest _) "Ignore face settings in tests." nil))
 (unless (fboundp 'after!)
