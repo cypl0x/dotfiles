@@ -66,6 +66,13 @@ shim pkg-config script returning direct -I/-L/-l flags."
 (add-hook 'text-mode-hook #'+prose/jinx-mode-safe)
 (add-hook 'org-mode-hook #'+prose/jinx-mode-safe)
 (add-hook 'markdown-mode-hook #'+prose/jinx-mode-safe)
+;; Code too: jinx checks only comments, strings and docstrings there
+;; (`jinx-include-faces').  It replaced Doom's :checkers spell (flyspell),
+;; which ran on top of it in text buffers.
+(add-hook 'prog-mode-hook #'+prose/jinx-mode-safe)
+(global-set-key [remap ispell-word] #'jinx-correct)   ; z=, M-$
+(map! :m "]s" #'jinx-next              ; also ä s / ö s
+      :m "[s" #'jinx-previous)
 
 ;;;; mixed-pitch — Variable-pitch prose, fixed-pitch code ────────────────────
 
@@ -281,7 +288,8 @@ Shows Flesch Reading Ease, Flesch-Kincaid Grade Level, and Coleman-Liau Index."
 
 (define-minor-mode +prose/reading-mode
   "Hide inline diagnostics, spelling, and lint overlays for distraction-free reading.
-Disables flycheck, flymake, flyspell, jinx, eglot inlay hints, and sideline."
+Disables flycheck, flymake, flyspell, jinx, eglot inlay hints, and sideline;
+off turns jinx back on."
   :lighter " 📖"
   :global nil
   (if +prose/reading-mode
@@ -298,7 +306,7 @@ Disables flycheck, flymake, flyspell, jinx, eglot inlay hints, and sideline."
         (message "Reading mode ON — diagnostics hidden"))
     (when (bound-and-true-p flycheck-mode) (flycheck-mode 1))
     (when (derived-mode-p 'prog-mode) (flymake-mode 1))
-    (when (derived-mode-p 'text-mode 'org-mode) (flyspell-mode 1))
+    (when (derived-mode-p 'text-mode 'prog-mode) (+prose/jinx-mode-safe))
     (display-line-numbers-mode 1)
     (message "Reading mode OFF")))
 
