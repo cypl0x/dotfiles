@@ -109,7 +109,7 @@ there are days of data (now ~1 h, partly lab noise).
 - inari GC keep-roots after 2026-11-06; swaync/plugdev check after next login.
 * DONE Profile first-frame startup (user: yes, 2026-11-04)                :perf:
 First frame 0.78 → 0.57 s, later 0.43 → 0.22 s (67bf68a).
-** TODO Daemon init 13 s (Doom: 9.9 s for 336 pkgs): per-file timing needs a hook before Doom's baked init.32.0.el (EMACSLOADPATH and DOOMDIR were ignored); try doom's :core profiling or a profile under ~/.config/emacs/profiles. org-roam syncs twice at startup (34 ms each; +org-power.el defeats Doom's lazy sync).
+** DONE Daemon init 13.3 → 8.3 s, Doom 9.8 → 3.7 s (deferrals). Remaining ~4.6 s outside Doom's count: next look at after-init and persist restore.
 
 * User list 2026-11-04 ~09:50 (verbatim intent; see JOURNAL for results)
 ** DONE C-SPC is not working: in minibuffers it was set-mark (evil insert map not active); M-ß prompt binds it (c7d5ed3) :bug:
