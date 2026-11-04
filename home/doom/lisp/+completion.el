@@ -154,35 +154,114 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
 
 ;; SPC ': reopen the last minibuffer with what was in it.  `vertico-repeat'
 ;; did that for completion sessions only; M-ß's prompt (a plain
-;; read-string) and other prompts were gone after C-g.
-(defvar +minibuffer--last nil
-  "The last minibuffer closed: plist (:command CMD :input TEXT :vertico BOOL).")
+;; read-string) and other prompts were gone after C-g.  In a minibuffer,
+;; C-' goes on to the one closed before it and C-" back, the way
+;; `+popup/other' cycles through popups.
+(defvar +minibuffer-ring-size 30
+  "How many closed minibuffers `+minibuffer/resume' can go back through.")
+
+(defvar +minibuffer--ring nil
+  "Minibuffers closed, newest first: plists (:command CMD :input TEXT :session S).
+S is the `vertico-repeat' session of a completion session (candidate too).")
+
+(defvar-local +minibuffer--index nil
+  "Where in `+minibuffer--ring' the minibuffer reopened from; nil if new.")
+
+(defvar +minibuffer--leaving nil
+  "Non-nil while C-' / C-\" swap minibuffers: the one left isn't remembered.")
+
+(defvar vertico-repeat-history)
+(declare-function vertico-repeat--run "ext:vertico-repeat" (session))
+
+(defun +minibuffer--entry ()
+  "The minibuffer being closed, as a `+minibuffer--ring' entry, or nil."
+  (let ((cmd current-minibuffer-command))
+    (when (and (symbolp cmd) (commandp cmd)
+               (not (memq cmd '(+minibuffer/resume vertico-repeat vertico-repeat-last
+                                vertico-repeat-previous vertico-repeat-select))))
+      ;; vertico-repeat saved its session first (a local exit hook).
+      (let ((session (car-safe (bound-and-true-p vertico-repeat-history))))
+        (list :command cmd
+              :input (minibuffer-contents-no-properties)
+              :session (and (bound-and-true-p vertico--input)
+                            (eq (car-safe session) cmd)
+                            session))))))
+
+(defun +minibuffer--remember (entry)
+  "Put ENTRY first in `+minibuffer--ring', once."
+  (when entry
+    (setq +minibuffer--ring
+          (seq-take (cons entry
+                          (seq-remove (lambda (e)
+                                        (and (eq (plist-get e :command) (plist-get entry :command))
+                                             (equal (plist-get e :input) (plist-get entry :input))))
+                                      +minibuffer--ring))
+                    +minibuffer-ring-size))))
 
 (defun +minibuffer-remember-h ()
   "Remember the minibuffer being closed, for `+minibuffer/resume'."
-  (let ((cmd current-minibuffer-command))
-    (when (and (commandp cmd)
-               (not (memq cmd '(+minibuffer/resume vertico-repeat vertico-repeat-last))))
-      (setq +minibuffer--last
-            (list :command cmd
-                  :input (minibuffer-contents-no-properties)
-                  :vertico (and (bound-and-true-p vertico--input) t))))))
+  (unless +minibuffer--leaving
+    (+minibuffer--remember (+minibuffer--entry))))
 (add-hook 'minibuffer-exit-hook #'+minibuffer-remember-h)
 
-(defun +minibuffer/resume ()
-  "Reopen the last minibuffer with its input.
+(defun +minibuffer--open (index)
+  "Reopen entry INDEX of `+minibuffer--ring' with its input.
 Completion sessions through `vertico-repeat' (candidate position too);
 others (M-ß's prompt, plain prompts) by running their command again with
 the input put back."
-  (interactive)
-  (pcase-let (((map :command :input :vertico) +minibuffer--last))
-    (cond ((null command) (user-error "No minibuffer to reopen yet"))
-          ((and vertico (fboundp 'vertico-repeat)) (call-interactively #'vertico-repeat))
-          (t (minibuffer-with-setup-hook
-                 (lambda () (delete-minibuffer-contents) (insert input))
-               (call-interactively command))))))
+  (setq +minibuffer--leaving nil)
+  (pcase-let (((map :command :input :session) (nth index +minibuffer--ring))
+              (inhibit-quit nil))       ; from a timer: C-g must still quit
+    (minibuffer-with-setup-hook
+        (lambda ()
+          (setq +minibuffer--index index)
+          (unless session (delete-minibuffer-contents) (insert input)))
+      (setq this-command command)
+      (if (and session (or (fboundp 'vertico-repeat--run) (require 'vertico-repeat nil t)))
+          (vertico-repeat--run session)
+        (call-interactively command)))))
 
-(map! :leader :desc "Reopen last minibuffer" "'" #'+minibuffer/resume)
+(defun +minibuffer/resume ()
+  "Reopen the last minibuffer with its input.
+In it, \\`C-'' goes back to the one before, \\`C-\"' forward again."
+  (interactive)
+  (unless +minibuffer--ring (user-error "No minibuffer to reopen yet"))
+  (+minibuffer--open 0))
+
+(defun +minibuffer--swap-index (step)
+  "The ring position STEP away from the current minibuffer, or nil.
+A minibuffer not reopened is remembered first, so it can be come back to;
+a reopened one keeps its edits."
+  (let* ((entry (+minibuffer--entry))
+         (base (cond (+minibuffer--index
+                      (when entry (setf (nth +minibuffer--index +minibuffer--ring) entry))
+                      +minibuffer--index)
+                     (entry (+minibuffer--remember entry) 0)
+                     (t -1)))
+         (next (+ base step)))
+    (and (<= 0 next) (< next (length +minibuffer--ring)) next)))
+
+(defun +minibuffer--swap (step)
+  (let ((next (or (+minibuffer--swap-index step)
+                  (user-error "No %s minibuffer" (if (> step 0) "older" "newer")))))
+    (setq +minibuffer--leaving t)
+    (run-at-time 0 nil #'+minibuffer--open next)
+    (abort-recursive-edit)))
+
+(defun +minibuffer/older ()
+  "Swap this minibuffer for the one closed before it (`+minibuffer/resume')."
+  (interactive)
+  (+minibuffer--swap 1))
+
+(defun +minibuffer/newer ()
+  "Swap this minibuffer for the one closed after it."
+  (interactive)
+  (+minibuffer--swap -1))
+
+(map! :leader :desc "Reopen last minibuffer" "'" #'+minibuffer/resume
+      :map minibuffer-local-map
+      "C-'" #'+minibuffer/older
+      "C-\"" #'+minibuffer/newer)
 
 (provide '+completion)
 ;;; +completion.el ends here

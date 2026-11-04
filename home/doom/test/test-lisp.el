@@ -1056,18 +1056,25 @@ and a temp exec-path where bin/tar links to store/tar."
       (should-not +perf--gc-restore))))
 
 (ert-deftest completion/minibuffer-resume-puts-the-input-back ()
-  (let ((+minibuffer--last nil) got)
+  (let ((+minibuffer--ring nil) (+minibuffer--leaving nil) got)
     (defalias 'test-minibuffer--cmd (lambda () (interactive) (setq got (read-string "x: "))))
-    ;; Closing a minibuffer remembers its command and input.
-    (with-temp-buffer
-      (insert "half a question")
-      (let ((current-minibuffer-command 'test-minibuffer--cmd))
-        (+minibuffer-remember-h)))
-    (should (equal (plist-get +minibuffer--last :input) "half a question"))
-    ;; The resume itself isn't remembered as the thing to resume.
-    (with-temp-buffer
-      (let ((current-minibuffer-command '+minibuffer/resume)) (+minibuffer-remember-h)))
-    (should (eq (plist-get +minibuffer--last :command) 'test-minibuffer--cmd))
+    (defalias 'test-minibuffer--other (lambda () (interactive) (read-string "y: ")))
+    (cl-flet ((close (cmd text)
+                (with-temp-buffer
+                  (insert text)
+                  (let ((current-minibuffer-command cmd)) (+minibuffer-remember-h)))))
+      ;; Closing a minibuffer remembers its command and input.
+      (close 'test-minibuffer--cmd "half a question")
+      (should (equal (plist-get (car +minibuffer--ring) :input) "half a question"))
+      ;; The resume itself isn't remembered as the thing to resume.
+      (close '+minibuffer/resume "")
+      (should (= (length +minibuffer--ring) 1))
+      ;; Newest first, each once.
+      (close 'test-minibuffer--other "b")
+      (close 'test-minibuffer--other "c")
+      (close 'test-minibuffer--other "b")
+      (should (equal (mapcar (lambda (e) (plist-get e :input)) +minibuffer--ring)
+                     '("b" "c" "half a question"))))
     ;; Reopened: the same command, its input back in place.  (Batch
     ;; read-string reads stdin: a stand-in runs the minibuffer setup.)
     (cl-letf (((symbol-function 'read-string)
@@ -1075,14 +1082,34 @@ and a temp exec-path where bin/tar links to store/tar."
                  (with-temp-buffer (insert "old")
                    (run-hooks 'minibuffer-setup-hook)
                    (buffer-string)))))
-      (+minibuffer/resume))
+      (+minibuffer--open 2))
     (should (equal got "half a question"))
-    ;; Vertico sessions go to vertico-repeat.
+    ;; Vertico sessions go to vertico-repeat, with their session.
     (let (repeated)
-      (cl-letf (((symbol-function 'vertico-repeat) (lambda () (interactive) (setq repeated t))))
-        (setq +minibuffer--last '(:command find-file :input "~/x" :vertico t))
+      (cl-letf (((symbol-function 'vertico-repeat--run) (lambda (s) (setq repeated s))))
+        (setq +minibuffer--ring '((:command find-file :input "~/x" :session (find-file "~/x"))))
         (+minibuffer/resume))
-      (should repeated))))
+      (should (equal repeated '(find-file "~/x"))))))
+
+(ert-deftest completion/minibuffer-cycles-like-popup-other ()
+  (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
+        (+minibuffer--leaving nil))
+    (defalias 'test-minibuffer--cmd (lambda () (interactive)))
+    (with-temp-buffer
+      ;; A new minibuffer: remembered first, so C-' goes to the one before.
+      (insert "typed")
+      (let ((current-minibuffer-command 'test-minibuffer--cmd))
+        (should (= (+minibuffer--swap-index 1) 1))
+        (should (equal (plist-get (car +minibuffer--ring) :input) "typed"))
+        (should-not (+minibuffer--swap-index -1))
+        ;; Reopened from position 1: edits kept there, neighbours either side.
+        (setq +minibuffer--index 1)
+        (erase-buffer) (insert "edited")
+        (should (= (+minibuffer--swap-index 1) 2))
+        (should (equal (plist-get (nth 1 +minibuffer--ring) :input) "edited"))
+        (should (= (+minibuffer--swap-index -1) 0))
+        (setq +minibuffer--index 2)
+        (should-not (+minibuffer--swap-index 1))))))
 
 (ert-deftest perf/m-x-for-buffer-finds-bound-and-remapped-commands ()
   (let* ((map (make-sparse-keymap))
