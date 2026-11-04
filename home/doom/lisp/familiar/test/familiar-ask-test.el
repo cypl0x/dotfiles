@@ -543,6 +543,32 @@ answered \"one \" \"two\" in chunks; BODY sees the buffer, the request in
     (test-familiar-ask--inline "first POINTline\nlast" "more @inline"
       (should (equal (buffer-string) "first line\none two\nlast"))
       (should (string-match-p "first line\n⟦here⟧\n\nlast" (car asked))))))
+
+(ert-deftest familiar-ask/transient-opens-before-sending-and-sends-its-choices ()
+  (skip-unless test-familiar-available)
+  ;; @transient: nothing is sent; the transient opens on the prompt, its
+  ;; switches set from the prompt's other keywords.
+  (let (setup asked)
+    (cl-letf (((symbol-function 'transient-setup)
+               (lambda (&rest args) (setq setup args)))
+              ((symbol-function 'familiar-ask--send) (lambda (&rest _) (error "Sent"))))
+      (with-temp-buffer
+        (familiar-ask "fix this @inline @transient @model:m-one")))
+    (should (eq (car setup) 'familiar-ask-transient))
+    (should (equal (car (plist-get (nthcdr 3 setup) :scope)) "fix this"))
+    (should (equal (plist-get (nthcdr 3 setup) :value) '("--where=inline" "--model=m-one")))
+    (let ((familiar-ask-follow-up t))
+      (should (equal (familiar-ask--transient-value '(new) nil) nil))
+      (should (equal (familiar-ask--transient-value nil t) '("--follow-up"))))
+    ;; Its choices go back in as keywords, read by `familiar-ask' as usual.
+    (should (equal (familiar-ask--transient-prompt "fix this" '("--where=echo" "--model=m-one"))
+                   "fix this @echo @new @model:m-one"))
+    (should (equal (familiar-ask--transient-prompt "fix this" '("--follow-up"))
+                   "fix this @follow-up"))
+    (cl-letf (((symbol-function 'transient-scope) (lambda (&rest _) (list "fix this" '(:buffer x))))
+              ((symbol-function 'familiar-ask) (lambda (&rest args) (setq asked args))))
+      (familiar-ask-transient-send '("--where=replace")))
+    (should (equal asked '("fix this @replace @new" nil (:buffer x))))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"

@@ -27,6 +27,8 @@
 ;;   @inline          write the answer into the buffer: at point, after the region,
 ;;                    or on a new line (evil normal state); one undo takes it back
 ;;   @replace         write it in place of the region
+;;   @transient       after RET, a transient: where the answer goes, which
+;;                    conversation, who answers; then send or edit
 ;;   C-r  (prompt)    pick an earlier prompt
 ;;   C-c C-c          in the conversation: send the follow-up (from anywhere)
 ;;   RET / S-RET      at its end: send a follow-up / newline
@@ -82,7 +84,8 @@ arg.  RET at the end of an answer always follows up."
     ("echo" . "short answer in the echo area, no window")
     ("model" . "pick who answers: any gptel model, or a running agent (@model:NAME)")
     ("inline" . "write the answer into the buffer, at point or after the region")
-    ("replace" . "write the answer in place of the region"))
+    ("replace" . "write the answer in place of the region")
+    ("transient" . "choose where, which conversation and who answers before sending"))
   "Words a prompt may contain as @WORD; taken out before it is sent.
 Next to gptel's presets (@fast, @smart, @deep), which gptel applies.")
 
@@ -922,6 +925,69 @@ the whole of it back (and the replaced text with it)."
                     (pulse-momentary-highlight-region start end)
                     (message "✦ Written into %s (undo takes it back)" (buffer-name buf)))))))))))
 
+;;;; @transient: decide how to ask after writing the prompt
+
+(require 'transient)
+
+(defun familiar-ask--transient-value (keywords spec)
+  "The transient's starting arguments, from a prompt's KEYWORDS and @model SPEC."
+  (delq nil
+        (list (cond ((memq 'echo keywords) "--where=echo")
+                    ((memq 'inline keywords) "--where=inline")
+                    ((memq 'replace keywords) "--where=replace"))
+              (and (or (memq 'follow-up keywords)
+                       (and familiar-ask-follow-up (not (memq 'new keywords))))
+                   "--follow-up")
+              (and (stringp spec) (concat "--model=" spec)))))
+
+(defun familiar-ask--transient-prompt (prompt args)
+  "PROMPT with the @keywords that ARGS of `familiar-ask-transient' stand for."
+  (string-join
+   (delq nil (list prompt
+                   (when-let* ((where (transient-arg-value "--where=" args)))
+                     (concat "@" where))
+                   (if (member "--follow-up" args) "@follow-up" "@new")
+                   (when-let* ((model (transient-arg-value "--model=" args)))
+                     (concat "@model:" model))))
+   " "))
+
+(defun familiar-ask--read-model (prompt _initial _history)
+  "Read a label of `familiar-ask--model-choices' with PROMPT."
+  (completing-read prompt (familiar-ask--model-choices) nil t))
+
+(transient-define-prefix familiar-ask-transient ()
+  "How to ask the prompt written (@transient): where the answer goes,
+which conversation, who answers."
+  [:description
+   (lambda () (format "✦ %s" (truncate-string-to-width (car (transient-scope)) 70 nil nil "…")))
+   ["Answer goes"
+    ("w" "into (unset: the conversation)" "--where=" :choices ("echo" "inline" "replace"))
+    ("f" "follow up the running conversation" "--follow-up")]
+   ["Answered by"
+    ("m" "model or agent" "--model=" :reader familiar-ask--read-model)]
+   ["Ask"
+    ("RET" "send" familiar-ask-transient-send)
+    ("e" "edit the prompt first" familiar-ask-transient-edit)]])
+
+(transient-define-suffix familiar-ask-transient-send (args)
+  "Send the prompt as the transient says."
+  (interactive (list (transient-args 'familiar-ask-transient)))
+  (pcase-let ((`(,prompt ,origin) (transient-scope)))
+    (familiar-ask (familiar-ask--transient-prompt prompt args) nil origin)))
+
+(transient-define-suffix familiar-ask-transient-edit (args)
+  "Edit the prompt, with the transient's choices as @keywords, in a buffer."
+  (interactive (list (transient-args 'familiar-ask-transient)))
+  (pcase-let ((`(,prompt ,origin) (transient-scope)))
+    (setq familiar-ask--origin origin)
+    (familiar-ask--open-editor (familiar-ask--transient-prompt prompt args))))
+
+(defun familiar-ask--transient (prompt origin keywords spec)
+  "Open `familiar-ask-transient' for PROMPT (keywords out) asked at ORIGIN."
+  (transient-setup 'familiar-ask-transient nil nil
+                   :scope (list prompt origin)
+                   :value (familiar-ask--transient-value keywords spec)))
+
 (defvar familiar-ask-minibuffer-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c '") #'familiar-ask-edit-prompt)
@@ -1011,23 +1077,25 @@ ask's, which could be another buffer minutes ago."
   (pcase-let* ((`(,prompt . ,spec) (familiar-ask--model-spec prompt))
                (`(,prompt . ,keywords) (familiar-ask--keywords prompt)))
     (when (string-blank-p prompt) (user-error "Empty prompt"))
-    (let* ((follow (cond ((memq 'new keywords) nil)
-                         ((memq 'follow-up keywords) t)
-                         ((eq fresh t) nil)
-                         ((eq fresh 'follow-up) t)
-                         (t familiar-ask-follow-up)))
-           (echo (memq 'echo keywords))
-           (origin (or origin (familiar-ask--capture)))
-           (model (and spec (familiar-ask--resolve-model spec))))
-      (cond
-       ((eq (car model) 'agent)
-        (familiar-ask--hand-off prompt (cdr model) origin))
-       ((or (memq 'inline keywords) (memq 'replace keywords))
-        (familiar-ask--inline prompt origin (memq 'replace keywords) model))
-       (t
-        (familiar-ask--send
-         (if echo (concat prompt "\n\n" familiar-ask--echo-instruction) prompt)
-         follow echo origin keywords model))))))
+    (if (memq 'transient keywords)
+        (familiar-ask--transient prompt (or origin (familiar-ask--capture)) keywords spec)
+      (let* ((follow (cond ((memq 'new keywords) nil)
+                           ((memq 'follow-up keywords) t)
+                           ((eq fresh t) nil)
+                           ((eq fresh 'follow-up) t)
+                           (t familiar-ask-follow-up)))
+             (echo (memq 'echo keywords))
+             (origin (or origin (familiar-ask--capture)))
+             (model (and spec (familiar-ask--resolve-model spec))))
+        (cond
+         ((eq (car model) 'agent)
+          (familiar-ask--hand-off prompt (cdr model) origin))
+         ((or (memq 'inline keywords) (memq 'replace keywords))
+          (familiar-ask--inline prompt origin (memq 'replace keywords) model))
+         (t
+          (familiar-ask--send
+           (if echo (concat prompt "\n\n" familiar-ask--echo-instruction) prompt)
+           follow echo origin keywords model)))))))
 
 (defun familiar-ask--show (buf win)
   "Display BUF, from WIN when it's still there, unless BUF is on screen.

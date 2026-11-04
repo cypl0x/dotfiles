@@ -55,7 +55,8 @@ All share one bearer token, kept in =familiar-mcp-http-token-file= (0600).
   =@model= / =@model:NAME= picks who answers (any gptel model, or a running
   agent such as agent-shell), =@SERVER= adds an MCP server's tools for that turn.
   =@inline= writes the answer into the buffer (at point, after the region),
-  =@replace= in place of the region; one undo takes it back.
+  =@replace= in place of the region; one undo takes it back.  =@transient=
+  opens a transient after RET to choose all that before sending.
 - The context of where you are goes along: buffer, modes, point, region
   or nearby text, an active minibuffer's input and candidates, a shell's
   prompt.  =familiar-ask-context-functions= adds more (e.g. a PDF selection).
