@@ -202,5 +202,24 @@ nothing itself."
 (after! familiar-ask
   (add-hook 'familiar-ask-context-functions #'+vellumory-ask-selection)
   (add-hook 'familiar-ask-context-functions #'+vellumory-ask-page 90))
+
+;; A white/black frame around part of the page after scrolling: the box
+;; cursor drawn around the image tile under point.  Vellumory hides evil's
+;; cursor buffer-locally, but evil-collection's ultra-scroll integration
+;; (Doom's :ui smooth-scroll) hides it while scrolling and then
+;; `kill-local-variable's the evil cursor variables, Vellumory's included,
+;; so the global box comes back.  Vellumory never wants a cursor: keep that
+;; hook out of its buffers.  (Upstream: vellumory or evil-collection.)
+(declare-function evil-collection-ultra-scroll--set-cursor-visible "ext:evil-collection-ultra-scroll" (arg))
+(defvar ultra-scroll-hide-functions)
+
+(defun +vellumory-keep-cursor-hidden-h ()
+  "Keep evil-collection's ultra-scroll cursor restore out of this buffer."
+  (when (boundp 'ultra-scroll-hide-functions)
+    (setq-local ultra-scroll-hide-functions
+                (remq #'evil-collection-ultra-scroll--set-cursor-visible
+                      (default-value 'ultra-scroll-hide-functions)))))
+
+(add-hook 'vellumory-mode-hook #'+vellumory-keep-cursor-hidden-h)
 (provide '+vellumory)
 ;;; +vellumory.el ends here
