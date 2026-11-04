@@ -156,3 +156,4 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE Bug found on the way: freeze recorder errored every 30 s (profiler log export overflow); now turns itself off (a7003a8)
 ** DONE Zig: merged (user ok with 100 MB), nrs + doom sync; zig-ts-mode fontifies, zls hover works (live 22:11) — verified 23:0x in a fresh throwaway daemon: module active, zig-ts-mode, zls attached; your daemon needs restart (new emacs-packages-deps site-start.el; doom/reload only reloads user init), user asked 22:15
 ** DONE "familiar-ask jumps directly into fresh multiline prompt": user: C-M-ß covers it
+** DONE familiar footprint ledger: tools + @inline changes recorded apart from user edits; SPC A L; take back (f13176d)

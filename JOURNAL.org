@@ -39,6 +39,11 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 23:08] — See what the AI touched
+- Every change familiar's model makes in Emacs (its tools, =@inline=,
+  even arbitrary elisp) now lands in a ledger, apart from your own edits:
+  =SPC A L= lists them, =RET= goes there, =r= takes one back.
+
 ** [2026-11-04 Mi 23:01] — Fewer stuck processes, a frame gone, zoxide in Emacs
 - 169 stuck "Claude Code" notification listeners (~1 GiB, some 5 days
   old) cleared; new ones give up after 15 minutes.  Atuin AI spotted it.
