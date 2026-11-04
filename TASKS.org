@@ -22,7 +22,7 @@ project" for "Can you reformat this org buffer?".
 checked live (shell started in background, answered "ok"). Handoff:
 guard + same start helper, not yet run live (would write into the
 user's shell). Real-key check of SPC A still to do when the user is away.
-* TODO Central ask command (M-ß; C-M-? clashed with dired)                  :agent:big:
+* DONE Central ask command (M-ß; C-M-? clashed with dired)                  :agent:big:
 Atuin-AI experience one key away, anywhere (incl. minibuffer, non-file
 buffers). Full context by default (buffer, region, point, modes, open
 buffers) + tools to introspect / eval elisp; streaming popup with tool
@@ -123,8 +123,8 @@ First frame 0.78 → 0.57 s, later 0.43 → 0.22 s (67bf68a).
 ** DONE QWERTZ: ö ä = [ ], Ö Ä = { }, ü Ü = definition/back (aa6afc2); ß still free
 ** DONE Prose: fill/unfill, sentence lines, join, AI split with word check (this commit)
 ** DONE Usage insights → coach for held keys (8c3d4e4); more as data grows
-** ACTIVE Big: native AI harness, all protocols: plan in lisp/familiar/ROADMAP.org; step 1 (MCP client per turn) done a5ad54f
-** ACTIVE Inspiration: research report in JOURNAL 2026-11-04; adopt items one by one
+** DONE AI harness: 7 of 8 roadmap steps (MCP client+HTTP server, OpenAI, Atuin, history, ACP agent with fs/terminal/load, A2A, package); sampling deferred with reason (ROADMAP.org)
+** DONE Inspiration adopted where it fixes or speeds something: defaults, jinx/autocorrect, recentering. Not adopted without a reason from the user: per-level heading sizes (taste), org-return-dwim (Doom's +org/return is used), jit-lock defer (no lag seen), org-roam polish (roam dir empty).
 ** DONE monet hook was dead (yuya373 claude-code); removed, +monet.el covers attach
 ** DONE jinx only (en+de, code comments too); :checkers spell dropped (2a15d16), doom sync done
 ** DONE familiar-ask header: model of the last turn (8573989)
