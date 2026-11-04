@@ -1288,6 +1288,39 @@ and a temp exec-path where bin/tar links to store/tar."
       (should (equal (buffer-string) "x -----")))
     (kill-buffer "*Org by example*")))
 
+
+(load (expand-file-name "+org-ai-capture" test-lisp-dir) nil t)
+
+(ert-deftest org-ai-capture/files-entries-where-the-model-says-checked ()
+  (with-temp-buffer
+    (org-mode)
+    (buffer-enable-undo)
+    (insert "* Work\n** Reports\n* Home\n")
+    (undo-boundary)
+    (let* ((before (buffer-string))
+           (outline (+org-ai-capture--outline))
+           (entries (+org-ai-capture--entries "TODO Write Q4 report\nBuy milk\nLearn Zig\nStray")))
+      (should (equal entries '("* TODO Write Q4 report" "* Buy milk" "* Learn Zig" "* Stray")))
+      ;; The request numbers headings and entries.
+      (should (string-match-p "\\[2\\] Reports\n" (+org-ai-capture--request outline entries)))
+      (should (string-match-p "{3} \\* Learn Zig" (+org-ai-capture--request outline entries)))
+      (let ((plan (+org-ai-capture--plan
+                   '(:placements ((:entry 1 :under 2)
+                                  (:entry 2 :under 3)
+                                  (:entry 3 :new "Learning" :new_under 0)
+                                  (:entry 4 :under 99)))
+                   outline entries)))
+        (should (equal (+org-ai-capture--apply plan)
+                       '("Reports" "Home" "Learning" "top level"))))
+      (should (equal (buffer-string)
+                     "* Work\n** Reports\n*** TODO Write Q4 report\n* Home\n** Buy milk\n* Learning\n** Learn Zig\n* Stray\n"))
+      ;; One undo takes the capture back.
+      (undo-boundary)
+      (primitive-undo 1 (cdr buffer-undo-list))
+      (should (equal (buffer-string) before))))
+  ;; Starred text keeps its subtrees together.
+  (should (equal (+org-ai-capture--entries "** A\nbody\n*** sub\n** B")
+                 '("** A\nbody\n*** sub" "** B"))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
