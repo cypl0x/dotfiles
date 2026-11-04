@@ -128,7 +128,7 @@ First frame 0.78 → 0.57 s, later 0.43 → 0.22 s (67bf68a).
 ** DONE monet hook was dead (yuya373 claude-code); removed, +monet.el covers attach
 ** DONE jinx only (en+de, code comments too); :checkers spell dropped (2a15d16), doom sync done
 ** DONE familiar-ask header: model of the last turn (8573989)
-** TODO Ask user: evil-move-cursor-back nil, evil-ex-substitute-global t (tecosaur); change muscle memory
-** TODO Ask user: fetch tecosaur's autocorrect (learns from jinx corrections; code.tecosaur.net)
-** TODO Ask user: is the bar cursor in the minibuffer what "line cursor" meant?
+** DONE User: neither evil default (2026-11-04)
+** ACTIVE User: yes, add autocorrect (2026-11-04)
+** DONE User: the bar cursor is it
 ** TODO Next harness step: streamable-HTTP MCP server in Emacs (ROADMAP step 2)
