@@ -104,7 +104,7 @@
                 (should familiar-ask-mode)
                 (should (equal gptel-tools familiar-ask-tools))
                 (should (eq gptel-model (alist-get familiar-ask-tier familiar-models)))
-                (should (string-match-p "^\\*\\* What is this\\?\n#\\+begin_context" (buffer-string)))
+                (should (string-match-p "^\\*\\* What is this\\?  \\[[^]]+\\]\n#\\+begin_context" (buffer-string)))
                 (should (string-prefix-p (expand-file-name familiar-ask-directory) buffer-file-name))
                 ;; The same conversation takes the next question.
                 (setq familiar-ask--origin (familiar-ask--capture))
@@ -145,5 +145,31 @@
       (familiar-ask--after-response nil nil)
       (familiar-ask--after-response nil nil))
     (should (equal (buffer-string) "** q\nanswer\n\n** "))))
+
+
+(ert-deftest familiar-ask/transcript-drops-context-and-title ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (insert "#+title: familiar-ask x\n\n** q  [2026-11-04 Mi 06:40]\n#+begin_context\nBuffer: b\n#+end_context\n\nanswer\n\n** ")
+    (should (equal (familiar-ask--transcript) "** q  [2026-11-04 Mi 06:40]\n\nanswer\n\n**"))))
+
+(ert-deftest familiar-ask/prompt-heading-is-stamped-first-line ()
+  (skip-unless test-familiar-available)
+  (let* ((familiar-ask-directory (make-temp-file "familiar-ask" t))
+         (familiar-ask--buffer-name "*familiar-ask-test*"))
+    (cl-letf (((symbol-function 'gptel-send) #'ignore)
+              ((symbol-function 'display-buffer) #'ignore))
+      (unwind-protect
+          (test-familiar-ask--in "x POINT\n"
+            (setq familiar-ask--origin (familiar-ask--capture))
+            (with-current-buffer (familiar-ask "first line\nsecond line" t)
+              (should (string-match-p
+                       "^\\*\\* first line  \\[[0-9-]+ [[:alpha:]]+ [0-9:]+\\]\nsecond line\n#\\+begin_context"
+                       (buffer-string)))
+              (should (string-match-p "1 prompts" (familiar-ask--header-line)))))
+        (when-let* ((b (get-buffer familiar-ask--buffer-name)))
+          (with-current-buffer b (set-buffer-modified-p nil))
+          (kill-buffer b))
+        (delete-directory familiar-ask-directory t)))))
 
 ;;; test-familiar-ask.el ends here

@@ -10,7 +10,9 @@
 ;;   C-u C-M-?        ask in a fresh conversation
 ;;   C-c '  (prompt)  edit the prompt in a buffer; C-c C-c sends, C-c C-k keeps it
 ;;   @fast/@smart/@deep in the prompt picks the model (gptel presets)
+;;   C-r  (prompt)    pick an earlier prompt
 ;;   RET / S-RET      in the conversation: send a follow-up / newline
+;;   C-c C-e          copy the conversation as Markdown or Org
 ;;   familiar-ask-sessions   reopen an earlier conversation
 ;;
 ;; Built on gptel's chat buffers: streaming, tool calls shown as folded
@@ -81,6 +83,8 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
   "A prompt edited in a buffer and then kept with C-c C-k.")
 
 (defvar familiar-ask--buffer-name "*familiar-ask*")
+
+(defvar-local familiar-ask--cost 0.0 "Spent in this conversation, in USD.")
 
 ;;;; Context
 
@@ -269,6 +273,7 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
     (define-key map (kbd "RET") #'familiar-ask-ret)
     (define-key map (kbd "<S-return>") #'newline)
     (define-key map (kbd "C-c C-k") #'gptel-abort)
+    (define-key map (kbd "C-c C-e") #'familiar-ask-export)
     map)
   "Keymap of `familiar-ask-mode'.")
 
@@ -282,6 +287,20 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
   (if (and (eobp) (not (looking-back "^\\*+ *\\|\\`\\s-*" (line-beginning-position))))
       (gptel-send)
     (newline)))
+
+(defun familiar-ask--header-line ()
+  "Model, prompts, cost and start of this conversation."
+  (format " ✦ familiar-ask  ·  %s  ·  %d prompts  ·  $%.4f%s"
+          gptel-model
+          (how-many "^\\*\\* ." (point-min) (point-max))
+          familiar-ask--cost
+          (if buffer-file-name
+              (format-time-string "  ·  since %F %R"
+                                  (date-to-time (replace-regexp-in-string
+                                                 "\\`\\(....\\)\\(..\\)\\(..\\)-\\(..\\)\\(..\\)\\(..\\)\\'"
+                                                 "\\1-\\2-\\3 \\4:\\5:\\6"
+                                                 (file-name-base buffer-file-name))))
+            "")))
 
 (defun familiar-ask--setup (buf)
   "Make BUF a familiar-ask conversation."
@@ -302,6 +321,7 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
                 gptel-response-prefix-alist '((org-mode . "")))
     (familiar-ask-mode 1)
     (add-hook 'gptel-post-response-functions #'familiar-ask--after-response nil t)
+    (setq header-line-format '(:eval (familiar-ask--header-line)))
     buf))
 
 (defun familiar-ask--new-buffer ()
@@ -332,10 +352,11 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
 (defun familiar-ask--record-a (tokens &optional _tokens-full)
   (when (and tokens (bound-and-true-p familiar-ask-mode))
     ;; The request's model: an @preset in the prompt overrides `gptel-model'.
-    (familiar--record (or (and gptel--fsm-last
+    (cl-incf familiar-ask--cost
+             (familiar--record (or (and gptel--fsm-last
                                (plist-get (gptel-fsm-info gptel--fsm-last) :model))
                           gptel-model)
-                      'ask tokens)))
+                      'ask tokens))))
 (advice-add 'gptel--update-token-usage :after #'familiar-ask--record-a)
 
 ;;;; Prompting
@@ -349,6 +370,7 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
 (defvar familiar-ask-minibuffer-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c '") #'familiar-ask-edit-prompt)
+    (define-key map (kbd "C-r") #'familiar-ask-pick-history)
     map)
   "Extra keys while reading a `familiar-ask' prompt.")
 
@@ -389,7 +411,11 @@ With prefix arg NEW, start a fresh conversation."
       (unless (looking-back "^\\*\\* " (line-beginning-position))
         (unless (bolp) (insert "\n"))
         (insert "\n** "))
-      (insert (string-trim prompt) "\n" context "\n")
+      (let ((lines (split-string (string-trim prompt) "\n")))
+        ;; Heading: the first line, stamped; the rest of the prompt below it.
+        (insert (car lines) (format-time-string "  [%F %a %R]") "\n"
+                (mapconcat (lambda (l) (concat l "\n")) (cdr lines) "")
+                context "\n"))
       ;; Context folded: it's for the model, you saw it already.
       (save-excursion
         (when (re-search-backward "^#\\+begin_context" nil t)
@@ -402,6 +428,15 @@ With prefix arg NEW, start a fresh conversation."
       (goto-char (point-max))
       (gptel-send))
     buf))
+
+(defun familiar-ask-pick-history ()
+  "Replace the prompt with an earlier one, picked with completion."
+  (interactive)
+  (if (fboundp 'consult-history)
+      (consult-history familiar-ask-history)
+    (let ((pick (completing-read "Earlier prompt: " familiar-ask-history nil t)))
+      (delete-minibuffer-contents)
+      (insert pick))))
 
 ;;;; Editing a prompt in a buffer
 
@@ -472,6 +507,36 @@ With prefix arg NEW, start a fresh conversation."
     (with-current-buffer (find-file-noselect pick)
       (familiar-ask--setup (current-buffer))
       (pop-to-buffer (current-buffer)))))
+
+;;;; Export
+
+(defun familiar-ask--transcript ()
+  "This conversation as Org, without the context blocks and the title."
+  (let ((text (buffer-substring-no-properties (point-min) (point-max))))
+    (with-temp-buffer
+      (insert text)
+      (goto-char (point-min))
+      (while (re-search-forward "^#\\+begin_context\n\\(?:.*\n\\)*?#\\+end_context\n?" nil t)
+        (replace-match ""))
+      (goto-char (point-min))
+      (when (looking-at "#\\+title:.*\n+") (replace-match ""))
+      (string-trim (buffer-string)))))
+
+;;;###autoload
+(defun familiar-ask-export (format)
+  "Copy this conversation as FORMAT (org or markdown) to the kill ring."
+  (interactive
+   (list (intern (completing-read "Copy conversation as: " '("markdown" "org") nil t))))
+  (let ((org (familiar-ask--transcript)))
+    (kill-new
+     (if (eq format 'org)
+         org
+       (require 'ox-md)
+       (with-temp-buffer
+         (insert org)
+         (org-mode)
+         (org-export-as 'md nil nil nil '(:with-toc nil :section-numbers nil)))))
+    (message "Conversation copied as %s" format)))
 
 (provide 'familiar-ask)
 ;;; familiar-ask.el ends here
