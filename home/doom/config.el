@@ -321,17 +321,16 @@
       (apply orig-fn args))))
 
 ;; ── monet — Claude Code IDE protocol bridge ────────────────────────────────
-;; Lets a claude-code.el session (SPC c c / C-c c above) see the current
-;; selection, buffer diagnostics, and open diff views over a local WebSocket
-;; — the same protocol the official VS Code / JetBrains extensions use.
-;; monet-start-server-function feeds claude-code.el the env vars
-;; (ENABLE_IDE_INTEGRATION, CLAUDE_CODE_SSE_PORT) needed to auto-connect, so
-;; every claude-code session starts wired up with no manual `/ide` step.
+;; Claude Code sees the selection, diagnostics and diff views over a local
+;; WebSocket, the protocol of the VS Code / JetBrains extensions.  Sessions
+;; attach through lock files lisp/+monet.el writes per project, so any
+;; `claude' attaches: in kitty, agent-shell, or claude-code (C-c c).  (A hook
+;; on `claude-code-process-environment-functions' lived here: that's
+;; stevemolitor/claude-code.el's, but the claude-code installed is
+;; yuya373/claude-code-emacs, so it never ran.)
 (use-package! monet
   :config
-  (monet-mode 1)
-  (add-hook 'claude-code-process-environment-functions
-            #'monet-start-server-function))
+  (monet-mode 1))
 
 ;; ── aider.el — aider CLI pair-programming ──────────────────────────────────
 ;; Model/backend (currently local ollama) is configured once in
