@@ -1261,6 +1261,33 @@ and a temp exec-path where bin/tar links to store/tar."
     (forward-line 1)
     (end-of-line)
     (should-not (+org-slash-capf))))
+
+(load (expand-file-name "+org-cheatsheet" test-lisp-dir) nil t)
+
+(ert-deftest org-cheatsheet/every-example-is-org-and-names-a-real-node ()
+  (require 'info)
+  (let ((nodes (ignore-errors (mapcar #'car (Info-toc-nodes "org")))))
+    (dolist (e +org-cheatsheet)
+      ;; The manual node exists (when the manual is installed here).
+      (when nodes (should (member (nth 2 e) nodes)))
+      ;; Each example parses as Org without errors.
+      (with-temp-buffer
+        (org-mode)
+        (insert (nth 1 e))
+        (should (org-element-parse-buffer)))))
+  ;; Picking shows it; i puts it where you were.
+  (with-temp-buffer
+    (set-window-buffer (selected-window) (current-buffer))
+    (insert "x ")
+    (cl-letf (((symbol-function 'pop-to-buffer) #'set-buffer)
+              ((symbol-function 'quit-window) #'ignore))
+      (+org/cheatsheet "Horizontal rule")
+      (with-current-buffer "*Org by example*"
+        (should (string-match-p "\\`-----\n\n# Manual: (org) Horizontal Rules" (buffer-string)))
+        (+org-cheatsheet-insert))
+      (should (equal (buffer-string) "x -----")))
+    (kill-buffer "*Org by example*")))
+
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
