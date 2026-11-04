@@ -1098,3 +1098,12 @@ and a temp exec-path where bin/tar links to store/tar."
         (dolist (cmd '(forward-word backward-word kill-whole-line kill-line upcase-word))
           (should (funcall pred cmd buf)))
         (should-not (funcall pred 'downcase-region buf))))))
+
+(ert-deftest persist/new-buffers-are-real ()
+  ;; Doom's buffer cycling skipped them: *...* and no file read as unreal.
+  (with-temp-buffer
+    (rename-buffer "*new*<3>" t)
+    (should (+persist-new-buffer-real-p (current-buffer))))
+  (with-temp-buffer
+    (rename-buffer "*Messages-like*" t)
+    (should-not (+persist-new-buffer-real-p (current-buffer)))))

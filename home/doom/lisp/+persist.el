@@ -33,6 +33,30 @@
 Other starred buffers are generated (logs, sidebars, search results) and
 are not; buffers the user named themselves (no leading `*') are.")
 
+;; Doom counts a buffer named *...* that visits no file as unreal, so
+;; M-ö / M-ä (previous/next-buffer) and other buffer cycling skipped the
+;; *new* buffers: your own text, kept by this module.  They are real.
+(defun +persist-new-buffer-real-p (buf)
+  "Non-nil for *new* and *new*<N> buffers (`doom-real-buffer-functions')."
+  (string-match-p "\\`\\*new\\*\\(?:<[0-9]+>\\)?\\'" (buffer-name buf)))
+(add-hook 'doom-real-buffer-functions #'+persist-new-buffer-real-p)
+
+;; Real wasn't enough: with workspaces, buffer cycling only offers buffers of
+;; the current workspace, and the *new* buffers restored at startup belong to
+;; none (restored before persp-mode).  They join "main", where Doom starts.
+(declare-function persp-add-buffer "ext:persp-mode" (&optional buffs-or-names persp switchorno called-interactively-p))
+(declare-function persp-get-by-name "ext:persp-mode" (name &optional phash default))
+(defun +persist-join-workspace-h ()
+  "Add the *new* buffers to the main workspace."
+  (when-let* (((bound-and-true-p persp-mode))
+              (main (persp-get-by-name "main"))
+              ((not (symbolp main))))
+    (dolist (buf (buffer-list))
+      (when (+persist-new-buffer-real-p buf)
+        (persp-add-buffer buf main nil nil)))))
+(add-hook 'persp-mode-hook
+          (lambda () (run-with-idle-timer 1 nil #'+persist-join-workspace-h)))
+
 (defun +persist/--should-persist-p (buf)
   "Return non-nil if BUF holds text of the user's own worth keeping.
 That is a non-file, non-empty, editable text, prog or fundamental buffer
