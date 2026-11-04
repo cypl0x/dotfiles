@@ -49,11 +49,15 @@ minibuffer would wait for real input.
 ** DONE Export: C-c C-e copies as Markdown or Org (d185743, a25af0c)
 ** DONE Header line: model, prompts, cost, start; stamped headings (d185743)
 ** TODO "How do I" vs imperative: verify behaviour on the use-case list
-** TODO Auto-approve read-only eval? (decide; now every eval asks)
+** DONE Approvals: user chose none (familiar-ask-confirm-tools nil, 8e72fd9)
 
 * TODO Anticipate command (LLM optional)                          :agent:
 Predict next edits / commands / searches from context.
-* TODO Atuin and Atuin AI integration                             :shell:
+* DONE Atuin and Atuin AI integration                             :shell:
+8e72fd9: Atuin AI = TUI (atuin ai inline) on Atuin's hosted service; works in
+ghostel (real zsh). Emacs shells: ? at empty eshell/shell prompt → M-ß,
+insert_at_prompt tool, shell hint in context. Read the user's 34 Atuin AI
+questions (ai_sessions.db) for the use cases.
 Research `?' in zsh (Atuin AI); test; bring into Emacs.
 * TODO C-SPC context-sensitive completion (e.g. org)              :completion:
 * DONE leo vocabulary collection + Anki-like review               :prose:
