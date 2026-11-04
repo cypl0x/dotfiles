@@ -121,9 +121,9 @@ Measure the first frame after daemon start in the lab only; defer slow parts.
 ** DONE org-modern: 8 bullets, heading colours, cycling (d4b1a17)
 ** DONE QWERTZ: ö ä = [ ], Ö Ä = { }, ü Ü = definition/back (aa6afc2); ß still free
 ** DONE Prose: fill/unfill, sentence lines, join, AI split with word check (this commit)
-** TODO +usage-mode data: insights → workflow improvements
+** DONE Usage insights → coach for held keys (8c3d4e4); more as data grows
 ** TODO Big: native AI harness, all protocols (OpenAI/Anthropic HTTP, MCP, ACP, A2A client+server)
 ** TODO Inspiration: hlissner dotfiles, tecosaur config (somewhere in ~/dev), awesome-emacs
 ** DONE monet hook was dead (yuya373 claude-code); removed, +monet.el covers attach
 ** DONE jinx only (en+de, code comments too); :checkers spell dropped (2a15d16), doom sync done
-** TODO familiar-ask header shows buffer model, not the @fast/@deep preset of the turn
+** DONE familiar-ask header: model of the last turn (8573989)
