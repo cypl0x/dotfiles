@@ -39,6 +39,15 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 15:54] — familiar works in your files from any editor; M-x habits get keys
+- familiar is in agent-shell's agent picker now (=SPC A n=), and as an
+  ACP agent it can *read and write files through the editor* that drives
+  it: reads include unsaved changes, and every write asks you first in
+  that editor.  Live: it read =flake.nix= through agent-shell and quoted
+  the description, the read shown as "✓ Read flake.nix".
+- Keys for things your usage log shows you doing via M-x: =zM= picks the
+  PDF colours, =SPC t o= / =SPC t O= toggle org-modern and pretty markup.
+
 ** [2026-11-04 Mi 15:37] — familiar, a package of its own; and an ACP agent
 Your order, steps 1 and 2:
 - *familiar is a package* in =lisp/familiar/=, like brave-search: proper
