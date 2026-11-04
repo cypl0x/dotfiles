@@ -42,9 +42,9 @@ buffer (C-c C-c / C-c C-k keep); familiar-ask-sessions; cache; ledger.
 Live: Haiku answered via eval_elisp (approved by me), cache hit 2000 tok.
 ** TODO Real-key test: C-M-? in a buffer, in M-x ("exclude X include Y" → set_minibuffer)
 ** TODO Suggestions applicable with one key ($ / ! / RET) from the answer
-** TODO Vertico picker over previous prompts (beyond M-p / history)
-** TODO Export transcript (org/markdown/clipboard)
-** TODO Header line: model, time, tokens/cost per turn
+** DONE Picker over previous prompts: C-r in the prompt (d185743)
+** DONE Export: C-c C-e copies as Markdown or Org (d185743, a25af0c)
+** DONE Header line: model, prompts, cost, start; stamped headings (d185743)
 ** TODO "How do I" vs imperative: verify behaviour on the use-case list
 ** TODO Auto-approve read-only eval? (decide; now every eval asks)
 
