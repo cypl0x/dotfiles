@@ -54,5 +54,25 @@ completion still work.  Install it (or enter its nix shell) and M-x eglot."
 (with-eval-after-load 'eglot
   (advice-add 'eglot--connect :around #'+lsp-fallback-connect-a))
 
+
+;;;; Semantic tokens: the modifiers servers add beyond the standard
+;;
+;; eglot paints LSP semantic tokens (on wherever the server offers them:
+;; here zls, rust-analyzer, nil), one face per token type and standard
+;; modifier.  Servers add their own modifiers, and eglot ignores those it
+;; has no face for: rust-analyzer's `mutable' (a binding that can change)
+;; and `unsafe' (an unsafe operation) are the ones worth seeing at a glance,
+;; as rust-analyzer's own VS Code client shows them.
+(defface eglot-semantic-mutable '((t (:underline t)))
+  "LSP semantic modifier `mutable': a binding that can change."
+  :group 'eglot-semantic-faces)
+
+(defface eglot-semantic-unsafe '((t (:inherit warning)))
+  "LSP semantic modifier `unsafe': an unsafe operation."
+  :group 'eglot-semantic-faces)
+
+(with-eval-after-load 'eglot
+  (dolist (modifier '("mutable" "unsafe"))
+    (add-to-list 'eglot-semantic-token-modifiers modifier t)))
 (provide '+lsp-fallback)
 ;;; +lsp-fallback.el ends here

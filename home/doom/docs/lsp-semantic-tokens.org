@@ -1,0 +1,44 @@
+#+title: LSP semantic tokens, here
+#+date: 2026-11-05
+
+Research note for the task list's "LSP semantic tokens" item: what the
+protocol offers, what this Emacs does with it, which servers here use it.
+
+* What semantic tokens are
+
+A language server tells the editor what each identifier /is/ (a type, a
+parameter, a mutable variable, a macro), not just what it looks like; the
+editor paints it.  Each token has one type and any number of modifiers,
+from a legend the server announces (LSP 3.16+).  Requests: the whole file,
+a range, or the changes since last time; the server can ask the editor to
+refresh.
+
+* This Emacs
+
+eglot (Emacs 32's) implements them: =eglot-semantic-tokens-mode= turns on
+by itself in every buffer whose server offers them, asks for the visible
+range, and repaints on the server's refresh requests.  Each standard token
+type and modifier has a face =eglot-semantic-NAME= that inherits a
+font-lock face, so themes work unchanged and tree-sitter's colours stay
+underneath.  =M-x customize-group eglot-semantic-faces= lists them.
+
+Added here (=lisp/+lsp-fallback.el=): faces for two modifiers servers add
+beyond the standard ones, which eglot otherwise ignores:
+
+| Modifier  | Face                     | Who sends it   | Looks        |
+|-----------+--------------------------+----------------+--------------|
+| =mutable= | =eglot-semantic-mutable= | rust-analyzer  | underlined   |
+| =unsafe=  | =eglot-semantic-unsafe=  | rust-analyzer  | warning colour |
+
+* Servers on this machine (probed 2026-11-05)
+
+| Server        | Semantic tokens        | Checked                              |
+|---------------+------------------------+--------------------------------------|
+| zls (Zig)     | yes, 28 token types    | live: variable/function/namespace    |
+| rust-analyzer | yes, 58 token types    | live: mutable, unsafe                |
+| nil (Nix)     | yes, 14 token types    | initialize response                  |
+| others        | not answered by a bare probe: unknown, not "no" |              |
+
+Lean, Rocq, Agda, Dart and Turm: not installed system-wide here (Lean and
+Turm come with their projects' dev shells, =SPC N d=); to be checked inside
+those shells.
