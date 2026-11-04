@@ -11,6 +11,22 @@
     text = builtins.readFile ../../home/bin/glo.sh;
   };
 
+  # atuin-emacs: Atuin with "Emacs AI" where it says "Atuin AI" (box title,
+  # answer label), for ß / Alt+ß in zsh (home/shell/zsh/familiar-ai.zsh),
+  # whose answers come from Emacs: distinguishable from Atuin's own `?`.
+  # The label is hard-coded; same-length bytes are swapped in a copy of the
+  # binary (no rebuild of Atuin, whose sources would have to be fetched).
+  atuin-emacs = pkgs.runCommand "atuin-emacs-${pkgs.atuin.version}" {} ''
+    mkdir -p $out/bin
+    cp ${pkgs.atuin}/bin/atuin $out/bin/atuin-emacs
+    chmod u+w $out/bin/atuin-emacs
+    ${pkgs.perl}/bin/perl -0777 -pi -e 's/Atuin AI/Emacs AI/g' $out/bin/atuin-emacs
+    if grep -qa 'Atuin AI' $out/bin/atuin-emacs || ! grep -qa 'Emacs AI' $out/bin/atuin-emacs; then
+      echo "atuin-emacs: label not replaced" >&2; exit 1
+    fi
+    $out/bin/atuin-emacs --version
+  '';
+
   # Fresh agent harnesses from numtide/llm-agents.nix (binary cache:
   # cache.numtide.com). Keep nixpkgs.follows unset on that input so these
   # store paths match their CI builds.
@@ -35,6 +51,7 @@ in {
         fzf
         git
         glo # see the let above
+        atuin-emacs # ditto: ß / Alt+ß in zsh
         gnumake
         glow # cli to preview markdown files
         bc # Calculator

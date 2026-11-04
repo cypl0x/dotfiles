@@ -1,7 +1,8 @@
 # familiar-ai.zsh — Atuin's AI prompt, answered by Emacs, on ß and Alt+ß.
 #
 # Atuin's own `?` (Atuin Hub) stays as it is.  These run the same inline
-# TUI (`atuin ai inline --hook`) against the Atuin AI server inside the
+# TUI (`atuin-emacs ai inline --hook`: Atuin, labelled "Emacs AI";
+# modules/system/packages.nix) against the Atuin AI server inside the
 # Emacs daemon (familiar-atuin.el): your Claude key, familiar's ledger.
 #
 #   ß      at an empty prompt, like Atuin's `?`: ask; Enter runs the
@@ -47,7 +48,7 @@ _familiar_ai_ask() {
     local output
     output=$(ATUIN_AI__ENDPOINT=$FAMILIAR_AI_URL ATUIN_AI__ENDPOINT_PROTOCOL=oss \
              ATUIN_AI__API_TOKEN=$(<$FAMILIAR_AI_TOKEN_FILE) \
-             atuin ai inline --hook ${1:+"$1"} 3>&1 1>&2 2>&3)
+             atuin-emacs ai inline --hook ${1:+"$1"} 3>&1 1>&2 2>&3)
     if [[ $output == __atuin_ai_print__:* ]]; then
         echo "${output#__atuin_ai_print__:}"
         BUFFER=$1                                # the line asked about, if any
