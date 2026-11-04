@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 07:36] — C-SPC that knows where you are, and a look ahead
+- *=C-SPC=* completes by context: links after =[[=, keywords and tags in
+  Org, code in src blocks, dictionary words in prose (English *and* German:
+  "Hä" offers Häfen, Hände, Hälfte …). Dictionary completion never worked
+  before: it read =/usr/share/dict/words=, which NixOS doesn't have. The
+  word lists are built from the hunspell dictionaries you already had.
+  Doom's corfu binding shadowed mine at first; a real-key test caught it.
+- *=SPC A .= anticipates*: from the commands you run after each other and
+  what you use in each mode, the likely next ones with their keys; =RET=
+  runs one. =C-u= hands the same evidence to the model for a forecast of
+  edits, commands and searches. It learns from now on.
+- Two robustness fixes from that test: asks started from code used the last
+  interactive ask's buffer (a PDF from minutes earlier), and one tool result
+  was the whole vellumory keymap. Now each ask starts where you are, and
+  results are capped at 6000 characters.
 ** [2026-11-04 Mi 07:27] — PDF selections, Atuin's ?, docs you can learn from
 - *Your bug report*: =M-ß= in a Vellumory PDF missed the selection (it isn't
   an Emacs region) and only saw tile layout. It now gets the selection,
