@@ -137,3 +137,13 @@ First frame 0.78 → 0.57 s, later 0.43 → 0.22 s (67bf68a).
 The user's own list (bugs → familiar → org → completion → research). It is
 the source of truth; re-read it while working, the user extends it.
 Entries tagged :incomplete: → ask before implementing. Progress noted here.
+** DONE [#A] M-S-x froze 8-10 s → 0.09 s (+perf.el)
+** DONE [#A] M-ö/M-ü skipped *new* buffers: real buffers + main workspace (+persist.el)
+** DONE [#B] corfu selection visible; de/en/en_GB word lists (355k de words)
+** DONE [#B] C-c C-c follow-up from anywhere (9e9062d)
+** DONE [#C] familiar-ask auto-scroll off by default
+** DONE [#B] C-M-ß multi-line prompt + editor polish: header, M-p/M-n, C-c C-q (bed7f27)
+** TODO [#B] Directives: @inline @model @transient; replace [#C]
+** TODO [#B] SPC ' cycles previous minibuffers like +popup/other
+** TODO [#B] completion in Org ~code~ / Markdown backticks
+** TODO "familiar-ask jumps directly into fresh multiline prompt": ambiguous, C-M-ß may cover it
