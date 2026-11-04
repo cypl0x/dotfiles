@@ -22,6 +22,8 @@
 ;;   C-M-ß            write the prompt in a buffer right away (multi-line)
 ;;   C-c '  (prompt)  edit the prompt in a buffer; C-c C-c sends, C-c C-k keeps it
 ;;   @fast/@smart/@deep in the prompt picks the model (gptel presets)
+;;   @model[:NAME]    who answers this turn: any gptel model, or a running agent
+;;                    (agent-shell, claude-code) that gets the prompt and context
 ;;   C-r  (prompt)    pick an earlier prompt
 ;;   C-c C-c          in the conversation: send the follow-up (from anywhere)
 ;;   RET / S-RET      at its end: send a follow-up / newline
@@ -74,7 +76,8 @@ arg.  RET at the end of an answer always follows up."
 (defvar familiar-ask-keywords
   '(("follow-up" . "continue the running conversation")
     ("new" . "start a fresh conversation")
-    ("echo" . "short answer in the echo area, no window"))
+    ("echo" . "short answer in the echo area, no window")
+    ("model" . "pick who answers: any gptel model, or a running agent (@model:NAME)"))
   "Words a prompt may contain as @WORD; taken out before it is sent.
 Next to gptel's presets (@fast, @smart, @deep), which gptel applies.")
 
@@ -429,6 +432,32 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
   "A `familiar-ask' conversation: RET at the end sends a follow-up."
   :lighter " ✦ask")
 
+(defun familiar-ask--send-with-model (model)
+  "`gptel-send' here, answered by MODEL (BACKEND . MODEL) if non-nil."
+  (if model
+      (let ((gptel-backend (car model))
+            (gptel-model (cdr model)))
+        (gptel-send))
+    (gptel-send)))
+
+(defun familiar-ask--send-here ()
+  "Send the follow-up typed at the end of this conversation.
+An @model in it picks who answers, as in the M-ß prompt."
+  (let* ((spec (save-excursion
+                 (goto-char (point-max))
+                 (and (re-search-backward "^\\*\\* " nil t)
+                      (re-search-forward "\\(?:^\\|[ \t]\\)@model\\(?::\\(\\S-+\\)\\)?\\(?:[ \t]\\|$\\)" nil t)
+                      (prog1 (or (match-string 1) t)
+                        (replace-match " ")))))
+         (model (and spec (familiar-ask--resolve-model spec))))
+    (goto-char (point-max))
+    (if (eq (car model) 'agent)
+        (let ((text (save-excursion
+                      (re-search-backward "^\\*\\* " nil t)
+                      (string-trim (buffer-substring-no-properties (+ (point) 3) (point-max))))))
+          (familiar-ask--hand-off text (cdr model) familiar-ask--origin))
+      (familiar-ask--send-with-model model))))
+
 (defun familiar-ask-send-follow-up ()
   "Send the follow-up typed under the last prompt heading, from anywhere.
 RET only sent with point at the very end, and evil's or Org's RET may
@@ -439,13 +468,13 @@ win over this mode's map; C-c C-c is free in both."
   (if (looking-back "^\\*+ *" (line-beginning-position))
       (user-error "Type the follow-up after the last ** first")
     (goto-char (point-max))
-    (gptel-send)))
+    (familiar-ask--send-here)))
 
 (defun familiar-ask-ret ()
   "Send a follow-up when point is in the last, unanswered prompt; else newline."
   (interactive)
   (if (and (eobp) (not (looking-back "^\\*+ *\\|\\`\\s-*" (line-beginning-position))))
-      (gptel-send)
+      (familiar-ask--send-here)
     (newline)))
 
 (defvar-local familiar-ask--last-tokens nil "Tokens of the last answer.")
@@ -717,6 +746,73 @@ KIND is `command', `keys', `elisp' or `shell'."
     :description (format "familiar-ask on %s" (cdr tier))
     :model (cdr tier)))
 
+
+;;;; @model: who answers this turn
+
+(defun familiar-ask--model-choices ()
+  "What @model can pick: alist of (LABEL . (BACKEND . MODEL)) for every
+model of every gptel backend, and (LABEL . (agent . TARGET)) for each coding
+agent running now (`familiar-handoff-targets', clipboard aside)."
+  (append
+   (cl-loop for (name . backend) in gptel--known-backends
+            nconc (cl-loop for model in (gptel-backend-models backend)
+                           collect (cons (format "%s:%s" name model) (cons backend model))))
+   (cl-loop for (target . props) in familiar-handoff-targets
+            unless (eq target 'clipboard)
+            when (ignore-errors (funcall (plist-get props :available)))
+            collect (cons (format "agent:%s" target) (cons 'agent target)))))
+
+(defun familiar-ask--model-spec (prompt)
+  "PROMPT without its @model, and what it asked for: (TEXT . SPEC).
+SPEC is nil without @model, t for a bare @model (pick one), else the NAME
+of @model:NAME."
+  (if (string-match "\\(?:^\\|[ \t]+\\)@model\\(?::\\(\\S-+\\)\\)?\\(?:[ \t]+\\|$\\)" prompt)
+      (cons (string-trim (replace-match " " t t prompt))
+            (or (match-string 1 prompt) t))
+    (cons prompt nil)))
+
+(defun familiar-ask--resolve-model (spec)
+  "The (BACKEND . MODEL) or (agent . TARGET) SPEC names, asking for t.
+NAME may be a label of `familiar-ask--model-choices' or its part after the
+colon: a model name (the current backend's first) or an agent."
+  (let ((choices (familiar-ask--model-choices))
+        (current (or familiar-backend gptel-backend)))
+    (if (eq spec t)
+        (cdr (assoc (completing-read "Answer with: " choices nil t) choices))
+      (or (cdr (assoc spec choices))
+          (let ((matches (seq-filter (lambda (c) (equal (cadr (split-string (car c) ":")) spec))
+                                     choices)))
+            (cdr (or (seq-find (lambda (c) (eq (cadr c) current)) matches)
+                     (car matches))))
+          (user-error "@model: no model or agent named %s" spec)))))
+
+(defun familiar-ask--model-capf ()
+  "Complete the NAME of @model:NAME in the prompt."
+  (when (looking-back "@model:\\(\\S-*\\)" (line-beginning-position))
+    (let ((choices (familiar-ask--model-choices)))
+      (list (match-beginning 1) (point)
+            (delete-dups (mapcar (lambda (c) (cadr (split-string (car c) ":"))) choices))
+            :annotation-function
+            (lambda (name)
+              (when-let* ((c (seq-find (lambda (c) (equal (cadr (split-string (car c) ":")) name))
+                                       choices)))
+                (concat "  " (car (split-string (car c) ":")))))
+            :exclusive 'no))))
+
+(defun familiar-ask--hand-off (prompt target origin)
+  "Hand PROMPT and the context at ORIGIN to the running agent TARGET."
+  (let ((props (alist-get target familiar-handoff-targets))
+        (buf (plist-get origin :buffer)))
+    (funcall (plist-get props :send)
+             (if (buffer-live-p buf)
+                 (concat prompt "\n\n"
+                         (with-current-buffer buf
+                           (save-excursion
+                             (goto-char (or (plist-get origin :point) (point)))
+                             (familiar-handoff-context))))
+               prompt))
+    (message "familiar: asked %s" target)))
+
 (defvar familiar-ask-minibuffer-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c '") #'familiar-ask-edit-prompt)
@@ -736,16 +832,18 @@ From the minibuffer, for the buffer the prompt is about."
 
 (defun familiar-ask--keywords-capf ()
   "Complete @keywords and @presets in the prompt."
-  (when (looking-back "@\\([[:alnum:]-]*\\)" (line-beginning-position))
-    (let ((cands (append (familiar-ask--all-keywords)
-                         (mapcar (lambda (p)
-                                   (cons (symbol-name (car p))
-                                         (or (plist-get (cdr p) :description) "")))
-                                 gptel--known-presets))))
-      (list (match-beginning 1) (point) (mapcar #'car cands)
-            :annotation-function
-            (lambda (c) (concat "  " (cdr (assoc c cands))))
-            :exclusive 'no))))
+  (if (looking-back "@model:\\S-*" (line-beginning-position))
+      (familiar-ask--model-capf)
+    (when (looking-back "@\\([[:alnum:]-]*\\)" (line-beginning-position))
+      (let ((cands (append (familiar-ask--all-keywords)
+                           (mapcar (lambda (p)
+                                     (cons (symbol-name (car p))
+                                           (or (plist-get (cdr p) :description) "")))
+                                   gptel--known-presets))))
+        (list (match-beginning 1) (point) (mapcar #'car cands)
+              :annotation-function
+              (lambda (c) (concat "  " (cdr (assoc c cands))))
+              :exclusive 'no)))))
 
 (defun familiar-ask--keywords (prompt)
   "PROMPT without its @keywords, and the keywords: (TEXT . SYMBOLS)."
@@ -801,17 +899,22 @@ ask's, which could be another buffer minutes ago."
      (list (familiar-ask--read)
            (and current-prefix-arg (if familiar-ask-follow-up t 'follow-up))
            origin)))
-  (pcase-let ((`(,prompt . ,keywords) (familiar-ask--keywords prompt)))
+  (pcase-let* ((`(,prompt . ,spec) (familiar-ask--model-spec prompt))
+               (`(,prompt . ,keywords) (familiar-ask--keywords prompt)))
     (when (string-blank-p prompt) (user-error "Empty prompt"))
     (let* ((follow (cond ((memq 'new keywords) nil)
                          ((memq 'follow-up keywords) t)
                          ((eq fresh t) nil)
                          ((eq fresh 'follow-up) t)
                          (t familiar-ask-follow-up)))
-           (echo (memq 'echo keywords)))
-      (familiar-ask--send
-       (if echo (concat prompt "\n\n" familiar-ask--echo-instruction) prompt)
-       follow echo (or origin (familiar-ask--capture)) keywords))))
+           (echo (memq 'echo keywords))
+           (origin (or origin (familiar-ask--capture)))
+           (model (and spec (familiar-ask--resolve-model spec))))
+      (if (eq (car model) 'agent)
+          (familiar-ask--hand-off prompt (cdr model) origin)
+        (familiar-ask--send
+         (if echo (concat prompt "\n\n" familiar-ask--echo-instruction) prompt)
+         follow echo origin keywords model)))))
 
 (defun familiar-ask--show (buf win)
   "Display BUF, from WIN when it's still there, unless BUF is on screen.
@@ -821,11 +924,12 @@ From WIN: asked from the minibuffer, the minibuffer window is selected."
         (with-selected-window win (display-buffer buf))
       (display-buffer buf))))
 
-(defun familiar-ask--send (prompt follow echo origin &optional keywords)
+(defun familiar-ask--send (prompt follow echo origin &optional keywords model)
   "Put PROMPT and ORIGIN's context into the conversation and send it.
 FOLLOW continues the running conversation; ECHO shows the answer in the
 echo area instead of the conversation's window.  KEYWORDS (symbols) may
-add tools for this turn (`familiar-ask-turn-tools-functions')."
+add tools for this turn (`familiar-ask-turn-tools-functions'); MODEL
+(BACKEND . MODEL) answers it instead of the conversation's model."
   (let* ((context (familiar-ask--context origin))
          (buf (if (and follow (get-buffer familiar-ask--buffer-name))
                   (get-buffer familiar-ask--buffer-name)
@@ -870,7 +974,7 @@ add tools for this turn (`familiar-ask-turn-tools-functions')."
         ;; Per turn: an @server's tools ride along only when asked for.
         (setq-local gptel-tools (append familiar-ask-tools extra))
         (goto-char (point-max))
-        (gptel-send)))
+        (familiar-ask--send-with-model model)))
     buf))
 
 (defun familiar-ask-pick-history ()

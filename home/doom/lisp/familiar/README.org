@@ -52,7 +52,8 @@ All share one bearer token, kept in =familiar-mcp-http-token-file= (0600).
 
 - Fresh conversation by default; =@follow-up= continues, =@new= forces fresh,
   =@echo= answers in the echo area, =@fast= =@smart= =@deep= pick the tier,
-  =@SERVER= adds an MCP server's tools for that turn.
+  =@model= / =@model:NAME= picks who answers (any gptel model, or a running
+  agent such as agent-shell), =@SERVER= adds an MCP server's tools for that turn.
 - The context of where you are goes along: buffer, modes, point, region
   or nearby text, an active minibuffer's input and candidates, a shell's
   prompt.  =familiar-ask-context-functions= adds more (e.g. a PDF selection).

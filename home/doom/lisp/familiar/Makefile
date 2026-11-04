@@ -1,6 +1,7 @@
 # familiar — standalone checks, no Doom needed.
 #   make test     ERT
-#   make compile  byte-compile, warnings are errors
+#   make compile  byte-compile, warnings are errors (the .elc are removed:
+#                 this directory is on a live load-path, stale ones would win)
 # Dependencies (gptel; mcp-server-lib for familiar-mcp) come from -L dirs in
 # LOAD_PATH, FAMILIAR_LOAD_PATH, or a Doom build (test/familiar-test-helper.el).
 
@@ -16,7 +17,8 @@ test:
 
 compile:
 	$(EMACS) -Q --batch $(LOAD_PATH) -l test/familiar-test-helper.el \
-	  --eval "(setq byte-compile-error-on-warn t)" -f batch-byte-compile $(EL)
+	  --eval "(setq byte-compile-error-on-warn t)" -f batch-byte-compile $(EL); \
+	  status=$$?; rm -f *.elc; exit $$status
 
 clean:
 	rm -f *.elc

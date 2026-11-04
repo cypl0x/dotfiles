@@ -432,6 +432,54 @@ du -sh .
          (should (equal displayed (list buf buf)))
          (should-not minibuffer-exit-hook))))))
 
+
+(ert-deftest familiar-ask/model-picks-who-answers-the-turn ()
+  (skip-unless test-familiar-available)
+  (require 'gptel-openai)
+  (let* ((gptel--known-backends nil)    ; the backends below register there
+         (a (gptel-make-openai "test-a" :models '(m-one m-two) :key "x"))
+         (b (gptel-make-openai "test-b" :models '(m-two) :key "x"))
+         (gptel-backend b)
+         (familiar-backend nil)
+         (handed nil)
+         (familiar-handoff-targets
+          `((agent-shell :available always :send ,(lambda (text) (setq handed text)))
+            (claude-code :available ignore :send ignore)
+            (clipboard :available always :send ignore))))
+    ;; @model[:NAME] comes out of the prompt; bare means "ask me".
+    (should (equal (familiar-ask--model-spec "why @model:m-one this") '("why this" . "m-one")))
+    (should (equal (familiar-ask--model-spec "@model why") '("why" . t)))
+    (should (equal (familiar-ask--model-spec "mail me@model.org") '("mail me@model.org")))
+    ;; Names: a full label, a model (the current backend's first), an agent
+    ;; that's running; not one that isn't, nor the clipboard.
+    (should (equal (familiar-ask--resolve-model "test-a:m-two") (cons a 'm-two)))
+    (should (equal (familiar-ask--resolve-model "m-two") (cons b 'm-two)))
+    (should (equal (familiar-ask--resolve-model "m-one") (cons a 'm-one)))
+    (should (equal (familiar-ask--resolve-model "agent-shell") '(agent . agent-shell)))
+    (should-error (familiar-ask--resolve-model "claude-code") :type 'user-error)
+    (should-error (familiar-ask--resolve-model "clipboard") :type 'user-error)
+    ;; Completion after @model: offers models and agents, with the backend.
+    (with-temp-buffer
+      (insert "explain @model:m-")
+      (let ((capf (familiar-ask--keywords-capf)))
+        (should (equal (sort (all-completions "m-" (nth 2 capf)) #'string<) '("m-one" "m-two")))
+        (should (string-match-p "test-a" (funcall (plist-get (nthcdr 3 capf) :annotation-function)
+                                                  "m-one")))))
+    ;; The turn is sent with that model; the conversation keeps its own.
+    (test-familiar-ask--asking
+     (let (used)
+       (cl-letf (((symbol-function 'gptel-send)
+                  (lambda (&rest _) (setq used (cons gptel-backend gptel-model)))))
+         (let ((buf (familiar-ask "what is this @model:test-a:m-one")))
+           (should (equal used (cons a 'm-one)))
+           (with-current-buffer buf
+             (should-not (eq gptel-model 'm-one))
+             (should-not (string-match-p "@model" (buffer-string))))))))
+    ;; An agent gets the prompt and the context; no conversation is made.
+    (test-familiar-ask--asking
+     (familiar-ask "fix it @model:agent-shell")
+     (should-not (get-buffer familiar-ask--buffer-name))
+     (should (string-prefix-p "fix it\n\n" handed)))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"
