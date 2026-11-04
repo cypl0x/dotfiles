@@ -39,6 +39,15 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 23:27] — Turm without building it here
+- Turm pulled from inari (7 commits).  Its dev shell loads into Emacs
+  with =SPC N d= in 6 s.
+- =turm= built once on inari; inari's cachix watcher published it, so
+  =nix build .#turm= here is an 8.5 MB download, no build.
+- =SPC m m= in Org: Casual's menu of what can be done where point is;
+  math letters (𝑓) no longer draw as boxes.
+- Your daemon restart activated Zig: tree-sitter and zls.
+
 ** [2026-11-04 Mi 23:08] — See what the AI touched
 - Every change familiar's model makes in Emacs (its tools, =@inline=,
   even arbitrary elisp) now lands in a ledger, apart from your own edits:
