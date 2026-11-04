@@ -39,6 +39,32 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 06:39] — ✦ C-M-?: ask anything, from anywhere (familiar-ask)
+- Your biggest wish from the new list, first version: =C-M-?= in any buffer
+  (minibuffer and non-file buffers too) asks one long-lived conversation in a
+  popup on the right. Where you were goes along as a folded context block
+  (buffer, modes, point, region or nearby text, the M-x prompt and its
+  candidates), so you never restate it.
+- The model looks around Emacs with tools (describe, buffer_text,
+  list_buffers, apropos) and acts the way you would: =eval_elisp= and
+  =replace_in_buffer= ask first and edit undoably; =set_minibuffer= rewrites
+  the M-x input you asked from.
+- RET at the end sends a follow-up (S-RET newline), =C-u C-M-?= starts fresh,
+  =@fast= / =@smart= / =@deep= picks the model (with completion), =C-c '= edits
+  the prompt in an Org buffer (=C-c C-c= send, =C-c C-k= keep it for next
+  time), =SPC A A= reopens earlier conversations. Prompt caching is on, and
+  every turn lands in =SPC A $=.
+- First live answer (Haiku, $0.0004): "Run it with ~C-M-?~". It called a
+  tool, I approved it, and the follow-up turn read 2,000 tokens from cache.
+  Two bugs found on the way and fixed: Doom's popup left another buffer
+  current, so the first try sent a dired listing; the ledger priced Sonnet
+  for an @fast turn.
+- Also landed: =SPC A= now lays out in columns like magit; =SPC A a= and
+  =SPC A H= start an agent-shell when none runs. Sorry again for killing the
+  one you had just started.
+- Next: real-key tests (including "exclude tests" inside M-x), one-key
+  apply for suggestions, a prompt-history picker, transcript export. The
+  full list is in =TASKS.org=.
 ** [2026-11-04 Mi 04:12] — leo: "hören" instead of h\303\266ren
 - From your screenshot: =SPC l w= showed UTF-8 bytes raw. leo.el parses the
   response unibyte (its FIXME toggles multibyte twice), and the old

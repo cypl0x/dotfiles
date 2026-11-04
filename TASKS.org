@@ -34,6 +34,20 @@ metadata + timestamps; revisitable result buffers; export transcript;
 edits through Emacs (undoable), never writing files by default.
 Minibuffer case: "exclude X include Y" in M-x writes orderless syntax into
 the *running* minibuffer; "How do I …" only suggests (RET / $ / ! to apply).
+** DONE MVP familiar-ask.el (942f83a, 602cc7c)
+C-M-? anywhere; folded context; tools (eval_elisp/replace_in_buffer confirm,
+describe/buffer_text/list_buffers/apropos, set_minibuffer); RET follow-ups,
+S-RET newline; C-u fresh; @fast/@smart/@deep + capf; history; C-c ' edit
+buffer (C-c C-c / C-c C-k keep); familiar-ask-sessions; cache; ledger.
+Live: Haiku answered via eval_elisp (approved by me), cache hit 2000 tok.
+** TODO Real-key test: C-M-? in a buffer, in M-x ("exclude X include Y" → set_minibuffer)
+** TODO Suggestions applicable with one key ($ / ! / RET) from the answer
+** TODO Vertico picker over previous prompts (beyond M-p / history)
+** TODO Export transcript (org/markdown/clipboard)
+** TODO Header line: model, time, tokens/cost per turn
+** TODO "How do I" vs imperative: verify behaviour on the use-case list
+** TODO Auto-approve read-only eval? (decide; now every eval asks)
+
 * TODO Anticipate command (LLM optional)                          :agent:
 Predict next edits / commands / searches from context.
 * TODO Atuin and Atuin AI integration                             :shell:
