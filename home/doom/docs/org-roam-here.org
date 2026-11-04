@@ -1,0 +1,126 @@
+#+title: Org Roam, here
+#+subtitle: A companion to the Org-roam manual, for this configuration
+#+texinfo_filename: org-roam-here.info
+#+texinfo_dir_category: Emacs
+#+texinfo_dir_title: Org Roam here: (org-roam-here)
+#+texinfo_dir_desc: Org-roam as configured in these dotfiles
+
+Org-roam's own manual explains Org-roam: =SPC n r M= opens it, or
+=M-x org-roam-manual=.  This one explains what this configuration adds to it,
+the keys and templates and where notes go, and walks from the first note to a
+daily habit.  Each chapter links the manual's chapter for the full story.
+
+It lives in the dotfiles (=home/doom/docs/=), next to the configuration it
+describes, so the two change together; your notes live in =~/vault/roam=.
+=SPC n r ?= opens it as Info.
+
+* Where notes go
+
+| What                  | Where                                                |
+|-----------------------+------------------------------------------------------|
+| Notes                 | =~/vault/roam/= (=org-roam-directory=)                 |
+| Concepts, references  | =concepts/=, =refs/= below it                          |
+| Turm notes            | =turm/= below it                                       |
+| Daily notes           | =daily/= below it, one file per day                    |
+| The database          | =~/vault/roam/org-roam.db=, kept current on save       |
+
+The database follows your files by itself (=org-roam-db-autosync-mode=):
+edit, rename or delete notes like any file.
+
+Manual: [[info:org-roam#Setting up Org-roam][Setting up Org-roam]].
+
+* The keys
+
+All under =SPC n r= (notes, roam):
+
+| Key         | Does                                                          |
+|-------------+---------------------------------------------------------------|
+| =SPC n r f= | find a note by title or alias, or make it if there's none     |
+| =SPC n r i= | insert a link to a note (or make the note and link it)        |
+| =SPC n r c= | capture a new note with a template                            |
+| =SPC n r b= | the backlinks buffer: what links here, beside the note        |
+| =SPC n r g= | the graph of notes and links                                  |
+| =SPC n r t= | today's daily note                                            |
+| =SPC n r d= | capture into today's daily note                               |
+| =SPC n r s= | search the text of all notes (consult)                        |
+| =SPC n r ?= | this manual                                                   |
+| =SPC n r M= | Org-roam's manual                                             |
+
+In any Org buffer, typing in link brackets =[[= completes note titles
+(=org-roam-completion-everywhere= is on), so linking while writing needs no
+key at all.
+
+Manual: [[info:org-roam#Creating and Linking Nodes][Creating and Linking Nodes]].
+
+* Templates
+
+=SPC n r c= (or making a note from =SPC n r f=) asks which kind:
+
+| Key | Kind      | File                          | Starts with                                   |
+|-----+-----------+-------------------------------+-----------------------------------------------|
+| =d= | default   | =TIMESTAMP-slug.org=          | the title and an empty =#+filetags:=          |
+| =c= | concept   | =concepts/TIMESTAMP-slug.org= | Definition, Properties, Examples, Related     |
+| =r= | reference | =refs/TIMESTAMP-slug.org=     | Source (author, URL, year), Summary, Key Points, Quotes |
+| =t= | turm      | =turm/TIMESTAMP-slug.org=     | Context, Type Theory, Implementation Notes, Proof Sketch |
+
+Concepts, references and Turm notes are tagged =concept=, =reference= and
+=turm dtt=, so =SPC n r f= can narrow by tag.
+
+Manual: [[info:org-roam#The Templating System][The Templating System]].
+
+* A first session
+
+1. =SPC n r f=, type =Dependent types=, RET: there's no such note, so Org-roam
+   offers the templates; =c= makes a concept note and opens it.
+2. Under Definition, write a sentence.  Type =[[=, then =Curry=: no note
+   yet; pick the offer to make =Curry–Howard correspondence=, a second
+   concept.  The link is in place.
+3. =SPC n r b= on the second note: the backlinks buffer shows the first,
+   with the sentence the link sits in.
+4. =SPC n r t=: today's daily note.  Write what you did; link both notes.
+
+That's the whole loop: find or make, link while writing, see what links
+back.  Notes grow by links, not by folders.
+
+Manual: [[info:org-roam#Getting Started][Getting Started]],
+[[info:org-roam#The Org-roam Buffer][The Org-roam Buffer]].
+
+* Daily notes
+
+=SPC n r t= opens today's note (=daily/YYYY-MM-DD.org=, titled with the
+weekday); =SPC n r d= captures a heading into it without leaving where you
+are.  Link from a daily note to concepts as you meet them: the concept's
+backlinks then show when you worked on it.
+
+Manual: [[info:org-roam#org-roam-dailies][org-roam-dailies]].
+
+* Finding things again
+
+- By title: =SPC n r f=, with orderless matching (=dep typ= finds
+  =Dependent types=).
+- By text: =SPC n r s= searches note bodies with a live preview.
+- By link: =SPC n r b= from any note.
+- With the rest of Org: notes are Org files, so the agenda, =org-ql=
+  (=SPC n q=) and =M-ß= (ask familiar about the note in front of you) all
+  work on them.
+
+Manual: [[info:org-roam#Node Properties][Node Properties]] (aliases, tags,
+refs).
+
+* References and citations
+
+The reference template is for sources by hand.  With a bibliography,
+=citar-org-roam= (loaded once citar is) makes one note per cited work, found
+from citar.
+
+Manual: [[info:org-roam#Citations][Citations]].
+
+* When something seems off
+
+- A note doesn't show in =SPC n r f=: it needs an =:ID:= property (notes
+  made through Org-roam have one), and the database may be behind:
+  =M-x org-roam-db-sync=.
+- Moving =~/vault/roam= means changing =org-roam-directory= in
+  =home/doom/lisp/+org-power.el=; the database is rebuilt on the next sync.
+
+Manual: [[info:org-roam#Performance Optimization][Performance Optimization]].

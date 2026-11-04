@@ -6,6 +6,8 @@
 ;;              and first doc line; RET runs it (M-x for your own additions)
 ;;   +docs/learn  lisp/README.org at its learning path   (SPC H L)
 ;;   +docs/info   the same README as an Info manual        (SPC H i)
+;;   SPC n r ?    Org Roam as configured here (docs/org-roam-here.org, Info)
+;;   SPC n r M    Org-roam's own manual
 ;;
 ;;; Code:
 
@@ -65,25 +67,50 @@ and took a minute)."
     (recenter 0)))
 
 ;;;###autoload
-(defun +docs/info ()
-  "The README as an Info manual, rebuilt when the README is newer."
-  (interactive)
+(defun +docs--info-of (org name)
+  "Info manual NAME.info built from Org file ORG (in the cache, rebuilt when
+ORG is newer); its path."
   (let* ((dir (expand-file-name "docs/" doom-cache-dir))
-         (info (expand-file-name "doom-config.info" dir)))
+         (info (expand-file-name (concat name ".info") dir)))
     (when (or (not (file-exists-p info))
-              (file-newer-than-file-p +docs-readme info))
+              (file-newer-than-file-p org info))
       (make-directory dir t)
       (require 'ox-texinfo)
-      ;; Built in the cache, not next to the README (that's the repo).
-      (let ((texi (expand-file-name "doom-config.texi" dir)))
-        (with-current-buffer (find-file-noselect +docs-readme)
+      ;; Built in the cache, not next to the source (that's the repo).
+      (let ((texi (expand-file-name (concat name ".texi") dir)))
+        (with-current-buffer (find-file-noselect org)
           (org-export-to-file 'texinfo texi nil nil nil nil
                               '(:with-broken-links mark)))
         (unless (zerop (call-process "makeinfo" nil "*makeinfo*" nil
                                      "--no-split" "--force" "-o" info texi))
           (pop-to-buffer "*makeinfo*")
           (user-error "makeinfo failed; see *makeinfo*"))))
-    (info info)))
+    info))
+
+(defun +docs/info ()
+  "The README as an Info manual, rebuilt when the README is newer."
+  (interactive)
+  (info (+docs--info-of +docs-readme "doom-config")))
+
+(defvar +docs-org-roam
+  (expand-file-name "../docs/org-roam-here.org" (file-truename +docs-dir))
+  "The companion to Org-roam's manual, for this configuration.")
+
+(defun +docs/org-roam ()
+  "Org Roam as configured here (Info; Org-roam's own manual: SPC n r M)."
+  (interactive)
+  (info (+docs--info-of +docs-org-roam "org-roam-here")))
+
+(defun +docs/org-roam-manual ()
+  "Org-roam's own manual."
+  (interactive)
+  (info "org-roam"))
+
+(map! :leader
+      (:prefix ("n" . "notes")
+       (:prefix ("r" . "roam")
+        :desc "Org Roam here (manual)" "?" #'+docs/org-roam
+        :desc "Org-roam's manual"      "M" #'+docs/org-roam-manual)))
 
 (map! :leader :desc "My commands" "h /" #'+docs/commands)
 
