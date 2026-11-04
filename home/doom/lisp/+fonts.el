@@ -50,7 +50,12 @@
     '(font-lock-keyword-face :weight bold)
     ;; Slightly dimmed line numbers to reduce visual noise.
     `(line-number :foreground ,(doom-darken (doom-color 'fg) 0.6))
-    `(line-number-current-line :foreground ,(doom-color 'fg) :weight bold)))
+    `(line-number-current-line :foreground ,(doom-color 'fg) :weight bold)
+    ;; pulse.el's olive #AAAA33 (gptel flashes each answer with it, pulsar's
+    ;; generic face inherits it) under the light text: contrast 1.38.  Blue
+    ;; blended into the background keeps the flash visible at 5.24 (WCAG AA).
+    `(pulse-highlight-start-face :background ,(doom-blend 'blue 'bg 0.25))
+    `(pulse-highlight-face :background ,(doom-blend 'blue 'bg 0.25))))
 
 ;;;; Maple Mono NF Ligatures ─────────────────────────────────────────────────
 

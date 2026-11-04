@@ -123,6 +123,9 @@
 ;; ---------------------------------------------------------------------------
 
 (package! leo)                 ;; dict.leo.org translation (word lookup, DE<->EN)
+;; Spaced repetition on plain Org headings; leo lookups become cards (+vocab.el).
+;; The awk scripts find due cards fast, so they ship with the package.
+(package! org-fc :recipe (:host github :repo "l3kn/org-fc" :files (:defaults "awk")))
 ;; gt: multi-engine translation incl. DeepL. Explicit recipe — the bare name
 ;; isn't in Doom's straight recipe repos (doom sync: "Could not find package").
 (package! go-translate
