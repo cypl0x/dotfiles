@@ -39,6 +39,25 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 06:57] — SPC c f for Org, flashcards from leo, screenshots everywhere
+- *Ask key moved to =M-ß=* (your call): =C-M-?= turned out to be dired's
+  unmark-all. =M-ß= is unbound in every keymap and evil state; I checked them all.
+- *=SPC c f= formats again*: it pointed at an undefined command. In Org it
+  aligns tables and tags, repairs lists, updates =[/]= cookies and drops
+  trailing blanks. =C-u= offers Org's canonical form as a diff first.
+  Elsewhere it uses eglot's formatter, or re-indents.
+- *Vocabulary*: every leo lookup becomes an org-fc flashcard in
+  =~/vault/vocabulary.org=, both directions, with lookup counts. =SPC l r=
+  reviews, =SPC l v= opens it. "hören" is the first card.
+- *Screenshots*: every Print key copies *and* saves to =~/Pictures/Screenshots=.
+  In Emacs, =M-Y= inserts the clipboard image or a saved one (newest first,
+  previewed), and =SPC o S= / =SPC o C-s= browse them. In rofi (=Super+Y=),
+  images show as 96 px previews instead of "[ binary data ]".
+- *=SPC b R=* suggests a name from the buffer's contents while you type
+  ("flake-vellumory-pin-notes.org", $0.00008).
+- *Your feedback, fixed*: familiar output now follows as it streams. The
+  yellow flash on new AI output had a WCAG contrast of 1.38 against your
+  text; it's now blue-grey #2f495f at 5.24.
 ** [2026-11-04 Mi 06:39] — ✦ C-M-?: ask anything, from anywhere (familiar-ask)
 - Your biggest wish from the new list, first version: =C-M-?= in any buffer
   (minibuffer and non-file buffers too) asks one long-lived conversation in a

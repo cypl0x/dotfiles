@@ -53,7 +53,10 @@ Predict next edits / commands / searches from context.
 * TODO Atuin and Atuin AI integration                             :shell:
 Research `?' in zsh (Atuin AI); test; bring into Emacs.
 * TODO C-SPC context-sensitive completion (e.g. org)              :completion:
-* TODO leo vocabulary collection + Anki-like review               :prose:
+* DONE leo vocabulary collection + Anki-like review               :prose:
+59f54bf: leo lookups → org-fc double cards in ~/vault/vocabulary.org; SPC l r
+review, SPC l v file. Live card made + found by awk index. Review UI not
+yet driven with real keys. config.el load! needs nrs.
 * TODO README.org learning path for all custom workflows (+ Info) :docs:
 * TODO Discoverability of own additions                           :docs:
 * TODO org-modern: richer, colours matching org                   :org:
