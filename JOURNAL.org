@@ -39,6 +39,16 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 04:12] — leo: "hören" instead of h\\303\\266ren
+- From your screenshot: =SPC l w= showed UTF-8 bytes raw. leo.el parses the
+  response unibyte (its FIXME toggles multibyte twice), and the old
+  workaround never ran: =leo--parse-xml= is an =aio-defun=, so the
+  =cl-letf= binding was gone before its body ran. Now
+  =+prose--leo-parse-xml-a= decodes both the network and the cache path (67b2721).
+- Batch test against dict.leo.org: with the fix "hören", without it raw bytes.
+  Live: =*leo*= shows =hören |hörte, gehört|=.
+- My slip: =(leo-translate-word "hören")= passed the word as PREFIX, which
+  opened a language prompt in your frame. You pressed C-g; I noted the lesson in memory.
 ** [2026-11-03 Di 21:06] — Vellumory 4e97a8c: window changes on a 7,438-page PDF in 61 ms
 - The Vellumory agent on inari fixed both ThinkPad reports (OCR on busy
   runners: 3443fc9; full re-layout on every window change: 4e97a8c). With
