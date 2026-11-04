@@ -261,4 +261,49 @@
       (let ((out (funcall (test-familiar-ask--tool "buffer_text") (buffer-name))))
         (should (string-prefix-p "xxxxxxxxxx\n[… 40 more characters cut" out))))))
 
+(defconst test-familiar-ask--answer
+  "** q  [2026-11-04 Mi 07:40]
+#+begin_context
+Buffer: x
+#+end_context
+
+Use ~forward-word~ or press ~C-f~; ~n~ is a variable.
+
+#+begin_src emacs-lisp
+(setq test-familiar-ask--applied 'yes)
+#+end_src
+
+#+begin_src sh
+du -sh .
+#+end_src
+
+** ")
+
+(defvar test-familiar-ask--applied nil)
+
+(ert-deftest familiar-ask/suggestions-from-the-latest-answer ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (insert test-familiar-ask--answer)
+    (should (equal (mapcar (lambda (s) (list (car s) (cadr s))) (familiar-ask-suggestions))
+                   '((command forward-word) (keys "C-f")
+                     (elisp "(setq test-familiar-ask--applied 'yes)\n")
+                     (shell "du -sh ."))))))
+
+(ert-deftest familiar-ask/apply-runs-where-asked ()
+  (skip-unless test-familiar-available)
+  (let ((origin-buf (generate-new-buffer " *origin*"))
+        (test-familiar-ask--applied nil))
+    (unwind-protect
+        (with-temp-buffer
+          (insert test-familiar-ask--answer)
+          (with-current-buffer origin-buf (insert "one two three") (goto-char 1))
+          (let ((familiar-ask--origin (list :buffer origin-buf :point 1))
+                (sugg (familiar-ask-suggestions)))
+            (familiar-ask--apply (nth 0 sugg))            ; forward-word
+            (should (= (with-current-buffer origin-buf (point)) 4))
+            (familiar-ask--apply (nth 2 sugg))            ; the elisp block
+            (should (eq test-familiar-ask--applied 'yes))))
+      (kill-buffer origin-buf))))
+
 ;;; test-familiar-ask.el ends here

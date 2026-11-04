@@ -14,6 +14,8 @@
 ;;   C-r  (prompt)    pick an earlier prompt
 ;;   RET / S-RET      in the conversation: send a follow-up / newline
 ;;   C-c C-e          copy the conversation as Markdown or Org
+;;   C-c ! / C-c $    apply a suggestion from the latest answer (command, keys,
+;;                    elisp block, shell command at the prompt) / the first one
 ;;   familiar-ask-sessions   reopen an earlier conversation
 ;;
 ;; Built on gptel's chat buffers: streaming, tool calls shown as folded
@@ -367,6 +369,8 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
     (define-key map (kbd "<S-return>") #'newline)
     (define-key map (kbd "C-c C-k") #'gptel-abort)
     (define-key map (kbd "C-c C-e") #'familiar-ask-export)
+    (define-key map (kbd "C-c !") #'familiar-ask-apply)
+    (define-key map (kbd "C-c $") #'familiar-ask-apply-first)
     map)
   "Keymap of `familiar-ask-mode'.")
 
@@ -458,6 +462,77 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
                           gptel-model)
                       'ask tokens))))
 (advice-add 'gptel--update-token-usage :after #'familiar-ask--record-a)
+
+;;;; Applying a suggestion
+
+(defun familiar-ask--last-answer-bounds ()
+  "Start and end of the latest answer: after the last context block."
+  (save-excursion
+    (goto-char (point-max))
+    (when (re-search-backward "^#\\+end_context$" nil t)
+      (cons (line-beginning-position 2)
+            (progn (goto-char (point-max))
+                   (if (re-search-backward "^\\*\\* *$" nil t) (point) (point-max)))))))
+
+(defun familiar-ask-suggestions ()
+  "What the latest answer suggests, in order: a list of (KIND VALUE LABEL).
+KIND is `command', `keys', `elisp' or `shell'."
+  (when-let* ((bounds (familiar-ask--last-answer-bounds)))
+    (let (out)
+      (save-excursion
+        (goto-char (car bounds))
+        (while (re-search-forward
+                "^[ \t]*#\\+begin_src[ \t]+\\([^ \t\n]+\\).*\n\\(\\(?:.*\n\\)*?\\)[ \t]*#\\+end_src\\|~\\([^~\n]+\\)~"
+                (cdr bounds) t)
+          (let ((lang (match-string-no-properties 1))
+                (body (match-string-no-properties 2))
+                (code (match-string-no-properties 3)))
+            (cond
+             (lang
+              (cond ((member lang '("elisp" "emacs-lisp"))
+                     (push (list 'elisp body (concat "eval: " (string-trim (car (split-string body "\n"))))) out))
+                    ((member lang '("sh" "bash" "shell" "zsh" "eshell"))
+                     (push (list 'shell (string-trim body) (concat "at prompt: " (string-trim body))) out))))
+             ((and (intern-soft code) (commandp (intern-soft code)))
+              (push (list 'command (intern-soft code) (concat "M-x " code)) out))
+             ((and (string-match-p "\\`\\(?:\\(?:[CMSsHA]-\\)+\\S-+\\|SPC\\)\\(?: \\S-+\\)*\\'" code)
+                   (ignore-errors (key-valid-p code)))
+              (push (list 'keys code (concat "keys: " code)) out))))))
+      (delete-dups (nreverse out)))))
+
+(defun familiar-ask--apply (suggestion)
+  "Carry out SUGGESTION, (KIND VALUE LABEL), where the question was asked."
+  (let* ((origin familiar-ask--origin)
+         (buf (plist-get origin :buffer))
+         (win (and (buffer-live-p buf) (get-buffer-window buf t))))
+    (unless (buffer-live-p buf) (user-error "The buffer asked from is gone"))
+    (pcase-let ((`(,kind ,value ,label) suggestion))
+      (when win (select-window win))
+      (with-current-buffer buf
+        (pcase kind
+          ('command (call-interactively value))
+          ('keys (execute-kbd-macro (kbd value)))
+          ('elisp (message "%S" (eval (read (format "(progn %s)" value)) t)))
+          ('shell (familiar-ask-insert-at-prompt value))))
+      (message "Applied: %s" label))))
+
+(defun familiar-ask-apply (&optional first)
+  "Apply a suggestion from the latest answer, picked; with FIRST the first one."
+  (interactive)
+  (let* ((suggestions (or (familiar-ask-suggestions)
+                          (user-error "Nothing runnable in the latest answer")))
+         (pick (if (or first (null (cdr suggestions)))
+                   (car suggestions)
+                 (let ((labels (mapcar #'caddr suggestions)))
+                   (nth (cl-position (completing-read "Apply: " labels nil t nil nil (car labels))
+                                     labels :test #'equal)
+                        suggestions)))))
+    (familiar-ask--apply pick)))
+
+(defun familiar-ask-apply-first ()
+  "Apply the first suggestion of the latest answer."
+  (interactive)
+  (familiar-ask-apply t))
 
 ;;;; Prompting
 
