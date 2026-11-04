@@ -52,6 +52,14 @@ any elisp unasked, so text it reads (a web page, a mail) could steer it."
                  (const :tag "Never" nil))
   :group 'familiar)
 
+(defcustom familiar-ask-context-functions nil
+  "Functions adding context, called without arguments in the buffer asked from.
+Each returns nil or a plist (:title STRING :text STRING [:lang MODE] [:primary
+BOOL]).  A :primary part replaces the default text around point: use it
+where the buffer text isn't what the user sees (a PDF, an image, a terminal).
+Say in :title what \"this\" refers to when it's a selection."
+  :type 'hook :group 'familiar)
+
 (defcustom familiar-ask-context-lines 30
   "Lines around point sent along when there is no region or defun."
   :type 'natnum :group 'familiar)
@@ -61,7 +69,10 @@ any elisp unasked, so text it reads (a web page, a mail) could steer it."
 with evil, vertico and orderless; Emacs 32).  Each user message ends with a \
 #+begin_context block describing where they were when they asked: buffer, \
 modes, point, region, nearby text, minibuffer.  Treat it as the subject of \
-the question; the user won't restate it.  Your tools inspect Emacs and act \
+the question; the user won't restate it.  When a part is marked as what \
+\"this\" refers to (a region, a selection in a PDF), the question is about \
+that: explain the thing itself in general terms first, then how the \
+surrounding text uses it.  Your tools inspect Emacs and act \
 in it; use them instead of guessing.  Prefer the read-only ones (describe, \
 buffer_text, list_buffers, apropos): they run at once, while eval_elisp and \
 replace_in_buffer wait for the user to approve each call.
@@ -168,14 +179,26 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
                                  (mapcar (lambda (w) (buffer-name (window-buffer w)))
                                          (window-list (selected-frame) 'nomini)))
                                 ", "))
-           (format "%s, lines %d-%d:\n"
-                   (if region "Region" "Around point")
-                   (line-number-at-pos (car bounds)) (line-number-at-pos (cdr bounds)))
-           (format "#+begin_src %s\n%s\n#+end_src\n" lang
-                   (string-trim-right
-                    (org-escape-code-in-string
-                     (buffer-substring-no-properties (car bounds) (cdr bounds)))))
+           (let ((parts (delq nil (mapcar #'funcall familiar-ask-context-functions))))
+             (concat
+              (mapconcat #'familiar-ask--context-part parts "")
+              ;; A mode's own primary part (a PDF's selection, say) replaces
+              ;; the buffer text, which there is only layout.
+              (unless (seq-some (lambda (p) (plist-get p :primary)) parts)
+                (familiar-ask--context-part
+                 (list :title (format "%s, lines %d-%d"
+                                      (if region "Region (what \"this\" refers to)" "Around point")
+                                      (line-number-at-pos (car bounds))
+                                      (line-number-at-pos (cdr bounds)))
+                       :lang lang
+                       :text (buffer-substring-no-properties (car bounds) (cdr bounds)))))))
            "#+end_context"))))))
+
+(defun familiar-ask--context-part (part)
+  "PART, a plist (:title :text [:lang]), as a titled src block."
+  (format "%s:\n#+begin_src %s\n%s\n#+end_src\n"
+          (plist-get part :title) (or (plist-get part :lang) "text")
+          (string-trim-right (org-escape-code-in-string (plist-get part :text)))))
 
 ;;;; Tools
 

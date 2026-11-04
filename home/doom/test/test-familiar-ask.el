@@ -47,7 +47,7 @@
       (goto-char (line-end-position))
       (activate-mark)
       (let ((ctx (familiar-ask--context (familiar-ask--capture))))
-        (should (string-match-p "Region, lines 2-2" ctx))
+        (should (string-match-p "Region (what \"this\" refers to), lines 2-2" ctx))
         (should (string-match-p "two POINT" ctx))
         (should-not (string-match-p "three" ctx))))))
 
@@ -221,5 +221,17 @@
     (let ((familiar-ask--origin (list :buffer (current-buffer) :point 2)))
       (funcall (test-familiar-ask--tool "insert_at_prompt") "X"))
     (should (equal (buffer-string) "aXb"))))
+
+(ert-deftest familiar-ask/context-functions-primary-replaces-buffer-text ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--in "tile tile tile POINT\n"
+    (let* ((familiar-ask-context-functions
+            (list (lambda () (list :title "Selection on page 3 (what \"this\" refers to)"
+                                   :text "dependently typed programming language" :primary t))
+                  (lambda () nil)))
+           (ctx (familiar-ask--context (familiar-ask--capture))))
+      (should (string-match-p "Selection on page 3 (what \"this\" refers to):\n#\\+begin_src text\ndependently typed" ctx))
+      (should-not (string-match-p "Around point" ctx))
+      (should-not (string-match-p "tile tile" ctx)))))
 
 ;;; test-familiar-ask.el ends here

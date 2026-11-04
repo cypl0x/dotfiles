@@ -21,9 +21,11 @@
 (defun +dashboard/ql-view ()
   "Open org-ql views." (interactive) (call-interactively #'org-ql-view))
 
+;; Groups nested as rows of columns (as in magit), not one screen-high stack.
 (transient-define-prefix +dashboard/hub ()
     "Configuration & feature hub — the starting point for everything."
-    ["AI Agents"
+    [["AI Agents"
+     ("x" "Ask anything (M-ß)"  familiar-ask)
      ("a" "Agent menu (AI)"      +agent/transient)
      ("A" "Start Claude session" +dashboard/start-claude)
      ("g" "gptel (inline LLM)"  +dashboard/gptel-menu)]
@@ -35,8 +37,8 @@
     ["Proof Assistants"
      ("D" "DTT menu"             +dtt/transient)
      ("u" "Agda Unicode toggle"  +dtt/toggle-agda-input)
-     ("s" "Proof status"         +dtt/proof-status)]
-    ["System"
+     ("s" "Proof status"         +dtt/proof-status)]]
+    [["System"
      ("N" "NixOS menu"           +nix/transient)
      ("R" "Remote (TRAMP)"       +tramp/connection-info)
      ("F" "Font showcase"        +fonts/ligature-showcase)]
@@ -45,9 +47,12 @@
      ("P" "Prose stats"          +prose/text-stats)
      ("W" "Word frequency"       +prose/word-frequency)]
     ["Help"
+     ("/" "My commands (all)"    +docs/commands)
+     ("L" "Learning path"        +docs/learn)
+     ("i" "Manual (Info)"        +docs/info)
      ("?" "Help & discovery"     +nav/help-transient)
      ("b" "Buffer menu"          +nav/buffer-transient)
-     ("q" "Quit"                 transient-quit-one)])
+     ("q" "Quit"                 transient-quit-one)]])
 
 ;;;; Dashboard menu item ─────────────────────────────────────────────────────
 

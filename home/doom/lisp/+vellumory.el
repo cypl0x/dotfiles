@@ -156,5 +156,48 @@ nothing itself."
       :desc "Feedback" "F" #'+vellumory/feedback
       :desc "Newer release?" "U" #'+vellumory/update)
 
+
+;;;; M-ß in a PDF: the selection and the page are the context
+
+;; The buffer text of a Vellumory buffer is image layout, so familiar-ask's
+;; default "around point" told the model nothing; a selection there isn't an
+;; Emacs region either.  These give it what you see.
+
+(declare-function vellumory--rpc "ext:vellumory" (method params callback))
+(defvar vellumory--current-page)
+(defvar familiar-ask-context-functions)
+
+(defvar +vellumory-ask-page-timeout 2
+  "Seconds to wait for the worker's page text when asking.")
+
+(defun +vellumory-page-text (page)
+  "PAGE's text (0-based) from the worker, waiting at most a moment."
+  (let (text done)
+    (vellumory--rpc "text" `((page . ,page))
+                    (lambda (reply)
+                      (setq text (alist-get 'text (alist-get 'result reply)) done t)))
+    (with-timeout (+vellumory-ask-page-timeout nil)
+      (while (not done) (accept-process-output nil 0.05)))
+    text))
+
+(defun +vellumory-ask-selection ()
+  "The selection, as what \"this\" refers to."
+  (when-let* (((derived-mode-p 'vellumory-mode))
+              (text (and (fboundp 'vellumory-selection-text) (vellumory-selection-text)))
+              ((not (string-blank-p text))))
+    (list :title (format "Selected in the PDF %s (what \"this\" refers to)" (buffer-name))
+          :text text :primary t)))
+
+(defun +vellumory-ask-page ()
+  "The text of the page on screen, as background."
+  (when-let* (((derived-mode-p 'vellumory-mode))
+              (page (or vellumory--current-page 0))
+              (text (ignore-errors (+vellumory-page-text page))))
+    (list :title (format "Text of page %d, on screen (background, not the question)" (1+ page))
+          :text text :primary t)))
+
+(after! familiar-ask
+  (add-hook 'familiar-ask-context-functions #'+vellumory-ask-selection)
+  (add-hook 'familiar-ask-context-functions #'+vellumory-ask-page 90))
 (provide '+vellumory)
 ;;; +vellumory.el ends here

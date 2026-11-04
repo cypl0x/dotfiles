@@ -37,6 +37,72 @@ order.
 3. Restart Emacs daemon
 4. Press =SPC H= to open the Feature Hub — the master transient menu
 
+* Learning path
+
+Ten lessons, each a few minutes, in the order that pays off fastest.  Each
+names the keys, what to try, and where the reference section is.  Lost?
+=SPC h /= lists every command this config adds, with its keys; =SPC H= is
+the hub.
+
+** 1. Ask anything: =M-ß=
+
+From any buffer, the minibuffer included: =M-ß=, type a question, =RET=.
+The answer pops up on the right and already knows where you were (buffer,
+point, region, mode), so "explain this" or "make this tail recursive"
+needs no copy-paste.  Follow up by typing at the end of the answer and
+pressing =RET=.  Try: in an Org buffer, "When to use ~ and when =?".
+=@fast= in the prompt is cheaper, =@deep= thinks harder; =SPC A N= starts
+a fresh conversation.  [[#familiar-ask][Reference]]
+
+** 2. The AI menu: =SPC A=
+
+Everything AI in one transient, in columns: explain (=x=), fix as a
+reviewable smerge proposal (=F=), commit message (=C=), review the diff
+(=v=), hand the context to an agent shell (=H=, which starts one if none
+runs), spend (=$=).  [[#familiar][Reference]]
+
+** 3. Shell commands in plain words: =?=
+
+At an empty eshell or shell prompt, =?= asks; the command lands on your
+prompt, unrun, like Atuin's =?= (which works in ghostel, where zsh runs).
+
+** 4. Your own commands: =SPC h /=
+
+Every command this config defines, with its keys and first doc line;
+=RET= runs it.  It's generated from the code, so it's never out of date.
+
+** 5. Format: =SPC c f=
+
+Org: tables, lists, tags, =[/]= cookies tidied.  =C-u SPC c f= shows the
+canonical Org form as a diff first.  Elsewhere: the language server, or
+re-indent.  [[#format][Reference]]
+
+** 6. Words: =SPC l w=, then =SPC l r=
+
+Look a word up with leo; it becomes a flashcard.  =SPC l r= quizzes you
+on the due ones, both directions.  [[#vocab][Reference]]
+
+** 7. Screenshots: =Print=, then =M-Y=
+
+=Print= copies a region *and* saves it.  In Emacs, =M-Y= inserts the
+clipboard image or any saved shot (newest first, previewed);
+=SPC o S= browses them.  [[#screenshot][Reference]]
+
+** 8. Rename by contents: =SPC b R=
+
+The rename prompt fills with a name read from the buffer's text while you
+wait; type your own and it stays out of the way.
+
+** 9. Projects the way you run them: =SPC p h=, =SPC p u=
+
+Run commands from your shell history for this project; pull from inari.
+[[#workflow][Reference]]
+
+** 10. Get better from evidence: =M-x +usage/suggest=
+
+Your command counts (local only) go to the assistant, which suggests keys
+and shortcuts for what you actually do.  Best after a few days of use.
+
 * Architecture
 
 ** File Layout
@@ -955,13 +1021,86 @@ diagnostics, and shows its edits as diffs in Emacs. The lock file's auth token
 is enforced (monet itself never checks it); after a Claude exits the project
 is offered again. =M-x monet-list-sessions=, =M-x +monet-auto-start-mode=.
 
-** =+usage.el= — Command Usage Counter (opt-in)
+** =+usage.el= — Command Usage Counter
 :PROPERTIES:
 :CUSTOM_ID: usage
 :END:
 
-=M-x +usage-mode= counts commands with the keys that ran them (local file
-only); =M-x +usage/report= lists them by frequency with bound keys.
+=+usage-mode= (on by default) counts commands with the keys that ran them (local file
+only; keyboard macros excluded); =M-x +usage/report= lists them by frequency
+with bound keys, =M-x +usage/suggest= asks for keybinding and workflow
+suggestions from them.
+
+** =familiar/familiar-ask.el= — Ask Anything, From Anywhere
+:PROPERTIES:
+:CUSTOM_ID: familiar-ask
+:END:
+
+=M-ß= (one chord on a German keyboard; unbound everywhere else) asks a
+long-lived conversation from any buffer, the minibuffer and non-file
+buffers included.  A folded =#+begin_context= block carries where you
+were: buffer, modes, point, region or nearby lines, an active minibuffer's
+prompt, input and candidates, and for shells the prompt itself.
+
+| Key / command         | What                                                    |
+|-----------------------+---------------------------------------------------------|
+| =M-ß=                   | ask; =RET= at the end of the answer for a follow-up       |
+| =SPC A N=, =SPC u M-ß=    | ask in a fresh conversation                             |
+| =C-r= (in the prompt)   | pick an earlier prompt                                  |
+| =C-c '= (in the prompt) | edit the prompt in an Org buffer: =C-c C-c= send, =C-c C-k= keep |
+| =@fast= =@smart= =@deep=  | model for this turn (completion with =M-TAB=)             |
+| =C-c C-e=               | copy the conversation as Markdown or Org                |
+| =SPC A A=               | reopen an earlier conversation                          |
+| =?= at a shell prompt   | ask from eshell/shell; the command lands on the prompt  |
+
+Tools the model can call: =describe=, =buffer_text=, =list_buffers=,
+=apropos=, =eval_elisp=, =replace_in_buffer= (undoable), =insert_at_prompt=,
+=set_minibuffer= (e.g. orderless syntax into the running =M-x=).
+=familiar-ask-confirm-tools= decides which ask first; this config sets it
+to =nil= (none).  Prompt caching is on; every turn is priced into =SPC A $=.
+
+** =+format.el= — =SPC c f= Formats, Org Included
+:PROPERTIES:
+:CUSTOM_ID: format
+:END:
+
+Org: =org-table-align= on every table, =org-list-repair= on every list,
+statistics cookies, tag alignment, trailing whitespace.  =C-u=: Org's
+canonical form (=org-element= parsed and printed back, src bodies left
+alone), shown as a diff and applied with =replace-region-contents=.
+eglot buffers: the server's formatter.  Elsewhere: =indent-region=.
+
+** =+vocab.el= — leo Lookups Become Flashcards
+:PROPERTIES:
+:CUSTOM_ID: vocab
+:END:
+
+Every =SPC l w= lookup adds an org-fc double card to
+=~/vault/vocabulary.org= (front: the word; back: leo's first six matches);
+repeated lookups count up =LEO_LOOKUPS=.  =SPC l r= reviews the due cards,
+=SPC l v= opens the file.  SM-2 scheduling (org-fc's FSRS needs Python).
+
+** =+screenshot.el= — Screenshots, Pasted and Browsed
+:PROPERTIES:
+:CUSTOM_ID: screenshot
+:END:
+
+Hyprland's =Print= keys run =grimblast copysave= into
+=~/Pictures/Screenshots=.  =M-Y= inserts the clipboard image (=yank-media=;
+Org saves it as an attachment) or a saved shot, newest first with preview;
+Org gets a link, Markdown an image.  =SPC o S= opens the directory newest
+first in dirvish, =SPC o C-s= as thumbnails.  =Super+Y= (rofi) shows image
+previews in the clipboard history.
+
+** =+docs.el= — Your Own Additions, Found
+:PROPERTIES:
+:CUSTOM_ID: docs
+:END:
+
+=SPC h /= lists every interactive command defined in =lisp/=, with keys and
+first doc line, generated from the code.  =+docs/learn= opens this file at
+the learning path, =+docs/info= builds it as an Info manual (cache dir,
+=makeinfo=) and opens it.  Both are in the hub (=SPC H L=, =SPC H i=).
 
 * Setup Reference
 
