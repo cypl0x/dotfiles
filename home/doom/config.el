@@ -501,6 +501,7 @@
 (load! "lisp/+screenshot")   ;; M-Y insert a screenshot, SPC o S browse them
 (load! "lisp/+format")       ;; SPC c f: Org tidy (C-u canonical), eglot, indent
 (load! "lisp/+vocab")        ;; leo lookups → org-fc cards; SPC l r review, SPC l v file
+(load! "lisp/+docs")         ;; SPC h /: every own command; learning path, Info manual
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules

@@ -9,6 +9,8 @@
 ;;
 ;;; Code:
 
+(defvar doom-cache-dir)
+(declare-function org-fold-show-subtree "org-fold" ())
 (declare-function consult--read "ext:consult" (table &rest options))
 (declare-function org-export-to-file "ox" (backend file &optional async subtreep visible-only body-only ext-plist post-process))
 
@@ -17,17 +19,18 @@
 
 (defvar +docs-readme (expand-file-name "README.org" +docs-dir))
 
-(defun +docs-own-p (sym)
-  "Non-nil when SYM is defined in a file under `+docs-dir'."
-  (when-let* ((file (symbol-file sym 'defun)))
-    (string-prefix-p (file-truename +docs-dir)
-                     (file-truename (file-name-sans-extension file)))))
-
 (defun +docs-commands ()
-  "Interactive commands defined in this config, sorted by name."
-  (let (out)
-    (mapatoms (lambda (s) (when (and (commandp s) (+docs-own-p s)) (push s out))))
-    (sort out #'string<)))
+  "Interactive commands defined in this config, sorted by name.
+One pass over `load-history' (per-symbol `symbol-file' calls rescan it
+and took a minute)."
+  (let ((dir (file-truename +docs-dir)) out)
+    (dolist (entry load-history)
+      (when (and (stringp (car entry))
+                 (string-prefix-p dir (file-truename (car entry))))
+        (dolist (def (cdr entry))
+          (when (and (eq (car-safe def) 'defun) (commandp (cdr def)))
+            (push (cdr def) out)))))
+    (sort (delete-dups out) #'string<)))
 
 (defun +docs--annotate (name)
   (let* ((sym (intern-soft name))
