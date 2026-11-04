@@ -118,15 +118,18 @@ The on-disk counterpart of `+persist/--should-persist-p'."
                           (buffer-substring-no-properties
                            (point-min) (point-max)))))))))
 
-(defun +persist/save-all ()
-  "Save all persistable buffers."
-  (interactive)
+(defun +persist/save-all (&optional interactive)
+  "Save all persistable buffers.
+Say how many only when called as a command: from the 60 s timer it filled
+*Messages* (202 of its lines on 2026-11-04)."
+  (interactive (list t))
   (let ((count 0))
     (dolist (buf (buffer-list))
       (when (+persist/--should-persist-p buf)
         (+persist/save-buffer buf)
         (cl-incf count)))
-    (message "Persisted %d buffers" count)))
+    (when interactive
+      (message "Persisted %d buffers" count))))
 
 (defun +persist/restore-all ()
   "Restore all persisted buffers from disk."
