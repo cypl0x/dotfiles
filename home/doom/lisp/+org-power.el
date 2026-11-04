@@ -115,20 +115,40 @@
         org-modern-table-vertical 1
         org-modern-table-horizontal 0.2
         org-modern-list '((43 . "➤") (45 . "–") (42 . "•"))
-        org-modern-todo-faces
-        '(("TODO" :background "#ff6c6b" :foreground "white" :weight bold)
-          ("STRT" :background "#da8548" :foreground "white" :weight bold)
-          ("DONE" :background "#98be65" :foreground "white" :weight bold))
-        org-modern-priority-faces
-        '((?A :background "#ff6c6b" :foreground "white" :weight bold)
-          (?B :background "#da8548" :foreground "white")
-          (?C :background "#5B6268" :foreground "white"))
+        ;; Labels in the theme's own colours (the keyword's Org face as the
+        ;; label background, like org-modern's defaults): see
+        ;; `+org-modern-todo-faces-h'.  The old hard-coded white-on-colour labels
+        ;; read at WCAG 2.1-2.8; these at 5.2-10.
         org-modern-tag t
         org-modern-timestamp t
         org-modern-block-fringe nil
         org-modern-keyword nil
         ;; Hide leading stars — org-modern renders its own bullets.
-        org-hide-leading-stars t))
+        org-hide-leading-stars t
+        ;; Markup as in Markdown previews: hidden, revealed at point by
+        ;; org-appear (which does nothing while the markers are shown).
+        org-hide-emphasis-markers t
+        org-pretty-entities t)
+  (+org-modern-todo-faces-h)
+  (add-hook 'doom-load-theme-hook #'+org-modern-todo-faces-h))
+
+(defun +org-modern-label-face (face)
+  "A label in FACE's colour: its foreground behind the theme's background.
+Explicit colours, not :inherit: org-modern appends org-modern-label (0.8)
+itself, and inheriting faces rendered labels at 14, 18 and 22 px side by side."
+  (list :background (face-foreground face nil t)
+        :foreground (face-background 'default nil t)
+        :weight 'semibold))
+
+(defun +org-modern-todo-faces-h ()
+  "Keyword and priority labels in the colours Org itself uses for them."
+  (setq org-modern-todo-faces
+        (mapcar (lambda (kf) (cons (car kf) (+org-modern-label-face (cdr kf))))
+                org-todo-keyword-faces)
+        org-modern-priority-faces
+        `((?A ,@(+org-modern-label-face 'error))
+          (?B ,@(+org-modern-label-face 'warning))
+          (?C ,@(+org-modern-label-face 'shadow)))))
 
 ;;;; org-appear — Auto-reveal markup ─────────────────────────────────────────
 
