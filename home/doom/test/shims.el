@@ -10,6 +10,8 @@
 
 (unless (fboundp 'map!)
   (defmacro map! (&rest _) "Ignore keybindings in tests." nil))
+(unless (fboundp 'custom-set-faces!)
+  (defmacro custom-set-faces! (&rest _) "Ignore face settings in tests." nil))
 (unless (fboundp 'after!)
   (defmacro after! (package &rest body)
     "Run BODY once PACKAGE (a symbol) is loaded."

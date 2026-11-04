@@ -26,6 +26,8 @@
 (declare-function org-roam-complete-link-at-point "ext:org-roam-mode" ())
 (declare-function pcomplete-completions-at-point "pcomplete" ())
 (require 'map)
+(declare-function doom-color "ext:doom-themes" (name &optional type))
+(declare-function doom-blend "ext:doom-themes" (color1 color2 alpha))
 (defvar cape-dict-file)
 (defvar cape-dabbrev-buffer-function)
 (declare-function cape--dabbrev-list "ext:cape" (input))
