@@ -132,23 +132,31 @@
   (+org-modern-todo-faces-h)
   (add-hook 'doom-load-theme-hook #'+org-modern-todo-faces-h))
 
-(defun +org-modern-label-face (face)
-  "A label in FACE's colour: its foreground behind the theme's background.
+(defun +org-modern-label-face (face-or-colour)
+  "A label in FACE-OR-COLOUR (a face's foreground, or a colour string).
 Explicit colours, not :inherit: org-modern appends org-modern-label (0.8)
-itself, and inheriting faces rendered labels at 14, 18 and 22 px side by side."
-  (list :background (face-foreground face nil t)
-        :foreground (face-background 'default nil t)
+itself, and inheriting faces rendered labels at 14, 18 and 22 px side by
+side.  Inverse video, so hl-line's background on the current line becomes
+the label's text instead of wiping the label out."
+  (list :foreground (if (stringp face-or-colour) face-or-colour
+                      (face-foreground face-or-colour nil t))
+        :background (face-background 'default nil t)
+        :inverse-video t
         :weight 'semibold))
 
 (defun +org-modern-todo-faces-h ()
-  "Keyword and priority labels in the colours Org itself uses for them."
-  (setq org-modern-todo-faces
-        (mapcar (lambda (kf) (cons (car kf) (+org-modern-label-face (cdr kf))))
-                org-todo-keyword-faces)
-        org-modern-priority-faces
-        `((?A ,@(+org-modern-label-face 'error))
-          (?B ,@(+org-modern-label-face 'warning))
-          (?C ,@(+org-modern-label-face 'shadow)))))
+  "Keyword and priority labels in the colours Org itself uses for them.
+Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
+  (let ((muted (doom-color 'base7)))
+    (setq org-modern-todo-faces
+          (append (mapcar (lambda (kf) (cons (car kf) (+org-modern-label-face (cdr kf))))
+                          org-todo-keyword-faces)
+                  (mapcar (lambda (kw) (cons kw (+org-modern-label-face muted)))
+                          '("DONE" "OKAY" "YES" "[X]")))
+          org-modern-priority-faces
+          `((?A ,@(+org-modern-label-face 'error))
+            (?B ,@(+org-modern-label-face 'warning))
+            (?C ,@(+org-modern-label-face muted))))))
 
 ;;;; org-appear — Auto-reveal markup ─────────────────────────────────────────
 
