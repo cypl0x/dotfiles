@@ -39,6 +39,12 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 00:05] — Code that tells you what can change
+- In Rust, a binding that can change is now underlined and an unsafe
+  operation stands out, straight from rust-analyzer.  Semantic tokens
+  were already on for Zig, Rust and Nix; a short note in
+  =home/doom/docs/= says what each server offers.
+
 ** [2026-11-04 Mi 23:55] — Your tailnet and NixOS, from Emacs
 - =SPC o n=: your Tailscale peers, how each is reached (direct or relay),
   files and shells there in one key, a settings menu, the daemon log.
