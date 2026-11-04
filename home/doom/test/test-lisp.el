@@ -858,3 +858,22 @@ and a temp exec-path where bin/tar links to store/tar."
             (set-buffer-modified-p nil)
             (kill-buffer)))
       (delete-file +vocab-file))))
+
+(ert-deftest usage/summary-ranks-and-describes ()
+  (let ((+usage-file (make-temp-file "usage" nil ".eld"))
+        (+usage--counts (make-hash-table :test #'eq)))
+    (unwind-protect
+        (progn
+          (with-temp-file +usage-file
+            (prin1 '((find-file ("SPC f f" . 3) ("M-x" . 1)) (magit-status ("M-x" . 9))) (current-buffer)))
+          (let ((lines (split-string (+usage-summary) "\n")))
+            (should (string-match-p "^ +9  magit-status  via M-x×9" (car lines)))
+            (should (string-match-p "^ +4  find-file  via SPC f f×3, M-x×1" (cadr lines)))))
+      (delete-file +usage-file))))
+
+(ert-deftest usage/macros-are-not-counted ()
+  (let ((+usage--counts (make-hash-table :test #'eq))
+        (this-command 'forward-char) (real-this-command 'forward-char)
+        (executing-kbd-macro "abc"))
+    (+usage--record-h)
+    (should (zerop (hash-table-count +usage--counts)))))

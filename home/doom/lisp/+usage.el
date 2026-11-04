@@ -7,6 +7,7 @@
 ;;
 ;;   M-x +usage-mode     start/stop counting (off by default)
 ;;   M-x +usage/report   commands by frequency, with keys used and keys bound
+;;   M-x +usage/suggest  familiar reads the counts and suggests keys and shortcuts
 ;;
 ;;; Code:
 
@@ -27,17 +28,22 @@
   "COMMAND → hash of KEYS → count, since the last save.")
 
 (defvar +usage--timer nil)
+(declare-function familiar-ask "familiar-ask" (prompt &optional new))
 
 (defun +usage--record-h ()
   "Count `this-command' and how it was invoked."
+  ;; Keyboard macros replay keys nobody typed now (Claude's lab tests too):
+  ;; not evidence of how you work.
   (when (and (symbolp this-command) this-command
+             (not executing-kbd-macro)
              (not (memq this-command +usage-ignore)))
     (let* ((keys (this-command-keys-vector))
-           (how (if (or (eq real-this-command 'execute-extended-command)
-                        (zerop (length keys))
-                        (memq (aref keys 0) '(?\M-x)))
-                    "M-x"
-                  (key-description keys)))
+           (how (cond ((or (eq real-this-command 'execute-extended-command)
+                           (and (> (length keys) 0) (memq (aref keys 0) '(?\M-x))))
+                       "M-x")
+                      ;; Timers, mouse-less remaps, programmatic calls.
+                      ((zerop (length keys)) "(no keys)")
+                      (t (key-description keys))))
            (table (or (gethash this-command +usage--counts)
                       (puthash this-command (make-hash-table :test #'equal)
                                +usage--counts))))
@@ -116,6 +122,36 @@
       (tabulated-list-init-header)
       (tabulated-list-print)
       (pop-to-buffer (current-buffer)))))
+
+(defun +usage-summary (&optional n)
+  "The N (default 80) most used commands, one line each, for a model to read."
+  (let ((rows (sort (mapcar (lambda (e) (cons (car e) (cons (apply #'+ (mapcar #'cdr (cdr e))) (cdr e))))
+                            (+usage--merged))
+                    (lambda (a b) (> (cadr a) (cadr b))))))
+    (mapconcat (lambda (row)
+                 (pcase-let ((`(,cmd ,count . ,hows) row))
+                   (format "%5d  %s  via %s  bound to %s"
+                           count cmd
+                           (mapconcat (lambda (h) (format "%s×%d" (car h) (cdr h)))
+                                      (seq-take (sort (copy-sequence hows) (lambda (a b) (> (cdr a) (cdr b)))) 3)
+                                      ", ")
+                           (or (ignore-errors (key-description (where-is-internal cmd nil t))) "nothing"))))
+               (seq-take rows (or n 80))
+               "\n")))
+
+;;;###autoload
+(defun +usage/suggest ()
+  "Ask familiar for workflow suggestions from what you actually use."
+  (interactive)
+  (unless (fboundp 'familiar-ask) (user-error "familiar-ask isn't available"))
+  (familiar-ask
+   (concat "Here is how I use Emacs (counts of commands, how each was invoked, what it's bound to). "
+           "Suggest concrete improvements: commands I run by M-x often that deserve a key "
+           "(name a free one in Doom/evil), long key sequences I repeat that have shorter ones, "
+           "chains of commands that want one command, built-in or package features that would "
+           "replace what I do by hand.  Lead with the five with the most effect.\n\n"
+           "#+begin_example\n" (+usage-summary) "\n#+end_example")
+   t))
 
 ;; Opt-in: M-x +usage-mode (or (+usage-mode 1) in config.el) to start counting.
 
