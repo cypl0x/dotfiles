@@ -442,3 +442,77 @@ du -sh .
       (let ((gptel--fsm-last (gptel-make-fsm :info '(:model claude-haiku-5-5))))
         (familiar-ask--record-a '(:input 10 :output 2 :cached 0)))
       (should (string-match-p "claude-haiku-5-5" (familiar-ask--header-line))))))
+
+;;; familiar-mcp-client
+
+(when test-familiar-available
+  (load (expand-file-name "../lisp/familiar/familiar-mcp-client"
+                          (file-name-directory (or load-file-name buffer-file-name)))
+        nil t))
+
+(defmacro test-familiar-mcp--with-config (json &rest body)
+  (declare (indent 1))
+  `(let* ((familiar-mcp-client-config (make-temp-file "claude" nil ".json" ,json))
+          (familiar-mcp-client--cache nil))
+     (unwind-protect (progn ,@body)
+       (delete-file familiar-mcp-client-config))))
+
+(ert-deftest familiar-mcp-client/servers-of-user-and-project ()
+  (skip-unless test-familiar-available)
+  (test-familiar-mcp--with-config
+      "{\"mcpServers\": {\"emacs\": {\"type\": \"stdio\", \"command\": \"e\"},
+                         \"web\": {\"type\": \"http\", \"url\": \"https://x\"},
+                         \"nix\": {\"command\": \"mcp-nixos\"}},
+        \"projects\": {\"/p\": {\"mcpServers\": {\"github\": {\"type\": \"stdio\", \"command\": \"npx\",
+                                 \"args\": [\"-y\", \"gh\"], \"env\": {\"TOKEN\": \"t\"}}}}}}"
+    (should (equal (familiar-mcp-client-servers "/p")
+                   '(("nix" :command "mcp-nixos" :args nil :env nil)
+                     ("github" :command "npx" :args ("-y" "gh") :env (:TOKEN "t")))))
+    (should (equal (mapcar #'car (familiar-mcp-client-servers "/elsewhere")) '("nix")))))
+
+(ert-deftest familiar-mcp-client/server-keywords-are-prompt-keywords ()
+  (skip-unless test-familiar-available)
+  (cl-letf (((symbol-function 'familiar-mcp-client-servers)
+             (lambda (&rest _) '(("github" :command "npx")))))
+    (should (equal (familiar-ask--keywords "@github open issues?")
+                   '("open issues?" github)))
+    (with-temp-buffer
+      (insert "@git")
+      (should (member "github" (all-completions "git" (nth 2 (familiar-ask--keywords-capf))))))))
+
+(ert-deftest familiar-mcp-client/tools-only-for-the-turn-that-names-them ()
+  (skip-unless test-familiar-available)
+  (let (asked ran)
+    (cl-letf (((symbol-function 'familiar-mcp-client-servers)
+               (lambda (&rest _) '(("github" :command "npx"))))
+              ((symbol-function 'familiar-mcp-client--connection) (lambda (&rest _) 'conn))
+              ((symbol-function 'mcp--tools)
+               (lambda (_) '((:name "list_issues") (:name "create_issue"))))
+              ((symbol-function 'mcp-make-text-tool)
+               (lambda (_server tool _async)
+                 (list :name tool :async t :description "d" :args nil
+                       :function (lambda (cb &rest _) (push tool ran) (funcall cb "ok")))))
+              ((symbol-function 'y-or-n-p) (lambda (p) (push p asked) nil)))
+      (should-not (familiar-mcp-client-turn-tools '(echo) nil))
+      (let* ((tools (familiar-mcp-client-turn-tools '(github) nil))
+             (call (lambda (name)
+                     (let (out)
+                       (funcall (gptel-tool-function
+                                 (seq-find (lambda (tl) (equal (gptel-tool-name tl) name)) tools))
+                                (lambda (r) (setq out r)))
+                       out))))
+        (should (equal (mapcar #'gptel-tool-name tools) '("list_issues" "create_issue")))
+        (should (equal (funcall call "list_issues") "ok"))       ; reads: at once
+        (should (string-match-p "declined" (funcall call "create_issue")))
+        (should (equal ran '("list_issues")))
+        (should (= 1 (length asked)))))))
+
+(ert-deftest familiar-mcp-client/read-only-by-hint-server-then-name ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-mcp-client-read-only-servers '("nixos-mcp")))
+    (should (familiar-mcp-client--read-only-p "nixos-mcp" '(:name "nix")))
+    (should (familiar-mcp-client--read-only-p "github" '(:name "list_issues")))
+    (should-not (familiar-mcp-client--read-only-p "github" '(:name "merge_pull_request")))
+    ;; The tool's own word wins either way.
+    (should (familiar-mcp-client--read-only-p "x" '(:name "merge" :annotations (:readOnlyHint t))))
+    (should-not (familiar-mcp-client--read-only-p "nixos-mcp" '(:name "nix" :annotations (:readOnlyHint :false))))))

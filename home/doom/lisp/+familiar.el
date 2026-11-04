@@ -42,6 +42,8 @@
 ;; itself on only in minibuffers that already have their own capfs, which
 ;; the prompt gets later in its setup.
 (after! familiar-ask
+  ;; @github, @nixos-mcp…: the MCP servers Claude Code knows for the project.
+  (require 'familiar-mcp-client)
   (add-to-list 'familiar-ask-prompt-capfs #'+completion-prose-capf t)
   (add-hook 'familiar-ask-prompt-setup-hook
             (defun +familiar-ask-corfu-h ()

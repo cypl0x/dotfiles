@@ -64,6 +64,14 @@ arg.  RET at the end of an answer always follows up."
   "Words a prompt may contain as @WORD; taken out before it is sent.
 Next to gptel's presets (@fast, @smart, @deep), which gptel applies.")
 
+(defvar familiar-ask-keyword-functions nil
+  "Functions returning more keywords, as `familiar-ask-keywords' does.
+Called in the buffer asked from (e.g. MCP servers known for its project).")
+
+(defvar familiar-ask-turn-tools-functions nil
+  "Functions called with a turn's keywords (symbols) and its origin plist,
+each returning gptel tools offered on that turn besides `familiar-ask-tools'.")
+
 (defvar familiar-ask-prompt-capfs nil
   "Completion functions in the prompt, after @keyword completion.")
 
@@ -631,10 +639,18 @@ KIND is `command', `keys', `elisp' or `shell'."
     map)
   "Extra keys while reading a `familiar-ask' prompt.")
 
+(defun familiar-ask--all-keywords ()
+  "`familiar-ask-keywords' and those of `familiar-ask-keyword-functions'.
+From the minibuffer, for the buffer the prompt is about."
+  (with-current-buffer (if (minibufferp) (window-buffer (minibuffer-selected-window))
+                         (current-buffer))
+    (append familiar-ask-keywords
+            (mapcan (lambda (f) (copy-sequence (funcall f))) familiar-ask-keyword-functions))))
+
 (defun familiar-ask--keywords-capf ()
   "Complete @keywords and @presets in the prompt."
   (when (looking-back "@\\([[:alnum:]-]*\\)" (line-beginning-position))
-    (let ((cands (append familiar-ask-keywords
+    (let ((cands (append (familiar-ask--all-keywords)
                          (mapcar (lambda (p)
                                    (cons (symbol-name (car p))
                                          (or (plist-get (cdr p) :description) "")))
@@ -647,7 +663,7 @@ KIND is `command', `keys', `elisp' or `shell'."
 (defun familiar-ask--keywords (prompt)
   "PROMPT without its @keywords, and the keywords: (TEXT . SYMBOLS)."
   (let (found)
-    (dolist (kw familiar-ask-keywords)
+    (dolist (kw (familiar-ask--all-keywords))
       (let ((re (format "\\(?:^\\|[ \t]+\\)@%s\\b" (regexp-quote (car kw)))))
         (when (string-match-p re prompt)
           (push (intern (car kw)) found)
@@ -698,7 +714,7 @@ ask's, which could be another buffer minutes ago."
            (concat prompt "\n\n(Answer in one to three short lines of plain text, \
 no lists or code blocks: it is shown in the echo area.)")
          prompt)
-       follow echo (or origin (familiar-ask--capture))))))
+       follow echo (or origin (familiar-ask--capture)) keywords))))
 
 (defun familiar-ask--show (buf win)
   "Display BUF, from WIN when it's still there, unless BUF is on screen.
@@ -708,10 +724,11 @@ From WIN: asked from the minibuffer, the minibuffer window is selected."
         (with-selected-window win (display-buffer buf))
       (display-buffer buf))))
 
-(defun familiar-ask--send (prompt follow echo origin)
+(defun familiar-ask--send (prompt follow echo origin &optional keywords)
   "Put PROMPT and ORIGIN's context into the conversation and send it.
 FOLLOW continues the running conversation; ECHO shows the answer in the
-echo area instead of the conversation's window."
+echo area instead of the conversation's window.  KEYWORDS (symbols) may
+add tools for this turn (`familiar-ask-turn-tools-functions')."
   (let* ((context (familiar-ask--context origin))
          (buf (if (and follow (get-buffer familiar-ask--buffer-name))
                   (get-buffer familiar-ask--buffer-name)
@@ -750,9 +767,13 @@ echo area instead of the conversation's window."
           (add-hook 'minibuffer-exit-hook again))))
     ;; Doom's popup `display-buffer' can leave another buffer current, and
     ;; `gptel-send' sends whatever buffer is current: send explicitly here.
-    (with-current-buffer buf
-      (goto-char (point-max))
-      (gptel-send))
+    (let ((extra (mapcan (lambda (f) (copy-sequence (funcall f keywords origin)))
+                         familiar-ask-turn-tools-functions)))
+      (with-current-buffer buf
+        ;; Per turn: an @server's tools ride along only when asked for.
+        (setq-local gptel-tools (append familiar-ask-tools extra))
+        (goto-char (point-max))
+        (gptel-send)))
     buf))
 
 (defun familiar-ask-pick-history ()

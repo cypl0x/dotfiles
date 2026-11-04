@@ -992,7 +992,16 @@ Tools the model can call: =describe=, =buffer_text=, =list_buffers=,
 =set_minibuffer= (e.g. orderless syntax into the running =M-x=), and
 =web_search= (Brave, from =+brave-search.el=).
 =familiar-ask-confirm-tools= decides which ask first; this config sets it
-to =nil= (none).  Prompt caching is on; every turn is priced into =SPC A $=.
+to =nil= (none).
+
+MCP servers (=familiar-mcp-client.el=): every server Claude Code knows for
+the project (=~/.claude.json=, user and project scope) is an =@keyword=:
+=@github=, =@nixos-mcp=.  Named in a prompt, the server starts if needed
+and its tools ride along for that turn only (github's 26 schemas would
+cost tokens on every prompt).  Tools that may change things outside Emacs
+ask first regardless; read-only ones (the tool's =readOnlyHint=, else
+=familiar-mcp-client-read-only-servers=, else get_/list_/search_ names) run
+at once.  Prompt caching is on; every turn is priced into =SPC A $=.
 
 ** =+format.el= — =SPC c f= Formats, Org Included
 :PROPERTIES:

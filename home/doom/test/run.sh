@@ -8,7 +8,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 lisp=$here/../lisp
 emacs=${EMACS:-emacs}
 # Modules that stand on their own under the shims; the rest need Doom loaded.
-standalone=(+daemon.el +vellumory.el +workflow.el +tldr.el +proced.el +perf.el +usage.el +lsp-fallback.el +monet.el +persist.el +screenshot.el +format.el +vocab.el +docs.el +completion.el familiar/familiar.el familiar/familiar-mcp.el familiar/familiar-ask.el)
+standalone=(+daemon.el +vellumory.el +workflow.el +tldr.el +proced.el +perf.el +usage.el +lsp-fallback.el +monet.el +persist.el +screenshot.el +format.el +vocab.el +docs.el +completion.el familiar/familiar.el familiar/familiar-mcp.el familiar/familiar-ask.el familiar/familiar-mcp-client.el)
 
 lint() {
   "$emacs" -Q --batch -l "$here/shims.el" -l "$here/lint.el" \
