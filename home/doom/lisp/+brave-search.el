@@ -25,8 +25,10 @@
 (defun +brave-search--tool (query)
   "The top five web results for QUERY, as Markdown for a model."
   (mapconcat (lambda (r)
-               (format "## %s\n%s\n%s\n" (alist-get 'title r) (alist-get 'url r)
-                       (or (alist-get 'description r) "")))
+               (format "## %s\n%s\n%s\n"
+                       (brave-search--decode-entities (alist-get 'title r))
+                       (alist-get 'url r)
+                       (brave-search--decode-entities (or (alist-get 'description r) ""))))
              (alist-get 'results (alist-get 'web (brave-search-web query :count 5)))
              "\n"))
 
