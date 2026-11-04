@@ -799,8 +799,8 @@ and a temp exec-path where bin/tar links to store/tar."
             "| x | longer |\n|-+-|\n| 1 | 2 |\n")
     (+format-org)
     (should (equal (buffer-string)
-                   (concat "* Tasks [1/2]\n"
-                           "- [X] one\n- [ ] two\n\nSteps:\n"
+                   (concat "* Tasks [1/2]\n\n"
+                           "- [X] one\n- [ ] two\n\nSteps:\n\n"
                            "1. a\n2. b\n3. c\n\n"
                            "| x | longer |\n|---+--------|\n| 1 |      2 |\n")))))
 
@@ -1121,6 +1121,38 @@ and a temp exec-path where bin/tar links to store/tar."
       (should (equal (buffer-string) "run ~(save-some-buffers~"))))
   (should (equal (+completion--code-sort (list "fill-column" "car" "forward-word"))
                  '("forward-word" "car" "fill-column"))))
+
+(ert-deftest format/org-blank-lines-by-convention ()
+  (cl-flet ((fmt (text)
+              (with-temp-buffer
+                (org-mode)
+                (insert text)
+                (+format-org-blank-lines)
+                (buffer-string))))
+    ;; One blank line between headings and before a heading's text; the
+    ;; heading's planning and drawer stay right under it.
+    (should (equal (fmt "#+TITLE: x\n* A\nSCHEDULED: <2026-11-04 Wed>\n:PROPERTIES:\n:ID: 1\n:END:\ntext\n** B\n\n\n\n* C")
+                   "#+title: x\n\n* A\nSCHEDULED: <2026-11-04 Wed>\n:PROPERTIES:\n:ID: 1\n:END:\n\ntext\n\n** B\n\n* C\n"))
+    ;; Tables, lists and blocks set apart; text around them is not.
+    (should (equal (fmt "* A\n\nintro\n- one\n- two\nafter\n| a |\nmore\nand more\n")
+                   "* A\n\nintro\n\n- one\n- two\n\nafter\n\n| a |\n\nmore\nand more\n"))
+    ;; Blank lines inside a block are its content; its delimiters lower case,
+    ;; not what it contains.
+    (should (equal (fmt "* A\n\n#+NAME: s\n#+BEGIN_SRC sh\necho\n\n\n#+TITLE: kept\n#+END_SRC\n\n\n\ntext\n")
+                   "* A\n\n#+name: s\n#+begin_src sh\necho\n\n\n#+TITLE: kept\n#+end_src\n\ntext\n"))
+    ;; Runs of blank lines between paragraphs: one (a whole run, however long).
+    (should (equal (fmt "a\n\n\n\nb\n") "a\n\nb\n"))
+    ;; A list item's own paragraphs aren't top-level: left alone.
+    (should (equal (fmt "* A\n\n- item\n  more of it\n- next\n")
+                   "* A\n\n- item\n  more of it\n- next\n")))
+  ;; In a region, the end isn't the buffer's: no newline forced there.
+  (with-temp-buffer
+    (org-mode)
+    (insert "* A\ntext\n* B\nrest")
+    (save-restriction
+      (narrow-to-region 1 10)
+      (+format-org-blank-lines))
+    (should (equal (buffer-string) "* A\n\ntext\n* B\nrest"))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))

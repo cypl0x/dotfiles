@@ -3,7 +3,8 @@
 ;; With Doom's :editor format off, SPC c f pointed at an undefined command.
 ;; Now it formats the region or buffer by what the buffer is:
 ;;
-;;   Org         `+format-org': align tables and tags, repair lists (indent,
+;;   Org         `+format-org': blank lines by convention (below), lower-case
+;;               #+keywords, align tables and tags, repair lists (indent,
 ;;               numbering), update statistics cookies, drop trailing blanks.
 ;;               C-u: the canonical form Org's own parser prints back
 ;;               (`org-element-interpret-data'), shown as a diff first.
@@ -23,10 +24,111 @@
 (declare-function org-element-at-point "org-element" (&optional epom cached-only))
 (declare-function org-element-lineage "org-element-ast" (datum &optional types with-self))
 (declare-function org-element-property "org-element-ast" (property node &optional dflt force-undefer))
+(declare-function org-element-map "org-element" (data types fun &optional info first-match no-recursion with-affiliated))
+(declare-function org-element-type "org-element-ast" (node &optional anonymous))
+(declare-function org-element-contents "org-element-ast" (node))
 (defvar org-src-preserve-indentation)
 (declare-function eglot-managed-p "eglot" ())
 (declare-function eglot-format "eglot" (&optional beg end on-type-format))
 (declare-function eglot-server-capable "eglot" (&rest feats))
+
+;; Blank lines, by two conventions already in use rather than a new one:
+;; alphapapa's `unpackaged/org-fix-blank-lines' (a blank line between
+;; headings, and between a heading's planning/drawers and its text) and
+;; markdownlint's (MD012: no runs of blank lines; MD022, MD031, MD032:
+;; headings, blocks, tables and lists set apart by one).  Blank lines inside
+;; blocks are their content and stay; a heading keeps its planning line and
+;; drawers right under it (Org needs them there).
+(defconst +format-org-set-apart
+  '(table plain-list src-block example-block quote-block center-block
+    special-block export-block verse-block dynamic-block fixed-width)
+  "Elements with a blank line before and after them.")
+
+(defconst +format-org-verbatim
+  '(src-block example-block export-block verse-block comment-block fixed-width)
+  "Elements whose blank lines are their content.")
+
+(defun +format-org--blank-before (pos)
+  "Make it exactly one blank line before the line at POS (none at the start)."
+  (save-excursion
+    (goto-char pos)
+    (beginning-of-line)
+    (let ((end (point)))
+      (skip-chars-backward " \t\n")
+      (unless (bobp)
+        (forward-line 1)
+        (delete-region (point) end)
+        (insert "\n")))))
+
+(defun +format-org--blank-positions ()
+  "Where a blank line goes: before each heading, before each top-level
+element set apart (and after it: before what follows), before a section's
+text after the heading's planning and drawers."
+  (let (positions)
+    (org-element-map (org-element-parse-buffer 'element) '(headline section)
+      (lambda (el)
+        (if (eq (org-element-type el) 'headline)
+            (push (org-element-property :begin el) positions)
+          (let* ((kids (org-element-contents el))
+                 (meta (and (eq (org-element-type (org-element-property :parent el)) 'headline)
+                            (seq-take-while (lambda (k) (memq (org-element-type k)
+                                                              '(planning property-drawer drawer)))
+                                            kids)))
+                 (body (nthcdr (length meta) kids)))
+            ;; Text under a heading: a blank line between it and the heading.
+            (when (and body (eq (org-element-type (org-element-property :parent el)) 'headline))
+              (push (org-element-property :begin (car body)) positions))
+            (cl-loop for (k next) on body
+                     when (memq (org-element-type k) +format-org-set-apart)
+                     do (push (org-element-property :begin k) positions)
+                     (when next (push (org-element-property :begin next) positions)))))))
+    (sort (delete-dups positions) #'>)))
+
+(defun +format-org-blank-lines ()
+  "Blank lines by the conventions above, in the accessible part."
+  (let ((verbatim
+         ;; Inside a block, not in the blank lines after it (its post-blank).
+         (lambda ()
+           (let ((el (org-element-at-point)) (pos (point)))
+             (and (memq (org-element-type el) +format-org-verbatim)
+                  (< pos (save-excursion (goto-char (org-element-property :end el))
+                                         (skip-chars-backward " \t\n")
+                                         (point))))))))
+    ;; Runs of blank lines outside blocks: one.
+    (save-excursion
+      (goto-char (point-min))
+      ;; Forward: a match is then a whole run (backward, one could start
+      ;; inside a run and leave two blank lines).
+      (while (re-search-forward "\n\\(?:[ \t]*\n\\)\\{2,\\}" nil t)
+        (unless (save-match-data
+                  (save-excursion (goto-char (1+ (match-beginning 0))) (funcall verbatim)))
+          (replace-match "\n\n" t t))))
+    (dolist (pos (+format-org--blank-positions))
+      (+format-org--blank-before pos))
+    ;; Org writes its keywords and block delimiters in lower case (since 9);
+    ;; a block's own lines are its content.
+    (save-excursion
+      (goto-char (point-min))
+      (let ((case-fold-search nil))
+        (while (re-search-forward "^[ \t]*#\\+\\(\\(?:BEGIN\\|END\\)_[A-Za-z]+\\|[A-Z_]+:\\)" nil t)
+          (let* ((el (save-match-data (org-element-at-point)))
+                 (bol (line-beginning-position))
+                 (first (save-excursion (goto-char (org-element-property :post-affiliated el))
+                                        (line-end-position)))
+                 (last (save-excursion (goto-char (org-element-property :end el))
+                                       (skip-chars-backward " \t\n")
+                                       (line-beginning-position))))
+            ;; Not a line between a block's delimiters.
+            (unless (and (memq (org-element-type el) +format-org-verbatim)
+                         (> bol first) (< bol last))
+              (replace-match (downcase (match-string 1)) t t nil 1))))))
+    ;; One newline at the end of the buffer (not of a region).
+    (when (= (point-max) (1+ (buffer-size)))
+      (save-excursion
+        (goto-char (point-max))
+        (skip-chars-backward " \t\n")
+        (delete-region (point) (point-max))
+        (insert "\n")))))
 
 (defun +format-org (&optional beg end)
   "Tidy Org between BEG and END (default: the whole buffer), in place."
@@ -46,7 +148,8 @@
                                                    '(plain-list) t)))))
         (org-update-statistics-cookies 'all)
         (org-align-tags t)
-        (delete-trailing-whitespace)))
+        (delete-trailing-whitespace)
+        (+format-org-blank-lines)))
     (set-marker beg nil)
     (set-marker end nil)))
 
