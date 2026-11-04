@@ -56,7 +56,10 @@ From the minibuffer, the buffers on screen: the M-ß prompt asks about them."
 
 (defun +completion--words (input)
   "Words starting with INPUT: from buffers first, then the dictionaries.
-One list without duplicates (`cape-capf-super' keeps a word once per source)."
+One list without duplicates (`cape-capf-super' keeps a word once per source).
+The word lists are cape's own, not autoloaded: cape is loaded first (after a
+restart nothing had, and M-ß's prompt failed: void cape--dabbrev-list)."
+  (require 'cape)
   (let ((buffers (+completion--word-buffers))
         (case-fold-search nil))
     (seq-filter

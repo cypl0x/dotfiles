@@ -274,6 +274,10 @@ streamed segment ends (`t') with the calls in INFO's :tool-use and
 background request, priced but not kept in the history, failing quietly.
 Returns the model used."
   (let* ((model (or model (familiar--model task escalate)))
+         ;; The request runs curl here; a directory deleted since (a test
+         ;; project, a removed checkout) made every request fail.
+         (default-directory (if (file-directory-p default-directory) default-directory
+                              (expand-file-name "~/")))
          (gptel-backend (or backend familiar-backend gptel-backend))
          (gptel-model model)
          (gptel-tools tools)
