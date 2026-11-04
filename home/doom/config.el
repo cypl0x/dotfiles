@@ -453,6 +453,11 @@
 (after! doom-modeline
   (setq doom-modeline-window-number t))
 
+;; Turm reports through flymake (the :lang turm module); flycheck there only
+;; doubled the work per change (noticed by the Turm session while timing input lag).
+(after! flycheck
+  (setq flycheck-global-modes '(not turm-mode)))
+
 ;; ---------------------------------------------------------------------------
 ;; Private config path override
 ;; SPC f p opens the dotfiles source instead of the read-only Nix store symlink.
