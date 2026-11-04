@@ -318,4 +318,14 @@ du -sh .
                           (marker-position start) (point-max))
       (should (equal (buffer-string) "/Magit/")))))
 
+(ert-deftest familiar-ask/set-minibuffer-refuses-a-closed-one ()
+  ;; A minibuffer buffer outlives its prompt; writing there would report
+  ;; success while changing nothing the user sees.
+  (skip-unless test-familiar-available)
+  (let* ((mb (get-buffer-create " *Minibuf-9*"))
+         (familiar-ask--origin (list :buffer (current-buffer) :minibuffer mb)))
+    (unwind-protect
+        (should-error (funcall (test-familiar-ask--tool "set_minibuffer") "!dired"))
+      (kill-buffer mb))))
+
 ;;; test-familiar-ask.el ends here

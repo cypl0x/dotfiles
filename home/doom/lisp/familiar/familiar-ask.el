@@ -342,6 +342,9 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
                 (let ((mb (plist-get familiar-ask--origin :minibuffer)))
                   (unless (and mb (buffer-live-p mb) (minibufferp mb))
                     (error "No minibuffer to write into"))
+                  ;; It may have closed while the model thought (C-g, or RET).
+                  (unless (minibufferp mb t)
+                    (error "The minibuffer asked from is closed; nothing changed"))
                   (with-current-buffer mb
                     (delete-minibuffer-contents)
                     (insert text))
