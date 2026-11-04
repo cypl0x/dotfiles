@@ -1,0 +1,250 @@
+;;; lisp/+org-lint.el --- Org style lint, live, on Org's own org-lint -*- lexical-binding: t; -*-
+;;
+;; markdownlint for Org: rules about how Org is written, not whether it
+;; parses (Org's own `org-lint' does that).  Each rule is an org-lint
+;; checker in the `style' category, so
+;;
+;;   M-x org-lint          lists Org's findings and these together
+;;   C-u M-x org-lint      `style' only
+;;
+;; and flycheck shows all of them as you write (checker `+org-lint').
+;;
+;;   rule                          like markdownlint
+;;   =x= that is code → ~x~        (Org manual: ~code~, =verbatim=)
+;;   empty heading
+;;   heading level jumps           MD001
+;;   same heading twice in a row   MD024 (siblings only)
+;;   heading ending in . , ; : !   MD026
+;;   runs of blank lines           MD012
+;;   trailing spaces               MD009
+;;   blank line missing            MD022 MD031 MD032 (what SPC c f adds)
+;;   #+KEYWORD in upper case       (Org writes them lower case since 9)
+;;   bullets mixed in one list     MD004
+;;
+;;; Code:
+
+(require 'map)
+(declare-function org-lint-add-checker "org-lint" (name summary fun &rest props))
+(declare-function org-lint-checker-function "org-lint" (cl-x))
+(declare-function org-lint-checker-name "org-lint" (cl-x))
+(declare-function org-element-map "org-element" (data types fun &optional info first-match no-recursion with-affiliated))
+(declare-function org-element-parse-buffer "org-element" (&optional granularity visible-only keep-deferred))
+(declare-function org-element-type "org-element-ast" (node &optional anonymous))
+(declare-function org-element-property "org-element-ast" (property node &optional dflt force-undefer))
+(declare-function org-element-contents "org-element-ast" (node))
+(declare-function org-element-at-point "org-element" (&optional epom cached-only))
+(declare-function +format-org--blank-positions "+format" ())
+(defvar org-lint--checkers)
+(defvar +format-org-verbatim)
+
+;;;; Rules
+
+(defun +org-lint--key-p (s)
+  "Whether S reads as keys (C-c C-c, SPC c f, M-ß): those stay =verbatim=."
+  (string-match-p
+   "\\`\\(?:\\(?:[CMSsHA]-\\)*\\(?:[^ ]\\|SPC\\|RET\\|TAB\\|ESC\\|DEL\\|<[[:alnum:]-]+>\\)\\(?: \\|\\'\\)\\)+\\'"
+   s))
+
+(defun +org-lint--code-p (s)
+  "Whether S is plainly code: a Lisp form, or an Emacs function or variable."
+  (and (not (+org-lint--key-p s))
+       (or (string-match-p "\\`([^ ].*)\\'" s)
+           (when-let* ((sym (intern-soft s)))
+             (and (string-match-p "[-/]" s) (or (fboundp sym) (boundp sym)))))))
+
+(defun +org-lint-verbatim-code (ast)
+  (org-element-map ast 'verbatim
+    (lambda (v)
+      (let ((s (org-element-property :value v)))
+        (when (+org-lint--code-p s)
+          (list (org-element-property :begin v)
+                (format "=%s= is code: Org writes code as ~%s~" s s)))))))
+
+(defun +org-lint--title (h)
+  (string-trim (or (org-element-property :raw-value h) "")))
+
+(defun +org-lint-empty-heading (ast)
+  (org-element-map ast 'headline
+    (lambda (h)
+      (when (string-empty-p (+org-lint--title h))
+        (list (org-element-property :begin h) "Heading without a title")))))
+
+(defun +org-lint-heading-increment (ast)
+  (org-element-map ast 'headline
+    (lambda (h)
+      (let* ((parent (org-element-property :parent h))
+             (above (if (eq (org-element-type parent) 'headline)
+                        (org-element-property :level parent)
+                      0))
+             (level (org-element-property :level h)))
+        (when (> level (1+ above))
+          (list (org-element-property :begin h)
+                (format "Heading level %d under level %d: skips a level" level above)))))))
+
+(defun +org-lint-duplicate-sibling (ast)
+  (let (reports)
+    (org-element-map ast '(org-data headline)
+      (lambda (parent)
+        (let (seen)
+          (dolist (h (org-element-contents parent))
+            (when (eq (org-element-type h) 'headline)
+              (let ((title (+org-lint--title h)))
+                (unless (string-empty-p title)
+                  (if (member title seen)
+                      (push (list (org-element-property :begin h)
+                                  (format "Same heading as a sibling above: %s" title))
+                            reports)
+                    (push title seen)))))))))
+    (nreverse reports)))
+
+(defun +org-lint-heading-punctuation (ast)
+  (org-element-map ast 'headline
+    (lambda (h)
+      (let ((title (replace-regexp-in-string "[ \t]*\\[[0-9]*[/%][0-9]*\\]\\'" ""
+                                             (+org-lint--title h))))
+        ;; An ellipsis (a placeholder: "Include ...") isn't a sentence end.
+        (when (and (string-match-p "[.,;:!]\\'" title)
+                   (not (string-match-p "\\.\\.\\'\\|…\\'" title)))
+          (list (org-element-property :begin h)
+                (format "Heading ends in \"%s\"" (substring title -1))))))))
+
+(defun +org-lint--in-verbatim-p ()
+  "Whether point is between the delimiters of a block whose text is content."
+  (let ((el (org-element-at-point)))
+    (and (memq (org-element-type el) +format-org-verbatim)
+         (> (point) (save-excursion (goto-char (org-element-property :post-affiliated el))
+                                    (line-end-position)))
+         (< (point) (save-excursion (goto-char (org-element-property :end el))
+                                    (skip-chars-backward " \t\n")
+                                    (line-beginning-position))))))
+
+(defun +org-lint-blank-lines (_ast)
+  (let (reports)
+    (while (re-search-forward "\n\\(?:[ \t]*\n\\)\\{2,\\}" nil t)
+      (let ((pos (1+ (match-beginning 0))))
+        (unless (save-match-data (save-excursion (goto-char pos) (+org-lint--in-verbatim-p)))
+          (push (list pos "More than one blank line") reports))))
+    (nreverse reports)))
+
+(defun +org-lint-trailing-whitespace (_ast)
+  (let (reports)
+    (while (re-search-forward "[ \t]+$" nil t)
+      (unless (save-match-data (+org-lint--in-verbatim-p))
+        (push (list (match-beginning 0) "Trailing whitespace") reports)))
+    (nreverse reports)))
+
+(defun +org-lint-missing-blank-line (_ast)
+  (when (fboundp '+format-org--blank-positions)   ; lisp/+format.el
+    (let (reports)
+      (dolist (pos (+format-org--blank-positions))
+        (save-excursion
+          (goto-char pos)
+          (unless (or (bobp)
+                      (save-excursion (forward-line -1) (looking-at-p "[ \t]*$")))
+            (push (list pos "No blank line before this (SPC c f adds it)") reports))))
+      (sort reports (lambda (a b) (< (car a) (car b)))))))
+
+(defun +org-lint-keyword-case (_ast)
+  (let ((case-fold-search nil) reports)
+    (while (re-search-forward "^[ \t]*#\\+\\(\\(?:BEGIN\\|END\\)_[A-Za-z]+\\|[A-Z_]+:\\)" nil t)
+      (unless (save-match-data (+org-lint--in-verbatim-p))
+        (push (list (match-beginning 1)
+                    (format "#+%s: Org writes it lower case" (match-string 1)))
+              reports)))
+    (nreverse reports)))
+
+(defun +org-lint-list-bullets (ast)
+  (org-element-map ast 'plain-list
+    (lambda (l)
+      (unless (eq (org-element-property :type l) 'ordered)
+        (let* ((items (org-element-contents l))
+               (bullet (lambda (i) (string-trim (org-element-property :bullet i))))
+               (first (funcall bullet (car items))))
+          (seq-some (lambda (i)
+                      (unless (equal (funcall bullet i) first)
+                        (list (org-element-property :begin i)
+                              (format "Bullet %s in a list of %s" (funcall bullet i) first))))
+                    (cdr items)))))))
+
+(defconst +org-lint-rules
+  '((+org-lint-verbatim-code      "=code= that should be ~code~" low)
+    (+org-lint-empty-heading      "Heading without a title" high)
+    (+org-lint-heading-increment  "Heading levels skipped (MD001)" high)
+    (+org-lint-duplicate-sibling  "Same heading twice among siblings (MD024)" high)
+    (+org-lint-heading-punctuation "Heading ends in punctuation (MD026)" high)
+    (+org-lint-blank-lines        "Runs of blank lines (MD012)" high)
+    (+org-lint-trailing-whitespace "Trailing whitespace (MD009)" high)
+    (+org-lint-missing-blank-line "Blank line missing (MD022/MD031/MD032)" high)
+    (+org-lint-keyword-case       "Upper-case #+KEYWORD" high)
+    (+org-lint-list-bullets       "Bullets mixed in one list (MD004)" high))
+  "The style rules: (FUNCTION SUMMARY TRUST).")
+
+(with-eval-after-load 'org-lint
+  (pcase-dolist (`(,fn ,summary ,trust) +org-lint-rules)
+    (org-lint-add-checker fn summary fn :categories '(style) :trust trust)))
+
+;;;; Flycheck
+
+(declare-function flycheck-define-generic-checker "ext:flycheck" (symbol docstring &rest properties))
+(declare-function flycheck-error-new-at-pos "ext:flycheck" (pos level message &rest args))
+(defvar flycheck-checkers)
+(defvar flycheck-disabled-checkers)
+
+(defcustom +org-lint-max-per-rule 3
+  "A style rule with more findings than this is shown once as you write,
+saying how many more; M-x org-lint lists them all."
+  :type 'natnum :group 'org)
+
+(defcustom +org-lint-max-size 150000
+  "Larger Org buffers aren't linted as you write (it runs in this Emacs:
+~170 ms for 100k characters); M-x org-lint still works there."
+  :type 'natnum :group 'org)
+
+(defun +org-lint-findings ()
+  "This buffer's `org-lint' findings: (POS LEVEL MESSAGE) ...
+Org's checks are warnings, the style rules above info; a style rule with
+more than `+org-lint-max-per-rule' findings gives its first, with a count."
+  (require 'org-lint)
+  (let ((ast (org-element-parse-buffer nil nil 'defer))
+        (style (mapcar #'car +org-lint-rules))
+        findings)
+    (dolist (checker org-lint--checkers)
+      (let* ((name (org-lint-checker-name checker))
+             (reports (condition-case nil
+                          (save-excursion
+                            (goto-char (point-min))
+                            (funcall (org-lint-checker-function checker) ast))
+                        (error nil)))
+             (more (and (memq name style)
+                        (> (length reports) +org-lint-max-per-rule)
+                        (1- (length reports)))))
+        (pcase-dolist (`(,pos ,msg) (if more (list (car reports)) reports))
+          (push (list (if (markerp pos) (marker-position pos) pos)
+                      (if (memq name style) 'info 'warning)
+                      (if more
+                          (format "%s, and %d more like it (M-x org-lint lists them)" msg more)
+                        msg))
+                findings))))
+    (sort findings (lambda (a b) (< (car a) (car b))))))
+
+;; In place of flycheck's own org-lint checker (an Emacs subprocess
+;; showing every finding): the same checks in this Emacs, many of a kind
+;; shown once.
+(with-eval-after-load 'flycheck
+  (flycheck-define-generic-checker '+org-lint
+    "Org's `org-lint' checks and the style rules of lisp/+org-lint.el."
+    :start (lambda (checker callback)
+             (condition-case err
+                 (funcall callback 'finished
+                          (mapcar (pcase-lambda (`(,pos ,level ,msg))
+                                    (flycheck-error-new-at-pos pos level msg :checker checker))
+                                  (+org-lint-findings)))
+               (error (funcall callback 'errored (error-message-string err)))))
+    :modes '(org-mode)
+    :predicate (lambda () (< (buffer-size) +org-lint-max-size)))
+  (add-to-list 'flycheck-checkers '+org-lint)
+  (setq-default flycheck-disabled-checkers
+                (cons 'org-lint (default-value 'flycheck-disabled-checkers))))
+
+(provide '+org-lint)
+;;; +org-lint.el ends here

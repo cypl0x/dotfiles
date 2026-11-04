@@ -1153,6 +1153,54 @@ and a temp exec-path where bin/tar links to store/tar."
       (narrow-to-region 1 10)
       (+format-org-blank-lines))
     (should (equal (buffer-string) "* A\n\ntext\n* B\nrest"))))
+
+(load (expand-file-name "+org-lint" test-lisp-dir) nil t)
+
+(ert-deftest org-lint/style-rules-find-what-they-say ()
+  (require 'org-lint)
+  (cl-flet ((lint (rule text)
+              (with-temp-buffer
+                (org-mode)
+                (insert text)
+                (goto-char (point-min))
+                (mapcar #'cadr (funcall rule (org-element-parse-buffer))))))
+    ;; Code in =verbatim=; keys and file names stay verbatim.
+    (should (equal (lint #'+org-lint-verbatim-code
+                         "Use =forward-word= or =(setq x 1)=, keys =C-c C-c= =SPC c f=, file =README.org=, =fill-column=.\n")
+                   '("=forward-word= is code: Org writes code as ~forward-word~"
+                     "=(setq x 1)= is code: Org writes code as ~(setq x 1)~"
+                     "=fill-column= is code: Org writes code as ~fill-column~")))
+    (should (equal (lint #'+org-lint-empty-heading "* TODO\n* Fine\n") '("Heading without a title")))
+    (should (equal (lint #'+org-lint-heading-increment "* A\n*** C\n** B\n")
+                   '("Heading level 3 under level 1: skips a level")))
+    (should (equal (lint #'+org-lint-duplicate-sibling "* A\n** X\n** X\n* B\n** X\n")
+                   '("Same heading as a sibling above: X")))
+    (should (equal (lint #'+org-lint-heading-punctuation "* Done.\n* Why?\n* Tasks: [1/2]\n* More ...\n")
+                   '("Heading ends in \".\"" "Heading ends in \":\"")))
+    (should (equal (lint #'+org-lint-blank-lines "a\n\n\nb\n#+begin_src sh\n1\n\n\n2\n#+end_src\n")
+                   '("More than one blank line")))
+    (should (equal (lint #'+org-lint-trailing-whitespace "a \nb\n") '("Trailing whitespace")))
+    (should (equal (lint #'+org-lint-missing-blank-line "* A\ntext\n\n* B\n")
+                   '("No blank line before this (SPC c f adds it)")))
+    (should (equal (lint #'+org-lint-keyword-case "#+TITLE: x\n#+begin_src sh\n#+TITLE: in code\n#+end_src\n")
+                   '("#+TITLE:: Org writes it lower case")))
+    (should (equal (lint #'+org-lint-list-bullets "- a\n+ b\n\n1. x\n2) y\n")
+                   '("Bullet + in a list of -"))))
+  ;; Registered with org-lint, in the style category.
+  (should (seq-find (lambda (c) (eq (org-lint-checker-name c) '+org-lint-list-bullets))
+                    org-lint--checkers)))
+
+(ert-deftest org-lint/many-of-a-kind-shown-once-as-you-write ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "* A\n\none \n\n* B\n\ntwo \n\n* C\n\nthree \n\n* D\n\nfour \n\n#+begin_src\n#+end_src\n")
+    (let ((found (+org-lint-findings)))
+      ;; Style: one finding with a count; Org's own checks (here: a src
+      ;; block without a language) as warnings.
+      (should (equal (seq-filter (lambda (f) (eq (nth 1 f) 'info)) found)
+                     '((9 info "Trailing whitespace, and 3 more like it (M-x org-lint lists them)"))))
+      (should (seq-find (lambda (f) (eq (nth 1 f) 'warning)) found)))))
+
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))

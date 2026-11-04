@@ -549,6 +549,7 @@
 (load! "lisp/+proced")      ;; SPC o k: ps aux | rg, kill N, as live proced
 (load! "lisp/+screenshot")   ;; M-Y insert a screenshot, SPC o S browse them
 (load! "lisp/+format")       ;; SPC c f: Org tidy (C-u canonical), eglot, indent
+(load! "lisp/+org-lint")     ;; Org style rules (markdownlint-like) in org-lint and flymake
 (load! "lisp/+vocab")        ;; leo lookups → org-fc cards; SPC l r review, SPC l v file
 (load! "lisp/+docs")         ;; SPC h /: every own command; learning path, Info manual
 (load! "lisp/+completion")   ;; C-SPC: completion sources by context (links, tags, words, code)
