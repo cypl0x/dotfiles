@@ -248,18 +248,34 @@ Shows Flesch Reading Ease, Flesch-Kincaid Grade Level, and Coleman-Liau Index."
 
 ;;;; leo.el — Fix umlaut/multibyte rendering ─────────────────────────────────
 
-;; leo.el's XML parser doesn't decode gzip+UTF-8 responses properly.
-;; The FIXME at line 297 of leo.el toggles multibyte twice (no-op).
-;; Fix: decode response body as UTF-8 after gzip decompression.
+;; `leo--parse-xml' parses the response as raw bytes: `url-retrieve' leaves
+;; the body unibyte (text/xml; charset=utf-8), leo.el's FIXME toggles
+;; multibyte twice (a no-op), and its cache path never decodes either, so
+;; "hören" shows as "h\303\266ren". It's an `aio-defun', so an :around
+;; advice with `cl-letf' doesn't help: the body runs after `aio-await',
+;; when the binding is long gone. Replace it with one that decodes.
 (after! leo
-  (defadvice! +prose/leo-fix-multibyte (fn url)
-    "Decode leo response as UTF-8 to fix umlauts (ä ö ü ß)."
-    :around #'leo--parse-xml
-    (cl-letf (((symbol-function 'toggle-enable-multibyte-characters)
-               (lambda ()
-                 (decode-coding-region (point) (point-max) 'utf-8)
-                 (set-buffer-multibyte t))))
-      (funcall fn url))))
+  (aio-defun +prose--leo-parse-xml-a (url)
+    "Parse the XML retrieved from URL, decoded as UTF-8."
+    (let ((url-user-agent leo-user-agent))
+      (if (url-is-cached url)
+          (with-current-buffer (url-fetch-from-cache url)
+            (set-buffer-multibyte nil)
+            (let ((start (goto-char (re-search-forward "\n\n"))))
+              (zlib-decompress-region start (point-max))
+              (+prose--leo-decode start)))
+        (let ((response (aio-await (aio-url-retrieve url))))
+          (with-current-buffer (cdr response)
+            (goto-char (point-min))
+            (+prose--leo-decode (search-forward "\n\n")))))))
+
+  (defun +prose--leo-decode (start)
+    "Decode the unibyte UTF-8 body from START to the end, then parse it."
+    (set-buffer-multibyte t)
+    (decode-coding-region start (point-max) 'utf-8)
+    (xml-parse-region start (point-max)))
+
+  (advice-add #'leo--parse-xml :override #'+prose--leo-parse-xml-a))
 
 ;;;; org-reading-mode — Distraction-free reading ─────────────────────────────
 
