@@ -166,3 +166,5 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE LanguageTool: language auto + motherTongue de-DE (was en-US for all) (d96df38)
 ** DONE research: LSP semantic tokens: eglot has them; servers probed; rust-analyzer mutable/unsafe faces (11c3ce7)
 ** DONE [#C] Grammarly-class: SPC P v review (LT by rule, spelling, long sentences, Amstad/Flesch) (0b9ad34); more to come
+** DONE Grammarly-class: SPC P i rewrite toward a goal with word diff preview (56a1022)
+** DONE research: Isabelle PIDE: SPC t P panels Output/Problems/Outline for any LSP (964daaf); Lean goals + sledgehammer-like queries next

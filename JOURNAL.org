@@ -39,6 +39,11 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 00:17] — An IDE layout that follows you
+- =SPC t P=: Isabelle-style panels for any language: what is at point on
+  the right, this file's problems under it, its outline on the left with
+  where you are highlighted.  They follow you as you move between files.
+
 ** [2026-11-05 Do 00:12] — Sentences, polished on request
 - =SPC P i= rewrites the sentence you're in toward a goal (grammar
   only, clearer, shorter, friendlier ...), and shows exactly which words
