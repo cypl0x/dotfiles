@@ -122,8 +122,8 @@ Measure the first frame after daemon start in the lab only; defer slow parts.
 ** DONE QWERTZ: ö ä = [ ], Ö Ä = { }, ü Ü = definition/back (aa6afc2); ß still free
 ** DONE Prose: fill/unfill, sentence lines, join, AI split with word check (this commit)
 ** DONE Usage insights → coach for held keys (8c3d4e4); more as data grows
-** TODO Big: native AI harness, all protocols (OpenAI/Anthropic HTTP, MCP, ACP, A2A client+server)
-** TODO Inspiration: hlissner dotfiles, tecosaur config (somewhere in ~/dev), awesome-emacs
+** ACTIVE Big: native AI harness, all protocols: plan in lisp/familiar/ROADMAP.org; step 1 (MCP client per turn) done a5ad54f
+** ACTIVE Inspiration: research report in JOURNAL 2026-11-04; adopt items one by one
 ** DONE monet hook was dead (yuya373 claude-code); removed, +monet.el covers attach
 ** DONE jinx only (en+de, code comments too); :checkers spell dropped (2a15d16), doom sync done
 ** DONE familiar-ask header: model of the last turn (8573989)

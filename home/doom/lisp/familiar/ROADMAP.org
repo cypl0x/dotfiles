@@ -1,0 +1,58 @@
+#+title: familiar: an Emacs-native AI harness, every protocol
+#+startup: show2levels
+
+The goal: one Emacs-native layer through which any model or agent works
+with Emacs, and Emacs with any of them, over every protocol that matters.
+Not another chat UI: the conversation is an Org buffer, tools are Emacs
+itself, and the protocols are transports underneath.
+
+Status as of 2026-11-04.  Survey of existing Elisp work: research report in
+the JOURNAL entry of that day (repos, stars, last push, gaps).
+
+* What exists (here)
+
+| Layer                | Piece                         | Protocol / role                        |
+|----------------------+-------------------------------+----------------------------------------|
+| Ask from anywhere    | =familiar-ask.el= (M-ß)       | Anthropic HTTP via gptel; Org buffer   |
+| Emacs as tools       | =familiar-ask-tools=           | gptel tools (eval, buffers, minibuffer) |
+| Tasks                | =familiar.el=                  | explain, fix (smerge), review, commit  |
+| Emacs as MCP server  | =familiar-mcp.el=              | MCP server, stdio via emacsclient      |
+| MCP servers as tools | =familiar-mcp-client.el=       | MCP client (mcp.el), =@server= per turn |
+| Agents in Emacs      | agent-shell (+agent.el)        | ACP client (acp.el)                    |
+| Agents see Emacs     | monet (+monet.el)              | Claude Code IDE protocol (WebSocket)   |
+| Spend                | ledger, =SPC A $=              | every request priced                   |
+
+* Gaps, by protocol
+
+| Protocol            | Client in Emacs              | Server in Emacs                   | Gap                                          |
+|---------------------+------------------------------+-----------------------------------+----------------------------------------------|
+| Anthropic Messages  | gptel                        | -                                 | none for use; batch API and files API unused |
+| OpenAI-compatible   | gptel (backends)             | none                              | Emacs as an OpenAI-compatible endpoint: no   |
+| MCP                 | mcp.el (stdio, SSE)          | mcp-server-lib (stdio only)       | streamable HTTP server; sampling, elicitation |
+| ACP                 | acp.el + agent-shell         | none                              | Emacs as an ACP *agent*; =terminal/*= in acp.el |
+| A2A                 | none usable                  | none                              | everything                                   |
+| Claude Code IDE     | -                            | monet                             | none known                                   |
+
+* Order of work (each a self-contained step, tested and used live)
+
+1. [X] MCP servers' tools in M-ß, opt-in per turn (=familiar-mcp-client.el=).
+2. [ ] Streamable-HTTP MCP server inside Emacs (=familiar-mcp-http=): no
+   emacsclient wrapper, one port, token in a lock file like monet's;
+   any agent on the machine attaches with a URL.
+3. [ ] Conversation core: one representation of a turn (prompt, context,
+   tool calls, result, cost) that M-ß, agent-shell transcripts and MCP
+   sampling requests all write; Org as the storage format.
+4. [ ] MCP sampling: servers that ask the client for a completion get one
+   from familiar (budgeted, ledgered, asks first).
+5. [ ] Emacs as an ACP agent: editors and tools speaking ACP drive a
+   familiar conversation (the inverse of agent-shell).
+6. [ ] OpenAI-compatible endpoint: =/v1/chat/completions= served by Emacs,
+   so any tool that speaks it gets Emacs' tools and context.
+7. [ ] A2A: agent card + task endpoints over the same HTTP server; an
+   =@agent= keyword in M-ß to delegate to a remote A2A agent.
+8. [ ] Split out: =familiar= as a standalone package (MELPA), Doom glue as a
+   module.
+
+Each step: research the current spec first (spec version, upstream
+issues), batch tests without network, a live test in the lab frame, then
+the README and journal.
