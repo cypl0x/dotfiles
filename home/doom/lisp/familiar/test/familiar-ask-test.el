@@ -729,6 +729,20 @@ answered \"one \" \"two\" in chunks; BODY sees the buffer, the request in
   (let ((table (lambda (s p a) (complete-with-action a (list "ab" "abc") s p))))
     (should (equal (familiar-complete--try "a" table nil 1) (cons "a" 1)))
     (should (equal (familiar-complete--all "zz" table nil 2) (quote ("ab" "abc" . 0))))))
+
+(ert-deftest familiar-ask/fresh-conversation-restores-no-gptel-state ()
+  ;; gptel complained "Could not activate gptel backend nil" on every ask.
+  (skip-unless test-familiar-available)
+  (let (restored)
+    (cl-letf (((symbol-function 'gptel--restore-state) (lambda () (setq restored t))))
+      (with-temp-buffer
+        (insert "#+title: new\n")
+        (familiar-ask--setup (current-buffer))
+        (should-not restored))
+      (with-temp-buffer
+        (insert ":PROPERTIES:\n:GPTEL_MODEL: claude-sonnet-5-5\n:END:\n#+title: old\n")
+        (familiar-ask--setup (current-buffer))
+        (should restored)))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"

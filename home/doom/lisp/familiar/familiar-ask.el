@@ -517,7 +517,12 @@ win over this mode's map; C-c C-c is free in both."
     ;; ("Waiting…", "Ready") goes to the mode line instead.
     (setq-local gptel-use-header-line nil)
     ;; First: turning it on restores saved state, which would undo the below.
-    (gptel-mode 1)
+    ;; A fresh conversation has none to restore, and gptel said so on every
+    ;; ask ("Could not activate gptel backend \"nil\"!"): skip it there.
+    (if (save-excursion (goto-char (point-min)) (re-search-forward "^[ \t]*:GPTEL_" nil t))
+        (gptel-mode 1)
+      (cl-letf (((symbol-function 'gptel--restore-state) #'ignore))
+        (gptel-mode 1)))
     (setq-local gptel-model (alist-get familiar-ask-tier familiar-models)
                 gptel-backend (or familiar-backend gptel-backend)
                 gptel-system-prompt familiar-ask-system
