@@ -1,4 +1,4 @@
-;;; test/test-familiar-ask.el --- Batch tests for familiar-ask -*- lexical-binding: t; -*-
+;;; familiar-ask-test.el --- Tests for familiar-ask and friends -*- lexical-binding: t; -*-
 ;;
 ;; No network: `gptel-send' is replaced by a fake that records the buffer it
 ;; was called in.  Reuses `test-familiar--with' for the ledger.
@@ -7,10 +7,10 @@
 
 (require 'ert)
 (unless (fboundp 'test-familiar--with)        ; when run on its own
-  (load (expand-file-name "test-familiar" (file-name-directory (or load-file-name buffer-file-name))) nil t))
+  (load (expand-file-name "familiar-test" (file-name-directory (or load-file-name buffer-file-name))) nil t))
 
 (when test-familiar-available
-  (load (expand-file-name "../lisp/familiar/familiar-ask"
+  (load (expand-file-name "../familiar-ask"
                           (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
@@ -328,7 +328,6 @@ du -sh .
         (should-error (funcall (test-familiar-ask--tool "set_minibuffer") "!dired"))
       (kill-buffer mb))))
 
-;;; test-familiar-ask.el ends here
 
 (ert-deftest familiar-ask/keywords-are-taken-out ()
   (skip-unless test-familiar-available)
@@ -446,7 +445,7 @@ du -sh .
 ;;; familiar-mcp-client
 
 (when test-familiar-available
-  (load (expand-file-name "../lisp/familiar/familiar-mcp-client"
+  (load (expand-file-name "../familiar-mcp-client"
                           (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
@@ -519,7 +518,7 @@ du -sh .
 
 ;;; familiar-mcp-http
 
-(load (expand-file-name "../lisp/familiar/familiar-mcp-http"
+(load (expand-file-name "../familiar-mcp-http"
                         (file-name-directory (or load-file-name buffer-file-name)))
       nil t)
 
@@ -602,7 +601,7 @@ du -sh .
 ;;; familiar-openai
 
 (when test-familiar-available
-  (load (expand-file-name "../lisp/familiar/familiar-openai"
+  (load (expand-file-name "../familiar-openai"
                           (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
@@ -688,7 +687,7 @@ du -sh .
 ;;; familiar-atuin
 
 (when test-familiar-available
-  (load (expand-file-name "../lisp/familiar/familiar-atuin"
+  (load (expand-file-name "../familiar-atuin"
                           (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
@@ -758,7 +757,7 @@ du -sh .
 ;;; familiar-history
 
 (when test-familiar-available
-  (load (expand-file-name "../lisp/familiar/familiar-history"
+  (load (expand-file-name "../familiar-history"
                           (file-name-directory (or load-file-name buffer-file-name)))
         nil t)
   ;; Other tests make requests too: they must not write a real history.
@@ -848,3 +847,6 @@ du -sh .
             (should (member (expand-file-name "proj/.agent-shell/transcripts" root) dirs))
             (should-not (member (expand-file-name "proj/notes/transcripts" root) dirs))))
       (delete-directory root t))))
+
+(provide 'familiar-ask-test)
+;;; familiar-ask-test.el ends here

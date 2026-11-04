@@ -1,5 +1,12 @@
 ;;; familiar-mcp-http.el --- familiar's MCP server over HTTP, inside Emacs -*- lexical-binding: t; -*-
 ;;
+;; Author: Wolfhard Prell <mail@wolfhard.dev>
+;; SPDX-License-Identifier: GPL-3.0-or-later
+;;
+;; This file is part of familiar (see familiar.el), not of GNU Emacs.
+;;
+;;; Commentary:
+;;
 ;; The MCP Streamable HTTP transport (spec 2025-06-18), served by Emacs
 ;; itself: an agent attaches with a URL instead of the stdio script, which
 ;; starts an emacsclient for every message.  The tools are the ones

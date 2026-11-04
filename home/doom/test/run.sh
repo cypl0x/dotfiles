@@ -17,7 +17,8 @@ lint() {
 }
 
 tests() {
-  "$emacs" -Q --batch -l "$here/test-lisp.el" -l "$here/test-familiar.el" -l "$here/test-familiar-ask.el" \
+  "$emacs" -Q --batch -l "$here/test-lisp.el" \
+    -l "$lisp/familiar/test/familiar-test.el" -l "$lisp/familiar/test/familiar-ask-test.el" \
     -f ert-run-tests-batch-and-exit
 }
 

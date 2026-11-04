@@ -1,5 +1,12 @@
 ;;; familiar-history.el --- Every AI turn, in one Org history -*- lexical-binding: t; -*-
 ;;
+;; Author: Wolfhard Prell <mail@wolfhard.dev>
+;; SPDX-License-Identifier: GPL-3.0-or-later
+;;
+;; This file is part of familiar (see familiar.el), not of GNU Emacs.
+;;
+;;; Commentary:
+;;
 ;; One record of what was asked and answered, wherever: M-ß, ß in the
 ;; shell (the Atuin server), OpenAI-compatible clients, familiar's tasks
 ;; (explain, review, commit messages...).  Monthly Org files under

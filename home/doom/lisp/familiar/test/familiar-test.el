@@ -1,14 +1,14 @@
-;;; test/test-familiar.el --- Batch tests for lisp/familiar -*- lexical-binding: t; -*-
+;;; familiar-test.el --- Tests for familiar -*- lexical-binding: t; -*-
 ;;
 ;; No network: `gptel-request' is replaced by a fake that answers instantly
-;; with canned text and token counts.  Needs gptel on the load path (the
-;; shims add Doom's build of it); skipped otherwise.
+;; with canned text and token counts.  Needs gptel on the load path
+;; (familiar-test-helper.el finds it); skipped otherwise.
 ;;
 ;;; Code:
 
 (require 'ert)
 (require 'cl-lib)
-(load (expand-file-name "shims" (file-name-directory (or load-file-name buffer-file-name))) nil t)
+(load (expand-file-name "familiar-test-helper" (file-name-directory (or load-file-name buffer-file-name))) nil t)
 
 (defconst test-familiar-available
   (and (require 'gptel nil t) (require 'gptel-anthropic nil t)))
@@ -18,7 +18,7 @@
   "A Claude backend, as in the real config; creating it attaches model prices.")
 
 (when test-familiar-available
-  (load (expand-file-name "../lisp/familiar/familiar"
+  (load (expand-file-name "../familiar"
                           (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
@@ -344,7 +344,7 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
 
 ;;; familiar-mcp (tool functions; the MCP wiring is tested live)
 
-(load (expand-file-name "../lisp/familiar/familiar-mcp"
+(load (expand-file-name "../familiar-mcp"
                         (file-name-directory (or load-file-name buffer-file-name)))
       nil t)
 
@@ -398,7 +398,6 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
     (should (fboundp (car spec)))
     (should (plist-get (cdr spec) :read-only))))
 
-(provide 'test-familiar)
 
 (ert-deftest familiar/name-suggestion-parses-name-and-path ()
   (test-familiar--with "`nix-flake-notes.org`\n~/dotfiles/notes/nix-flake-notes.org\n"
@@ -430,4 +429,6 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
             (should (= (window-point w) 1))))
       (kill-buffer buf))))
 
-;;; test-familiar.el ends here
+
+(provide 'familiar-test)
+;;; familiar-test.el ends here

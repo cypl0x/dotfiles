@@ -2,6 +2,9 @@
 ;;
 ;; Author: Wolfhard Prell <mail@wolfhard.dev>
 ;; Package-Requires: ((emacs "29.1") (mcp-server-lib "0.5.0"))
+;; SPDX-License-Identifier: GPL-3.0-or-later
+;;
+;; This file is part of familiar (see familiar.el), not of GNU Emacs.
 ;;
 ;;; Commentary:
 ;;

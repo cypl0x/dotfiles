@@ -1,5 +1,12 @@
 ;;; familiar-openai.el --- An OpenAI-compatible endpoint, answered by familiar -*- lexical-binding: t; -*-
 ;;
+;; Author: Wolfhard Prell <mail@wolfhard.dev>
+;; SPDX-License-Identifier: GPL-3.0-or-later
+;;
+;; This file is part of familiar (see familiar.el), not of GNU Emacs.
+;;
+;;; Commentary:
+;;
 ;; Anything that speaks the OpenAI chat API (llm, aichat, shell tools,
 ;; editors) can use Emacs as its model provider:
 ;;

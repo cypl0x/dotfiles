@@ -1,5 +1,12 @@
 ;;; familiar-atuin.el --- Atuin AI's server, answered by familiar -*- lexical-binding: t; -*-
 ;;
+;; Author: Wolfhard Prell <mail@wolfhard.dev>
+;; SPDX-License-Identifier: GPL-3.0-or-later
+;;
+;; This file is part of familiar (see familiar.el), not of GNU Emacs.
+;;
+;;; Commentary:
+;;
 ;; Atuin's AI (the ? in your shell) talks to a server: Atuin Hub by
 ;; default, or any "OSS" server at `ai.endpoint'.  This is one, inside
 ;; Emacs: POST /api/cli/chat on familiar-mcp-http's server, answered by

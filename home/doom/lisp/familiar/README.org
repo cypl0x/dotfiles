@@ -1,0 +1,82 @@
+#+title: familiar — an AI familiar woven into Emacs
+
+A familiar is the spirit on your shoulder.  This one speaks to language
+models through [[https://github.com/karthink/gptel][gptel]], but lives where you already work instead of in a
+chat window, and speaks the protocols other tools use to reach Emacs.
+
+Emacs 29.1+, gptel 0.9.9+.  Optional: [[https://github.com/laurynas-biveinis/mcp-server-lib.el][mcp-server-lib]] (=familiar-mcp=,
+=familiar-mcp-http=), [[https://github.com/lizqwerscott/mcp.el][mcp.el]] (=familiar-mcp-client=).
+
+* Pieces
+
+| File                     | What                                                                 |
+|--------------------------+----------------------------------------------------------------------|
+| =familiar.el=            | tasks (explain, fix as smerge, review, commit message, rename buffer, handoff), model tiers, ledger and budget |
+| =familiar-ask.el=        | ask anything from anywhere (minibuffer included): context, Emacs tools, Org conversations |
+| =familiar-history.el=    | every turn in one Org history, searchable with agent transcripts    |
+| =familiar-mcp.el=        | Emacs' code knowledge (xref, imenu) as MCP tools for agents          |
+| =familiar-mcp-http.el=   | that MCP server over Streamable HTTP, inside Emacs                   |
+| =familiar-mcp-client.el= | MCP servers' tools in =familiar-ask=, per turn by =@name=            |
+| =familiar-openai.el=     | an OpenAI-compatible endpoint (=/v1/chat/completions=)               |
+| =familiar-atuin.el=      | the server behind Atuin's AI (=/api/cli/chat=)                       |
+
+* Setup
+
+#+begin_src emacs-lisp
+(use-package familiar
+  :load-path "path/to/familiar"
+  :commands (familiar-explain familiar-fix familiar-review familiar-commit-message
+             familiar-ask familiar-ask-new familiar-ask-continue familiar-history)
+  :bind (("M-ß" . familiar-ask))          ; any free key
+  :config
+  (setq familiar-budget 10.0))            ; USD, for the alerts
+#+end_src
+
+Keys are yours to choose; the commands are autoloaded.  The author's Doom
+glue (bindings, popup rules, servers started at idle) is =+familiar.el= in
+the config this lives in.
+
+Servers, when wanted:
+
+#+begin_src emacs-lisp
+(require 'familiar-openai)                ; registers /v1/
+(require 'familiar-atuin)                 ; registers /api/cli/
+(familiar-mcp-http-start)                 ; 127.0.0.1:39391, /mcp and the above
+#+end_src
+
+All share one bearer token, kept in =familiar-mcp-http-token-file= (0600).
+
+* Asking (=familiar-ask=)
+
+- Fresh conversation by default; =@follow-up= continues, =@new= forces fresh,
+  =@echo= answers in the echo area, =@fast= =@smart= =@deep= pick the tier,
+  =@SERVER= adds an MCP server's tools for that turn.
+- The context of where you are goes along: buffer, modes, point, region
+  or nearby text, an active minibuffer's input and candidates, a shell's
+  prompt.  =familiar-ask-context-functions= adds more (e.g. a PDF selection).
+- Tools: describe, apropos, buffer_text, list_buffers, eval_elisp,
+  replace_in_buffer (undoable), insert_at_prompt, set_minibuffer;
+  =familiar-ask-confirm-tools= decides which ask first.
+- In the conversation: =RET= follows up, =C-c != / =C-c $= apply a suggestion,
+  =C-c C-e= exports.
+
+* Cost
+
+Every request is priced (gptel's model table, else =familiar-model-prices=)
+and appended to =familiar-ledger-file=; =familiar-spend= shows it, alerts at
+=familiar-budget-alerts= of =familiar-budget=.
+
+* Development
+
+#+begin_src sh
+make test      # ERT, no network: gptel-request is faked
+make compile   # byte-compile, warnings are errors
+#+end_src
+
+Dependencies come from =LOAD_PATH= (=-L dir= flags), =FAMILIAR_LOAD_PATH=,
+or a Doom build next to the config (=test/familiar-test-helper.el=).
+Plans: [[file:ROADMAP.org][ROADMAP.org]].
+
+* License
+
+GPL-3.0-or-later.

@@ -4,6 +4,7 @@
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "29.1") (gptel "0.9.9"))
 ;; Keywords: tools, convenience, vc
+;; SPDX-License-Identifier: GPL-3.0-or-later
 ;; URL: https://github.com/cypl0x/familiar.el
 ;;
 ;;; Commentary:

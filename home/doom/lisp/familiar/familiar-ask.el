@@ -1,5 +1,12 @@
 ;;; familiar-ask.el --- Ask anything, from anywhere in Emacs -*- lexical-binding: t; -*-
 ;;
+;; Author: Wolfhard Prell <mail@wolfhard.dev>
+;; SPDX-License-Identifier: GPL-3.0-or-later
+;;
+;; This file is part of familiar (see familiar.el), not of GNU Emacs.
+;;
+;;; Commentary:
+;;
 ;; One key (M-ß by default) from any buffer, including the minibuffer and
 ;; buffers that visit no file, asks a long-lived conversation.  What you were
 ;; looking at goes along as context, so you never restate it; tools let the

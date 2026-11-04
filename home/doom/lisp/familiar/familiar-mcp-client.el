@@ -1,5 +1,12 @@
 ;;; familiar-mcp-client.el --- MCP servers' tools in familiar-ask, by @name -*- lexical-binding: t; -*-
 ;;
+;; Author: Wolfhard Prell <mail@wolfhard.dev>
+;; SPDX-License-Identifier: GPL-3.0-or-later
+;;
+;; This file is part of familiar (see familiar.el), not of GNU Emacs.
+;;
+;;; Commentary:
+;;
 ;; The MCP servers Claude Code knows for a project (~/.claude.json: the
 ;; user's and the project's own) are @keywords in M-ß: "@github open
 ;; issues about the CI?" starts the server if it isn't running and offers
