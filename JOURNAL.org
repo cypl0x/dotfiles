@@ -1179,3 +1179,13 @@ Fall back cleanly when a CLI or key is missing.
 - *Desktop notifications* (swaync) for things worth knowing while you're
   on workspace 1/2.
 - *Commits:* small, one logical change each. =nrs= after Nix changes.
+
+* [2026-11-04 Wed 09:37] One door to ask, and your keys back
+=+prompt.el= is gone. It had squatted on =SPC i= (Doom's insert menu), =SPC '=
+(resume last search) and =SPC I= (system overview), and quietly handed every
+gptel chat an =eval_elisp= tool. All three keys are Doom's again, live in the
+running daemon, no restart. M-ß keeps the one thing only +prompt had: it can
+now search the web. Asked "latest Emacs release?", it searched, read the
+emacs-devel announcement and answered with the link. Fixed on the way: the
+live tool list had missed =insert_at_prompt= (a stale =defvar=), and web
+snippets showed raw =&#x27;=.
