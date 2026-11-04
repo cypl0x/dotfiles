@@ -495,6 +495,7 @@
 (load! "lisp/+workflow")    ;; SPC p h/u/P/G: history runs, peer pull, git-closure
 (load! "lisp/+tldr")        ;; SPC h X: which -a + tldr examples + man, one buffer
 (load! "lisp/+proced")      ;; SPC o k: ps aux | rg, kill N, as live proced
+(load! "lisp/+screenshot")   ;; M-Y insert a screenshot, SPC o S browse them
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules

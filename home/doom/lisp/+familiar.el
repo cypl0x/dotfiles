@@ -6,7 +6,7 @@
 ;;
 ;;   SPC A x / d / F / C / $   explain · explain diagnostic · fix · commit msg · spend
 ;;   SPC A E / v               explain the compilation error at point · review diff
-;;   C-M-?, SPC A ? / A       ask anything (familiar-ask) · earlier conversations
+;;   M-ß, SPC A ? / A          ask anything (familiar-ask) · earlier conversations
 ;;   SPC A H                   hand context at point to agent-shell / claude-code / clipboard
 ;;   M-g, SPC m g              in a commit message buffer: write the message
 ;;   X                         embark action on regions, defuns and identifiers
@@ -20,12 +20,13 @@
                familiar-commit-message familiar-spend familiar-mode-line-mode))
   (autoload cmd "familiar" nil t))
 
-;; Ask anything from anywhere (familiar-ask.el).  C-M-? is unbound in every evil
-;; state and in the minibuffer, so one global binding reaches it everywhere,
-;; M-x prompts included.
+;; Ask anything from anywhere (familiar-ask.el).  M-ß (one chord on a German
+;; keyboard) is unbound in every loaded keymap and evil state, so one global
+;; binding reaches it everywhere, M-x prompts included.  (C-M-? was the first
+;; pick, but dired binds it in normal state.)
 (autoload 'familiar-ask "familiar-ask" nil t)
 (autoload 'familiar-ask-sessions "familiar-ask" nil t)
-(map! "C-M-?" #'familiar-ask)
+(map! "M-ß" #'familiar-ask)
 (set-popup-rule! "^\\*familiar-ask\\*$" :side 'right :size 0.45 :select nil :quit nil :ttl nil)
 (set-popup-rule! "^\\*familiar-ask prompt\\*$" :size 0.3 :select t :quit nil)
 

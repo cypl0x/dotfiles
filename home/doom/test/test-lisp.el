@@ -758,3 +758,30 @@ and a temp exec-path where bin/tar links to store/tar."
 
 (provide 'test-lisp)
 ;;; test-lisp.el ends here
+
+;;; +screenshot
+
+(load (expand-file-name "../lisp/+screenshot" (file-name-directory (or load-file-name buffer-file-name))) nil t)
+
+(ert-deftest screenshot/files-newest-first ()
+  (let* ((+screenshot-dir (file-name-as-directory (make-temp-file "shots" t)))
+         (old (expand-file-name "b-old.png" +screenshot-dir))
+         (new (expand-file-name "a-new.png" +screenshot-dir)))
+    (unwind-protect
+        (progn
+          (write-region "" nil old) (write-region "" nil new)
+          (write-region "" nil (expand-file-name "notes.txt" +screenshot-dir))
+          (set-file-times old (time-subtract nil 3600))
+          ;; By time, not by name; images only.
+          (should (equal (+screenshot-files) (list new old))))
+      (delete-directory +screenshot-dir t))))
+
+(ert-deftest screenshot/insert-file-per-mode ()
+  (let ((file (expand-file-name "~/Pictures/Screenshots/x.png")))
+    (with-temp-buffer
+      (+screenshot-insert-file file)
+      (should (equal (buffer-string) "~/Pictures/Screenshots/x.png")))
+    (with-temp-buffer
+      (org-mode)
+      (+screenshot-insert-file file)
+      (should (equal (buffer-string) "[[file:~/Pictures/Screenshots/x.png]]")))))

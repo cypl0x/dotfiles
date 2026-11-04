@@ -1,13 +1,13 @@
 ;;; familiar-ask.el --- Ask anything, from anywhere in Emacs -*- lexical-binding: t; -*-
 ;;
-;; One key (C-M-? by default) from any buffer, including the minibuffer and
+;; One key (M-ß by default) from any buffer, including the minibuffer and
 ;; buffers that visit no file, asks a long-lived conversation.  What you were
 ;; looking at goes along as context, so you never restate it; tools let the
 ;; model look around Emacs itself and act in it, the way you would (edits are
 ;; undoable, nothing is written to disk unless you ask for it).
 ;;
-;;   C-M-?            ask (in the minibuffer too: "exclude tests" in M-x)
-;;   C-u C-M-?        ask in a fresh conversation
+;;   M-ß              ask (in the minibuffer too: "exclude tests" in M-x)
+;;   C-u M-ß          ask in a fresh conversation
 ;;   C-c '  (prompt)  edit the prompt in a buffer; C-c C-c sends, C-c C-k keeps it
 ;;   @fast/@smart/@deep in the prompt picks the model (gptel presets)
 ;;   C-r  (prompt)    pick an earlier prompt
@@ -485,7 +485,7 @@ With prefix arg NEW, start a fresh conversation."
   (interactive)
   (setq familiar-ask--draft (string-trim (buffer-string)))
   (quit-window t)
-  (message "Prompt kept; C-M-? brings it back"))
+  (message "Prompt kept; M-ß brings it back"))
 
 ;;;; Earlier conversations
 
