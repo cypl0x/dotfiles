@@ -22,7 +22,7 @@ project" for "Can you reformat this org buffer?".
 checked live (shell started in background, answered "ok"). Handoff:
 guard + same start helper, not yet run live (would write into the
 user's shell). Real-key check of SPC A still to do when the user is away.
-* TODO Central ask command (C-M-? or better key)                  :agent:big:
+* TODO Central ask command (M-ß; C-M-? clashed with dired)                  :agent:big:
 Atuin-AI experience one key away, anywhere (incl. minibuffer, non-file
 buffers). Full context by default (buffer, region, point, modes, open
 buffers) + tools to introspect / eval elisp; streaming popup with tool
@@ -60,9 +60,16 @@ Research `?' in zsh (Atuin AI); test; bring into Emacs.
 Markdown currently looks richer than org.
 * TODO org-fmt / org-format command                               :org:
 * TODO Rename buffer by its contents                              :misc:
-* TODO Screenshots: clipboard + default dir, pasteable via M-y     :desktop:
+* DONE Screenshots: clipboard + default dir, pasteable via M-y     :desktop:
 Rofi clipboard history shows "[ binary data ]"; Emacs M-y excludes images.
 Browser in Emacs: dired-like, preview at point, thumbnails, newest first.
+9506929: Print keys copysave into ~/Pictures/Screenshots; M-Y inserts the
+clipboard image (yank-media; Org attaches) or a saved shot (newest first,
+previewed); SPC o S dirvish newest first; SPC o C-s thumbnails. Rofi still
+shows "[ binary data ]" for images (cliphist): open.
+* TODO Rofi clipboard menu: image previews instead of "[ binary data ]" :desktop:
+* TODO Ask user: retire +prompt.el (SPC i, SPC I, SPC ') in favour of familiar-ask?
+It shadows Doom's SPC i insert prefix and overlaps M-ß.
 * TODO Record usage for later AI workflow suggestions             :usage:
 (+usage.el exists; check what it records.)
 
