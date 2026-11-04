@@ -120,7 +120,6 @@ and shortcuts for what you actually do.  Best after a few days of use.
     ├── +prose.el        Writing mode, jinx, text stats, readability
     ├── +dtt.el          Dependently typed language enhancements
     ├── +agent.el        AI agent integration, gptel, agent-shell
-    ├── +prompt.el       Emacs-centric AI prompt with tool-use
     ├── +brave-search.el Brave Web Search (loads brave-search/)
     ├── +persist.el      Persistent scratch buffers
     ├── +nav.el          Navigation, discovery, help transients
@@ -147,10 +146,10 @@ Following Doom Emacs conventions established by hlissner:
 
 | Pattern            | Meaning                                      | Example                    |
 |--------------------+----------------------------------------------+----------------------------|
-| =+module/command=  | Interactive command (for =M-x= / keybinding) | =+prompt/ask=              |
+| =+module/command=  | Interactive command (for =M-x= / keybinding) | =+docs/commands=           |
 | =+module-function= | Public non-interactive function              | =+persist/save-buffer=     |
-| =+module--private= | Private/internal function                    | =+prompt/--expand-context= |
-| =+module/name-h=   | Hook function                                | (not used currently)       |
+| =+module--private= | Private/internal function                    | =+docs--annotate=          |
+| =+module--name-h=  | Hook function                                | =+usage--record-h=         |
 | =+module/name-a=   | Advice function                              | =+prose/leo-fix-multibyte= |
 
 The =+= prefix means "belongs to a user/module namespace" (not Doom core).
@@ -162,9 +161,6 @@ modules append to existing prefixes, never re-create them.
 
 | Key             | Command                                          | Module        |
 |-----------------+--------------------------------------------------+---------------|
-| =SPC i=         | AI prompt (with tools)                           | +prompt       |
-| =SPC I=         | AI followup                                      | +prompt       |
-| =SPC '=         | AI prompt transient                              | +prompt       |
 | =SPC A=         | Agent shell transient                            | +agent        |
 | =SPC D=         | DTT languages menu                               | +dtt          |
 | =SPC F=         | Font tools                                       | +fonts        |
@@ -582,7 +578,7 @@ Three layers of AI integration:
    Agent-centric: you switch to agent buffer.
 2. *gptel* — Claude API in any buffer.  Uses API billing ($).
    Emacs-centric: AI comes to you.
-3. *+prompt* — Custom layer on top of gptel with context expansion and tool-use.
+3. *familiar-ask* (=M-ß=) — gptel with the current context and Emacs tools.
 
 *** Permission Model
 
@@ -636,71 +632,6 @@ Available models:
 
 The =+agent.el= module advises =agent-shell-anthropic-make-claude-client= to
 inject monet environment variables into agent-shell sessions.
-
-** =+prompt.el= — Emacs-Centric AI Prompt
-:PROPERTIES:
-:CUSTOM_ID: prompt
-:END:
-
-*** Philosophy
-
-=+prompt= is the Emacs-centric counterpart to agent-shell's agent-centric approach.
-Instead of switching to an agent buffer, you ask questions from wherever you are.
-The AI can read your buffers, evaluate elisp, and insert text — all through
-gptel's tool-use framework.
-
-*** Context Expansion Syntax
-
-When typing a prompt in the minibuffer, use =@= references to include context:
-
-| Syntax         | Expands to                                    |
-|----------------+-----------------------------------------------|
-| =@buffer=      | Full content of current buffer                |
-| =@region=      | Selected text (active region)                 |
-| =@file:path=   | Content of file at path                       |
-| =@var:name=    | Value of Emacs variable                       |
-| =@eval:(expr)= | Result of evaluating elisp expression         |
-| =@mode=        | Current major + minor modes                   |
-| =@buffers=     | List of open file-visiting buffers with modes |
-
-Example prompt: =@region Explain this Agda code and suggest improvements=
-
-*** Tool-Use: LLM Reads/Writes Emacs
-
-Eight tools are always enabled when using =+prompt/ask=:
-
-| Tool                | What the LLM can do                   |
-|---------------------+---------------------------------------|
-| =read_buffer=       | Read any buffer's contents by name    |
-| =list_buffers=      | See all open buffers with their modes |
-| =eval_elisp=        | Evaluate arbitrary Emacs Lisp         |
-| =describe_variable= | Get variable value + documentation    |
-| =describe_function= | Get function documentation            |
-| =insert_text=       | Insert text at cursor in any buffer   |
-| =get_modes=         | Get active modes in a buffer          |
-| =web_search=        | Search the web via Brave Search API   |
-
-The LLM decides which tools to call based on your prompt.  If you ask
-"what packages do I have loaded?", it will call =eval_elisp= with
-=(length package-alist)= or similar.
-
-*** Commands
-
-| Key     | Command             | Description               |
-|---------+---------------------+---------------------------|
-| =SPC i= | =+prompt/ask=       | Ask with @context + tools |
-| =SPC I= | =+prompt/followup=  | Continue conversation     |
-| =SPC '= | =+prompt/transient= | Full dispatch menu        |
-
-Additional quick actions in transient:
-
-| Key | Action               | Description                |
-|-----+----------------------+----------------------------|
-| =e= | Explain region       | Explain selected code      |
-| =r= | Rewrite region       | Rewrite with instruction   |
-| =b= | Ask about buffer     | Full buffer as context     |
-| =t= | Generate org table   | Table from description     |
-| =i= | Insert last response | Paste AI response at point |
 
 ** =+brave-search.el= — Brave Web Search
 :PROPERTIES:
@@ -1055,7 +986,8 @@ prompt, input and candidates, and for shells the prompt itself.
 
 Tools the model can call: =describe=, =buffer_text=, =list_buffers=,
 =apropos=, =eval_elisp=, =replace_in_buffer= (undoable), =insert_at_prompt=,
-=set_minibuffer= (e.g. orderless syntax into the running =M-x=).
+=set_minibuffer= (e.g. orderless syntax into the running =M-x=), and
+=web_search= (Brave, from =+brave-search.el=).
 =familiar-ask-confirm-tools= decides which ask first; this config sets it
 to =nil= (none).  Prompt caching is on; every turn is priced into =SPC A $=.
 
@@ -1220,7 +1152,7 @@ third-party tools.  Claude Max/Pro subscriptions work ONLY through:
 Third-party harnesses (OpenClaw, OpenCode, elisp implementations) that
 piggyback on subscription credentials are blocked.
 
-*For gptel and +prompt:* Requires separate Anthropic API billing.
+*For gptel and M-ß:* Requires separate Anthropic API billing.
 $5/month gets 1M+ tokens.  Key in =~/.authinfo=.
 
 *For agent-shell:* Uses Claude Code CLI which uses Max subscription.
@@ -1264,7 +1196,7 @@ Initial release.  12 modules, 50 packages, 160 features.
 
 - TRAMP performance: =scp= → =ssh=, eglot guard, SSH ControlMaster
 - Org power: org-roam, super-agenda, org-ql, org-modern, org-appear
-- AI integration: gptel with 8 tools, +prompt with @context, agent-shell ecosystem
+- AI integration: gptel, M-ß (familiar-ask) with context and tools, agent-shell ecosystem
 - Brave Search: full API client with org-mode output
 - Persistent buffers: Sublime-style auto-save/restore
 - Font: Maple Mono NF ligatures (130+ sequences)

@@ -95,8 +95,8 @@ previewed); SPC o S dirvish newest first; SPC o C-s thumbnails. Rofi still
 shows "[ binary data ]" for images (cliphist): open.
 * DONE Rofi clipboard menu: image previews instead of "[ binary data ]" :desktop:
 98f8256: cliphist-rofi-img script mode, 96 px icons. Not opened on screen yet.
-* TODO Ask user: retire +prompt.el (SPC i, SPC I, SPC ') in favour of familiar-ask?
-It shadows Doom's SPC i insert prefix and overlaps M-ß.
+* DONE Retire +prompt.el (user: yes, 2026-11-04)                        :ai:
+Removed; SPC i (Doom insert), SPC ' (vertico-repeat), SPC I (system overview) back. web_search moved to familiar-ask tools (+brave-search.el).
 * DONE Record usage for later AI workflow suggestions             :usage:
 +usage-mode on by default; M-x +usage/suggest → familiar-ask. Run it once
 there are days of data (now ~1 h, partly lab noise).
