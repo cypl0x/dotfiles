@@ -111,16 +111,19 @@ there are days of data (now ~1 h, partly lab noise).
 Measure the first frame after daemon start in the lab only; defer slow parts.
 
 * User list 2026-11-04 ~09:50 (verbatim intent; see JOURNAL for results)
-** TODO C-SPC is not working                                           :bug:
-** TODO Completion in M-ß prompt doesn't work                          :bug:
-** TODO Completion in insert state in org-mode doesn't work            :bug:
-** TODO M-ß popup doesn't show up (or re-popup when in background)     :bug:
-** TODO M-ß: fresh conversation by default (follow-up context costs too much); @follow-up keyword
-** TODO M-ß keywords: @echo (answer in echo area), @follow-up, more
-** TODO Line cursor (hl-line) in minibuffer: M-ß, M-x, etc.
-** TODO org-modern: bullets for every level, coloured like the heading (plain Org does that)
-** TODO Use free keys on German ISO QWERTZ (umlauts, ß); C-umlauts currently zoom
-** TODO Format prose (split paragraphs etc.), with or without AI
+** DONE C-SPC is not working: in minibuffers it was set-mark (evil insert map not active); M-ß prompt binds it (c7d5ed3) :bug:
+** DONE Completion in M-ß prompt: corfu + words + @keywords (c7d5ed3) :bug:
+** DONE Org insert-state completion: prose capf (14f8961; fixed a 2-min freeze on the way) :bug:
+** DONE M-ß popup vanished on leaving M-x (read-minibuffer-restore-windows) (c7d5ed3) :bug:
+** DONE M-ß fresh by default, @follow-up (c7d5ed3)
+** DONE M-ß keywords @echo @follow-up @new (c7d5ed3); more later
+** DONE Minibuffer bar cursor (261861d); user to confirm it is what they meant
+** DONE org-modern: 8 bullets, heading colours, cycling (d4b1a17)
+** DONE QWERTZ: ö ä = [ ], Ö Ä = { }, ü Ü = definition/back (aa6afc2); ß still free
+** DONE Prose: fill/unfill, sentence lines, join, AI split with word check (this commit)
 ** TODO +usage-mode data: insights → workflow improvements
 ** TODO Big: native AI harness, all protocols (OpenAI/Anthropic HTTP, MCP, ACP, A2A client+server)
 ** TODO Inspiration: hlissner dotfiles, tecosaur config (somewhere in ~/dev), awesome-emacs
+** TODO From research: monet hook targets stevemolitor/claude-code.el, but yuya373's claude-code is installed → hook never fires
+** TODO From research: flyspell (+everywhere) and jinx both spellcheck text buffers
+** TODO familiar-ask header shows buffer model, not the @fast/@deep preset of the turn
