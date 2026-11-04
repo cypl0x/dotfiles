@@ -1005,6 +1005,15 @@ canonical form (=org-element= parsed and printed back, src bodies left
 alone), shown as a diff and applied with =replace-region-contents=.
 eglot buffers: the server's formatter.  Elsewhere: =indent-region=.
 
+Prose, as it's written here (hard-wrapped at =fill-column=):
+
+| Key              | What                                                          |
+|------------------+---------------------------------------------------------------|
+| =M-q=, =SPC P q= | fill the paragraph; again: unfill it                          |
+| =SPC P L=        | one sentence per line (=z.B.=, =e.g.=, "am 3. Mai" don't end one) |
+| =SPC P P=        | join the paragraphs in the region, filled                     |
+| =SPC P p=        | split where the topic shifts (AI, fast tier); applied only if every word is unchanged, then filled |
+
 ** =+vocab.el= — leo Lookups Become Flashcards
 :PROPERTIES:
 :CUSTOM_ID: vocab

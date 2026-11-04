@@ -968,3 +968,53 @@ and a temp exec-path where bin/tar links to store/tar."
                  '("nf-cod-repo_forked" "⑆" "WT" face codicon)))
   (should (equal (+perf-modeline-icon-a '("nf-dev-git_branch" "" "@" face))
                  '("nf-dev-git_branch" "" "@" face))))
+
+(ert-deftest format/sentences-know-abbreviations-and-ordinals ()
+  (should (equal (+format-sentences "Das ist z.B. gut. Am 3. Mai kam J. Doe!  Next one, e.g. this? Yes.")
+                 '("Das ist z.B. gut." "Am 3. Mai kam J. Doe!" "Next one, e.g. this?" "Yes.")))
+  (should (equal (+format-sentences "A quote: \"Done.\" Then *bold.* End")
+                 '("A quote: \"Done.\"" "Then *bold.*" "End"))))
+
+(ert-deftest format/sentence-lines-in-a-list-item ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "- One sentence here. Another one\n  wrapped. Third.\n")
+    (goto-char 5)
+    (+format/sentence-lines)
+    (should (equal (buffer-string)
+                   "- One sentence here.\n  Another one wrapped.\n  Third.\n"))))
+
+(ert-deftest format/fill-then-unfill ()
+  (with-temp-buffer
+    (text-mode)
+    (setq fill-column 20)
+    (insert "one two three four five six seven eight")
+    (goto-char 1)
+    (let ((this-command '+format/fill-dwim) (last-command nil))
+      (+format/fill-dwim))
+    (should (string-match-p "\n" (buffer-string)))
+    (let ((this-command '+format/fill-dwim) (last-command '+format/fill-dwim))
+      (+format/fill-dwim))
+    (should (equal (buffer-string) "one two three four five six seven eight"))))
+
+(ert-deftest format/join-paragraphs ()
+  (with-temp-buffer
+    (text-mode)
+    (insert "first part\nof it.\n\nsecond part.")
+    (+format/join-paragraphs (point-min) (point-max))
+    (should (equal (buffer-string) "first part of it. second part."))))
+
+(ert-deftest format/split-paragraphs-applies-only-unchanged-words ()
+  (dolist (case '(("One topic. Still it. Another topic now." . "One topic. Still it.\n\nAnother topic now.")
+                  ("One topic. Still it. Another topic now." . "One topic. Still it.\n\nA different topic now.")))
+    (with-temp-buffer
+      (text-mode)
+      (insert (car case))
+      (goto-char 1)
+      (cl-letf (((symbol-function 'familiar-request)
+                 (lambda (_prompt &rest args) (funcall (plist-get args :callback) (cdr case) nil))))
+        (+format/split-paragraphs))
+      (should (equal (buffer-string)
+                     (if (+format-same-words-p (car case) (cdr case))
+                         "One topic. Still it.\n\nAnother topic now."
+                       (car case)))))))

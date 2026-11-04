@@ -95,5 +95,166 @@ In Org with prefix arg CANONICAL, rewrite it in Org's canonical form."
 
 (map! :leader :desc "Format buffer/region" "c f" #'+format/dwim)
 
+;;;; Prose
+
+;; Paragraphs as you write them here: hard-wrapped at `fill-column' (77% of
+;; the prose lines in ~/vault are 60-80 columns), one space after a sentence.
+;;
+;;   M-q, SPC P q   fill the paragraph; again: unfill it (one long line)
+;;   SPC P L        one sentence per line (semantic line breaks: diffs and
+;;                  reordering by line)
+;;   SPC P P        join the paragraphs in the region into one
+;;   SPC P p        split into paragraphs where the topic shifts (AI); applied
+;;                  only if the words are unchanged, then each one filled
+
+(declare-function familiar-request "familiar" (prompt &rest args))
+
+(defvar +format-abbreviations
+  '("e.g." "i.e." "etc." "vs." "cf." "approx." "Dr." "Mr." "Mrs." "Ms." "Prof." "St."
+    "z.B." "d.h." "u.a." "bzw." "vgl." "usw." "ggf." "evtl." "ca." "inkl." "sog."
+    "Nr." "S." "Abs." "Kap." "Hr." "Fr.")
+  "Words ending in a full stop that don't end a sentence (English, German).")
+
+(defun +format--paragraph-bounds ()
+  "The region, else the paragraph at point: (BEG . END)."
+  (cond
+   ((use-region-p) (cons (region-beginning) (region-end)))
+   ;; Org's paragraph motion stops at a list item's continuation lines.
+   ((and (derived-mode-p 'org-mode)
+         (eq (car-safe (org-element-at-point)) 'paragraph))
+    (let ((el (org-element-at-point)))
+      (cons (org-element-property :contents-begin el)
+            (save-excursion (goto-char (org-element-property :contents-end el))
+                            (skip-chars-backward " \t\n")
+                            (point)))))
+   (t
+    (save-excursion
+      (let ((end (progn (forward-paragraph) (point))))
+        (backward-paragraph)
+        (skip-chars-forward " \t\n")
+        (cons (point) (progn (goto-char end) (skip-chars-backward " \t\n") (point))))))))
+
+(defun +format--sentence-end-p (word)
+  "Whether WORD ends a sentence."
+  (and (string-match-p "[.!?…][]\"')»“”’*/=~_]*\\'" word)
+       (not (member word +format-abbreviations))
+       ;; Ordinals and dates ("am 3. Mai"), initials ("J. Doe").
+       (not (string-match-p "\\`\\(?:[0-9]+\\|[[:alpha:]]\\)\\.\\'" word))))
+
+(defun +format-sentences (text)
+  "TEXT as a list of sentences, whitespace collapsed."
+  (let (out cur)
+    (dolist (w (split-string text "[ \t\n]+" t))
+      (push w cur)
+      (when (+format--sentence-end-p w)
+        (push (string-join (nreverse cur) " ") out)
+        (setq cur nil)))
+    (when cur (push (string-join (nreverse cur) " ") out))
+    (nreverse out)))
+
+(defun +format--replace (beg end text)
+  "Replace BEG..END with TEXT; its later lines indented like the first's text.
+In a list item that is the item's text column, not the bullet's."
+  (save-excursion
+    (goto-char beg)
+    (let ((indent (save-excursion
+                    (beginning-of-line)
+                    (if (looking-at "[ \t]*\\(?:[-+*]\\|[0-9]+[.)]\\)[ \t]+")
+                        (- (match-end 0) (point))
+                      (current-indentation)))))
+      (atomic-change-group
+        (delete-region beg end)
+        (insert (replace-regexp-in-string "\n\\(.\\)" (concat "\n" (make-string indent ?\s) "\\1")
+                                          text t))
+        (point)))))
+
+;;;###autoload
+(defun +format/fill-dwim ()
+  "Fill the paragraph (or region); repeated, unfill it instead."
+  (interactive)
+  (if (eq last-command this-command)
+      (let ((fill-column most-positive-fixnum))
+        (setq this-command nil)           ; a third press fills again
+        (fill-paragraph nil (use-region-p))
+        (message "Unfilled"))
+    (fill-paragraph nil (use-region-p))))
+
+;;;###autoload
+(defun +format/sentence-lines ()
+  "Put each sentence of the paragraph (or region) on its own line."
+  (interactive)
+  (pcase-let ((`(,beg . ,end) (+format--paragraph-bounds)))
+    (let ((sentences (+format-sentences (buffer-substring-no-properties beg end))))
+      (+format--replace beg end (string-join sentences "\n"))
+      (message "%d sentences" (length sentences)))))
+
+;;;###autoload
+(defun +format/join-paragraphs (beg end)
+  "Join the paragraphs between BEG and END into one, filled."
+  (interactive "r")
+  (let ((text (string-join (split-string (buffer-substring-no-properties beg end)
+                                         "[ \t\n]+" t)
+                           " ")))
+    (+format--replace beg end text)
+    (save-excursion (goto-char beg) (fill-paragraph))))
+
+(defun +format--fill-paragraphs (beg end)
+  "Fill each paragraph between BEG and END."
+  (save-excursion
+    (goto-char beg)
+    (let ((end (copy-marker end)))
+      (while (< (point) end)
+        (fill-paragraph)
+        (forward-paragraph))
+      (set-marker end nil))))
+
+(defun +format-same-words-p (a b)
+  "Whether strings A and B hold the same words in the same order."
+  (equal (split-string a "[ \t\n]+" t) (split-string b "[ \t\n]+" t)))
+
+;;;###autoload
+(defun +format/split-paragraphs ()
+  "Split the paragraph (or region) where the topic shifts, by asking a model.
+Applied only if its answer keeps every word in order, so nothing but the
+breaks can change; then each paragraph is filled."
+  (interactive)
+  (pcase-let* ((`(,beg . ,end) (+format--paragraph-bounds))
+               (text (buffer-substring-no-properties beg end))
+               (buf (current-buffer))
+               (tick (buffer-chars-modified-tick)))
+    (message "Asking where the paragraphs break…")
+    (familiar-request
+     (string-join (split-string text "[ \t\n]+" t) " ")
+     :task 'format
+     :system "Split the user's text into paragraphs where the topic or step \
+of the argument shifts.  Return the same text: every word and punctuation \
+mark unchanged and in order, one blank line between paragraphs, nothing else \
+(no commentary, no code fence).  If it is one topic, return it unchanged."
+     :callback
+     (lambda (response _info)
+       (cond
+        ((not (stringp response)) (message "No answer; nothing changed"))
+        ((not (buffer-live-p buf)))
+        ((/= tick (buffer-chars-modified-tick buf))
+         (message "The buffer changed meanwhile; nothing applied"))
+        ((not (+format-same-words-p text response))
+         (message "The answer changed words; nothing applied"))
+        (t
+         (with-current-buffer buf
+           (let ((paras (mapcar (lambda (p) (string-join (split-string p "[ \t\n]+" t) " "))
+                                (split-string (string-trim response) "\n[ \t]*\n" t))))
+             (atomic-change-group
+               (+format--fill-paragraphs
+                beg (+format--replace beg end (string-join paras "\n\n"))))
+             (message "%d paragraph%s" (length paras) (if (cdr paras) "s" ""))))))))))
+
+(map! :leader
+      (:prefix ("P" . "prose")
+       :desc "Fill / unfill"         "q" #'+format/fill-dwim
+       :desc "Sentence per line"     "L" #'+format/sentence-lines
+       :desc "Split paragraphs (AI)" "p" #'+format/split-paragraphs
+       :desc "Join paragraphs"       "P" #'+format/join-paragraphs)
+      :map text-mode-map "M-q" #'+format/fill-dwim)
+
 (provide '+format)
 ;;; +format.el ends here
