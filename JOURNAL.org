@@ -39,7 +39,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
-** [2026-11-04 Mi 21:43] — Org learns new tricks; prompts get a library
+** [2026-11-04 Mi 21:42] — Org learns new tricks; prompts get a library
 - Type =/= in Org: =/table5x2=, =/code=, =/todo=, =/date= … become the real
   thing (5x2 = columns×rows, as Org itself asks).
 - =SPC m ?= — Org by example: 50 "how do I …" answers, each a working
