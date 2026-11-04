@@ -51,7 +51,9 @@ minibuffer would wait for real input.
 ** TODO "How do I" vs imperative: verify behaviour on the use-case list
 ** DONE Approvals: user chose none (familiar-ask-confirm-tools nil, 8e72fd9)
 
-* TODO Anticipate command (LLM optional)                          :agent:
+* DONE Anticipate command (LLM optional)                          :agent:
+SPC A . (+usage/anticipate): command-pair + per-mode counts (non-LLM);
+C-u → model forecast. Data accumulates from now.
 Predict next edits / commands / searches from context.
 * DONE Atuin and Atuin AI integration                             :shell:
 8e72fd9: Atuin AI = TUI (atuin ai inline) on Atuin's hosted service; works in
