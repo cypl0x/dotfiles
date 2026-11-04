@@ -1,4 +1,19 @@
-{pkgs, ...}: {
+{pkgs, ...}: let
+  # cape-dict (C-SPC, lisp/+completion.el): plain word lists, en and de, made
+  # from the hunspell dictionaries jinx already uses.  A .dic is a count
+  # line, then word/AFFIX-FLAGS; de_DE is ISO-8859-1 ("h\366ren").  Linked to
+  # ~/.local/share/dict: the per-user profile doesn't link share/dict.
+  dictWords = pkgs.runCommand "dict-words" {} ''
+    mkdir -p $out
+    words() { tail -n +2 "$1" | cut -d/ -f1 | LC_ALL=C sort -u; }
+    words ${pkgs.hunspellDicts.en_US}/share/hunspell/en_US.dic > $out/words-en
+    words ${pkgs.hunspellDicts.de_DE}/share/hunspell/de_DE.dic \
+      | ${pkgs.glibc.bin}/bin/iconv -f ISO-8859-1 -t UTF-8 > $out/words-de
+  '';
+in {
+  xdg.dataFile."dict/words-en".source = "${dictWords}/words-en";
+  xdg.dataFile."dict/words-de".source = "${dictWords}/words-de";
+
   # Binary dependencies for Doom Emacs modules.
   # These are tools that Doom packages shell out to at runtime.
   # The Doom config itself lives in home/doom/ and is linked via home/doom.nix.
@@ -81,17 +96,6 @@
 
     # difftastic.el (config.el: magit diff menu D/S) runs the difft binary
     difftastic
-
-    # cape-dict (C-SPC, lisp/+completion.el): plain word lists, en and de, made
-    # from the hunspell dictionaries jinx already uses.  A .dic is a count
-    # line, then word/AFFIX-FLAGS; de_DE is ISO-8859-1 ("h\366ren").
-    (pkgs.runCommand "dict-words" {} ''
-      mkdir -p $out/share/dict
-      words() { tail -n +2 "$1" | cut -d/ -f1 | LC_ALL=C sort -u; }
-      words ${pkgs.hunspellDicts.en_US}/share/hunspell/en_US.dic > $out/share/dict/words-en
-      words ${pkgs.hunspellDicts.de_DE}/share/hunspell/de_DE.dic \
-        | ${pkgs.glibc.bin}/bin/iconv -f ISO-8859-1 -t UTF-8 > $out/share/dict/words-de
-    '')
   ];
 
   # A package list puts no .pc files on pkg-config's path, so jinx (which runs

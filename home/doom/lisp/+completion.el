@@ -32,8 +32,7 @@
               (mapcan (lambda (dir)
                         (list (expand-file-name "words-en" dir)
                               (expand-file-name "words-de" dir)))
-                      (list (format "/etc/profiles/per-user/%s/share/dict" (user-login-name))
-                            (expand-file-name "~/.nix-profile/share/dict"))))
+                      (list (expand-file-name "dict" (or (getenv "XDG_DATA_HOME") "~/.local/share")))))
   "Word lists for `cape-dict' (home/emacs-deps.nix: dict-words).")
 
 (with-eval-after-load 'cape
@@ -77,7 +76,10 @@
   (let ((completion-at-point-functions (+completion-capfs)))
     (completion-at-point)))
 
-(map! :i "C-SPC" #'+completion/dwim)
+;; Doom's corfu module binds C-SPC to plain `completion-at-point' in
+;; corfu-mode-map's insert state, which wins over a global binding.
+(map! :i "C-SPC" #'+completion/dwim
+      :after corfu :map corfu-mode-map :i "C-SPC" #'+completion/dwim)
 
 (provide '+completion)
 ;;; +completion.el ends here
