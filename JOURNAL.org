@@ -39,6 +39,12 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 17:43] — Nothing you type into M-ß is lost
+- A prompt you abandon (C-g) is kept in the M-ß history now; =M-p= /
+  =C-r= in the prompt bring it back.
+- =SPC '= reopens the last minibuffer, whatever it was, with its text: M-ß
+  prompts too, not only completion sessions.
+
 ** [2026-11-04 Mi 16:11] — A2A, from scratch: Emacs agents talk to agents
 No Emacs Lisp implementation of Agent2Agent existed.  Now familiar speaks
 it both ways, built from the 1.0 spec and its normative proto:
