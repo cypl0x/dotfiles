@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 16:11] — A2A, from scratch: Emacs agents talk to agents
+No Emacs Lisp implementation of Agent2Agent existed.  Now familiar speaks
+it both ways, built from the 1.0 spec and its normative proto:
+- *As an agent:* a public agent card at
+  =http://127.0.0.1:39391/.well-known/agent-card.json=, and the JSON-RPC
+  methods behind your token: send (blocking, background, or streamed),
+  get, cancel, list tasks, conversations by context.
+- *As a client:* name remote agents in =familiar-a2a-agents=, and =@name=
+  in M-ß lets the model hand work to them.
+- Live: M-ß asked "six times seven" with =@self= (familiar pointed at
+  itself), the model delegated over A2A, got "Six times seven is 42.",
+  and both sides are in your history.
+- ACP got its last pieces too: terminal commands (asked first) and
+  sessions you can resume.
+Roadmap: 6 of 8 steps done; MCP sampling (needs mcp.el) remains.
+
 ** [2026-11-04 Mi 15:54] — familiar works in your files from any editor; M-x habits get keys
 - familiar is in agent-shell's agent picker now (=SPC A n=), and as an
   ACP agent it can *read and write files through the editor* that drives
