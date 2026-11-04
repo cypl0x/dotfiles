@@ -107,8 +107,8 @@ there are days of data (now ~1 h, partly lab noise).
 - Decided 2026-11-04: keep persist-buffers.pruned-20261030/; leave the 34
   profile-only packages; cachix token stays (user accepts the risk).
 - inari GC keep-roots after 2026-11-06; swaync/plugdev check after next login.
-* ACTIVE Profile first-frame startup (user: yes, 2026-11-04)              :perf:
-Measure the first frame after daemon start in the lab only; defer slow parts.
+* DONE Profile first-frame startup (user: yes, 2026-11-04)                :perf:
+First frame 0.78 → 0.57 s, later 0.43 → 0.22 s (see commit). Daemon init 13 s: next.
 
 * User list 2026-11-04 ~09:50 (verbatim intent; see JOURNAL for results)
 ** DONE C-SPC is not working: in minibuffers it was set-mark (evil insert map not active); M-ß prompt binds it (c7d5ed3) :bug:
