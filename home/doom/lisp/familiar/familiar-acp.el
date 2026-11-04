@@ -25,7 +25,9 @@
 ;; cancelled), session/cancel.  Text and embedded resources in prompts.
 ;; Tools, when the client offers them: read_file (fs/read_text_file) and
 ;; write_file (fs/write_text_file, after session/request_permission), shown
-;; as tool_call updates.  Not yet: terminal/*, session/load.
+;; as tool_call updates; run_command (terminal/create, wait_for_exit, output,
+;; release; also asks first), the terminal shown in the tool call.  Not
+;; yet: session/load.
 ;;
 ;;; Code:
 
@@ -196,7 +198,66 @@ Reads go straight to the client; writes ask the user there first."
                            (funcall callback (if err (format "Error: %s" (alist-get 'message err))
                                                (format "Wrote %s" path))))))))))))
             tools))
+    (when (eq (process-get proc :terminal) t)
+      (push (gptel-make-tool
+             :name "run_command" :category "acp" :async t
+             :description "Run a shell command in the user's editor terminal (they are asked first), in the working directory; returns its output and exit code."
+             :args '((:name "command" :type string :description "Shell command line (sh -c)"))
+             :function
+             (lambda (callback command)
+               (let ((id (funcall call-id))
+                     (title (format "Run: %s" (truncate-string-to-width command 60 nil nil "…")))
+                     (dir (or cwd default-directory)))
+                 (familiar-acp--tool-update proc sid id `((title . ,title) (kind . "execute") (status . "pending")
+                                                          (rawInput . ((command . ,command)))))
+                 (familiar-acp--request
+                  proc "session/request_permission"
+                  `((sessionId . ,sid)
+                    (toolCall . ((toolCallId . ,id) (title . ,title) (kind . "execute")))
+                    (options . [((optionId . "allow") (name . "Run it") (kind . "allow_once"))
+                                ((optionId . "reject") (name . "Don't") (kind . "reject_once"))]))
+                  (lambda (result _err)
+                    (let ((outcome (alist-get 'outcome result)))
+                      (if (not (and (equal (alist-get 'outcome outcome) "selected")
+                                    (equal (alist-get 'optionId outcome) "allow")))
+                          (progn (familiar-acp--tool-update proc sid id '((status . "failed")))
+                                 (funcall callback "The user declined; nothing was run."))
+                        (familiar-acp--run proc sid id command dir callback))))))))
+            tools))
     (nreverse tools)))
+
+(defun familiar-acp--run (proc sid id command dir callback)
+  "Run COMMAND in DIR in a terminal of the client; CALLBACK gets the outcome.
+The terminal is shown in tool call ID while it runs, and released after."
+  (let ((fail (lambda (err)
+                (familiar-acp--tool-update proc sid id '((status . "failed")))
+                (funcall callback (format "Error: %s" (alist-get 'message err))))))
+    (familiar-acp--request
+     proc "terminal/create"
+     `((sessionId . ,sid) (command . "sh") (args . ["-c" ,command]) (cwd . ,dir)
+       (outputByteLimit . 100000))
+     (lambda (created err)
+       (if err (funcall fail err)
+         (let ((term (alist-get 'terminalId created)))
+           (familiar-acp--tool-update
+            proc sid id `((status . "in_progress")
+                          (content . [((type . "terminal") (terminalId . ,term))])))
+           (familiar-acp--request
+            proc "terminal/wait_for_exit" `((sessionId . ,sid) (terminalId . ,term))
+            (lambda (exit err)
+              (if err (funcall fail err)
+                (familiar-acp--request
+                 proc "terminal/output" `((sessionId . ,sid) (terminalId . ,term))
+                 (lambda (out _err)
+                   (familiar-acp--request proc "terminal/release"
+                                          `((sessionId . ,sid) (terminalId . ,term)) #'ignore)
+                   (let ((code (alist-get 'exitCode exit)))
+                     (familiar-acp--tool-update proc sid id `((status . ,(if (eql code 0) "completed" "failed"))))
+                     (funcall callback
+                              (format "Exit code: %s%s\n%s"
+                                      (or code "none")
+                                      (if-let* ((sig (alist-get 'signal exit))) (format " (signal %s)" sig) "")
+                                      (familiar-acp--cap (or (alist-get 'output out) ""))))))))))))))))
 
 (defun familiar-acp--cap (text)
   "TEXT, cut to 20000 characters for the model."
@@ -218,6 +279,7 @@ Reads go straight to the client; writes ask the user there first."
          (funcall (cdr waiting) (alist-get 'result msg) (alist-get 'error msg))))
       ("initialize"
        (process-put proc :caps (alist-get 'clientCapabilities params))
+       (process-put proc :terminal (alist-get 'terminal (alist-get 'clientCapabilities params)))
        (familiar-acp--result
         proc id
         `((protocolVersion . ,familiar-acp-protocol-version)

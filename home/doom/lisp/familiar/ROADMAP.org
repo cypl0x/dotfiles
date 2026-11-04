@@ -29,7 +29,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 | Anthropic Messages  | gptel                        | -                                 | none for use; batch API and files API unused |
 | OpenAI-compatible   | gptel (backends)             | familiar-openai (/v1/)           | tools for clients (function calling)         |
 | MCP                 | mcp.el (stdio, SSE, HTTP)    | mcp-server-lib + familiar-mcp-http | sampling, elicitation; server-sent streams    |
-| ACP                 | acp.el + agent-shell         | familiar-acp (prompts, fs tools)  | terminal/* through the client; session/load    |
+| ACP                 | acp.el + agent-shell         | familiar-acp (prompts, fs, terminal) | session/load; agent-shell offers no terminal |
 | A2A                 | none usable                  | none                              | everything                                   |
 | Claude Code IDE     | -                            | monet                             | none known                                   |
 
