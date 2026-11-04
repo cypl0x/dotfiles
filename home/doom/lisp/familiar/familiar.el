@@ -32,6 +32,8 @@
 (require 'cl-lib)
 (require 'subr-x)
 (require 'gptel)
+(declare-function familiar-history-record "familiar-history" (&rest args))
+(declare-function familiar-history-prompt-text "familiar-history" (prompt))
 
 (declare-function flymake-diagnostics "flymake")
 (declare-function flymake-diagnostic-text "flymake")
@@ -274,16 +276,25 @@ continues.  Returns the model used."
       :system system
       :stream stream
       :callback
-      (lambda (response info)
-        (when (or (eq response t) (and (stringp response) (not stream))
-                  ;; A tool call can end the turn: it was paid for too.
-                  (eq (car-safe response) 'tool-call))
-          (when-let* ((tokens (plist-get info :tokens)))
-            (familiar--record model task tokens)))
-        (when (null response)
-          (funcall familiar-notify-function "familiar: request failed"
-                   (or (plist-get info :status) "no response")))
-        (funcall callback response info)))
+      (let ((answer ""))
+        (lambda (response info)
+          (when (stringp response) (setq answer (concat answer response)))
+          (when (or (eq response t) (and (stringp response) (not stream)))
+            (let* ((tokens (plist-get info :tokens))
+                   (cost (and tokens (familiar--record model task tokens))))
+              ;; One Org history of every turn (familiar-history.el).
+              (when (fboundp 'familiar-history-record)
+                (familiar-history-record
+                 :prompt (familiar-history-prompt-text prompt) :answer answer
+                 :task task :model model :tokens tokens :cost cost
+                 :calls (mapcar (lambda (call)
+                                  (format "%s %S" (plist-get call :name) (plist-get call :args)))
+                                (plist-get info :tool-use))))
+              (setq answer "")))
+          (when (null response)
+            (funcall familiar-notify-function "familiar: request failed"
+                     (or (plist-get info :status) "no response")))
+          (funcall callback response info))))
     model))
 
 

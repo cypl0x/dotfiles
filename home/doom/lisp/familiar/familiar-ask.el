@@ -32,6 +32,7 @@
 (require 'familiar)
 (require 'org)
 
+(declare-function familiar-history-record "familiar-history" (&rest args))
 (declare-function vertico--exhibit "ext:vertico" ())
 (declare-function evil-insert-state "ext:evil-states" (&optional arg))
 (defvar vertico--candidates)
@@ -421,6 +422,9 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
       (gptel-send)
     (newline)))
 
+(defvar-local familiar-ask--last-tokens nil "Tokens of the last answer.")
+(defvar-local familiar-ask--last-cost nil "Cost of the last answer.")
+
 (defvar-local familiar-ask--last-model nil
   "The model that answered last (an @preset may differ from `gptel-model').")
 
@@ -491,6 +495,10 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
       (insert (format "#+title: familiar-ask %s\n\n" (format-time-string "%F %R"))))
     (familiar-ask--setup buf)))
 
+(defconst familiar-ask--echo-instruction
+  "(Answer in one to three short lines of plain text, no lists or code blocks: it is shown in the echo area.)"
+  "Added to an @echo prompt; not part of what the user asked.")
+
 (defvar-local familiar-ask--echo nil
   "Non-nil when the answer being written goes to the echo area (@echo).")
 
@@ -502,18 +510,47 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
                          (when (buffer-live-p buf)
                            (with-current-buffer buf
                              (let ((save-silently t) (inhibit-message t)) (save-buffer))
+                             (when (fboundp 'familiar-history-record)
+                               (familiar-ask--history))
                              (when familiar-ask--echo
                                (setq familiar-ask--echo nil)
                                (familiar-ask--echo-answer))))))))
+
+(defun familiar-ask--answer-text (bounds)
+  "The answer between BOUNDS, without its folded tool blocks."
+  (string-trim
+   (replace-regexp-in-string
+    "^[ \t]*#\\+begin_tool\\(?:.\\|\n\\)*?#\\+end_tool[ \t]*\n?" ""
+    (buffer-substring (car bounds) (cdr bounds)))))
+
+(defun familiar-ask--history ()
+  "Record the latest turn in the familiar history, linked to this conversation."
+  (when-let* ((bounds (familiar-ask--last-answer-bounds)))
+    (save-excursion
+      (goto-char (car bounds))
+      (when (re-search-backward "^\\*\\* \\(.*\\)$" nil t)
+        (let* ((heading (match-string-no-properties 1))
+               (title (replace-regexp-in-string "  \\[[^]]*\\]\\'" "" heading))
+               (body (buffer-substring-no-properties
+                      (line-beginning-position 2)
+                      (if (re-search-forward "^#\\+begin_context" (car bounds) t)
+                          (match-beginning 0)
+                        (line-beginning-position 2)))))
+          (familiar-history-record
+           :prompt (string-trim (string-replace familiar-ask--echo-instruction ""
+                                                (concat title "\n" body)))
+           :answer (substring-no-properties (familiar-ask--answer-text bounds))
+           :task 'ask :model familiar-ask--last-model
+           :tokens familiar-ask--last-tokens :cost familiar-ask--last-cost
+           :link (and buffer-file-name
+                      (format "[[file:%s::*%s][conversation]]"
+                              (abbreviate-file-name buffer-file-name) heading))))))))
 
 (defun familiar-ask--echo-answer ()
   "Show the latest answer in the echo area, as Org shows it."
   (when-let* ((bounds (familiar-ask--last-answer-bounds)))
     (font-lock-ensure (car bounds) (cdr bounds))
-    (let ((text (string-trim
-                 (replace-regexp-in-string
-                  "^[ \t]*#\\+begin_tool\\(?:.\\|\n\\)*?#\\+end_tool[ \t]*\n?" ""
-                  (buffer-substring (car bounds) (cdr bounds)))))
+    (let ((text (familiar-ask--answer-text bounds))
           (message-truncate-lines nil))
       ;; Faces stay; org-indent's prefixes would indent the echo area.
       (remove-list-of-text-properties 0 (length text) '(line-prefix wrap-prefix) text)
@@ -547,7 +584,9 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
     (setq familiar-ask--last-model
           (or (and gptel--fsm-last (plist-get (gptel-fsm-info gptel--fsm-last) :model))
               gptel-model))
-    (cl-incf familiar-ask--cost (familiar--record familiar-ask--last-model 'ask tokens))))
+    (setq familiar-ask--last-tokens tokens
+          familiar-ask--last-cost (familiar--record familiar-ask--last-model 'ask tokens))
+    (cl-incf familiar-ask--cost familiar-ask--last-cost)))
 (advice-add 'gptel--update-token-usage :after #'familiar-ask--record-a)
 
 ;;;; Applying a suggestion
@@ -710,10 +749,7 @@ ask's, which could be another buffer minutes ago."
                          (t familiar-ask-follow-up)))
            (echo (memq 'echo keywords)))
       (familiar-ask--send
-       (if echo
-           (concat prompt "\n\n(Answer in one to three short lines of plain text, \
-no lists or code blocks: it is shown in the echo area.)")
-         prompt)
+       (if echo (concat prompt "\n\n" familiar-ask--echo-instruction) prompt)
        follow echo (or origin (familiar-ask--capture)) keywords))))
 
 (defun familiar-ask--show (buf win)

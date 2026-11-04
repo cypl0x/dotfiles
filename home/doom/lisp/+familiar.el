@@ -41,6 +41,10 @@
 ;; The prompt completes words too (+completion.el), as you type: corfu turns
 ;; itself on only in minibuffers that already have their own capfs, which
 ;; the prompt gets later in its setup.
+(after! familiar
+  ;; Every AI turn in one Org history (SPC A j).
+  (require 'familiar-history))
+
 (after! familiar-ask
   ;; @github, @nixos-mcp…: the MCP servers Claude Code knows for the project.
   (require 'familiar-mcp-client)

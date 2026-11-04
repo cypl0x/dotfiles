@@ -870,6 +870,12 @@ box exactly like Atuin's own =?=, but answered by Emacs; =Alt+ß= asks
 what's already on the prompt.  Enter runs the suggested command, Tab puts
 it on the prompt.  Atuin's =?= (Hub) is unchanged.
 
+Every turn, wherever it came from (M-ß, =ß= in the shell, OpenAI clients,
+familiar's tasks), lands in one Org history (=familiar-history.el=,
+monthly files): question, answer, model, tokens, cost, and for M-ß a link
+to the conversation.  =SPC A j= searches it; =C-c C-r= on a turn asks it
+again.
+
 =C-u= escalates one tier. Every request is priced (gptel's model table, else
 =familiar-model-prices=) and appended to =familiar-ledger-file=; alerts at
 50/80/95% of =familiar-budget=. Fix proposals are resolved with stock smerge

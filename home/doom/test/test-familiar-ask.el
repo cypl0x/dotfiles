@@ -754,3 +754,80 @@ du -sh .
   (let ((events (test-familiar-atuin--chat
                  (lambda (cb) (funcall cb "It lists files." nil) (funcall cb t nil)))))
     (should (equal (mapcar #'car events) '("text" "done")))))
+
+;;; familiar-history
+
+(when test-familiar-available
+  (load (expand-file-name "../lisp/familiar/familiar-history"
+                          (file-name-directory (or load-file-name buffer-file-name)))
+        nil t)
+  ;; Other tests make requests too: they must not write a real history.
+  (setq familiar-history-enabled nil))
+
+(defmacro test-history--with (&rest body)
+  `(let ((familiar-history-directory (make-temp-file "familiar-history" t))
+         (familiar-history-enabled t))
+     (unwind-protect (progn ,@body)
+       (delete-directory familiar-history-directory t))))
+
+(defun test-history--text ()
+  (with-temp-buffer (insert-file-contents (familiar-history-file)) (buffer-string)))
+
+(ert-deftest familiar-history/a-turn-is-an-escaped-org-entry ()
+  (skip-unless test-familiar-available)
+  (test-history--with
+   (familiar-history-record :prompt "What is * this?\nsecond line" :answer "* not a heading\n#+begin_src x"
+                            :task 'openai :model 'claude-haiku-5-5 :tokens '(:input 12 :output 3) :cost 0.0001
+                            :calls '("suggest_command (:command \"ls\")"))
+   (let ((text (test-history--text)))
+     (should (string-match-p "^\\* What is \\* this\\?  :openai:$" text))
+     (should (string-match-p ":MODEL:    claude-haiku-5-5" text))
+     (should (string-match-p ":TOKENS:   12 in, 3 out" text))
+     (should (string-match-p "^- suggest_command" text))
+     ;; Answer lines can't become headings or blocks.
+     (should (string-match-p "^,\\* not a heading$" text))
+     (should (string-match-p "^,#\\+begin_src x$" text))
+     (should (= #o600 (file-modes (familiar-history-file)))))))
+
+(ert-deftest familiar-history/every-familiar-request-is-recorded ()
+  (skip-unless test-familiar-available)
+  (test-history--with
+   (test-familiar--with "unused"
+     (cl-letf (((symbol-function 'gptel-request)
+                (lambda (_prompt &rest args)
+                  (let ((cb (plist-get args :callback)))
+                    (funcall cb "Hel" nil) (funcall cb "lo" nil)
+                    (funcall cb t '(:tokens (:input 10 :output 2)
+                                    :tool-use ((:name "suggest_command" :args (:command "ls"))))))))
+               ((symbol-function 'familiar-cost) (lambda (&rest _) 0.0002)))
+       (familiar-request '("first" "reply" "the question") :task 'atuin :stream t :callback #'ignore)
+       (let ((text (test-history--text)))
+         (should (string-match-p "^\\* the question  :atuin:" text))
+         (should (string-match-p ":COST:     0.000200" text))
+         (should (string-match-p "^Hello$" text))
+         (should (string-match-p "^- suggest_command (:command \"ls\")" text)))))))
+
+(ert-deftest familiar-history/m-ss-turns-link-their-conversation-and-replay ()
+  (skip-unless test-familiar-available)
+  (test-history--with
+   (with-temp-buffer
+     (org-mode)
+     (setq buffer-file-name (expand-file-name "conv.org" familiar-history-directory))
+     (insert "#+title: x\n\n** Explain this  [2026-11-04 Wed 13:00]\nmore lines\n#+begin_context\nctx\n#+end_context\n"
+             "#+begin_tool (x)\nr\n#+end_tool\nIt is a test.\n\n** ")
+     (setq familiar-ask--last-model 'claude-sonnet-5-5 familiar-ask--last-cost 0.01
+           familiar-ask--last-tokens '(:input 1 :output 1))
+     (familiar-ask--history)
+     (set-buffer-modified-p nil))
+   (let ((text (test-history--text)) asked)
+     (should (string-match-p "^\\* Explain this  :ask:" text))
+     (should (string-match-p ":LINK:     \\[\\[file:.*conv.org::\\*Explain this  \\[2026" text))
+     (should (string-match-p "^It is a test\\.$" text))
+     (should-not (string-match-p "ctx\\|begin_tool" text))
+     ;; Replay asks the same again, fresh.
+     (cl-letf (((symbol-function 'familiar-ask) (lambda (p &optional fresh _) (setq asked (list p fresh)))))
+       (with-temp-buffer
+         (insert text) (org-mode)
+         (goto-char (point-min)) (re-search-forward "^\\* Explain")
+         (familiar-history-replay)))
+     (should (equal asked '("Explain this\nmore lines" t))))))

@@ -39,9 +39,11 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 2. [X] Streamable-HTTP MCP server inside Emacs (=familiar-mcp-http.el=): no
    emacsclient wrapper, one port, token in a lock file like monet's;
    any agent on the machine attaches with a URL.
-3. [ ] Conversation core: one representation of a turn (prompt, context,
+3. [~] Conversation core (=familiar-history.el=): one Org history of every turn (prompt, context,
    tool calls, result, cost) that M-ß, agent-shell transcripts and MCP
    sampling requests all write; Org as the storage format.
+   Done: M-ß, familiar-request (OpenAI, Atuin, tasks).  Open: agent-shell
+   transcripts, MCP sampling.
 4. [ ] MCP sampling: servers that ask the client for a completion get one
    from familiar (budgeted, ledgered, asks first).
 5. [ ] Emacs as an ACP agent: editors and tools speaking ACP drive a
