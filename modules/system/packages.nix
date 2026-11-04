@@ -3,6 +3,14 @@
   llm-agents,
   ...
 }: let
+  # glo: git log, one line per commit with refs and +/- counts
+  # (home/bin/glo.sh). writeShellApplication runs shellcheck at build time.
+  glo = pkgs.writeShellApplication {
+    name = "glo";
+    runtimeInputs = with pkgs; [git gawk less];
+    text = builtins.readFile ../../home/bin/glo.sh;
+  };
+
   # Fresh agent harnesses from numtide/llm-agents.nix (binary cache:
   # cache.numtide.com). Keep nixpkgs.follows unset on that input so these
   # store paths match their CI builds.
@@ -26,6 +34,7 @@ in {
         fd # Fast file finder (used in Makefile)
         fzf
         git
+        glo # see the let above
         gnumake
         glow # cli to preview markdown files
         bc # Calculator

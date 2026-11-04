@@ -111,6 +111,9 @@ zstyle ':completion:*:warnings' format 'No matches for: %d'
   zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --icons --color=always $realpath'
 zstyle ':fzf-tab:*' switch-group ',' '.'
 
+# glo (modules/system/packages.nix) takes git log's arguments: complete them so.
+compdef _git glo=git-log
+
 # fzf-tab replaces zsh's own menu, which must therefore stay off. Keep this
 # last: a stray `menu select` anywhere below wins and silently kills the fzf
 # picker, which is exactly what used to happen at the bottom of this file.
