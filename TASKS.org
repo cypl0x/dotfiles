@@ -131,4 +131,4 @@ First frame 0.78 → 0.57 s, later 0.43 → 0.22 s (67bf68a).
 ** DONE User: neither evil default (2026-11-04)
 ** DONE autocorrect: 92cd1d7 + case fix; lab data removed
 ** DONE User: the bar cursor is it
-** DONE Harness step 2: MCP over HTTP in Emacs (c240f8a); next: step 3 conversation core
+** DONE Harness step 2: MCP over HTTP (c240f8a); step 6 (user's pick): OpenAI endpoint (1186a46)

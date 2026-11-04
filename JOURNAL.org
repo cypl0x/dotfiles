@@ -39,6 +39,20 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 13:04] — Your Emacs is now an OpenAI endpoint
+You picked it, it's live: =http://127.0.0.1:39391/v1= speaks the OpenAI
+chat API, answered by familiar.  Any tool that takes =OPENAI_BASE_URL=
+(llm, aichat, editors, scripts) now runs on your Claude key through
+Emacs: one ledger, one budget, =SPC A $= shows it all.
+- =fast= / =smart= / =deep= are your tiers; =emacs-smart= etc. also tell the
+  model where you are in Emacs right now (buffer, mode, point, region).
+- Streaming works (chunks, then =[DONE]=).  Tested with curl and with
+  gptel acting as a plain OpenAI client from a second Emacs: it streamed
+  "Org" back, three requests landed in the ledger as task =openai=.
+- I didn't test =emacs-*= live on purpose: it would have sent whatever
+  you were looking at to the API.  The batch tests cover it.
+Setup in the README (two =export= lines).  Roadmap: 3 of 8 steps done.
+
 ** [2026-11-04 Mi 12:42] — Emacs starts in 8 s, and speaks MCP over HTTP
 - *Daemon start: 13.3 s → 8.3 s; Doom's own load 9.8 s → 3.7 s.*  I
   timed every top-level form of your config in throwaway daemons (a shim
