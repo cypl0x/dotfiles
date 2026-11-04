@@ -440,9 +440,18 @@
   (setq eglot-ltex-communication-channel 'stdio
         eglot-ltex-server-path (or (executable-find "ltex-ls-plus") ""))
   :config
-  ;; Mother tongue helps false-friend detection for a German native writing
-  ;; English; ltex auto-detects the checked language per document otherwise.
-  (setq eglot-ltex-language "en-US"))
+  ;; LTeX reads its settings from eglot's workspace configuration (an
+  ;; `eglot-ltex-language' set here before did nothing: no such option, so
+  ;; everything was checked as en-US, German too).  auto: LanguageTool
+  ;; detects each document's language (checked live: German and English
+  ;; files each get their own rules); a file can still say
+  ;; "# ltex: language=de-DE".  motherTongue: false friends for a German
+  ;; writer of English.
+  (after! eglot
+    (setq-default eglot-workspace-configuration
+                  (plist-put (copy-sequence (default-value 'eglot-workspace-configuration))
+                             :ltex '(:language "auto"
+                                     :additionalRules (:motherTongue "de-DE"))))))
 ;; ---------------------------------------------------------------------------
 ;; Translation
 ;;   SPC l t  → go-translate, quick popup (Google/Bing, no key needed)

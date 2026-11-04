@@ -106,6 +106,10 @@ ORG is newer); its path."
   (interactive)
   (info "org-roam"))
 
+;; By name too, as `magit-info' opens Magit's (Org-roam has no such command).
+(defalias 'org-roam-info #'+docs/org-roam-manual)
+(defalias 'org-roam-manual #'+docs/org-roam-manual)
+
 (map! :leader
       (:prefix ("n" . "notes")
        (:prefix ("r" . "roam")
