@@ -134,4 +134,16 @@
         (familiar-ask-edit-keep)))
     (should (equal familiar-ask--draft "a longer prompt"))))
 
+
+
+(ert-deftest familiar-ask/after-response-leaves-one-prompt-heading ()
+  ;; gptel runs it after the tool turn and after the answer.
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (insert "** q\nanswer\n\n")
+    (cl-letf (((symbol-function 'save-buffer) #'ignore))
+      (familiar-ask--after-response nil nil)
+      (familiar-ask--after-response nil nil))
+    (should (equal (buffer-string) "** q\nanswer\n\n** "))))
+
 ;;; test-familiar-ask.el ends here

@@ -51,8 +51,9 @@ with evil, vertico and orderless; Emacs 32).  Each user message ends with a \
 #+begin_context block describing where they were when they asked: buffer, \
 modes, point, region, nearby text, minibuffer.  Treat it as the subject of \
 the question; the user won't restate it.  Your tools inspect Emacs and act \
-in it; use them instead of guessing, and to look things up (documentation, \
-key bindings, buffer text) before answering.
+in it; use them instead of guessing.  Prefer the read-only ones (describe, \
+buffer_text, list_buffers, apropos): they run at once, while eval_elisp and \
+replace_in_buffer wait for the user to approve each call.
 
 Decide from the wording.  A question (\"how do I\", \"what is\", \"explain\", \
 \"when to use\") gets an answer: suggest commands, key bindings or elisp, \
@@ -286,6 +287,8 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
   "Make BUF a familiar-ask conversation."
   (with-current-buffer buf
     (unless (derived-mode-p 'org-mode) (org-mode))
+    ;; First: turning it on restores saved state, which would undo the below.
+    (gptel-mode 1)
     (setq-local gptel-model (alist-get familiar-ask-tier familiar-models)
                 gptel-backend (or familiar-backend gptel-backend)
                 gptel-system-prompt familiar-ask-system
@@ -293,9 +296,10 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
                 gptel-use-tools t
                 gptel-cache t
                 gptel-include-tool-results 'auto
+                ;; Shown, it's mostly empty blocks; the answer is what matters.
+                gptel-include-reasoning nil
                 gptel-prompt-prefix-alist '((org-mode . "** "))
                 gptel-response-prefix-alist '((org-mode . "")))
-    (gptel-mode 1)
     (familiar-ask-mode 1)
     (add-hook 'gptel-post-response-functions #'familiar-ask--after-response nil t)
     buf))
@@ -315,16 +319,23 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
 
 (defun familiar-ask--after-response (_beg _end)
   "Save the conversation and leave a fresh prompt heading."
+  ;; Runs after every turn, tool turns included: one prompt heading only.
   (save-excursion
     (goto-char (point-max))
-    (unless (bolp) (insert "\n"))
-    (insert "\n** "))
+    (unless (re-search-backward "^\\*\\* *\\=" (line-beginning-position 0) t)
+      (skip-chars-backward " \t\n")
+      (delete-region (point) (point-max))
+      (insert "\n\n** ")))
   (let ((save-silently t) (inhibit-message t)) (save-buffer)))
 
 ;; Spend: every turn of an ask conversation lands in familiar's ledger.
 (defun familiar-ask--record-a (tokens &optional _tokens-full)
   (when (and tokens (bound-and-true-p familiar-ask-mode))
-    (familiar--record gptel-model 'ask tokens)))
+    ;; The request's model: an @preset in the prompt overrides `gptel-model'.
+    (familiar--record (or (and gptel--fsm-last
+                               (plist-get (gptel-fsm-info gptel--fsm-last) :model))
+                          gptel-model)
+                      'ask tokens)))
 (advice-add 'gptel--update-token-usage :after #'familiar-ask--record-a)
 
 ;;;; Prompting
@@ -383,7 +394,12 @@ With prefix arg NEW, start a fresh conversation."
       (save-excursion
         (when (re-search-backward "^#\\+begin_context" nil t)
           (org-fold-hide-block-toggle t)))
-      (display-buffer buf)
+      (goto-char (point-max)))
+    ;; Doom's popup `display-buffer' can leave another buffer current, and
+    ;; `gptel-send' sends whatever buffer is current: send explicitly here.
+    (display-buffer buf)
+    (with-current-buffer buf
+      (goto-char (point-max))
       (gptel-send))
     buf))
 
