@@ -39,6 +39,12 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 22:22] — LanguageTool, for the first time
+- Grammar checking in Org and Markdown (LanguageTool) had never worked:
+  its server wrote two warnings where Emacs expected the reply, and Emacs
+  gave up after 30 s in every project.  Switched to ltex-ls-plus; it now
+  starts in ~16 s and catches "This are", "a error" and friends.
+
 ** [2026-11-04 Mi 22:16] — A quieter echo area
 - Read your *Messages*: the loudest lines were my own.  "Persisted N
   buffers" (202×, every minute) now only shows when you ask for it;
