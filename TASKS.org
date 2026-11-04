@@ -59,7 +59,10 @@ Research `?' in zsh (Atuin AI); test; bring into Emacs.
 * TODO org-modern: richer, colours matching org                   :org:
 Markdown currently looks richer than org.
 * TODO org-fmt / org-format command                               :org:
-* TODO Rename buffer by its contents                              :misc:
+* DONE Rename buffer by its contents                              :misc:
+SPC b R (familiar-rename-buffer): suggestion fills the prompt when it
+arrives; C-u saves under a suggested path. Live suggestion checked; the
+minibuffer fill still needs a real-key test.
 * DONE Screenshots: clipboard + default dir, pasteable via M-y     :desktop:
 Rofi clipboard history shows "[ binary data ]"; Emacs M-y excludes images.
 Browser in Emacs: dired-like, preview at point, thumbnails, newest first.
