@@ -904,3 +904,33 @@ and a temp exec-path where bin/tar links to store/tar."
     (should (eq (+completion-context) 'prose))
     (insert "\")\n(mess")
     (should (eq (+completion-context) 'code))))
+
+(defmacro test-usage--with-fresh (&rest body)
+  `(let* ((+usage-file (make-temp-file "usage" nil ".eld"))
+          (+usage-sequence-file (make-temp-file "useq" nil ".eld"))
+          (+usage--counts (make-hash-table :test #'eq))
+          (+usage--pairs (make-hash-table :test #'equal))
+          (+usage--modes (make-hash-table :test #'equal))
+          (+usage--last nil) (+usage--recent nil))
+     (unwind-protect (progn ,@body)
+       (delete-file +usage-file) (delete-file +usage-sequence-file))))
+
+(defun test-usage--run (&rest cmds)
+  "Record CMDS as if run in a row in `emacs-lisp-mode'."
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (dolist (c cmds)
+      (let ((this-command c) (real-this-command c) (executing-kbd-macro nil))
+        (+usage--record-h)))))
+
+(ert-deftest usage/anticipates-what-follows-the-last-command ()
+  (test-usage--with-fresh
+   ;; save-buffer is usually followed by dired; find-file is common here.
+   (test-usage--run 'save-buffer 'dired 'save-buffer 'dired
+                    'find-file 'find-file 'find-file 'save-buffer)
+   (+usage--save-sequences)               ; and it survives a save
+   (let ((rows (+usage-anticipations 'save-buffer 'emacs-lisp-mode)))
+     (should (eq (car (car rows)) 'dired))
+     (should (equal (cdr (assq 'dired rows)) '(8 2 2)))
+     (should-not (assq 'save-buffer rows)))
+   (should (equal (car +usage--recent) '(save-buffer . emacs-lisp-mode)))))

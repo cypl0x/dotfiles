@@ -234,4 +234,31 @@
       (should-not (string-match-p "Around point" ctx))
       (should-not (string-match-p "tile tile" ctx)))))
 
+(ert-deftest familiar-ask/lisp-callers-get-a-fresh-origin ()
+  ;; A stale origin from an earlier interactive ask must not leak in.
+  (skip-unless test-familiar-available)
+  (let* ((familiar-ask-directory (make-temp-file "familiar-ask" t))
+         (familiar-ask--buffer-name "*familiar-ask-test*")
+         (familiar-ask--origin (list :buffer (get-buffer-create " *stale*") :point 1)))
+    (cl-letf (((symbol-function 'gptel-send) #'ignore)
+              ((symbol-function 'display-buffer) #'ignore))
+      (unwind-protect
+          (test-familiar-ask--in "here POINT\n"
+            (with-current-buffer (familiar-ask "q" t)
+              (should (string-match-p "here POINT" (buffer-string)))
+              (should-not (string-match-p "\\*stale\\*" (buffer-string)))))
+        (when-let* ((b (get-buffer familiar-ask--buffer-name)))
+          (with-current-buffer b (set-buffer-modified-p nil)) (kill-buffer b))
+        (kill-buffer " *stale*")
+        (delete-directory familiar-ask-directory t)))))
+
+(ert-deftest familiar-ask/tool-results-are-capped ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-ask-tool-result-max 10))
+    (with-temp-buffer
+      (rename-buffer "familiar-ask-cap-test" t)
+      (insert (make-string 50 ?x))
+      (let ((out (funcall (test-familiar-ask--tool "buffer_text") (buffer-name))))
+        (should (string-prefix-p "xxxxxxxxxx\n[… 40 more characters cut" out))))))
+
 ;;; test-familiar-ask.el ends here

@@ -8,6 +8,7 @@
 ;;   M-x +usage-mode     start/stop counting (off by default)
 ;;   M-x +usage/report   commands by frequency, with keys used and keys bound
 ;;   M-x +usage/suggest  familiar reads the counts and suggests keys and shortcuts
+;;   SPC A .             anticipate: likely next commands here (C-u: ask the model)
 ;;
 ;;; Code:
 
@@ -27,6 +28,17 @@
 (defvar +usage--counts (make-hash-table :test #'eq)
   "COMMAND → hash of KEYS → count, since the last save.")
 
+
+;; Sequences, for anticipating the next command: which command follows
+;; which, and what each major mode sees most.  Local like the counts.
+(defvar +usage-sequence-file (locate-user-emacs-file "usage-sequences.eld")
+  "Where pair and per-mode counts persist: (:pairs ALIST :modes ALIST),
+keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
+
+(defvar +usage--pairs (make-hash-table :test #'equal) "Unsaved (PREV . CMD) → count.")
+(defvar +usage--modes (make-hash-table :test #'equal) "Unsaved (MODE . CMD) → count.")
+(defvar +usage--last nil "The last command counted.")
+(defvar +usage--recent nil "The last 40 commands counted, newest first, as (CMD . MODE).")
 (defvar +usage--timer nil)
 (declare-function familiar-ask "familiar-ask" (prompt &optional new))
 
@@ -47,7 +59,13 @@
            (table (or (gethash this-command +usage--counts)
                       (puthash this-command (make-hash-table :test #'equal)
                                +usage--counts))))
-      (cl-incf (gethash how table 0)))))
+      (cl-incf (gethash how table 0))
+      (when +usage--last
+        (cl-incf (gethash (cons +usage--last this-command) +usage--pairs 0)))
+      (cl-incf (gethash (cons major-mode this-command) +usage--modes 0))
+      (setq +usage--last this-command)
+      (push (cons this-command major-mode) +usage--recent)
+      (when (nthcdr 40 +usage--recent) (setcdr (nthcdr 39 +usage--recent) nil)))))
 
 (defun +usage--read ()
   (when (file-readable-p +usage-file)
@@ -88,10 +106,13 @@
       (progn
         (add-hook 'post-command-hook #'+usage--record-h)
         (add-hook 'kill-emacs-hook #'+usage-save)
-        (setq +usage--timer (run-with-idle-timer +usage-save-interval t #'+usage-save)))
+        (add-hook 'kill-emacs-hook #'+usage--save-sequences)
+        (setq +usage--timer (run-with-idle-timer +usage-save-interval t
+                                            (lambda () (+usage-save) (+usage--save-sequences)))))
     (remove-hook 'post-command-hook #'+usage--record-h)
     (when +usage--timer (cancel-timer +usage--timer))
-    (+usage-save)))
+    (+usage-save)
+    (+usage--save-sequences)))
 
 ;;;###autoload
 (defun +usage/report ()
@@ -152,6 +173,91 @@
            "replace what I do by hand.  Lead with the five with the most effect.\n\n"
            "#+begin_example\n" (+usage-summary) "\n#+end_example")
    t))
+
+
+(defun +usage--sequences ()
+  "Saved plus unsaved sequence counts: (PAIRS . MODES), two `equal' hash tables."
+  (let ((saved (when (file-readable-p +usage-sequence-file)
+                 (with-temp-buffer
+                   (insert-file-contents +usage-sequence-file)
+                   (ignore-errors (read (current-buffer))))))
+        (pairs (make-hash-table :test #'equal))
+        (modes (make-hash-table :test #'equal)))
+    (pcase-dolist (`(,k . ,n) (plist-get saved :pairs)) (puthash k n pairs))
+    (pcase-dolist (`(,k . ,n) (plist-get saved :modes)) (puthash k n modes))
+    (maphash (lambda (k n) (cl-incf (gethash k pairs 0) n)) +usage--pairs)
+    (maphash (lambda (k n) (cl-incf (gethash k modes 0) n)) +usage--modes)
+    (cons pairs modes)))
+
+(defun +usage--save-sequences ()
+  (when (or (> (hash-table-count +usage--pairs) 0) (> (hash-table-count +usage--modes) 0))
+    (pcase-let ((`(,pairs . ,modes) (+usage--sequences))
+                (print-length nil) (print-level nil))
+      (with-temp-file +usage-sequence-file
+        (prin1 (list :pairs (let (l) (maphash (lambda (k n) (push (cons k n) l)) pairs) l)
+                     :modes (let (l) (maphash (lambda (k n) (push (cons k n) l)) modes) l))
+               (current-buffer)))
+      (clrhash +usage--pairs)
+      (clrhash +usage--modes))))
+
+(defun +usage-anticipations (last mode &optional n)
+  "Up to N (default 15) likely next commands after LAST in MODE, best first.
+Each is (COMMAND SCORE AFTER-LAST IN-MODE); following LAST weighs three times
+what being common in MODE does."
+  (pcase-let ((`(,pairs . ,modes) (+usage--sequences))
+              (scores (make-hash-table :test #'eq)))
+    (maphash (lambda (k c) (when (eq (car k) last) (cl-incf (gethash (cdr k) scores 0) (* 3 c)))) pairs)
+    (maphash (lambda (k c) (when (eq (car k) mode) (cl-incf (gethash (cdr k) scores 0) c))) modes)
+    (let (rows)
+      (maphash (lambda (cmd score)
+                 (when (and (not (eq cmd last)) (commandp cmd)
+                            (not (memq cmd +usage-ignore)))
+                   (push (list cmd score (gethash (cons last cmd) pairs 0)
+                               (gethash (cons mode cmd) modes 0))
+                         rows)))
+               scores)
+      (seq-take (sort rows (lambda (a b) (> (nth 1 a) (nth 1 b)))) (or n 15)))))
+
+(defconst +usage--ask-model "✦ Ask the model to anticipate (edits, commands, searches)")
+
+;;;###autoload
+(defun +usage/anticipate (&optional ask)
+  "Pick a likely next command, from what you do after the last one and in
+this mode; RET runs it.  With prefix arg ASK, or the last entry, have the
+model anticipate edits, commands and searches from the same evidence."
+  (interactive "P")
+  (let* ((last +usage--last)
+         (rows (+usage-anticipations last major-mode))
+         (pick (unless ask
+                 (let* ((cands (append (mapcar (lambda (r) (symbol-name (car r))) rows)
+                                       (list +usage--ask-model)))
+                        (annotate
+                         (lambda (c)
+                           (when-let* ((row (assq (intern-soft c) rows)))
+                             (concat (propertize " " 'display '(space :align-to 40))
+                                     (propertize (or (ignore-errors (key-description (where-is-internal (car row) nil t))) "")
+                                                 'face 'help-key-binding)
+                                     (propertize " " 'display '(space :align-to 56))
+                                     (propertize (format "after %s ×%d · here ×%d" last (nth 2 row) (nth 3 row))
+                                                 'face 'completions-annotations))))))
+                   (let ((completion-extra-properties (list :annotation-function annotate)))
+                     (completing-read (format "Next (after %s): " last)
+                                      (lambda (s p a) (if (eq a 'metadata) '(metadata (display-sort-function . identity))
+                                                        (complete-with-action a cands s p)))
+                                      nil t))))))
+    (if (and pick (not (equal pick +usage--ask-model)))
+        (call-interactively (intern pick))
+      (unless (fboundp 'familiar-ask) (user-error "familiar-ask isn't available"))
+      (familiar-ask
+       (concat "@fast Anticipate what I'll do next here: the edits I'm likely to make, "
+               "the commands (with their keys), and what I might search for.  Short list, "
+               "most likely first; don't do anything yet.\n\n"
+               "My last commands, oldest first:\n"
+               (mapconcat (lambda (c) (format "- %s (%s)" (car c) (cdr c)))
+                          (reverse +usage--recent) "\n")
+               "\n\nWhat I usually run after the last one, or in this mode:\n"
+               (mapconcat (lambda (r) (format "- %s: after ×%d, here ×%d" (car r) (nth 2 r) (nth 3 r)))
+                          rows "\n"))))))
 
 ;; Opt-in: M-x +usage-mode (or (+usage-mode 1) in config.el) to start counting.
 

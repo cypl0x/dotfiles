@@ -171,6 +171,7 @@ A started shell lives until you kill its buffer."
     [["✦ familiar"
       ("?" "Ask anything"       familiar-ask)
       ("N" "Ask: new conversation" familiar-ask-new)
+      ("." "Anticipate next"    +usage/anticipate)
       ("A" "Ask: earlier"       familiar-ask-sessions)
       ("x" "Explain"            familiar-explain)
       ("d" "Explain diagnostic" familiar-explain-diagnostic)

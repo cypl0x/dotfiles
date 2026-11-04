@@ -202,6 +202,17 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
 
 ;;;; Tools
 
+(defcustom familiar-ask-tool-result-max 6000
+  "Longest tool result sent back to the model, in characters."
+  :type 'natnum :group 'familiar)
+
+(defun familiar-ask--cap (text)
+  "TEXT, cut to `familiar-ask-tool-result-max' with a note saying so."
+  (if (<= (length text) familiar-ask-tool-result-max) text
+    (concat (substring text 0 familiar-ask-tool-result-max)
+            (format "\n[… %d more characters cut; ask for less]"
+                    (- (length text) familiar-ask-tool-result-max)))))
+
 (defun familiar-ask--get-buffer (name)
   (or (get-buffer name) (error "No buffer named %s" name)))
 
@@ -339,6 +350,15 @@ Reply in Org markup, never Markdown (this conversation is an Org buffer): \
                   (format "Minibuffer input is now %S" text)))))
   "Tools `familiar-ask' offers the model.")
 
+;; Every result goes through `familiar-ask--cap': `describe' on a mode once
+;; returned its whole keymap, hundreds of lines of tokens.
+(dolist (tool familiar-ask-tools)
+  (let ((fn (gptel-tool-function tool)))
+    (setf (gptel-tool-function tool)
+          (lambda (&rest args)
+            (let ((result (apply fn args)))
+              (if (stringp result) (familiar-ask--cap result) result))))))
+
 ;;;; The conversation buffer
 
 (defvar familiar-ask-mode-map
@@ -473,14 +493,18 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
         (add-to-list 'savehist-additional-variables 'familiar-ask-history)))))
 
 ;;;###autoload
-(defun familiar-ask (prompt &optional new)
+(defun familiar-ask (prompt &optional new origin)
   "Ask PROMPT about where you are, in the running conversation.
-With prefix arg NEW, start a fresh conversation."
+With prefix arg NEW, start a fresh conversation.  ORIGIN is where it was
+asked from (`familiar-ask--capture'); from Lisp it defaults to here and now.
+It used to fall back to the last interactive ask's, which could be another
+buffer minutes ago."
   (interactive
-   (progn (setq familiar-ask--origin (familiar-ask--capture))
-          (list (familiar-ask--read) current-prefix-arg)))
+   (let ((origin (familiar-ask--capture)))
+     (setq familiar-ask--origin origin)   ; for C-c ' (`familiar-ask-edit-prompt')
+     (list (familiar-ask--read) current-prefix-arg origin)))
   (when (string-blank-p prompt) (user-error "Empty prompt"))
-  (let* ((origin (or familiar-ask--origin (familiar-ask--capture)))
+  (let* ((origin (or origin (familiar-ask--capture)))
          (context (familiar-ask--context origin))
          (buf (if (or new (not (get-buffer familiar-ask--buffer-name)))
                   (familiar-ask--new-buffer)
@@ -523,12 +547,14 @@ With prefix arg NEW, start a fresh conversation."
 
 
 ;;;###autoload
-(defun familiar-ask-new (prompt)
+(defun familiar-ask-new (prompt &optional origin)
   "Ask PROMPT in a fresh conversation."
   (interactive
-   (progn (setq familiar-ask--origin (familiar-ask--capture))
-          (list (familiar-ask--read))))
-  (familiar-ask prompt t))
+   (let ((origin (familiar-ask--capture)))
+     (setq familiar-ask--origin origin)
+     (list (familiar-ask--read) origin)))
+  (familiar-ask prompt t origin))
+
 ;;;; Editing a prompt in a buffer
 
 (defvar familiar-ask-edit-mode-map
@@ -568,7 +594,8 @@ With prefix arg NEW, start a fresh conversation."
     (setq familiar-ask--draft nil)
     (add-to-history 'familiar-ask-history text)
     (quit-window t)
-    (familiar-ask (format "%s\n\n(Prompt written in %s.)" text mode))))
+    ;; Where the prompt was started, not this prompt buffer.
+    (familiar-ask (format "%s\n\n(Prompt written in %s.)" text mode) nil familiar-ask--origin)))
 
 (defun familiar-ask-edit-keep ()
   "Close the prompt buffer; the next `familiar-ask' starts with its text."
