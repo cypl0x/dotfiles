@@ -39,6 +39,15 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 20:45] — Your list, bugs first: freezes gone, buffers found
+- =M-S-x= no longer freezes for 8–10 s: 0.09 s now.
+- =M-ö= / =M-ü= visit =*new*= buffers too; they join the main workspace.
+- corfu's selected candidate is visible; German has 355k words, British
+  English joined American.
+- =C-c C-c= sends a follow-up from anywhere; =C-M-ß= opens the multi-line
+  prompt straight away, with history on =M-p= / =M-n= and =C-c C-q= to
+  discard without losing it.
+
 ** [2026-11-04 Mi 17:43] — Nothing you type into M-ß is lost
 - A prompt you abandon (C-g) is kept in the M-ß history now; =M-p= /
   =C-r= in the prompt bring it back.
