@@ -9,7 +9,8 @@
 ;;
 ;;   SPC t P   panels on/off:
 ;;     right, top     Output: what is at point (eldoc: type, signature,
-;;                    docs; Lean's own information where lean4-mode runs)
+;;                    docs; in Lean (nael-mode) the tactic state: hypotheses
+;;                    and goals, as Isabelle's Output shows the proof state)
 ;;     right, bottom  Problems: this file's diagnostics (flycheck)
 ;;     left           Outline: the file's symbols (imenu, from the language
 ;;                    server where one runs), where you are highlighted;
