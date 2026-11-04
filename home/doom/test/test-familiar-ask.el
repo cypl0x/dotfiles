@@ -684,3 +684,73 @@ du -sh .
              (should (string-match-p "\"finish_reason\":\"stop\"" out)))
          (delete-process client)
          (familiar-mcp-http-stop))))))
+
+;;; familiar-atuin
+
+(when test-familiar-available
+  (load (expand-file-name "../lisp/familiar/familiar-atuin"
+                          (file-name-directory (or load-file-name buffer-file-name)))
+        nil t))
+
+(ert-deftest familiar-atuin/claude-messages-become-turns ()
+  (skip-unless test-familiar-available)
+  (should (equal (familiar-atuin-conversation
+                  '(((role . "user") (content . "list big files"))
+                    ((role . "assistant")
+                     (content . (((type . "text") (text . "Here:"))
+                                 ((type . "tool_use") (name . "suggest_command")
+                                  (input . ((command . "du -sh *")))))))
+                    ((role . "user") (content . (((type . "tool_result") (content . "ran"))
+                                                 ((type . "text") (text . "sorted?")))))))
+                 '("list big files" "Here:\n(suggest_command: du -sh *)" "(result: ran)\nsorted?"))))
+
+(defun test-familiar-atuin--chat (fake)
+  "Events (NAME . DATA) the server sends for one chat, familiar faked by FAKE."
+  (test-mcp-http--with
+   (cl-letf (((symbol-function 'familiar-request)
+              (lambda (_prompt &rest args)
+                (should (plist-get args :tools))
+                (let ((cb (plist-get args :callback)))
+                  (run-at-time 0 nil (lambda () (funcall fake cb)))))))
+     (let* ((url (familiar-mcp-http-start 0))
+            (port (string-to-number (car (last (split-string (string-remove-suffix "/mcp" url) ":")))))
+            (out "")
+            (body "{\"messages\":[{\"role\":\"user\",\"content\":\"list big files\"}],\"context\":{\"shell\":\"zsh\"},\"config\":{},\"invocation_id\":\"x\"}")
+            (client (make-network-process :name "test-atuin-client" :host "127.0.0.1" :service port
+                                          :coding 'binary
+                                          :filter (lambda (_ s) (setq out (concat out s))))))
+       (unwind-protect
+           (progn
+             (process-send-string client (format "POST /api/cli/chat HTTP/1.1\r\nAuthorization: Bearer %s\r\nContent-Length: %d\r\n\r\n%s"
+                                                 (familiar-mcp-http-token) (length body) body))
+             (with-timeout (5 (error "No done: %S" out))
+               (while (not (string-match-p "event: \\(done\\|error\\)" out)) (accept-process-output nil 0.05)))
+             (let (events (start 0))
+               (while (string-match "event: \\([a-z_]+\\)\ndata: \\(.*\\)\n\n" out start)
+                 (push (cons (match-string 1 out) (json-parse-string (match-string 2 out) :object-type 'alist)) events)
+                 (setq start (match-end 0)))
+               (nreverse events)))
+         (delete-process client)
+         (familiar-mcp-http-stop))))))
+
+(ert-deftest familiar-atuin/streams-text-and-a-suggested-command ()
+  (skip-unless test-familiar-available)
+  (let ((events (test-familiar-atuin--chat
+                 (lambda (cb)
+                   (funcall cb "Biggest first:" nil)
+                   ;; As gptel delivers it: the segment ends with the call pending.
+                   (funcall cb t '(:stop-reason "tool_use"
+                                   :tool-use ((:id "toolu_1" :name "suggest_command"
+                                               :args (:command "du -sh * | sort -h" :danger "low")))))))))
+    (should (equal (mapcar #'car events) '("text" "tool_call" "done")))
+    (should (equal (alist-get 'content (cdr (nth 0 events))) "Biggest first:"))
+    (let ((call (cdr (nth 1 events))))
+      (should (equal (alist-get 'name call) "suggest_command"))
+      (should (equal (alist-get 'command (alist-get 'input call)) "du -sh * | sort -h"))
+      (should (equal (alist-get 'danger (alist-get 'input call)) "low")))))
+
+(ert-deftest familiar-atuin/a-plain-answer-ends-with-done ()
+  (skip-unless test-familiar-available)
+  (let ((events (test-familiar-atuin--chat
+                 (lambda (cb) (funcall cb "It lists files." nil) (funcall cb t nil)))))
+    (should (equal (mapcar #'car events) '("text" "done")))))

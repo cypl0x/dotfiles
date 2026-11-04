@@ -56,3 +56,8 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 Each step: research the current spec first (spec version, upstream
 issues), batch tests without network, a live test in the lab frame, then
 the README and journal.
+
+* Done besides the plan
+- Atuin AI's server (=familiar-atuin.el=, =/api/cli/chat=): the =?= in the
+  shell answered by familiar.  Commands as =suggest_command= tool calls,
+  answers as streamed text; Atuin's own client tools not offered yet.

@@ -64,6 +64,7 @@
    3 nil (lambda ()
            (condition-case err
                (progn (require 'familiar-openai)   ; /v1/: OpenAI-compatible, same server
+                      (require 'familiar-atuin)    ; /api/cli/: Atuin AI's server
                       (familiar-mcp-http-start))
              (error (message "familiar MCP over HTTP not started: %s" (error-message-string err)))))))
 

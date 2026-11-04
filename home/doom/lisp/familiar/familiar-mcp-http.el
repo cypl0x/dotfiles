@@ -60,7 +60,7 @@ string, or nil/\"\" for notifications.")
 HANDLER is called with METHOD PATH HEADERS BODY and returns
 (STATUS EXTRA-HEADERS BODY), (:async FN) where FN is called with a
 function taking those three, or (:sse FN) where FN is called with SEND
-(one event's data) and CLOSE.  nil passes the request on.")
+(one event's data, and optionally its name) and CLOSE.  nil passes the request on.")
 
 ;;;; Token
 
@@ -180,9 +180,11 @@ UTF-8.  `:bad' when it can never become a request."
          (`(:sse ,fn)
           (process-send-string proc "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n")
           (funcall fn
-                   (lambda (data)
+                   (lambda (data &optional event)
                      (when (process-live-p proc)
-                       (process-send-string proc (concat "data: " (familiar-mcp-http--bytes data) "\n\n"))))
+                       (process-send-string
+                        proc (concat (if event (format "event: %s\n" event) "")
+                                     "data: " (familiar-mcp-http--bytes data) "\n\n"))))
                    (lambda () (when (process-live-p proc) (process-send-eof proc)))))
          (`(,status ,extra ,out) (familiar-mcp-http--send proc status extra out)))))))
 

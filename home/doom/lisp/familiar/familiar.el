@@ -257,21 +257,27 @@ Add it to `familiar-model-prices'." model)))
     (when escalate (setq pos (min (1+ pos) (1- (length tiers)))))
     (alist-get (nth pos tiers) familiar-models)))
 
-(cl-defun familiar-request (prompt &key task system escalate stream callback)
+(cl-defun familiar-request (prompt &key task system escalate stream callback tools)
   "Send PROMPT for TASK with SYSTEM prompt; call CALLBACK like `gptel-request'.
 The model comes from TASK's tier (one higher when ESCALATE).  The request is
-priced and recorded once it completes.  Returns the model used."
+priced and recorded once it completes.  TOOLS (gptel tools) are offered;
+when the model calls them, the streamed segment ends (`t') with the calls in
+INFO's :tool-use and :stop-reason \"tool_use\", before gptel runs them and
+continues.  Returns the model used."
   (let* ((model (familiar--model task escalate))
          (gptel-backend (or familiar-backend gptel-backend))
          (gptel-model model)
-         (gptel-use-tools nil)
+         (gptel-tools tools)
+         (gptel-use-tools (and tools t))
          (gptel-use-context nil))
     (gptel-request prompt
       :system system
       :stream stream
       :callback
       (lambda (response info)
-        (when (or (eq response t) (and (stringp response) (not stream)))
+        (when (or (eq response t) (and (stringp response) (not stream))
+                  ;; A tool call can end the turn: it was paid for too.
+                  (eq (car-safe response) 'tool-call))
           (when-let* ((tokens (plist-get info :tokens)))
             (familiar--record model task tokens)))
         (when (null response)
