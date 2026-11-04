@@ -39,6 +39,25 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 07:27] — PDF selections, Atuin's ?, docs you can learn from
+- *Your bug report*: =M-ß= in a Vellumory PDF missed the selection (it isn't
+  an Emacs region) and only saw tile layout. It now gets the selection,
+  labelled as what "this" means, plus the page's text from the worker.
+  "What is this?" on "dependently typed programming language" now explains
+  dependent types first, then how the Turm book uses the phrase.
+- *Atuin's =?=*: your 34 Atuin AI questions showed what you ask most
+  (commands, pasted errors, "read my last command"). Now =?= at an empty
+  eshell or shell prompt asks, and the command lands on your prompt,
+  unrun. Along the way: eshell hadn't started since May (wrong path to your
+  eshell functions); fixed.
+- *No more approvals*: =M-ß= runs every tool, as you asked.
+  =familiar-ask-confirm-tools= turns that back on.
+- *=SPC w w=* reaches the answer popups.
+- *Learning path*: README.org starts with ten lessons (=M-ß= first), also
+  as an Info manual (hub: =SPC H i=). =SPC h /= lists every command this
+  config adds, generated from the code. The hub is in columns now.
+- *Usage counting* is on by default. =M-x +usage/suggest= turns the counts
+  into keybinding suggestions; best after a few days of use.
 ** [2026-11-04 Mi 07:10] — Looking at it the way you do
 - You asked whether I still check things the way you see them. I hadn't, for
   a while. Now there's a lab frame that Hyprland puts on a special workspace

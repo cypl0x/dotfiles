@@ -64,8 +64,12 @@ Research `?' in zsh (Atuin AI); test; bring into Emacs.
 59f54bf: leo lookups → org-fc double cards in ~/vault/vocabulary.org; SPC l r
 review, SPC l v file. Live card made + found by awk index. Review UI not
 yet driven with real keys. config.el load! needs nrs.
-* TODO README.org learning path for all custom workflows (+ Info) :docs:
-* TODO Discoverability of own additions                           :docs:
+* DONE README.org learning path for all custom workflows (+ Info) :docs:
+b2175b4: ten-lesson learning path, 5 missing module sections, +docs/info
+(makeinfo, cache dir), checked rendered.
+* DONE Discoverability of own additions                           :docs:
+SPC h / (generated from load-history, 125 commands, 0.7 s); hub SPC H in
+columns with the new entries.
 * DONE org-modern: richer, colours matching org                   :org:
 ccf1f4e, 706741b: labels from org-todo-keyword-faces (inverse video,
 explicit colours: uniform 18 px, survive hl-line), markup hidden + pretty
