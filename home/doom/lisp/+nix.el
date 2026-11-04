@@ -73,22 +73,73 @@
 
 ;;;; Nix flake operations ────────────────────────────────────────────────────
 
-(defun +nix/flake-update ()
-  "Run `nix flake update' in the dotfiles directory."
-  (interactive)
-  (let ((default-directory (expand-file-name "~/dotfiles/")))
-    (compile "nix flake update")))
+(defvar +nix-dotfiles (expand-file-name "~/dotfiles/") "The system flake.")
+
+(defun +nix--inputs ()
+  "The flake's direct inputs with their locked dates: alist (LABEL . NAME)."
+  (let* ((default-directory +nix-dotfiles)
+         (meta (with-temp-buffer
+                 (call-process "nix" nil (list t nil) nil "flake" "metadata" "--json")
+                 (goto-char (point-min))
+                 (json-parse-buffer :object-type 'alist)))
+         (nodes (alist-get 'nodes (alist-get 'locks meta))))
+    (mapcar (lambda (entry)
+              ;; entry: (INPUT . NODE-KEY); a string key for a direct input.
+              (let* ((node (and (stringp (cdr entry)) (alist-get (intern (cdr entry)) nodes)))
+                     (time (alist-get 'lastModified (alist-get 'locked node))))
+                (cons (format "%-20s locked %s" (car entry)
+                              (if time (format-time-string "%F" time) "?"))
+                      (symbol-name (car entry)))))
+            (alist-get 'inputs (alist-get 'root nodes)))))
+
+(defun +nix/flake-update (input)
+  "Update one INPUT of the system flake (never all: on this metered link a
+full update fetched ~35 GB).  Check `datapass' after."
+  (interactive
+   (let ((inputs (+nix--inputs)))
+     (list (cdr (assoc (completing-read "Update input: " inputs nil t) inputs)))))
+  (let ((default-directory +nix-dotfiles))
+    (compile (format "nix flake update %s" (shell-quote-argument input)))))
 
 (defun +nix/flake-check ()
   "Run `nix flake check' in the dotfiles directory."
   (interactive)
-  (let ((default-directory (expand-file-name "~/dotfiles/")))
+  (let ((default-directory +nix-dotfiles))
     (compile "nix flake check")))
 
-(defun +nix/home-switch ()
-  "Run home-manager switch."
-  (interactive)
-  (compile "home-manager switch --flake ~/dotfiles"))
+(defvar +nix--rebuild-from nil "The system generation a rebuild started from.")
+
+(defun +nix--rebuild-finished (buf status)
+  "After a successful rebuild: what changed, package by package."
+  (with-current-buffer buf
+    (remove-hook 'compilation-finish-functions #'+nix--rebuild-finished t))
+  (when (and (string-prefix-p "finished" status) +nix--rebuild-from)
+    (let ((to (file-truename "/run/current-system")))
+      (if (equal to +nix--rebuild-from)
+          (message "Rebuilt: the system didn't change")
+        (with-current-buffer (get-buffer-create "*nix rebuild diff*")
+          (let ((inhibit-read-only t))
+            (erase-buffer)
+            (insert (format "%s\n→ %s\n\n" +nix--rebuild-from to))
+            (call-process "nix" nil (list t nil) nil "store" "diff-closures" +nix--rebuild-from to)
+            (ansi-color-apply-on-region (point-min) (point-max)))
+          (goto-char (point-min))
+          (special-mode))
+        (display-buffer "*nix rebuild diff*")))))
+
+(defun +nix/rebuild (&optional boot)
+  "`nrs' in Emacs: statix, then nixos-rebuild switch (BOOT: boot) for this
+host, in a compilation buffer; on success, the package diff against the
+previous generation."
+  (interactive "P")
+  (let ((default-directory +nix-dotfiles))
+    (setq +nix--rebuild-from (file-truename "/run/current-system"))
+    (with-current-buffer
+        (compile (format "statix check %s && sudo nixos-rebuild %s --flake %s#%s"
+                         (shell-quote-argument +nix-dotfiles) (if boot "boot" "switch")
+                         (shell-quote-argument (directory-file-name +nix-dotfiles))
+                         (system-name)))
+      (add-hook 'compilation-finish-functions #'+nix--rebuild-finished nil t))))
 
 (defun +nix/doom-sync ()
   "Run doom sync."
@@ -101,12 +152,13 @@
     "NixOS operations."
     ["Info"
      ("i" "System info"      +nix/system-info)
-     ("r" "Nix REPL"         +nix/repl)]
+     ("r" "Nix REPL"         +nix/repl)
+     ("d" "Dev shell into Emacs" +nix/develop)]
     ["Flake"
-     ("u" "Flake update"     +nix/flake-update)
+     ("u" "Update one input" +nix/flake-update)
      ("c" "Flake check"      +nix/flake-check)]
     ["Build"
-     ("h" "Home switch"      +nix/home-switch)
+     ("b" "Rebuild (nrs)"    +nix/rebuild)
      ("s" "Doom sync"        +nix/doom-sync)])
 
 ;;;; Keybindings ─────────────────────────────────────────────────────────────
@@ -217,7 +269,8 @@
        :desc "System info"    "i" #'+nix/system-info
        :desc "Nix REPL"       "r" #'+nix/repl
        :desc "Dev shell into Emacs" "d" #'+nix/develop
-       :desc "Flake update"   "u" #'+nix/flake-update
+       :desc "Update one input" "u" #'+nix/flake-update
+       :desc "Rebuild (nrs)"  "b" #'+nix/rebuild
        :desc "Doom sync"      "s" #'+nix/doom-sync))
 
 (provide '+nix)
