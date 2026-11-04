@@ -468,8 +468,12 @@
 ;; ---------------------------------------------------------------------------
 
 (after! turm-mode
-  (setq turm-tx-program (expand-file-name "~/dev/turm-emacs-bin/tx/bin/tx")
-        turm-program (expand-file-name "~/dev/turm-emacs-bin/turm/bin/turm")
+  ;; Your pick (2026-11-04): the Oct 28 store builds lacked `tx docs'
+  ;; (turm-docs-export failed) and `occurrences --types' (variable types,
+  ;; ElDoc types, case split).  These are newer, not Nix-built: inari's tx of
+  ;; Oct 30 and the Turm-book-rolling cargo build.
+  (setq turm-tx-program (expand-file-name "~/dev/turm-emacs-bin/inari/tx")
+        turm-program (expand-file-name "~/dev/Turm-book-rolling/target/release/turm")
         turm-tree-sitter-directory (expand-file-name "~/dev/turm-emacs-bin/tree-sitter/lib/")))
 
 ;; ---------------------------------------------------------------------------
