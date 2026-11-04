@@ -29,7 +29,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 | Anthropic Messages  | gptel                        | -                                 | none for use; batch API and files API unused |
 | OpenAI-compatible   | gptel (backends)             | familiar-openai (/v1/)           | tools for clients (function calling)         |
 | MCP                 | mcp.el (stdio, SSE, HTTP)    | mcp-server-lib + familiar-mcp-http | sampling, elicitation; server-sent streams    |
-| ACP                 | acp.el + agent-shell         | none                              | Emacs as an ACP *agent*; =terminal/*= in acp.el |
+| ACP                 | acp.el + agent-shell         | familiar-acp (prompts, no tools)  | agent tools via the client's fs/* and terminal/* |
 | A2A                 | none usable                  | none                              | everything                                   |
 | Claude Code IDE     | -                            | monet                             | none known                                   |
 
@@ -47,7 +47,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
    MCP sampling.
 4. [ ] MCP sampling: servers that ask the client for a completion get one
    from familiar (budgeted, ledgered, asks first).
-5. [ ] Emacs as an ACP agent: editors and tools speaking ACP drive a
+5. [X] Emacs as an ACP agent (=familiar-acp.el=, command =familiar-acp=): editors and tools speaking ACP drive a
    familiar conversation (the inverse of agent-shell).
 6. [X] OpenAI-compatible endpoint: =/v1/chat/completions= served by Emacs (=familiar-openai.el=),
    so any tool that speaks it gets Emacs' tools and context.

@@ -19,6 +19,7 @@ Emacs 29.1+, gptel 0.9.9+.  Optional: [[https://github.com/laurynas-biveinis/mcp
 | =familiar-mcp-client.el= | MCP servers' tools in =familiar-ask=, per turn by =@name=            |
 | =familiar-openai.el=     | an OpenAI-compatible endpoint (=/v1/chat/completions=)               |
 | =familiar-atuin.el=      | the server behind Atuin's AI (=/api/cli/chat=)                       |
+| =familiar-acp.el=        | familiar as an ACP agent: editors launch =familiar-acp=, Emacs answers |
 
 * Setup
 

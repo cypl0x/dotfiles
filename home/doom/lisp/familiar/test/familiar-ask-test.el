@@ -848,5 +848,97 @@ du -sh .
             (should-not (member (expand-file-name "proj/notes/transcripts" root) dirs))))
       (delete-directory root t))))
 
+;;; familiar-acp
+
+(when test-familiar-available
+  (load (expand-file-name "../familiar-acp" (file-name-directory (or load-file-name buffer-file-name))) nil t))
+
+(defmacro test-acp--session (fake &rest body)
+  "BODY with an ACP connection `client', `say' to send a message, `lines'
+to wait for N lines and get them parsed; familiar-request faked by FAKE."
+  (declare (indent 1))
+  `(test-mcp-http--with
+    (let ((familiar-acp--sessions (make-hash-table :test #'equal)) (out "") cbs)
+      (cl-letf (((symbol-function 'familiar-request)
+                 (lambda (prompt &rest args)
+                   (push (list prompt (plist-get args :callback)) cbs)
+                   (funcall ,fake (plist-get args :callback))))
+                ((symbol-function 'gptel-abort)
+                 (lambda (_buf) (funcall (cadr (car cbs)) 'abort nil))))
+        (let* ((port (familiar-acp-start 0))
+               (client (make-network-process :name "test-acp" :host "127.0.0.1" :service port
+                                             :coding 'binary
+                                             :filter (lambda (_ s) (setq out (concat out s)))))
+               (say (lambda (obj) (process-send-string client (concat (json-serialize obj) "\n"))))
+               (lines (lambda (n)
+                        (with-timeout (5 (error "Only got: %S" out))
+                          (while (< (cl-count ?\n out) n) (accept-process-output nil 0.05)))
+                        (mapcar (lambda (l) (json-parse-string l :object-type 'alist :array-type 'list))
+                                (split-string out "\n" t)))))
+          (unwind-protect
+              (progn (process-send-string client (format "AUTH %s\n" (familiar-mcp-http-token)))
+                     ,@body)
+            (delete-process client)
+            (familiar-acp-stop)))))))
+
+(ert-deftest familiar-acp/a-session-streams-and-ends-its-turn ()
+  (skip-unless test-familiar-available)
+  (test-acp--session (lambda (cb) (run-at-time 0 nil (lambda () (funcall cb "Hi" nil) (funcall cb "!" nil) (funcall cb t nil))))
+    (funcall say `((jsonrpc . "2.0") (id . 0) (method . "initialize")
+                   (params . ((protocolVersion . 1) (clientCapabilities . ,(make-hash-table))))))
+    (funcall say '((jsonrpc . "2.0") (id . 1) (method . "session/new")
+                   (params . ((cwd . "/tmp") (mcpServers . [])))))
+    (let* ((got (funcall lines 2))
+           (init (alist-get 'result (nth 0 got)))
+           (sid (alist-get 'sessionId (alist-get 'result (nth 1 got)))))
+      (should (= 1 (alist-get 'protocolVersion init)))
+      (should (equal (alist-get 'name (alist-get 'agentInfo init)) "familiar"))
+      (should (string-prefix-p "sess_" sid))
+      (funcall say `((jsonrpc . "2.0") (id . 2) (method . "session/prompt")
+                     (params . ((sessionId . ,sid)
+                                (prompt . [((type . "text") (text . "hello"))
+                                           ((type . "resource")
+                                            (resource . ((uri . "file:///a.el") (text . "(x)"))))])))))
+      (let ((got (funcall lines 5)))
+        (should (equal (mapcar (lambda (m) (alist-get 'sessionUpdate (alist-get 'update (alist-get 'params m))))
+                               (seq-subseq got 2 4))
+                       '("agent_message_chunk" "agent_message_chunk")))
+        (should (equal (alist-get 'text (alist-get 'content (alist-get 'update (alist-get 'params (nth 2 got)))))
+                       "Hi"))
+        (should (equal (alist-get 'stopReason (alist-get 'result (nth 4 got))) "end_turn"))
+        (should (string-match-p "hello\n\nFile file:///a.el" (car (car (car cbs)))))
+        ;; The next turn carries the conversation.
+        (funcall say `((jsonrpc . "2.0") (id . 3) (method . "session/prompt")
+                       (params . ((sessionId . ,sid) (prompt . [((type . "text") (text . "more"))])))))
+        (funcall lines 8)
+        (should (equal (car (car cbs)) (list (car (car (cadr cbs))) "Hi!" "more")))))))
+
+(ert-deftest familiar-acp/cancel-answers-cancelled ()
+  (skip-unless test-familiar-available)
+  (test-acp--session #'ignore              ; never answers by itself
+    (funcall say '((jsonrpc . "2.0") (id . 1) (method . "session/new") (params . ((cwd . "/tmp")))))
+    (let ((sid (alist-get 'sessionId (alist-get 'result (car (funcall lines 1))))))
+      (funcall say `((jsonrpc . "2.0") (id . 2) (method . "session/prompt")
+                     (params . ((sessionId . ,sid) (prompt . [((type . "text") (text . "long"))])))))
+      (sleep-for 0.1)
+      (funcall say `((jsonrpc . "2.0") (method . "session/cancel") (params . ((sessionId . ,sid)))))
+      (should (equal (alist-get 'stopReason (alist-get 'result (nth 1 (funcall lines 2)))) "cancelled")))))
+
+(ert-deftest familiar-acp/a-wrong-token-is-turned-away ()
+  (skip-unless test-familiar-available)
+  (test-mcp-http--with
+   (let* ((port (familiar-acp-start 0))
+          (closed nil)
+          (client (make-network-process :name "test-acp-bad" :host "127.0.0.1" :service port
+                                        :sentinel (lambda (_ _) (setq closed t)))))
+     (unwind-protect
+         (progn
+           (process-send-string client "AUTH wrong\n")
+           (with-timeout (3 (error "Not closed"))
+             (while (not closed) (accept-process-output nil 0.05)))
+           (should closed))
+       (delete-process client)
+       (familiar-acp-stop)))))
+
 (provide 'familiar-ask-test)
 ;;; familiar-ask-test.el ends here

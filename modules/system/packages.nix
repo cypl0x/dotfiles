@@ -11,6 +11,14 @@
     text = builtins.readFile ../../home/bin/glo.sh;
   };
 
+  # familiar-acp: the command an editor launches to use familiar (in the
+  # Emacs daemon) as its ACP agent (home/bin/familiar-acp.sh).
+  familiar-acp = pkgs.writeShellApplication {
+    name = "familiar-acp";
+    runtimeInputs = [pkgs.coreutils];
+    text = builtins.readFile ../../home/bin/familiar-acp.sh;
+  };
+
   # atuin-emacs: Atuin with "Emacs AI" where it says "Atuin AI" (box title,
   # answer label), for ß / Alt+ß in zsh (home/shell/zsh/familiar-ai.zsh),
   # whose answers come from Emacs: distinguishable from Atuin's own `?`.
@@ -52,6 +60,7 @@ in {
         git
         glo # see the let above
         atuin-emacs # ditto: ß / Alt+ß in zsh
+        familiar-acp # ditto: familiar as an ACP agent
         gnumake
         glow # cli to preview markdown files
         bc # Calculator

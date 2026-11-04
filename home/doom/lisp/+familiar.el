@@ -63,13 +63,16 @@
 ;; message.  Only the main daemon serves: test daemons would take the port.
 (autoload 'familiar-mcp-http-start "familiar-mcp-http" nil t)
 (autoload 'familiar-mcp-http-stop "familiar-mcp-http" nil t)
+(autoload 'familiar-acp-start "familiar-acp" nil t)
+(autoload 'familiar-acp-stop "familiar-acp" nil t)
 (when (eq (daemonp) t)
   (run-with-idle-timer
    3 nil (lambda ()
            (condition-case err
                (progn (require 'familiar-openai)   ; /v1/: OpenAI-compatible, same server
                       (require 'familiar-atuin)    ; /api/cli/: Atuin AI's server
-                      (familiar-mcp-http-start))
+                      (familiar-mcp-http-start)
+                      (familiar-acp-start))       ; ACP agent (familiar-acp command)
              (error (message "familiar MCP over HTTP not started: %s" (error-message-string err)))))))
 
 (after! familiar
