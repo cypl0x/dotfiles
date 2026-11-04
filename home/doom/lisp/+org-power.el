@@ -45,7 +45,8 @@
                               "#+title: %<%Y-%m-%d %A>\n\n")))))
 
 (use-package! consult-org-roam
-  :after org-roam
+  ;; With consult: :after org-roam alone loaded consult at startup (0.85 s).
+  :after (:all org-roam consult)
   :config
   (consult-org-roam-mode 1))
 
@@ -196,7 +197,7 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
 ;;;; org-noter — Synchronized annotation ─────────────────────────────────────
 
 (use-package! org-noter
-  :after (:any org pdf-view)
+  :defer t                     ; loaded with Org at startup (0.9 s); autoloaded
   :config
   (setq org-noter-notes-search-path (list (expand-file-name "refs" org-directory))
         org-noter-auto-save-last-location t

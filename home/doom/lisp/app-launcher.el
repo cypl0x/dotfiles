@@ -1,7 +1,7 @@
 ;;; app-launcher.el -*- lexical-binding: t; -*-
 
 (require 'cl-lib)
-(require 'consult)
+(declare-function consult--multi "ext:consult" (sources &rest options))   ; required when run: 0.85 s at startup
 (require 'json)
 (require 'subr-x)
 
@@ -323,6 +323,7 @@ The command is executed via the native messenger host (cmd=run).
 (defun app-launcher ()
   "Universal application launcher driven by Consult."
   (interactive)
+  (require 'consult)
   (let* ((sources (list (app-launcher--source-buffers)
                         (app-launcher--source-windows)
                         (app-launcher--source-tabs)

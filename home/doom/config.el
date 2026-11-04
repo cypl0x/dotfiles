@@ -195,6 +195,7 @@
 
 ;; ── blamer.el — GitLens-style inline blame annotation ─────────────────────
 (use-package! blamer
+  :defer t                              ; 0.8 s at startup; SPC g a loads it
   :custom
   ;; Wait 0.5 s of idle time before rendering the annotation.
   (blamer-idle-time 0.5)
@@ -239,6 +240,7 @@
 
 ;; ── gh-notify — GitHub notifications inside Emacs ─────────────────────────
 (use-package! gh-notify
+  :defer t                              ; 2.6 s at startup (forge); autoloaded
   :config
   ;; Show notifications updated within the last 48 hours.
   (setq gh-notify-max-time-since-update 48))
@@ -323,8 +325,10 @@
        :desc "Grep across repos (ghq)"      "Q"  #'consult-ghq-grep))
 
 (use-package! claude-code
-  :config
+  :defer t                              ; 1.1 s at startup; loads on C-c c
+  :init
   (global-set-key (kbd "C-c c") #'claude-code-transient)
+  :config
   ;; Fall back to default-directory when not inside a Projectile project.
   (advice-add 'claude-code-run :around
     (lambda (orig-fn &rest args)
@@ -349,9 +353,10 @@
 ;; ~/.aider.conf.yml (home/common.nix), shared between the CLI and this
 ;; package — no aider-args / API key duplicated here.
 (use-package! aider
-  :config
+  :defer t                              ; 0.6 s at startup; loads on C-c a
+  :init
   (global-set-key (kbd "C-c a") #'aider-transient-menu)
-  (aider-magit-setup-transients))
+  (after! magit (aider-magit-setup-transients)))
 
 ;; eat — terminal emulator in Eshell.
 ;; Provided by Nix (emacsPackages.eat); no package! declaration needed.
