@@ -95,8 +95,10 @@ shim pkg-config script returning direct -I/-L/-l flags."
    corrected))
 
 (defun +prose-autocorrect-here-p (pos)
-  "Whether jinx would check the word that ends at POS."
-  (let ((pos (max (point-min) (1- pos))))
+  "Whether jinx would check the word that ends at POS.
+Case-sensitive like jinx: its \"[A-Z]+\\\\>\" (all-caps words) matched \"teh\"."
+  (let ((pos (max (point-min) (1- pos)))
+        (case-fold-search nil))
     (not (or (jinx--face-excluded-p pos)
              (jinx--regexp-excluded-p (save-excursion (goto-char pos) (backward-word) (point)))
              (jinx--property-excluded-p pos)))))
