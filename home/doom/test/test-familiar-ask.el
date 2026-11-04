@@ -831,3 +831,20 @@ du -sh .
          (goto-char (point-min)) (re-search-forward "^\\* Explain")
          (familiar-history-replay)))
      (should (equal asked '("Explain this\nmore lines" t))))))
+
+(ert-deftest familiar-history/search-covers-agent-transcripts ()
+  (skip-unless (and test-familiar-available (executable-find "fd")))
+  (let* ((root (make-temp-file "roots" t))
+         (familiar-history-transcript-roots
+          (list (expand-file-name "global/transcripts" root) root))
+         (familiar-history--transcripts nil))
+    (unwind-protect
+        (progn
+          (make-directory (expand-file-name "global/transcripts" root) t)
+          (make-directory (expand-file-name "proj/.agent-shell/transcripts" root) t)
+          (make-directory (expand-file-name "proj/notes/transcripts" root) t) ; not agent-shell's
+          (let ((dirs (mapcar #'directory-file-name (familiar-history-transcript-directories))))
+            (should (member (expand-file-name "global/transcripts" root) dirs))
+            (should (member (expand-file-name "proj/.agent-shell/transcripts" root) dirs))
+            (should-not (member (expand-file-name "proj/notes/transcripts" root) dirs))))
+      (delete-directory root t))))

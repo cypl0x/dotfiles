@@ -105,13 +105,41 @@ last thing the user said."
 
 ;;;; Looking back
 
+(defcustom familiar-history-transcript-roots
+  '("~/.claude/transcripts" "~/.agent-shell/transcripts" "~/dotfiles" "~/dev" "~/todo")
+  "Where agent transcripts are: directories, or roots searched (depth 4) for
+per-project .agent-shell/transcripts.  The same places agent-recall indexes."
+  :type '(repeat directory))
+
+(defvar familiar-history--transcripts nil "Transcript directories, found once.")
+
+(defun familiar-history-transcript-directories ()
+  "Directories holding agent-shell and Claude Code transcripts."
+  (or familiar-history--transcripts
+      (setq familiar-history--transcripts
+            (delete-dups
+             (cl-loop for root in familiar-history-transcript-roots
+                      for dir = (expand-file-name root)
+                      when (file-directory-p dir)
+                      append (if (equal (file-name-nondirectory (directory-file-name dir)) "transcripts")
+                                 (list dir)
+                               (seq-filter
+                                (lambda (d) (string-suffix-p "/.agent-shell/transcripts" (directory-file-name d)))
+                                (and (executable-find "fd")
+                                     (process-lines-ignore-status
+                                      "fd" "--hidden" "--no-ignore" "--type" "d" "--max-depth" "4"
+                                      "--absolute-path" "^transcripts$" dir)))))))))
+
 ;;;###autoload
-(defun familiar-history ()
-  "Search every recorded turn."
-  (interactive)
+(defun familiar-history (&optional only-history)
+  "Search every recorded turn, and the agent transcripts too.
+With ONLY-HISTORY (prefix arg), just familiar's history."
+  (interactive "P")
   (make-directory familiar-history-directory t)
   (if (fboundp 'consult-ripgrep)
-      (consult-ripgrep familiar-history-directory)
+      (consult-ripgrep (if only-history familiar-history-directory
+                         (cons familiar-history-directory
+                               (familiar-history-transcript-directories))))
     (let ((default-directory familiar-history-directory))
       (call-interactively #'rgrep))))
 

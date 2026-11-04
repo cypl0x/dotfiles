@@ -42,8 +42,9 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 3. [~] Conversation core (=familiar-history.el=): one Org history of every turn (prompt, context,
    tool calls, result, cost) that M-ß, agent-shell transcripts and MCP
    sampling requests all write; Org as the storage format.
-   Done: M-ß, familiar-request (OpenAI, Atuin, tasks).  Open: agent-shell
-   transcripts, MCP sampling.
+   Done: M-ß, familiar-request (OpenAI, Atuin, tasks); SPC A j searches agent-shell
+   and Claude Code transcripts alongside (they keep their own files).  Open:
+   MCP sampling.
 4. [ ] MCP sampling: servers that ask the client for a completion get one
    from familiar (budgeted, ledgered, asks first).
 5. [ ] Emacs as an ACP agent: editors and tools speaking ACP drive a
