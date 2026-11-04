@@ -934,3 +934,9 @@ and a temp exec-path where bin/tar links to store/tar."
      (should (equal (cdr (assq 'dired rows)) '(8 2 2)))
      (should-not (assq 'save-buffer rows)))
    (should (equal (car +usage--recent) '(save-buffer . emacs-lisp-mode)))))
+
+(ert-deftest perf/modeline-worktree-icon-substituted ()
+  (should (equal (+perf-modeline-icon-a '("nf-cod-worktree" "⑆" "WT" face codicon))
+                 '("nf-cod-repo_forked" "⑆" "WT" face codicon)))
+  (should (equal (+perf-modeline-icon-a '("nf-dev-git_branch" "" "@" face))
+                 '("nf-dev-git_branch" "" "@" face))))

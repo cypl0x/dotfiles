@@ -309,5 +309,27 @@ elements containing secrets; the kill ring also loses huge entries."
       (cl-progv vars vals (apply fn args)))))
 (advice-add 'savehist-save :around #'+perf-savehist-filter-a)
 
+
+;;;; doom-modeline in git worktrees: a glyph no font has
+
+;; In a git worktree doom-modeline's vcs segment shows nf-cod-worktree,
+;; U+EC7E: nerd-icons knows it, no released Nerd Font (3.4.0 included) has
+;; it.  doom-modeline measures the right half with `string-pixel-width' on
+;; every redisplay, and a glyph without a font sends Emacs through every
+;; font each time: 175 ms per measure, ~4 a second idle in the Turm worktree
+;; buffers (measured 2026-11-04; reported as input lag).  A codicon that
+;; exists says the same: nf-cod-repo_forked, U+EA63, 0.04 ms.
+(defvar +perf-modeline-icon-substitutes
+  '(("nf-cod-worktree" . "nf-cod-repo_forked"))
+  "Icon names doom-modeline asks for that no installed font has → stand-ins.")
+
+(defun +perf-modeline-icon-a (args)
+  "Swap icon names in ARGS of `doom-modeline-vcs-icon' for ones fonts have."
+  (if-let* ((sub (cdr (assoc (car args) +perf-modeline-icon-substitutes))))
+      (cons sub (cdr args))
+    args))
+
+(with-eval-after-load 'doom-modeline
+  (advice-add 'doom-modeline-vcs-icon :filter-args #'+perf-modeline-icon-a))
 (provide '+perf)
 ;;; +perf.el ends here
