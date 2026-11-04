@@ -169,6 +169,9 @@
 ;; ---------------------------------------------------------------------------
 
 (package! jinx)                ;; Enchant-based spellchecker (faster than flyspell)
+(package! autocorrect         ;; learns from jinx corrections, then fixes them as you type (tecosaur)
+  :recipe (:host nil :repo "https://code.tecosaur.net/tec/autocorrect.git")
+  :pin "37e25a9534af2739ec06ed695a29728d098938d0")
 (package! mixed-pitch)         ;; Variable-pitch in prose, fixed-pitch in code
 (package! svg-tag-mode)        ;; Replace text tags with SVG badges
 (package! typst-ts-mode)       ;; Tree-sitter mode for typst

@@ -74,6 +74,49 @@ shim pkg-config script returning direct -I/-L/-l flags."
 (map! :m "]s" #'jinx-next              ; also ä s / ö s
       :m "[s" #'jinx-previous)
 
+
+;;;; autocorrect — typos you corrected with jinx get fixed as you type ───────
+
+;; tecosaur's package, wired to jinx as in his config but for jinx 2.11:
+;; `jinx--word-valid-p' takes the word itself now, and the exclusion tests
+;; are jinx's own predicates (faces, regexps, properties) at the word.  A
+;; correction becomes automatic after 3 corrections of the same typo over
+;; time (2 in one session); M-x autocorrect-list shows and edits them.
+(declare-function jinx--face-excluded-p "ext:jinx" (pos))
+(declare-function jinx--regexp-excluded-p "ext:jinx" (pos))
+(declare-function jinx--property-excluded-p "ext:jinx" (pos))
+(declare-function jinx--word-valid-p "ext:jinx" (word))
+(declare-function autocorrect-record-correction "ext:autocorrect" (misspelling corrected))
+
+(defun +prose-autocorrect-record-a (overlay corrected)
+  "Before jinx replaces OVERLAY with CORRECTED: tell autocorrect."
+  (autocorrect-record-correction
+   (buffer-substring-no-properties (overlay-start overlay) (overlay-end overlay))
+   corrected))
+
+(defun +prose-autocorrect-here-p (pos)
+  "Whether jinx would check the word that ends at POS."
+  (let ((pos (max (point-min) (1- pos))))
+    (not (or (jinx--face-excluded-p pos)
+             (jinx--regexp-excluded-p (save-excursion (goto-char pos) (backward-word) (point)))
+             (jinx--property-excluded-p pos)))))
+
+(use-package! autocorrect
+  :after jinx
+  :config
+  (setq autocorrect-check-spelling-function #'jinx--word-valid-p)
+  (add-to-list 'autocorrect-predicates #'+prose-autocorrect-here-p)
+  (advice-add 'jinx--correct-replace :before #'+prose-autocorrect-record-a)
+  (run-with-idle-timer 0.5 nil #'autocorrect-setup))
+
+;; Corrections are abbrevs.  Not in Coq: Proof General defines 328 that
+;; would start expanding.  Autocorrect keeps its own file; nothing is
+;; written to abbrev_defs.
+(setq save-abbrevs nil)
+(add-hook! '(text-mode-hook prog-mode-hook)
+  (defun +prose-abbrev-mode-h ()
+    (unless (derived-mode-p 'coq-mode) (abbrev-mode 1))))
+
 ;;;; mixed-pitch — Variable-pitch prose, fixed-pitch code ────────────────────
 
 (use-package! mixed-pitch
