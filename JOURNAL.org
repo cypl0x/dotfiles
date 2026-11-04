@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 13:41] — ß in your shell asks Emacs
+As you asked: Atuin stays as it is, and =ß= does what Atuin's =?= does.
+- =ß= at an empty prompt opens Atuin's own AI box (same TUI, same keys:
+  Enter runs the suggestion, Tab puts it on the prompt), but the answer
+  comes from your Emacs: familiar's fast model, your key, the ledger.
+  Anywhere else, =ß= is just ß ("straße" types fine).
+- =Alt+ß=, like =M-ß= in Emacs: whatever you typed on the prompt is the
+  question.  Type "the 3 largest files in /tmp", =Alt+ß=, and a =find=
+  command replaces it.
+- How: I read Atuin's AI code (stream.rs, the TUI, its zsh widget) and
+  built the server it talks to inside Emacs (=/api/cli/chat=); the zsh
+  widget is Atuin's own, line by line, pointed at Emacs.  A suggested
+  command ends the turn right away, so nothing is paid for twice.
+- Tested with the real =atuin= in a terminal: =ß= → "list files in /tmp
+  sorted by size" → Tab → =ls -lhS /tmp=.
+
 ** [2026-11-04 Mi 13:04] — Your Emacs is now an OpenAI endpoint
 You picked it, it's live: =http://127.0.0.1:39391/v1= speaks the OpenAI
 chat API, answered by familiar.  Any tool that takes =OPENAI_BASE_URL=

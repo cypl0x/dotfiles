@@ -864,6 +864,12 @@ Models: =fast= =smart= =deep= (familiar's tiers), =emacs-fast= etc. (the same,
 told where you are in Emacs: buffer, mode, point, region, nearby text),
 or a tier's model id.  =stream: true= gets server-sent chunks.
 
+And it is an Atuin AI server (=familiar-atuin.el=, =/api/cli/chat=).  In zsh
+(=home/shell/zsh/familiar-ai.sh=), =ß= at an empty prompt opens Atuin's AI
+box exactly like Atuin's own =?=, but answered by Emacs; =Alt+ß= asks
+what's already on the prompt.  Enter runs the suggested command, Tab puts
+it on the prompt.  Atuin's =?= (Hub) is unchanged.
+
 =C-u= escalates one tier. Every request is priced (gptel's model table, else
 =familiar-model-prices=) and appended to =familiar-ledger-file=; alerts at
 50/80/95% of =familiar-budget=. Fix proposals are resolved with stock smerge
