@@ -785,3 +785,36 @@ and a temp exec-path where bin/tar links to store/tar."
       (org-mode)
       (+screenshot-insert-file file)
       (should (equal (buffer-string) "[[file:~/Pictures/Screenshots/x.png]]")))))
+
+;;; +format
+
+(load (expand-file-name "../lisp/+format" (file-name-directory (or load-file-name buffer-file-name))) nil t)
+
+(ert-deftest format/org-tidies-tables-lists-cookies-blanks ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "* Tasks [/]   \n"
+            "- [X] one\n- [ ] two\n\nSteps:\n"
+            "1. a\n3. b\n7. c\n\n"
+            "| x | longer |\n|-+-|\n| 1 | 2 |\n")
+    (+format-org)
+    (should (equal (buffer-string)
+                   (concat "* Tasks [1/2]\n"
+                           "- [X] one\n- [ ] two\n\nSteps:\n"
+                           "1. a\n2. b\n3. c\n\n"
+                           "| x | longer |\n|---+--------|\n| 1 |      2 |\n")))))
+
+(ert-deftest format/org-region-only ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "| a | bb |\n|-|\n\ntext   \n")
+    (+format-org (point-min) 12)
+    (should (string-prefix-p "| a | bb |\n|---+----|\n" (buffer-string)))
+    ;; Outside the region: untouched.
+    (should (string-suffix-p "text   \n" (buffer-string)))))
+
+(ert-deftest format/org-canonical-round-trip ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "* H\n#+BEGIN_SRC sh\necho\n#+END_SRC\n")
+    (should (equal (+format-org-canonical) "* H\n#+begin_src sh\necho\n#+end_src\n"))))
