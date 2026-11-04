@@ -39,6 +39,23 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 15:37] — familiar, a package of its own; and an ACP agent
+Your order, steps 1 and 2:
+- *familiar is a package* in =lisp/familiar/=, like brave-search: proper
+  headers on every file (GPL-3.0-or-later), its own tests (=make test=: 84,
+  standalone), =make compile= clean with warnings as errors, and its own
+  README with setup outside Doom.  Ready to become its own repo the day you
+  want; until then it lives here.
+- *familiar is an ACP agent.*  Any editor that speaks the Agent Client
+  Protocol (Zed, agent-shell, ...) can use it: point it at the command
+  =familiar-acp=, and your Emacs answers, on your key, in your history.
+  Tested with a real ACP client (acp.el, the library agent-shell uses):
+  "familiar here.", =end_turn=.  On the way: bash gives a background job
+  =/dev/null= as its input, which made the bridge hang up at once; and my
+  own test client had a scoping bug that looked like the server's fault
+  until acp.el's log showed otherwise.
+Next (your step 3): back to Emacs/NixOS everyday improvements.
+
 ** [2026-11-04 Mi 15:03] — One history of every AI turn, glo, and an "Emacs AI" box
 - *Every AI turn in one Org history* (your pick for the harness):
   M-ß, =ß= in the shell, OpenAI clients, explain/review/commit messages —
