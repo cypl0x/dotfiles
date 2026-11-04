@@ -155,6 +155,9 @@ nothing itself."
       :localleader
       :desc "Feedback" "F" #'+vellumory/feedback
       :desc "Newer release?" "U" #'+vellumory/update)
+;; zm cycles the page colours (vellumory-evil); zM picks one.  Both were
+;; reached through M-x in the usage log (zm 4 times, set-theme 4).
+(map! :after vellumory-evil :map vellumory-mode-map :n "zM" #'vellumory-set-theme)
 
 
 ;;;; M-ß in a PDF: the selection and the page are the context

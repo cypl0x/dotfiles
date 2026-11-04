@@ -122,9 +122,9 @@ in this session yet: when a change is needed, show it."
        (familiar-acp--result
         proc id
         `((protocolVersion . ,familiar-acp-protocol-version)
-          (agentCapabilities . ((loadSession . :false)
-                                (promptCapabilities . ((image . :false) (audio . :false)
-                                                       (embeddedContext . t)))))
+          ;; Only what's supported: the spec reads an omitted capability as
+          ;; unsupported, and agent-shell listed false ones as available.
+          (agentCapabilities . ((promptCapabilities . ((embeddedContext . t)))))
           (agentInfo . ((name . "familiar") (title . "familiar (Emacs)")
                         (version . ,(or (ignore-errors
                                           (with-temp-buffer

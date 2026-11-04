@@ -268,5 +268,12 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
        :desc "org-ql search"        "q" #'org-ql-search
        :desc "Super agenda"         "a" #'org-agenda))
 
+;; Display toggles under Doom's SPC t, as the others: both were run through
+;; M-x in the usage log.
+(map! :leader
+      (:prefix "t"
+       :desc "Org modern look"   "o" #'org-modern-mode
+       :desc "Org pretty markup" "O" #'+org-pretty-mode))
+
 (provide '+org-power)
 ;;; +org-power.el ends here

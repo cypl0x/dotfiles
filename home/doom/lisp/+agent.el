@@ -155,6 +155,7 @@ A started shell lives until you kill its buffer."
     [["Agent Shell"
       ("s" "Start Claude"     +agent/start-claude)
       ("S" "Switch buffer"    +agent/switch-buf)
+      ("n" "New (pick agent)" agent-shell)
       ("l" "List sessions"    +agent/list-sessions)
       ("h" "Help menu"        +agent/help)]
      ["Quick Actions"
@@ -225,6 +226,21 @@ A started shell lives until you kill its buffer."
 
 ;; Add recall to agent transient instead of SPC A prefix (SPC A = transient command, not prefix)
 
+
+;; familiar (this Emacs, familiar-acp.el) as one of agent-shell's agents: the
+;; familiar-acp command connects to the ACP agent this daemon serves.
+(defun +agent-familiar-config ()
+  "agent-shell configuration for familiar (a maker, as agent-shell prefers)."
+  (agent-shell-make-agent-config
+   :identifier 'familiar
+   :mode-line-name "familiar" :buffer-name "familiar"
+   :shell-prompt "familiar> " :shell-prompt-regexp "familiar> "
+   :client-maker (lambda (buffer)
+                   (agent-shell--make-acp-client :command "familiar-acp"
+                                                 :context-buffer buffer))))
+(after! agent-shell
+  (when (listp agent-shell-agent-configs)
+    (add-to-list 'agent-shell-agent-configs #'+agent-familiar-config t)))
 
 (use-package! agent-shell-attention
   :after agent-shell
