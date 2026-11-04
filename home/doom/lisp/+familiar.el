@@ -94,7 +94,7 @@
 (add-hook 'doom-after-init-hook #'+familiar-mode-line-h)
 
 ;; `?' and `ß' at an empty shell prompt ask, as they do in zsh (Atuin's `?',
-;; home/shell/zsh/familiar-ai.sh's `ß'; ghostel runs zsh itself, so those
+;; home/shell/zsh/familiar-ai.zsh's `ß'; ghostel runs zsh itself, so those
 ;; work there).  Elsewhere they are just typed.
 (defun +familiar/shell-question-mark ()
   "At an empty eshell or shell prompt, `familiar-ask'; else type the key."

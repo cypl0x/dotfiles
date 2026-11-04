@@ -1,4 +1,4 @@
-# familiar-ai.sh — Atuin's AI prompt, answered by Emacs, on ß and Alt+ß.
+# familiar-ai.zsh — Atuin's AI prompt, answered by Emacs, on ß and Alt+ß.
 #
 # Atuin's own `?` (Atuin Hub) stays as it is.  These run the same inline
 # TUI (`atuin ai inline --hook`) against the Atuin AI server inside the

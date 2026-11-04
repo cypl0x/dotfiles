@@ -309,7 +309,7 @@
           source ${./shell/zsh/aliases.sh}
           source ${./shell/zsh/completions.sh}
           source ${./shell/zsh/functions.sh}
-          source ${./shell/zsh/familiar-ai.sh}       # ß / Alt+ß: Atuin AI answered by Emacs
+          source ${./shell/zsh/familiar-ai.zsh}       # ß / Alt+ß: Atuin AI answered by Emacs
 
           # Shellfish integration
           if [ -f ${./shell/shellfishrc} ]; then
