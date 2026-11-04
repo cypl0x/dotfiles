@@ -141,6 +141,14 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
           (defun +minibuffer-bar-cursor-h ()
             (setq-local cursor-type 'bar)))
 
+;; The selected candidate in corfu's popup was the editor background, one
+;; shade off the popup's own (#242730 on #2a2e38): barely visible.  Now the
+;; theme's blue, 30% into the background, and bold; the text stays at WCAG AA
+;; contrast (4.8:1 with doom-vibrant).
+(custom-set-faces!
+  `(corfu-current :background ,(doom-blend 'blue 'bg 0.3) :foreground ,(doom-color 'fg)
+                  :weight bold :extend t))
+
 ;; SPC ': reopen the last minibuffer with what was in it.  `vertico-repeat'
 ;; did that for completion sessions only; M-ß's prompt (a plain
 ;; read-string) and other prompts were gone after C-g.
