@@ -413,4 +413,21 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
         (should (string-match-p "Flake inputs" (nth 0 (car requests))))
         (should (eq (nth 2 (car (last (familiar--ledger)))) 'name))))))
 
+
+(ert-deftest familiar/stream-follows-windows-at-the-end ()
+  (skip-unless test-familiar-available)
+  (let ((buf (get-buffer-create "*familiar-follow-test*")))
+    (unwind-protect
+        (save-window-excursion
+          (switch-to-buffer buf)
+          (let ((w (selected-window))
+                (cb (familiar--stream-into buf)))
+            (funcall cb "line 1\n" nil)
+            (should (= (window-point w) (with-current-buffer buf (point-max))))
+            ;; Reading above: the window stays where it is.
+            (set-window-point w 1)
+            (funcall cb "line 2\n" nil)
+            (should (= (window-point w) 1))))
+      (kill-buffer buf))))
+
 ;;; test-familiar.el ends here

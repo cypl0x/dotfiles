@@ -322,6 +322,8 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
                 gptel-response-prefix-alist '((org-mode . "")))
     (familiar-ask-mode 1)
     (add-hook 'gptel-post-response-functions #'familiar-ask--after-response nil t)
+    ;; Follow the answer as it streams.
+    (add-hook 'gptel-post-stream-hook #'gptel-auto-scroll nil t)
     (setq header-line-format '(:eval (familiar-ask--header-line)))
     buf))
 

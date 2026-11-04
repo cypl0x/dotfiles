@@ -350,7 +350,13 @@ priced and recorded once it completes.  Returns the model used."
       (with-current-buffer buf
         (let ((inhibit-read-only t))
           (cond ((stringp response)
-                 (save-excursion (goto-char (point-max)) (insert response)))
+                 ;; Windows whose point is at the end follow the answer; move
+                 ;; point up to read and that window stays put.
+                 (let* ((end (point-max))
+                        (following (seq-filter (lambda (w) (= (window-point w) end))
+                                               (get-buffer-window-list buf nil t))))
+                   (save-excursion (goto-char end) (insert response))
+                   (dolist (w following) (set-window-point w (point-max)))))
                 ((eq response t)
                  (setq header-line-format
                        (concat header-line-format
