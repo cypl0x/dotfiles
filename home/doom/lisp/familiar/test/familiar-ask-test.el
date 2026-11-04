@@ -1093,5 +1093,148 @@ to wait for N lines and get them parsed; familiar-request faked by FAKE."
             (should (alist-get 'error (car (funcall lines 1))))))
       (delete-directory test-acp--dir t))))
 
+;;; familiar-a2a
+
+(when test-familiar-available
+  (load (expand-file-name "../familiar-a2a" (file-name-directory (or load-file-name buffer-file-name))) nil t))
+
+(defmacro test-a2a--with (fake &rest body)
+  "BODY with A2A state fresh and familiar-request faked by FAKE (gets the
+prompt turns and the callback)."
+  (declare (indent 1))
+  `(test-mcp-http--with
+    (let ((familiar-a2a--tasks (make-hash-table :test #'equal))
+          (familiar-a2a--contexts (make-hash-table :test #'equal))
+          (bufs nil))
+      (cl-letf (((symbol-function 'familiar-request)
+                 (lambda (prompt &rest args)
+                   (push (cons (current-buffer) (plist-get args :callback)) bufs)
+                   (funcall ,fake prompt (plist-get args :callback))))
+                ((symbol-function 'gptel-abort)
+                 (lambda (buf) (funcall (cdr (assq buf bufs)) 'abort nil))))
+        ,@body))))
+
+(defun test-a2a--call (method params &optional headers)
+  "Call METHOD over the route handler; the JSON-RPC response, parsed."
+  (let ((reply (familiar-mcp-http-respond
+                "POST" "/a2a" (append (test-mcp-http--auth) headers)
+                (json-serialize `((jsonrpc . "2.0") (id . 7) (method . ,method) (params . ,params)))))
+        out)
+    (pcase reply
+      (`(:async ,fn) (funcall fn (lambda (_s _h body) (setq out body)))
+       (with-timeout (3 (error "No answer")) (while (not out) (accept-process-output nil 0.05))))
+      (`(,_status ,_h ,body) (setq out body)))
+    (json-parse-string out :object-type 'alist :array-type 'list)))
+
+(defun test-a2a--msg (text &optional context)
+  `((messageId . "m1") (role . "ROLE_USER") (parts . [((text . ,text))])
+    ,@(and context `((contextId . ,context)))))
+
+(ert-deftest familiar-a2a/the-card-is-public-and-names-the-interface ()
+  (skip-unless test-familiar-available)
+  (test-mcp-http--with
+   (familiar-mcp-http-start 0)
+   (unwind-protect
+       (pcase-let ((`(,status ,_ ,body) (familiar-mcp-http-respond "GET" "/.well-known/agent-card.json" nil "")))
+         (should (= status 200))
+         (let* ((card (json-parse-string body :object-type 'alist :array-type 'list))
+                (iface (car (alist-get 'supportedInterfaces card))))
+           (should (equal (alist-get 'name card) "familiar"))
+           (should (equal (alist-get 'protocolBinding iface) "JSONRPC"))
+           (should (equal (alist-get 'protocolVersion iface) "1.0"))
+           (should (string-suffix-p "/a2a" (alist-get 'url iface)))
+           (should (alist-get 'skills card))))
+     (familiar-mcp-http-stop))
+   ;; Everything else still needs the token.
+   (should (= 401 (car (familiar-mcp-http-respond "POST" "/a2a" nil "{}"))))))
+
+(ert-deftest familiar-a2a/send-message-answers-with-a-completed-task ()
+  (skip-unless test-familiar-available)
+  (let (prompts)
+    (test-a2a--with (lambda (prompt cb) (push prompt prompts)
+                      (run-at-time 0 nil (lambda () (funcall cb "Paris." nil) (funcall cb t nil))))
+      (let* ((task (alist-get 'task (alist-get 'result (test-a2a--call "SendMessage" `((message . ,(test-a2a--msg "Capital of France?" "ctx-1")))))))
+             (art (car (alist-get 'artifacts task))))
+        (should (equal (alist-get 'state (alist-get 'status task)) "TASK_STATE_COMPLETED"))
+        (should (equal (alist-get 'text (car (alist-get 'parts art))) "Paris."))
+        (should (equal (alist-get 'contextId task) "ctx-1"))
+        ;; Same context: the conversation goes on.
+        (test-a2a--call "SendMessage" `((message . ,(test-a2a--msg "And Germany?" "ctx-1"))))
+        (should (equal (car prompts) '("Capital of France?" "Paris." "And Germany?")))
+        ;; GetTask finds it; unknown ids are TaskNotFound.
+        (should (equal (alist-get 'id (alist-get 'result (test-a2a--call "GetTask" `((id . ,(alist-get 'id task))))))
+                       (alist-get 'id task)))
+        (should (= -32001 (alist-get 'code (alist-get 'error (test-a2a--call "GetTask" '((id . "nope")))))))))))
+
+(ert-deftest familiar-a2a/return-immediately-then-get-task ()
+  (skip-unless test-familiar-available)
+  (let (finish)
+    (test-a2a--with (lambda (_prompt cb) (setq finish (lambda () (funcall cb "Done." nil) (funcall cb t nil))))
+      (let* ((task (alist-get 'task (alist-get 'result
+                                              (test-a2a--call "SendMessage" `((message . ,(test-a2a--msg "long job"))
+                                                                              (configuration . ((returnImmediately . t))))))))
+             (id (alist-get 'id task)))
+        (should (equal (alist-get 'state (alist-get 'status task)) "TASK_STATE_WORKING"))
+        (funcall finish)
+        (should (equal (alist-get 'state (alist-get 'status (alist-get 'result (test-a2a--call "GetTask" `((id . ,id))))))
+                       "TASK_STATE_COMPLETED"))))))
+
+(ert-deftest familiar-a2a/cancel-and-errors ()
+  (skip-unless test-familiar-available)
+  (test-a2a--with #'ignore
+    (let ((id (alist-get 'id (alist-get 'task (alist-get 'result
+                                                         (test-a2a--call "SendMessage" `((message . ,(test-a2a--msg "x"))
+                                                                                         (configuration . ((returnImmediately . t))))))))))
+      (should (equal (alist-get 'state (alist-get 'status (alist-get 'result (test-a2a--call "CancelTask" `((id . ,id))))))
+                     "TASK_STATE_CANCELED"))
+      (should (= -32002 (alist-get 'code (alist-get 'error (test-a2a--call "CancelTask" `((id . ,id))))))))
+    (should (= -32009 (alist-get 'code (alist-get 'error (test-a2a--call "GetTask" '((id . "x")) '(("a2a-version" . "0.2")))))))
+    (should (= -32004 (alist-get 'code (alist-get 'error (test-a2a--call "GetExtendedAgentCard" nil)))))))
+
+(ert-deftest familiar-a2a/streams-task-chunks-and-a-final-status ()
+  (skip-unless test-familiar-available)
+  (test-a2a--with (lambda (_p cb) (run-at-time 0 nil (lambda () (funcall cb "Hel" nil) (funcall cb "lo" nil) (funcall cb t nil))))
+    (let* ((url (familiar-mcp-http-start 0))
+           (port (string-to-number (car (last (split-string (string-remove-suffix "/mcp" url) ":")))))
+           (out "")
+           (body (json-serialize `((jsonrpc . "2.0") (id . 3) (method . "SendStreamingMessage")
+                                   (params . ((message . ,(test-a2a--msg "hi")))))))
+           (client (make-network-process :name "test-a2a" :host "127.0.0.1" :service port :coding 'binary
+                                         :filter (lambda (_ s) (setq out (concat out s))))))
+      (unwind-protect
+          (progn
+            (process-send-string client (format "POST /a2a HTTP/1.1\r\nAuthorization: Bearer %s\r\nContent-Length: %d\r\n\r\n%s"
+                                                (familiar-mcp-http-token) (length body) body))
+            (with-timeout (5 (error "No end: %S" out))
+              (while (not (string-match-p "TASK_STATE_COMPLETED" out)) (accept-process-output nil 0.05)))
+            (let ((events (mapcar (lambda (d) (alist-get 'result (json-parse-string d :object-type 'alist :array-type 'list)))
+                                  (let (ds (start 0))
+                                    (while (string-match "^data: \\(.*\\)$" out start)
+                                      (push (match-string 1 out) ds) (setq start (match-end 0)))
+                                    (nreverse ds)))))
+              (should (equal (mapcar (lambda (e) (car (car e))) events)
+                             '(task artifactUpdate artifactUpdate statusUpdate)))
+              (should (equal (alist-get 'text (car (alist-get 'parts (alist-get 'artifact (alist-get 'artifactUpdate (nth 1 events))))))
+                             "Hel"))))
+        (delete-process client)
+        (familiar-mcp-http-stop)))))
+
+(ert-deftest familiar-a2a/the-client-delegates-over-http ()
+  ;; familiar asks familiar: the client reads the card, then SendMessage.
+  (skip-unless test-familiar-available)
+  (test-a2a--with (lambda (_p cb) (run-at-time 0 nil (lambda () (funcall cb "42." nil) (funcall cb t nil))))
+    (let* ((url (familiar-mcp-http-start 0))
+           (familiar-a2a-agents `(("self" :url ,(string-remove-suffix "/mcp" url) :token familiar-mcp-http-token)))
+           answer)
+      (unwind-protect
+          (progn
+            (familiar-a2a-send "self" "What is six times seven?" (lambda (a) (setq answer a)))
+            (with-timeout (5 (error "No answer")) (while (not answer) (accept-process-output nil 0.05)))
+            (should (equal answer "42."))
+            (should (equal (mapcar #'car (familiar-a2a-keywords)) '("self")))
+            (should (equal (mapcar #'gptel-tool-name (familiar-a2a-turn-tools '(self) nil))
+                           '("ask_agent_self"))))
+        (familiar-mcp-http-stop)))))
+
 (provide 'familiar-ask-test)
 ;;; familiar-ask-test.el ends here

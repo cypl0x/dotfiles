@@ -30,7 +30,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 | OpenAI-compatible   | gptel (backends)             | familiar-openai (/v1/)           | tools for clients (function calling)         |
 | MCP                 | mcp.el (stdio, SSE, HTTP)    | mcp-server-lib + familiar-mcp-http | sampling, elicitation; server-sent streams    |
 | ACP                 | acp.el + agent-shell         | familiar-acp (prompts, fs, terminal, load) | -                                  |
-| A2A                 | none usable                  | none                              | everything                                   |
+| A2A                 | familiar-a2a (@agent tools)  | familiar-a2a (card, /a2a, SSE)    | push notifications; ListTasks paging         |
 | Claude Code IDE     | -                            | monet                             | none known                                   |
 
 * Order of work (each a self-contained step, tested and used live)
@@ -51,7 +51,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
    familiar conversation (the inverse of agent-shell).
 6. [X] OpenAI-compatible endpoint: =/v1/chat/completions= served by Emacs (=familiar-openai.el=),
    so any tool that speaks it gets Emacs' tools and context.
-7. [ ] A2A: agent card + task endpoints over the same HTTP server; an
+7. [X] A2A (=familiar-a2a.el=, spec 1.0): agent card + task endpoints over the same HTTP server; an
    =@agent= keyword in M-ß to delegate to a remote A2A agent.
 8. [ ] Split out: =familiar= as a standalone package (MELPA), Doom glue as a
    module.

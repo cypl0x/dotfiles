@@ -71,6 +71,7 @@
            (condition-case err
                (progn (require 'familiar-openai)   ; /v1/: OpenAI-compatible, same server
                       (require 'familiar-atuin)    ; /api/cli/: Atuin AI's server
+                      (require 'familiar-a2a)      ; /a2a and its agent card
                       (familiar-mcp-http-start)
                       (familiar-acp-start))       ; ACP agent (familiar-acp command)
              (error (message "familiar MCP over HTTP not started: %s" (error-message-string err)))))))

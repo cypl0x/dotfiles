@@ -62,6 +62,9 @@ string, or nil/\"\" for notifications.")
 
 (defvar familiar-mcp-http--server nil "The listening process.")
 
+(defvar familiar-mcp-http-public-paths nil
+  "Paths served without the token (discovery documents, like an A2A agent card).")
+
 (defvar familiar-mcp-http-routes nil
   "Alist PATH-PREFIX → HANDLER for endpoints besides /mcp (same token).
 HANDLER is called with METHOD PATH HEADERS BODY and returns
@@ -122,7 +125,8 @@ UTF-8.  `:bad' when it can never become a request."
     (cond
      ((not (familiar-mcp-http--origin-ok-p (funcall header "origin")))
       (list 403 nil "Forbidden origin"))
-     ((not (familiar-mcp-http--token-ok-p (funcall header "authorization")))
+     ((and (not (member (car (split-string path "?")) familiar-mcp-http-public-paths))
+           (not (familiar-mcp-http--token-ok-p (funcall header "authorization"))))
       (list 401 '(("WWW-Authenticate" . "Bearer")) "Unauthorized"))
      ((when-let* ((route (seq-find (lambda (r) (string-prefix-p (car r) path))
                                    familiar-mcp-http-routes)))
