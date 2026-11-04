@@ -150,7 +150,7 @@
 (ert-deftest familiar-ask/transcript-drops-context-and-title ()
   (skip-unless test-familiar-available)
   (with-temp-buffer
-    (insert "#+title: familiar-ask x\n\n** q  [2026-11-04 Mi 06:40]\n#+begin_context\nBuffer: b\n#+end_context\n\nanswer\n\n** ")
+    (insert ":PROPERTIES:\n:GPTEL_MODEL: m\n:END:\n#+title: familiar-ask x\n\n** q  [2026-11-04 Mi 06:40]\n#+begin_context\nBuffer: b\n#+end_context\n\nanswer\n\n** ")
     (should (equal (familiar-ask--transcript) "** q  [2026-11-04 Mi 06:40]\n\nanswer\n\n**"))))
 
 (ert-deftest familiar-ask/prompt-heading-is-stamped-first-line ()
@@ -166,7 +166,7 @@
               (should (string-match-p
                        "^\\*\\* first line  \\[[0-9-]+ [[:alpha:]]+ [0-9:]+\\]\nsecond line\n#\\+begin_context"
                        (buffer-string)))
-              (should (string-match-p "1 prompts" (familiar-ask--header-line)))))
+              (should (string-match-p "1 prompt " (familiar-ask--header-line)))))
         (when-let* ((b (get-buffer familiar-ask--buffer-name)))
           (with-current-buffer b (set-buffer-modified-p nil))
           (kill-buffer b))

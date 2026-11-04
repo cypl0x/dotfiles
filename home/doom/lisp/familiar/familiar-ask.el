@@ -290,9 +290,10 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
 
 (defun familiar-ask--header-line ()
   "Model, prompts, cost and start of this conversation."
-  (format " ✦ familiar-ask  ·  %s  ·  %d prompts  ·  $%.4f%s"
+  (format " ✦ familiar-ask  ·  %s  ·  %s  ·  $%.4f%s"
           gptel-model
-          (how-many "^\\*\\* ." (point-min) (point-max))
+          (let ((n (how-many "^\\*\\* ." (point-min) (point-max))))
+            (format "%d prompt%s" n (if (= n 1) "" "s")))
           familiar-ask--cost
           (if buffer-file-name
               (format-time-string "  ·  since %F %R"
@@ -518,7 +519,9 @@ With prefix arg NEW, start a fresh conversation."
       (goto-char (point-min))
       (while (re-search-forward "^#\\+begin_context\n\\(?:.*\n\\)*?#\\+end_context\n?" nil t)
         (replace-match ""))
+      ;; gptel's saved state (a property drawer) and the title, at the top.
       (goto-char (point-min))
+      (when (looking-at ":PROPERTIES:\n\\(?:.*\n\\)*?:END:\n+") (replace-match ""))
       (when (looking-at "#\\+title:.*\n+") (replace-match ""))
       (string-trim (buffer-string)))))
 
