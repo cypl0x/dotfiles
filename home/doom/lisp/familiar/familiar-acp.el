@@ -23,7 +23,9 @@
 ;; Implemented: initialize, authenticate, session/new, session/prompt
 ;; (streamed as agent_message_chunk updates; stopReason end_turn or
 ;; cancelled), session/cancel.  Text and embedded resources in prompts.
-;; Not yet: tools (the client's fs/* and terminal/*), session/load.
+;; Tools, when the client offers them: read_file (fs/read_text_file) and
+;; write_file (fs/write_text_file, after session/request_permission), shown
+;; as tool_call updates.  Not yet: terminal/*, session/load.
 ;;
 ;;; Code:
 
@@ -34,6 +36,7 @@
 
 (declare-function familiar-mcp-http-token "familiar-mcp-http" ())
 (declare-function gptel-abort "ext:gptel" (buf))
+(declare-function gptel-make-tool "ext:gptel" (&rest slots))
 
 (defgroup familiar-acp nil
   "familiar as an ACP agent."
@@ -50,8 +53,9 @@
 (defvar familiar-acp-system
   "You are familiar, an assistant running inside the user's Emacs, reached \
 from their editor over the Agent Client Protocol.  Answer what they ask \
-about their code and work; be concise.  You can't run tools or edit files \
-in this session yet: when a change is needed, show it."
+about their code and work; be concise.  When the editor offers them, read_file reads its \
+files (unsaved changes included) and write_file changes one, after the \
+user agrees there; otherwise show changes instead of claiming them."
   "System prompt; the session's working directory is appended.")
 
 (defconst familiar-acp-protocol-version 1)
@@ -111,6 +115,95 @@ in this session yet: when a change is needed, show it."
                    (familiar-acp--error proc (alist-get 'id msg) -32603
                                         (error-message-string err))))))))))
 
+(defun familiar-acp--request (proc method params callback)
+  "Send METHOD with PARAMS to the client on PROC; CALLBACK gets (RESULT ERROR)."
+  (let* ((n (1+ (or (process-get proc :next-id) 0)))
+         (id (format "familiar-%d" n)))
+    (process-put proc :next-id n)
+    (process-put proc :waiting (cons (cons id callback) (process-get proc :waiting)))
+    (familiar-acp--send proc `((jsonrpc . "2.0") (id . ,id) (method . ,method) (params . ,params)))))
+
+;;;; Tools: the client's files, through the client
+
+(defun familiar-acp--tool-update (proc sid call-id fields)
+  "Send a tool_call (FIELDS with :title) or tool_call_update for CALL-ID."
+  (familiar-acp--notify
+   proc "session/update"
+   `((sessionId . ,sid)
+     (update . ((sessionUpdate . ,(if (assq 'title fields) "tool_call" "tool_call_update"))
+                (toolCallId . ,call-id) ,@fields)))))
+
+(defun familiar-acp--tools (proc sid cwd)
+  "gptel tools for session SID on PROC: what its client can do with files.
+Reads go straight to the client; writes ask the user there first."
+  (let* ((caps (alist-get 'fs (process-get proc :caps)))
+         (absolute (lambda (path) (expand-file-name path (or cwd default-directory))))
+         (calls 0)
+         (call-id (lambda () (format "familiar_call_%d" (cl-incf calls))))
+         tools)
+    (when (alist-get 'readTextFile caps)
+      (push (gptel-make-tool
+             :name "read_file" :category "acp" :async t
+             :description "Read a text file from the user's editor (unsaved changes included)."
+             :args '((:name "path" :type string :description "File path, absolute or relative to the working directory")
+                     (:name "line" :type integer :description "First line, 1-based" :optional t)
+                     (:name "limit" :type integer :description "Number of lines" :optional t))
+             :function
+             (lambda (callback path &optional line limit)
+               (let ((id (funcall call-id)) (path (funcall absolute path)))
+                 (familiar-acp--tool-update proc sid id `((title . ,(format "Read %s" path)) (kind . "read")
+                                                          (status . "in_progress")
+                                                          (locations . [((path . ,path))])))
+                 (familiar-acp--request
+                  proc "fs/read_text_file"
+                  `((sessionId . ,sid) (path . ,path)
+                    ,@(and line `((line . ,line))) ,@(and limit `((limit . ,limit))))
+                  (lambda (result err)
+                    (familiar-acp--tool-update proc sid id `((status . ,(if err "failed" "completed"))))
+                    (funcall callback (if err (format "Error: %s" (alist-get 'message err))
+                                        (familiar-acp--cap (or (alist-get 'content result) "")))))))))
+            tools))
+    (when (alist-get 'writeTextFile caps)
+      (push (gptel-make-tool
+             :name "write_file" :category "acp" :async t
+             :description "Write a text file in the user's editor (they are asked first). Give the whole new content."
+             :args '((:name "path" :type string :description "File path, absolute or relative to the working directory")
+                     (:name "content" :type string :description "The complete new file content"))
+             :function
+             (lambda (callback path content)
+               (let ((id (funcall call-id)) (path (funcall absolute path)))
+                 (familiar-acp--tool-update proc sid id `((title . ,(format "Write %s" path)) (kind . "edit")
+                                                          (status . "pending")
+                                                          (locations . [((path . ,path))])))
+                 (familiar-acp--request
+                  proc "session/request_permission"
+                  `((sessionId . ,sid)
+                    (toolCall . ((toolCallId . ,id) (title . ,(format "Write %s" path)) (kind . "edit")))
+                    (options . [((optionId . "allow") (name . "Write it") (kind . "allow_once"))
+                                ((optionId . "reject") (name . "Don't") (kind . "reject_once"))]))
+                  (lambda (result _err)
+                    (let ((outcome (alist-get 'outcome result)))
+                      (if (not (and (equal (alist-get 'outcome outcome) "selected")
+                                    (equal (alist-get 'optionId outcome) "allow")))
+                          (progn (familiar-acp--tool-update proc sid id '((status . "failed")))
+                                 (funcall callback "The user declined; nothing was written."))
+                        (familiar-acp--tool-update proc sid id '((status . "in_progress")))
+                        (familiar-acp--request
+                         proc "fs/write_text_file"
+                         `((sessionId . ,sid) (path . ,path) (content . ,content))
+                         (lambda (_ err)
+                           (familiar-acp--tool-update proc sid id `((status . ,(if err "failed" "completed"))))
+                           (funcall callback (if err (format "Error: %s" (alist-get 'message err))
+                                               (format "Wrote %s" path))))))))))))
+            tools))
+    (nreverse tools)))
+
+(defun familiar-acp--cap (text)
+  "TEXT, cut to 20000 characters for the model."
+  (if (> (length text) 20000)
+      (concat (substring text 0 20000) (format "\n[… %d more characters]" (- (length text) 20000)))
+    text))
+
 ;;;; Methods
 
 (defun familiar-acp-dispatch (proc msg)
@@ -118,7 +211,13 @@ in this session yet: when a change is needed, show it."
   (let ((id (alist-get 'id msg))
         (params (alist-get 'params msg)))
     (pcase (alist-get 'method msg)
+      ;; A response to a request of ours (fs/*, session/request_permission).
+      ('nil
+       (when-let* ((waiting (assoc id (process-get proc :waiting))))
+         (process-put proc :waiting (delq waiting (process-get proc :waiting)))
+         (funcall (cdr waiting) (alist-get 'result msg) (alist-get 'error msg))))
       ("initialize"
+       (process-put proc :caps (alist-get 'clientCapabilities params))
        (familiar-acp--result
         proc id
         `((protocolVersion . ,familiar-acp-protocol-version)
@@ -183,6 +282,7 @@ in this session yet: when a change is needed, show it."
         (with-current-buffer buf
           (familiar-request
            turns :task 'acp :stream t
+           :tools (familiar-acp--tools proc sid (plist-get session :cwd))
            :system (concat familiar-acp-system
                            (when-let* ((cwd (plist-get session :cwd)))
                              (format "\n\nThe user's working directory: %s" cwd)))
@@ -196,7 +296,11 @@ in this session yet: when a change is needed, show it."
                  `((sessionId . ,sid)
                    (update . ((sessionUpdate . "agent_message_chunk")
                               (content . ((type . "text") (text . ,response))))))))
-               ('t (funcall finish "end_turn"))
+               ;; A segment ended; with a tool call pending, gptel runs it and
+               ;; goes on: the turn isn't over.
+               ('t (unless (or (plist-get info :tool-use)
+                              (equal (plist-get info :stop-reason) "tool_use"))
+                    (funcall finish "end_turn")))
                ('abort (funcall finish "cancelled"))
                ('nil
                 (when (equal (plist-get (gethash sid familiar-acp--sessions) :pending) id)
