@@ -102,7 +102,7 @@
        ;;ein               ; tame Jupyter notebooks with emacs
        (eval +overlay)     ; run code, run (also, repls)
        lookup              ; navigate your code and its documentation
-       (lsp +eglot +peek +booster)               ; M-x vscode
+       (lsp +eglot)      ; M-x vscode (+peek is lsp-mode only; +booster only installs on Emacs < 30)
        (magit +forge)             ; a git porcelain for Emacs
        make              ; run make tasks from Emacs
        ;;pass              ; password manager for nerds
