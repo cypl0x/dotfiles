@@ -110,6 +110,21 @@
    '("[TRACE]" "[DEBUG]" "[INFO]" "[WARN]" "[ERROR]" "[FATAL]"
      "[TODO]" "[FIXME]" "[NOTE]" "[HACK]" "[MARK]")))
 
+;; Org gets the code ligatures that can't be Org syntax: prose arrows and
+;; comparisons read well, and src blocks show most of what their language
+;; would (C-c ' edits them with all of it).  Left out because Org writes
+;; them: ** (headings, bold), || |> <| |} (table cells), // __ ++ (markup),
+;; << >> <<< >>> (targets, noweb), %% (diary sexps), :// www (links), #_ #(
+;; #[ (keywords nearby), /* */ (italic around *bold*).
+(after! ligature
+  (ligature-set-ligatures
+   'org-mode
+   '("==" "!=" "===" "!==" "=/=" ">=" "<=" "<=>"
+     "->" "<-" "=>" "->>" "=>>" "<<-" "<->" "<--" "-->"
+     "<~" "~>" "<~~" "~~>" "<~>" "==>" "<=="
+     "&&" "::" ":::" ":=" "=:=" ".." "..." "..<"
+     "<*>" "<+>" "<$>" "?:" "??" "!!" ";;")))
+
 ;;;; Stylistic Sets ──────────────────────────────────────────────────────────
 
 ;; Maple Mono NF offers many character variants (`cv01'–`cv66') and stylistic
