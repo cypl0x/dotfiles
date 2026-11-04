@@ -58,7 +58,9 @@ Research `?' in zsh (Atuin AI); test; bring into Emacs.
 * TODO Discoverability of own additions                           :docs:
 * TODO org-modern: richer, colours matching org                   :org:
 Markdown currently looks richer than org.
-* TODO org-fmt / org-format command                               :org:
+* DONE org-fmt / org-format command                               :org:
+SPC c f (+format/dwim, 48b6611): Org tidy; C-u canonical form via diff;
+eglot formatter elsewhere; indent fallback. SPC c f was an undefined command.
 * DONE Rename buffer by its contents                              :misc:
 SPC b R (familiar-rename-buffer): suggestion fills the prompt when it
 arrives; C-u saves under a suggested path. Live suggestion checked; the
@@ -70,7 +72,8 @@ Browser in Emacs: dired-like, preview at point, thumbnails, newest first.
 clipboard image (yank-media; Org attaches) or a saved shot (newest first,
 previewed); SPC o S dirvish newest first; SPC o C-s thumbnails. Rofi still
 shows "[ binary data ]" for images (cliphist): open.
-* TODO Rofi clipboard menu: image previews instead of "[ binary data ]" :desktop:
+* DONE Rofi clipboard menu: image previews instead of "[ binary data ]" :desktop:
+98f8256: cliphist-rofi-img script mode, 96 px icons. Not opened on screen yet.
 * TODO Ask user: retire +prompt.el (SPC i, SPC I, SPC ') in favour of familiar-ask?
 It shadows Doom's SPC i insert prefix and overlaps M-ß.
 * TODO Record usage for later AI workflow suggestions             :usage:
