@@ -111,7 +111,14 @@
   ;; Enable org-modern after font-lock is ready, not via hook (avoids
   ;; race condition that disables fontification).
   (add-hook 'org-mode-hook #'org-modern-mode 90)  ; high depth = runs late
-  (setq org-modern-star '("◉" "○" "◈" "◇" "▸")
+  ;; One bullet per Org level face (8), deeper levels cycle like the faces
+  ;; (`org-cycle-level-faces').  A list here is the old API: org-modern read
+  ;; it as `replace' with its default five, so levels 5+ all got ✳, a
+  ;; colour emoji (fixed green) instead of the heading's colour.  All from
+  ;; Maple Mono NF: no emoji font, no font search.
+  (setq org-modern-star 'replace
+        org-modern-replace-stars "◉○◈◇◆◎▸▹"
+        org-modern-cycle-stars t
         org-modern-table-vertical 1
         org-modern-table-horizontal 0.2
         org-modern-list '((43 . "➤") (45 . "–") (42 . "•"))
