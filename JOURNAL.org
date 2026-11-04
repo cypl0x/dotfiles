@@ -39,6 +39,15 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 23:49] — M-x that knows where you are; German checked as German
+- =M-x= now opens with what you run through M-x in this mode first (in
+  Org: org-modern-mode, pretty markup, reading mode ...).
+- =SPC m m= in Org: a menu of what can be done right where point is.
+- Org Roam: a companion manual for this setup (=SPC n r ?=), and the
+  official one by name, =M-x org-roam-info=, like =magit-info=.
+- LanguageTool had checked everything as English; it now detects each
+  file's language, German included.
+
 ** [2026-11-04 Mi 23:27] — Turm without building it here
 - Turm pulled from inari (7 commits).  Its dev shell loads into Emacs
   with =SPC N d= in 6 s.
