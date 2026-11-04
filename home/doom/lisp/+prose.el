@@ -82,6 +82,8 @@ shim pkg-config script returning direct -I/-L/-l flags."
 ;; are jinx's own predicates (faces, regexps, properties) at the word.  A
 ;; correction becomes automatic after 3 corrections of the same typo over
 ;; time (2 in one session); M-x autocorrect-list shows and edits them.
+(declare-function writegood-passive-voice-turn-off "ext:writegood-mode" ())
+(defvar writegood-mode)
 (declare-function jinx--face-excluded-p "ext:jinx" (pos))
 (declare-function jinx--regexp-excluded-p "ext:jinx" (pos))
 (declare-function jinx--property-excluded-p "ext:jinx" (pos))
@@ -118,6 +120,16 @@ Case-sensitive like jinx: its \"[A-Z]+\\\\>\" (all-caps words) matched \"teh\"."
 (add-hook! '(text-mode-hook prog-mode-hook)
   (defun +prose-abbrev-mode-h ()
     (unless (derived-mode-p 'coq-mode) (abbrev-mode 1))))
+
+
+;; writegood (Doom's :checkers grammar) without its passive-voice check: the
+;; bluish "Switch to active voice" marks.  Weasel words and duplicated words
+;; stay.
+(add-hook 'writegood-mode-hook
+          (defun +prose-writegood-no-passive-h ()
+            (when writegood-mode
+              (writegood-passive-voice-turn-off)
+              (font-lock-flush))))
 
 ;;;; mixed-pitch — Variable-pitch prose, fixed-pitch code ────────────────────
 
