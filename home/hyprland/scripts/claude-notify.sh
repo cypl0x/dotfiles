@@ -37,7 +37,11 @@ done
 
 if [ -n "$addr" ]; then
   (
-    act=$(notify-send --app-name="Claude Code" --urgency=normal --wait \
+    # --wait returns only on a click or a close, and swaync moves unanswered
+    # notifications to its center without closing them: listeners piled up
+    # (175 of them, 5 days old, ~1 GiB on 2026-11-04).  Listen 15 minutes;
+    # the notification itself stays in the center after that.
+    act=$(timeout 15m notify-send --app-name="Claude Code" --urgency=normal --wait \
       --action="default=Jump to session" "$title" "$msg" 2>/dev/null || true)
     [ "$act" = "default" ] && hyprctl dispatch focuswindow "address:$addr"
   ) &
