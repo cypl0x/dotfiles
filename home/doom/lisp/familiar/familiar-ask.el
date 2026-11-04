@@ -413,10 +413,13 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
       (gptel-send)
     (newline)))
 
+(defvar-local familiar-ask--last-model nil
+  "The model that answered last (an @preset may differ from `gptel-model').")
+
 (defun familiar-ask--header-line ()
-  "Model, prompts, cost and start of this conversation."
+  "Model of the last answer, prompts, cost and start of this conversation."
   (format " ✦ familiar-ask  ·  %s  ·  %s  ·  $%.4f%s"
-          gptel-model
+          (or familiar-ask--last-model gptel-model)
           (let ((n (how-many "^\\*\\* ." (point-min) (point-max))))
             (format "%d prompt%s" n (if (= n 1) "" "s")))
           familiar-ask--cost
@@ -533,11 +536,10 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
 (defun familiar-ask--record-a (tokens &optional _tokens-full)
   (when (and tokens (bound-and-true-p familiar-ask-mode))
     ;; The request's model: an @preset in the prompt overrides `gptel-model'.
-    (cl-incf familiar-ask--cost
-             (familiar--record (or (and gptel--fsm-last
-                               (plist-get (gptel-fsm-info gptel--fsm-last) :model))
-                          gptel-model)
-                      'ask tokens))))
+    (setq familiar-ask--last-model
+          (or (and gptel--fsm-last (plist-get (gptel-fsm-info gptel--fsm-last) :model))
+              gptel-model))
+    (cl-incf familiar-ask--cost (familiar--record familiar-ask--last-model 'ask tokens))))
 (advice-add 'gptel--update-token-usage :after #'familiar-ask--record-a)
 
 ;;;; Applying a suggestion

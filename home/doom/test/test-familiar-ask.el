@@ -432,3 +432,14 @@ du -sh .
          (run-hooks 'minibuffer-exit-hook)
          (should (equal displayed (list buf buf)))
          (should-not minibuffer-exit-hook))))))
+
+(ert-deftest familiar-ask/header-shows-the-model-that-answered ()
+  ;; An @fast turn was shown with the conversation's default model.
+  (test-familiar--with "unused"
+    (with-temp-buffer
+      (setq-local gptel-model 'claude-sonnet-5-5)
+      (familiar-ask-mode 1)
+      (cl-letf (((symbol-function 'gptel-fsm-info) (lambda (_) '(:model claude-haiku-5-5))))
+        (let ((gptel--fsm-last 'fsm))
+          (gptel--update-token-usage '(:input 10 :output 2 :cached 0))))
+      (should (string-match-p "claude-haiku-5-5" (familiar-ask--header-line))))))
