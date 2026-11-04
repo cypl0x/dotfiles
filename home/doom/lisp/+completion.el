@@ -96,7 +96,52 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
 ;; capfs are keywords, tags and src blocks only.
 (add-hook 'text-mode-hook
           (defun +completion-prose-h ()
-            (add-hook 'completion-at-point-functions #'+completion-prose-capf 90 t)))
+            (add-hook 'completion-at-point-functions #'+completion-prose-capf 90 t)
+            (add-hook 'completion-at-point-functions #'+completion-code-capf 80 t)))
+
+;; Inline code in prose, Org ~code~ / =verbatim= or Markdown `code`, is
+;; mostly Emacs Lisp names here: complete those, commands first.
+(defvar cape--elisp-symbol-properties)
+
+(defun +completion--inline-code-start ()
+  "Where the inline code being typed at point starts (after its opener), or nil.
+Org: ~ or = after a space or line start, followed by text, not closed yet
+\(\"~ 5 min\", \"x = 1\" are prose).  Markdown: after an odd number of
+backticks on the line."
+  (cond ((derived-mode-p 'org-mode)
+         (save-excursion
+           (when (re-search-backward "\\(?:^\\|[[:space:]({\"']\\)\\([~=]\\)[^~=\n[:space:]][^~=\n]*\\="
+                                     (line-beginning-position) t)
+             (match-end 1))))
+        ((derived-mode-p 'markdown-mode)
+         (when (cl-oddp (how-many "`" (line-beginning-position) (point)))
+           (save-excursion (search-backward "`" (line-beginning-position)) (1+ (point)))))))
+
+(defun +completion--code-sort (cands)
+  "Commands first, then other functions, then the rest; shorter first."
+  (let ((rank (lambda (c) (let ((s (intern-soft c)))
+                            (cond ((commandp s) 0) ((fboundp s) 1) (t 2))))))
+    (sort cands (lambda (a b)
+                  (let ((ra (funcall rank a)) (rb (funcall rank b)))
+                    (if (= ra rb) (< (length a) (length b)) (< ra rb)))))))
+
+(defun +completion-code-capf ()
+  "Complete Emacs Lisp names in Org/Markdown inline code; close it on exit."
+  (when-let* ((start (+completion--inline-code-start)))
+    (require 'cape)
+    (let ((closer (char-before start))
+          (chars "[:alnum:]-_/*+<>!?:"))
+      `(,(save-excursion (skip-chars-backward chars start) (point))
+        ,(save-excursion (skip-chars-forward chars) (point))
+        ,obarray
+        :exit-function
+        ,(lambda (_sym status)
+           (unless (or (eq status 'exact) (eq (char-after) closer))
+             (insert closer)))
+        :display-sort-function +completion--code-sort
+        ,@(cl-loop for (k v) on cape--elisp-symbol-properties by #'cddr
+                   unless (memq k '(:exit-function :exclusive)) nconc (list k v))
+        :exclusive no))))
 
 (defun +completion-context ()
   "What point is in, for choosing completion sources: a symbol."
@@ -107,7 +152,9 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
                      (looking-back ":[[:alnum:]_@#%:]*" (line-beginning-position)))
                 'org-tag)
                ((org-in-src-block-p t) 'org-src)
+               ((+completion--inline-code-start) 'inline-code)
                (t 'prose)))
+        ((and (derived-mode-p 'markdown-mode) (+completion--inline-code-start)) 'inline-code)
         ((derived-mode-p 'text-mode) 'prose)
         ((nth 8 (syntax-ppss)) 'prose)          ; in a comment or string
         (t 'code)))
@@ -120,6 +167,7 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
                                #'cape-file)))
     ((or 'org-keyword 'org-tag) (list #'pcomplete-completions-at-point))
     ('org-src (list #'cape-elisp-block #'cape-dabbrev))
+    ('inline-code (list #'+completion-code-capf))
     ('prose (+completion--prose))
     (_ (append (remq t completion-at-point-functions)
                (list #'cape-dabbrev #'cape-file)))))

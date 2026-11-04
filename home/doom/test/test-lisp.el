@@ -1091,6 +1091,36 @@ and a temp exec-path where bin/tar links to store/tar."
         (+minibuffer/resume))
       (should (equal repeated '(find-file "~/x"))))))
 
+
+(ert-deftest completion/inline-code-completes-elisp-names-commands-first ()
+  (cl-flet ((start-in (text)
+              (with-temp-buffer
+                (org-mode)
+                (insert text)
+                (+completion--inline-code-start))))
+    ;; Typing inside ~code~ or =verbatim=, not closed yet.
+    (should (= (start-in "use ~consult-li") 6))
+    (should (= (start-in "use =find-fi") 6))
+    (should (= (start-in "~(setq fill") 2))
+    ;; Prose: closed, a lone tilde, an equation.
+    (should-not (start-in "use ~foo~ and bar"))
+    (should-not (start-in "takes ~ 5 min"))
+    (should-not (start-in "x = 1 and y")))
+  (with-temp-buffer
+    (org-mode)
+    (insert "run ~(save-some-buf")
+    (should (eq (+completion-context) 'inline-code))
+    (pcase-let ((`(,beg ,end ,table . ,props) (+completion-code-capf)))
+      ;; The symbol only, not the paren.
+      (should (equal (buffer-substring beg end) "save-some-buf"))
+      (should (member "save-some-buffers" (all-completions "save-some-buf" table)))
+      ;; Choosing one closes the code.
+      (goto-char (point-max))
+      (insert "fers")
+      (funcall (plist-get props :exit-function) "save-some-buffers" 'finished)
+      (should (equal (buffer-string) "run ~(save-some-buffers~"))))
+  (should (equal (+completion--code-sort (list "fill-column" "car" "forward-word"))
+                 '("forward-word" "car" "fill-column"))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
