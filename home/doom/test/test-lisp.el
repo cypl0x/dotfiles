@@ -818,3 +818,43 @@ and a temp exec-path where bin/tar links to store/tar."
     (org-mode)
     (insert "* H\n#+BEGIN_SRC sh\necho\n#+END_SRC\n")
     (should (equal (+format-org-canonical) "* H\n#+begin_src sh\necho\n#+end_src\n"))))
+
+;;; +vocab
+
+(load (expand-file-name "../lisp/+vocab" (file-name-directory (or load-file-name buffer-file-name))) nil t)
+
+(defconst test-vocab-results
+  ;; The shape leo hands `leo--open-translation-buffer' (from a real lookup).
+  '((("Verben"
+      (((result . "to   hear  (sth.)   |heard, heard|")) ((result . "(etw. Akk. )  hören   |hörte, gehört|")))
+      (((result . "to   listen")) ((result . "hören")))))
+    (("Substantive"
+      (((result . "hearing")) ((result . "das   Hören   kein Pl.")))))))
+
+(ert-deftest vocab/translations-flatten-and-clean ()
+  (let ((+vocab-max-translations 2))
+    (should (equal (+vocab-translations test-vocab-results)
+                   '("to hear (sth.) |heard, heard| — (etw. Akk. ) hören |hörte, gehört|  /Verben/"
+                     "to listen — hören  /Verben/")))))
+
+(ert-deftest vocab/record-creates-a-card-then-counts-lookups ()
+  (let ((+vocab-file (make-temp-file "vocab" nil ".org")))
+    (unwind-protect
+        (progn
+          (+vocab-record "hören" "en" (+vocab-translations test-vocab-results))
+          (+vocab-record "hören" "en" (+vocab-translations test-vocab-results))
+          (with-current-buffer (find-file-noselect +vocab-file)
+            (revert-buffer t t)
+            (goto-char (point-min))
+            (should (= 1 (how-many "^\\* hören")))
+            (should (search-forward "** Back\n- to hear (sth.)" nil t))
+            (goto-char (point-min))
+            (search-forward "* hören")
+            (should (equal (org-entry-get nil "LEO_LOOKUPS") "2"))
+            (should (equal (org-entry-get nil "LEO_LANG") "en"))
+            (when (featurep 'org-fc)
+              (should (equal (org-entry-get nil "FC_TYPE") "double"))
+              (should (member "fc" (org-get-tags nil t))))
+            (set-buffer-modified-p nil)
+            (kill-buffer)))
+      (delete-file +vocab-file))))
