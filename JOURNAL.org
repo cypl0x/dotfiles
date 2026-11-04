@@ -39,6 +39,13 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 00:32] — Lean proofs, Isabelle-style
+- With =SPC t P= open on a Lean file, the right panel shows the tactic
+  state where your cursor is: hypotheses and the goal, as Isabelle's
+  Output does.  Lean came from Turm's dev shell: nothing downloaded.
+- Fixed: M-ß's prompt failed after the restart (a word list not loaded
+  yet), and AI requests failed from buffers whose directory was deleted.
+
 ** [2026-11-05 Do 00:17] — An IDE layout that follows you
 - =SPC t P=: Isabelle-style panels for any language: what is at point on
   the right, this file's problems under it, its outline on the left with
