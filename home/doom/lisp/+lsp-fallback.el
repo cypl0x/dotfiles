@@ -71,8 +71,10 @@ completion still work.  Install it (or enter its nix shell) and M-x eglot."
   "LSP semantic modifier `unsafe': an unsafe operation."
   :group 'eglot-semantic-faces)
 
+(defvar eglot-semantic-token-modifiers)
 (with-eval-after-load 'eglot
   (dolist (modifier '("mutable" "unsafe"))
     (add-to-list 'eglot-semantic-token-modifiers modifier t)))
+
 (provide '+lsp-fallback)
 ;;; +lsp-fallback.el ends here
