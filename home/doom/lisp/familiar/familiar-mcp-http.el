@@ -55,6 +55,13 @@ string, or nil/\"\" for notifications.")
 
 (defvar familiar-mcp-http--server nil "The listening process.")
 
+(defvar familiar-mcp-http-routes nil
+  "Alist PATH-PREFIX → HANDLER for endpoints besides /mcp (same token).
+HANDLER is called with METHOD PATH HEADERS BODY and returns
+(STATUS EXTRA-HEADERS BODY), (:async FN) where FN is called with a
+function taking those three, or (:sse FN) where FN is called with SEND
+(one event's data) and CLOSE.  nil passes the request on.")
+
 ;;;; Token
 
 (defun familiar-mcp-http-token ()
@@ -108,10 +115,13 @@ UTF-8.  `:bad' when it can never become a request."
     (cond
      ((not (familiar-mcp-http--origin-ok-p (funcall header "origin")))
       (list 403 nil "Forbidden origin"))
-     ((not (equal (car (split-string path "?")) "/mcp"))
-      (list 404 nil "Not found"))
      ((not (familiar-mcp-http--token-ok-p (funcall header "authorization")))
       (list 401 '(("WWW-Authenticate" . "Bearer")) "Unauthorized"))
+     ((when-let* ((route (seq-find (lambda (r) (string-prefix-p (car r) path))
+                                   familiar-mcp-http-routes)))
+        (funcall (cdr route) method path headers body)))
+     ((not (equal (car (split-string path "?")) "/mcp"))
+      (list 404 nil "Not found"))
      ((member method '("GET" "DELETE"))
       (list 405 '(("Allow" . "POST")) ""))
      ((not (equal method "POST"))
@@ -138,8 +148,12 @@ UTF-8.  `:bad' when it can never become a request."
   (pcase status (200 "OK") (202 "Accepted") (400 "Bad Request") (401 "Unauthorized")
          (403 "Forbidden") (404 "Not Found") (405 "Method Not Allowed") (_ "Error")))
 
+(defun familiar-mcp-http--bytes (s)
+  "S as UTF-8 bytes (`json-serialize' already returns those)."
+  (if (multibyte-string-p s) (encode-coding-string s 'utf-8) s))
+
 (defun familiar-mcp-http--send (proc status extra body)
-  (let ((bytes (encode-coding-string (or body "") 'utf-8)))
+  (let ((bytes (familiar-mcp-http--bytes (or body ""))))
     (process-send-string
      proc
      (concat (format "HTTP/1.1 %d %s\r\n" status (familiar-mcp-http--reason status))
@@ -157,10 +171,20 @@ UTF-8.  `:bad' when it can never become a request."
       (:bad (familiar-mcp-http--send proc 400 nil "Bad request"))
       (`(,method ,path ,headers ,body)
        (process-put proc :raw nil)
-       (pcase-let ((`(,status ,extra ,out)
-                    (condition-case err (familiar-mcp-http-respond method path headers body)
-                      (error (list 500 nil (error-message-string err))))))
-         (familiar-mcp-http--send proc status extra out))))))
+       (pcase (condition-case err (familiar-mcp-http-respond method path headers body)
+                (error (list 500 nil (error-message-string err))))
+         (`(:async ,fn)
+          (funcall fn (lambda (status extra out)
+                        (when (process-live-p proc)
+                          (familiar-mcp-http--send proc status extra out)))))
+         (`(:sse ,fn)
+          (process-send-string proc "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n")
+          (funcall fn
+                   (lambda (data)
+                     (when (process-live-p proc)
+                       (process-send-string proc (concat "data: " (familiar-mcp-http--bytes data) "\n\n"))))
+                   (lambda () (when (process-live-p proc) (process-send-eof proc)))))
+         (`(,status ,extra ,out) (familiar-mcp-http--send proc status extra out)))))))
 
 ;;;; Commands
 

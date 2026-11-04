@@ -27,7 +27,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 | Protocol            | Client in Emacs              | Server in Emacs                   | Gap                                          |
 |---------------------+------------------------------+-----------------------------------+----------------------------------------------|
 | Anthropic Messages  | gptel                        | -                                 | none for use; batch API and files API unused |
-| OpenAI-compatible   | gptel (backends)             | none                              | Emacs as an OpenAI-compatible endpoint: no   |
+| OpenAI-compatible   | gptel (backends)             | familiar-openai (/v1/)           | tools for clients (function calling)         |
 | MCP                 | mcp.el (stdio, SSE, HTTP)    | mcp-server-lib + familiar-mcp-http | sampling, elicitation; server-sent streams    |
 | ACP                 | acp.el + agent-shell         | none                              | Emacs as an ACP *agent*; =terminal/*= in acp.el |
 | A2A                 | none usable                  | none                              | everything                                   |
@@ -46,7 +46,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
    from familiar (budgeted, ledgered, asks first).
 5. [ ] Emacs as an ACP agent: editors and tools speaking ACP drive a
    familiar conversation (the inverse of agent-shell).
-6. [ ] OpenAI-compatible endpoint: =/v1/chat/completions= served by Emacs,
+6. [X] OpenAI-compatible endpoint: =/v1/chat/completions= served by Emacs (=familiar-openai.el=),
    so any tool that speaks it gets Emacs' tools and context.
 7. [ ] A2A: agent card + task endpoints over the same HTTP server; an
    =@agent= keyword in M-ß to delegate to a remote A2A agent.

@@ -62,7 +62,9 @@
 (when (eq (daemonp) t)
   (run-with-idle-timer
    3 nil (lambda ()
-           (condition-case err (familiar-mcp-http-start)
+           (condition-case err
+               (progn (require 'familiar-openai)   ; /v1/: OpenAI-compatible, same server
+                      (familiar-mcp-http-start))
              (error (message "familiar MCP over HTTP not started: %s" (error-message-string err)))))))
 
 (after! familiar

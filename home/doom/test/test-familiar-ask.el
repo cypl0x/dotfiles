@@ -598,3 +598,89 @@ du -sh .
            (should (string-match-p "\"id\":7" out)))
        (delete-process client)
        (familiar-mcp-http-stop)))))
+
+;;; familiar-openai
+
+(when test-familiar-available
+  (load (expand-file-name "../lisp/familiar/familiar-openai"
+                          (file-name-directory (or load-file-name buffer-file-name)))
+        nil t))
+
+(ert-deftest familiar-openai/messages-become-alternating-turns ()
+  (skip-unless test-familiar-available)
+  (should (equal (familiar-openai-conversation
+                  '(((role . "system") (content . "Be brief."))
+                    ((role . "user") (content . "a"))
+                    ((role . "user") (content . (((type . "text") (text . "b")))))
+                    ((role . "assistant") (content . "c"))
+                    ((role . "user") (content . "d"))))
+                 '("Be brief." "a\n\nb" "c" "d")))
+  ;; Starting with the model: an empty user turn first.
+  (should (equal (cdr (familiar-openai-conversation '(((role . "assistant") (content . "hi")))))
+                 '("" "hi"))))
+
+(ert-deftest familiar-openai/model-names ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-models '((fast . claude-haiku-5-5) (smart . claude-sonnet-5-5))))
+    (should (equal (familiar-openai--resolve "smart") '(smart)))
+    (should (equal (familiar-openai--resolve "emacs-fast") '(fast . t)))
+    (should (equal (familiar-openai--resolve "claude-sonnet-5-5") '(smart)))
+    (should (equal (familiar-openai--resolve "gpt-4o") (list familiar-openai-default-tier)))
+    (should (member "emacs-smart" (familiar-openai-models)))))
+
+(ert-deftest familiar-openai/completion-through-familiar-with-the-tier-asked-for ()
+  (skip-unless test-familiar-available)
+  (test-mcp-http--with
+   (let ((familiar-models '((fast . claude-haiku-5-5) (smart . claude-sonnet-5-5)))
+         seen)
+     (cl-letf (((symbol-function 'familiar-request)
+                (lambda (prompt &rest args)
+                  (setq seen (list prompt (plist-get args :system) (familiar--model 'openai)))
+                  (funcall (plist-get args :callback) "Hello!" '(:tokens (:input 5 :output 2)))))
+               ((symbol-function 'familiar-openai--emacs-context) (lambda () "Buffer: x.org")))
+       (pcase (familiar-mcp-http-respond
+               "POST" "/v1/chat/completions" (test-mcp-http--auth)
+               "{\"model\":\"emacs-smart\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
+         (`(:async ,fn)
+          (funcall fn (lambda (status _h body)
+                        (should (= status 200))
+                        (let ((r (json-parse-string body :object-type 'alist)))
+                          (should (equal (alist-get 'object r) "chat.completion"))
+                          (should (equal (alist-get 'model r) "claude-sonnet-5-5"))
+                          (should (equal (alist-get 'content (alist-get 'message (aref (alist-get 'choices r) 0)))
+                                         "Hello!"))
+                          (should (= 7 (alist-get 'total_tokens (alist-get 'usage r))))))))
+         (other (ert-fail (list "not async" other))))
+       (should (equal (car seen) '("hi")))
+       (should (string-match-p "Buffer: x.org" (nth 1 seen)))
+       (should (eq (nth 2 seen) 'claude-sonnet-5-5))
+       ;; Without the token: refused before any model is asked.
+       (should (= 401 (car (familiar-mcp-http-respond "POST" "/v1/chat/completions" nil "{}"))))
+       (should (= 200 (car (familiar-mcp-http-respond "GET" "/v1/models" (test-mcp-http--auth) ""))))))))
+
+(ert-deftest familiar-openai/streams-chunks-then-done-over-a-socket ()
+  (skip-unless test-familiar-available)
+  (test-mcp-http--with
+   (cl-letf (((symbol-function 'familiar-request)
+              (lambda (_prompt &rest args)
+                (let ((cb (plist-get args :callback)))
+                  (run-at-time 0 nil (lambda () (funcall cb "Hal" nil) (funcall cb "lo" nil) (funcall cb t nil)))))))
+     (let* ((url (familiar-mcp-http-start 0))
+            (port (string-to-number (car (last (split-string (string-remove-suffix "/mcp" url) ":")))))
+            (out "")
+            (body "{\"model\":\"fast\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
+            (client (make-network-process :name "test-openai-client" :host "127.0.0.1" :service port
+                                          :coding 'binary
+                                          :filter (lambda (_ s) (setq out (concat out s))))))
+       (unwind-protect
+           (progn
+             (process-send-string client (format "POST /v1/chat/completions HTTP/1.1\r\nAuthorization: Bearer %s\r\nContent-Length: %d\r\n\r\n%s"
+                                                 (familiar-mcp-http-token) (length body) body))
+             (with-timeout (5 (error "No [DONE]: %S" out))
+               (while (not (string-match-p "\\[DONE\\]" out)) (accept-process-output nil 0.05)))
+             (should (string-match-p "text/event-stream" out))
+             (should (string-match-p "\"content\":\"Hal\"" out))
+             (should (string-match-p "\"content\":\"lo\"" out))
+             (should (string-match-p "\"finish_reason\":\"stop\"" out)))
+         (delete-process client)
+         (familiar-mcp-http-stop))))))

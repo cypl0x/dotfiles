@@ -852,6 +852,18 @@ claude mcp add --transport http emacs-http http://127.0.0.1:39391/mcp \
   --header "Authorization: Bearer $(cat ~/.local/state/emacs/familiar-mcp-http-token)"
 #+end_src
 
+The same server is an OpenAI-compatible endpoint (=familiar-openai.el=), so
+any tool speaking that API uses familiar's models, ledger and budget:
+
+#+begin_src sh
+export OPENAI_BASE_URL=http://127.0.0.1:39391/v1
+export OPENAI_API_KEY=$(cat ~/.local/state/emacs/familiar-mcp-http-token)
+#+end_src
+
+Models: =fast= =smart= =deep= (familiar's tiers), =emacs-fast= etc. (the same,
+told where you are in Emacs: buffer, mode, point, region, nearby text),
+or a tier's model id.  =stream: true= gets server-sent chunks.
+
 =C-u= escalates one tier. Every request is priced (gptel's model table, else
 =familiar-model-prices=) and appended to =familiar-ledger-file=; alerts at
 50/80/95% of =familiar-budget=. Fix proposals are resolved with stock smerge
