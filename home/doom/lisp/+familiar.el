@@ -54,6 +54,17 @@
 (autoload 'familiar-mcp-start "familiar-mcp")
 (autoload 'familiar-mcp-stop "familiar-mcp")
 
+;; The same tools over HTTP, served by this Emacs (familiar-mcp-http.el):
+;; http://127.0.0.1:39391/mcp with a bearer token, no emacsclient per
+;; message.  Only the main daemon serves: test daemons would take the port.
+(autoload 'familiar-mcp-http-start "familiar-mcp-http" nil t)
+(autoload 'familiar-mcp-http-stop "familiar-mcp-http" nil t)
+(when (eq (daemonp) t)
+  (run-with-idle-timer
+   3 nil (lambda ()
+           (condition-case err (familiar-mcp-http-start)
+             (error (message "familiar MCP over HTTP not started: %s" (error-message-string err)))))))
+
 (after! familiar
   ;; Show the budget against what the key is actually charged with.
   (setq familiar-budget 10.0)

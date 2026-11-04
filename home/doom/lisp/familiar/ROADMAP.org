@@ -28,7 +28,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 |---------------------+------------------------------+-----------------------------------+----------------------------------------------|
 | Anthropic Messages  | gptel                        | -                                 | none for use; batch API and files API unused |
 | OpenAI-compatible   | gptel (backends)             | none                              | Emacs as an OpenAI-compatible endpoint: no   |
-| MCP                 | mcp.el (stdio, SSE)          | mcp-server-lib (stdio only)       | streamable HTTP server; sampling, elicitation |
+| MCP                 | mcp.el (stdio, SSE, HTTP)    | mcp-server-lib + familiar-mcp-http | sampling, elicitation; server-sent streams    |
 | ACP                 | acp.el + agent-shell         | none                              | Emacs as an ACP *agent*; =terminal/*= in acp.el |
 | A2A                 | none usable                  | none                              | everything                                   |
 | Claude Code IDE     | -                            | monet                             | none known                                   |
@@ -36,7 +36,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
 * Order of work (each a self-contained step, tested and used live)
 
 1. [X] MCP servers' tools in M-ß, opt-in per turn (=familiar-mcp-client.el=).
-2. [ ] Streamable-HTTP MCP server inside Emacs (=familiar-mcp-http=): no
+2. [X] Streamable-HTTP MCP server inside Emacs (=familiar-mcp-http.el=): no
    emacsclient wrapper, one port, token in a lock file like monet's;
    any agent on the machine attaches with a URL.
 3. [ ] Conversation core: one representation of a turn (prompt, context,

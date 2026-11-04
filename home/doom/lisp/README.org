@@ -841,6 +841,17 @@ glue. The answer goes where the work is, not into a chat window.
 | =SPC A H=                        | =familiar-handoff= → agent-shell / claude-code / clipboard            | free   |
 | MCP server =emacs= (Claude Code) | =definitions=, =references=, =outline= from Emacs (xref/eglot, imenu) | free   |
 
+The MCP server is also served over HTTP by the running daemon
+(=familiar-mcp-http.el=, MCP Streamable HTTP): =http://127.0.0.1:39391/mcp=,
+localhost only, Origin checked, bearer token in
+=~/.local/state/emacs/familiar-mcp-http-token= (0600).  No =emacsclient= per
+message.  To use it from Claude Code instead of the stdio script:
+
+#+begin_src sh
+claude mcp add --transport http emacs-http http://127.0.0.1:39391/mcp \
+  --header "Authorization: Bearer $(cat ~/.local/state/emacs/familiar-mcp-http-token)"
+#+end_src
+
 =C-u= escalates one tier. Every request is priced (gptel's model table, else
 =familiar-model-prices=) and appended to =familiar-ledger-file=; alerts at
 50/80/95% of =familiar-budget=. Fix proposals are resolved with stock smerge

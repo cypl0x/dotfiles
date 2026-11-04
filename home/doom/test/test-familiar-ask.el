@@ -516,3 +516,85 @@ du -sh .
     ;; The tool's own word wins either way.
     (should (familiar-mcp-client--read-only-p "x" '(:name "merge" :annotations (:readOnlyHint t))))
     (should-not (familiar-mcp-client--read-only-p "nixos-mcp" '(:name "nix" :annotations (:readOnlyHint :false))))))
+
+;;; familiar-mcp-http
+
+(load (expand-file-name "../lisp/familiar/familiar-mcp-http"
+                        (file-name-directory (or load-file-name buffer-file-name)))
+      nil t)
+
+(defmacro test-mcp-http--with (&rest body)
+  "BODY with a throwaway token and a processor that echoes the method."
+  `(let* ((familiar-mcp-http-token-file (make-temp-file "mcp-token"))
+          (familiar-mcp-http-process-function
+           (lambda (json _id)
+             (let ((m (json-parse-string json :object-type 'alist)))
+               (when (assq 'id m)
+                 (json-serialize `((jsonrpc . "2.0") (id . ,(alist-get 'id m))
+                                   (result . ((echo . ,(alist-get 'method m)))))))))))
+     (delete-file familiar-mcp-http-token-file)   ; created on first use
+     (unwind-protect (progn ,@body)
+       (ignore-errors (delete-file familiar-mcp-http-token-file)))))
+
+(defun test-mcp-http--auth (&rest more)
+  (append (list (cons "authorization" (concat "Bearer " (familiar-mcp-http-token)))) more))
+
+(ert-deftest familiar-mcp-http/answers-by-the-spec ()
+  (test-mcp-http--with
+   (let ((req "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}")
+         (note "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}"))
+     ;; A request: one JSON object.
+     (pcase-let ((`(,status ,headers ,body) (familiar-mcp-http-respond "POST" "/mcp" (test-mcp-http--auth) req)))
+       (should (= status 200))
+       (should (equal (cdr (assoc "Content-Type" headers)) "application/json"))
+       (should (string-match-p "\"echo\":\"tools/list\"" body)))
+     ;; A notification: 202, no body.
+     (should (equal (familiar-mcp-http-respond "POST" "/mcp" (test-mcp-http--auth) note) '(202 nil "")))
+     ;; No stream, no sessions.
+     (should (= 405 (car (familiar-mcp-http-respond "GET" "/mcp" (test-mcp-http--auth) ""))))
+     (should (= 405 (car (familiar-mcp-http-respond "DELETE" "/mcp" (test-mcp-http--auth) ""))))
+     ;; Versions: known pass, unknown 400.
+     (should (= 200 (car (familiar-mcp-http-respond "POST" "/mcp" (test-mcp-http--auth '("mcp-protocol-version" . "2025-06-18")) req))))
+     (should (= 400 (car (familiar-mcp-http-respond "POST" "/mcp" (test-mcp-http--auth '("mcp-protocol-version" . "1999-01-01")) req))))
+     (should (= 400 (car (familiar-mcp-http-respond "POST" "/mcp" (test-mcp-http--auth) "{not json"))))
+     (should (= 404 (car (familiar-mcp-http-respond "POST" "/other" (test-mcp-http--auth) req)))))))
+
+(ert-deftest familiar-mcp-http/refuses-strangers ()
+  (test-mcp-http--with
+   (let ((req "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
+     (should (= 401 (car (familiar-mcp-http-respond "POST" "/mcp" nil req))))
+     (should (= 401 (car (familiar-mcp-http-respond "POST" "/mcp" '(("authorization" . "Bearer wrong")) req))))
+     ;; DNS rebinding: a web page's origin, even with the token.
+     (should (= 403 (car (familiar-mcp-http-respond "POST" "/mcp" (test-mcp-http--auth '("origin" . "https://evil.example")) req))))
+     (should (= 200 (car (familiar-mcp-http-respond "POST" "/mcp" (test-mcp-http--auth '("origin" . "http://localhost:3000")) req))))
+     ;; The token file is private and stable.
+     (should (= #o600 (file-modes familiar-mcp-http-token-file)))
+     (should (equal (familiar-mcp-http-token) (familiar-mcp-http-token))))))
+
+(ert-deftest familiar-mcp-http/parses-a-body-that-arrives-in-pieces ()
+  (let ((raw "POST /mcp HTTP/1.1\r\nHost: x\r\nContent-Length: 7\r\n\r\n{\"a\":"))
+    (should-not (familiar-mcp-http--parse raw))
+    (should (equal (familiar-mcp-http--parse (concat raw "1}"))
+                   '("POST" "/mcp" (("host" . "x") ("content-length" . "7")) "{\"a\":1}")))
+    (should (eq (familiar-mcp-http--parse "garbage\r\n\r\n") :bad))))
+
+(ert-deftest familiar-mcp-http/round-trip-over-a-socket ()
+  (test-mcp-http--with
+   (let* ((url (familiar-mcp-http-start 0))
+          (port (string-to-number (car (last (split-string (string-remove-suffix "/mcp" url) ":")))))
+          (out "")
+          (body (encode-coding-string "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/list\",\"params\":{\"q\":\"ü\"}}" 'utf-8))
+          (client (make-network-process :name "test-mcp-client" :host "127.0.0.1" :service port
+                                        :coding 'binary
+                                        :filter (lambda (_ s) (setq out (concat out s))))))
+     (unwind-protect
+         (progn
+           (process-send-string client (format "POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer %s\r\nContent-Length: %d\r\n\r\n%s"
+                                               (familiar-mcp-http-token) (length body) body))
+           (with-timeout (5 (error "No answer"))
+             (while (not (string-match-p "\r\n\r\n.*}" out))
+               (accept-process-output nil 0.05)))
+           (should (string-prefix-p "HTTP/1.1 200 OK\r\n" out))
+           (should (string-match-p "\"id\":7" out)))
+       (delete-process client)
+       (familiar-mcp-http-stop)))))
