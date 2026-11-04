@@ -9,6 +9,8 @@
 ;;   M-x +usage/report   commands by frequency, with keys used and keys bound
 ;;   M-x +usage/suggest  familiar reads the counts and suggests keys and shortcuts
 ;;   SPC A .             anticipate: likely next commands here (C-u: ask the model)
+;;   coach               after 12 j/l/DEL... in a row, the bigger steps bound
+;;                       here, in the echo area (`+usage-coach' nil: off)
 ;;
 ;;; Code:
 
@@ -40,6 +42,7 @@ keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
 (defvar +usage--last nil "The last command counted.")
 (defvar +usage--recent nil "The last 40 commands counted, newest first, as (CMD . MODE).")
 (defvar +usage--timer nil)
+(defvar +usage-coach) (defvar +usage-coach-after) (defvar +usage--run)   ; the coach, below
 (declare-function familiar-ask "familiar-ask" (prompt &optional new))
 
 (defun +usage--record-h ()
@@ -62,10 +65,87 @@ keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
       (cl-incf (gethash how table 0))
       (when +usage--last
         (cl-incf (gethash (cons +usage--last this-command) +usage--pairs 0)))
+      (setq +usage--run (if (eq this-command +usage--last) (1+ +usage--run) 1))
+      (when (and +usage-coach (= +usage--run +usage-coach-after))
+        (+usage--coach this-command +usage--run how))
       (cl-incf (gethash (cons major-mode this-command) +usage--modes 0))
       (setq +usage--last this-command)
       (push (cons this-command major-mode) +usage--recent)
       (when (nthcdr 40 +usage--recent) (setcdr (nthcdr 39 +usage--recent) nil)))))
+
+
+;;;; Coach: long runs of one-step commands
+;;
+;; The counts showed held keys: j/k through PDFs (~1,900 line scrolls
+;; against 220 half screens), l through Turm code (272 in a row), DEL in
+;; Org.  After `+usage-coach-after' repeats of such a command, the echo area
+;; names the bigger steps bound right here (looked up, never assumed), at
+;; most once per command every `+usage-coach-quiet' seconds.
+
+(defvar +usage-coach t "Whether to show tips after long runs of one-step commands.")
+(defvar +usage-coach-after 12 "Repeats of one command before its tip.")
+(defvar +usage-coach-quiet 600 "Seconds before the same tip again.")
+(defvar +usage--run 0 "How many times `+usage--last' ran in a row.")
+(defvar +usage--coached nil "Alist COMMAND → time of its last tip.")
+
+(defvar +usage-coach-alternatives
+  '((next-line              (evil-forward-paragraph . "paragraph") (org-next-visible-heading . "heading")
+                            (+evil/next-section . "section") (evil-scroll-down . "half screen"))
+    (evil-next-line         . next-line)
+    (evil-next-visual-line  . next-line)
+    (previous-line          (evil-backward-paragraph . "paragraph") (org-previous-visible-heading . "heading")
+                            (evil-scroll-up . "half screen"))
+    (evil-previous-line     . previous-line)
+    (evil-previous-visual-line . previous-line)
+    (evil-forward-char      (evil-forward-word-begin . "word") (evil-forward-word-end . "word end")
+                            (evil-snipe-s . "to 2 chars") (evil-snipe-f . "to a char")
+                            (evil-find-char . "to a char") (evil-end-of-line . "line end"))
+    (evil-backward-char     (evil-backward-word-begin . "word") (evil-snipe-S . "back to 2 chars")
+                            (evil-snipe-F . "back to a char") (evil-find-char-backward . "back to a char")
+                            (evil-first-non-blank . "line start"))
+    (evil-delete-backward-char-and-join (evil-delete-backward-word . "word") (backward-kill-word . "word")
+                                        (evil-delete-back-to-indentation . "to line start"))
+    (delete-backward-char   . evil-delete-backward-char-and-join)
+    (vellumory-scroll-down  (vellumory-half-screen-down . "half screen") (vellumory-next-screen . "screen")
+                            (vellumory-next-page . "page"))
+    (vellumory-scroll-up    (vellumory-half-screen-up . "half screen") (vellumory-previous-screen . "screen")
+                            (vellumory-previous-page . "page")))
+  "One-step COMMAND → bigger steps (COMMAND . WHAT), or another entry to share.")
+
+(defun +usage-coach-tip (command n &optional pressed)
+  "The tip after N runs of COMMAND here, or nil: keys bound in this buffer.
+PRESSED is the key that ran it, when known."
+  (let* ((alts (alist-get command +usage-coach-alternatives))
+         (alts (if (symbolp alts) (alist-get alts +usage-coach-alternatives) alts))
+         (keys (lambda (cmd) (when-let* ((k (where-is-internal cmd nil t)))
+                               (key-description k))))
+         (own (if (and pressed (not (member pressed '("M-x" "(no keys)"))))
+                  pressed
+                (funcall keys command)))
+         (seen nil)
+         (parts (delq nil (mapcar (lambda (alt)
+                                    (when-let* ((k (funcall keys (car alt)))
+                                                ((not (member (cdr alt) seen))))
+                                      (push (cdr alt) seen)
+                                      (format "%s %s" (propertize k 'face 'help-key-binding) (cdr alt))))
+                                  alts))))
+    (when parts
+      (format "%s×%d → %s"
+              (if own (propertize own 'face 'help-key-binding) command) n
+              (string-join (if (and own (string-match-p "\\`[hjkl]\\'" own))
+                               (cons (format "%s%s" (propertize (format "%d%s" n own) 'face 'help-key-binding)
+                                             " counted")
+                                     parts)
+                             parts)
+                           " · ")))))
+
+(defun +usage--coach (command n &optional pressed)
+  (unless (or (minibufferp) executing-kbd-macro
+              (when-let* ((last (alist-get command +usage--coached)))
+                (< (float-time (time-since last)) +usage-coach-quiet)))
+    (when-let* ((tip (+usage-coach-tip command n pressed)))
+      (setf (alist-get command +usage--coached) (current-time))
+      (let ((message-log-max nil)) (message "%s" tip)))))
 
 (defun +usage--read ()
   (when (file-readable-p +usage-file)

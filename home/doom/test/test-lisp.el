@@ -1018,3 +1018,26 @@ and a temp exec-path where bin/tar links to store/tar."
                      (if (+format-same-words-p (car case) (cdr case))
                          "One topic. Still it.\n\nAnother topic now."
                        (car case)))))))
+
+(ert-deftest usage/coach-names-bigger-steps-bound-here ()
+  (with-temp-buffer
+    (let ((map (make-sparse-keymap)))
+      (define-key map "l" #'evil-forward-char)
+      (define-key map "w" #'evil-forward-word-begin)
+      (define-key map "s" #'evil-snipe-s)
+      (use-local-map map)
+      (let ((tip (substring-no-properties (+usage-coach-tip 'evil-forward-char 14))))
+        (should (string-match-p "\\`l×14 → 14l counted · w word · s to 2 chars\\'" tip)))
+      ;; Nothing bound: no tip rather than keys that don't work here.
+      (use-local-map (make-sparse-keymap))
+      (should-not (+usage-coach-tip 'vellumory-scroll-down 14)))))
+
+(ert-deftest usage/coach-speaks-once-at-the-threshold-then-rests ()
+  (test-usage--with-fresh
+   (let ((+usage-coach t) (+usage-coach-after 3) (+usage--coached nil) (+usage--run 0) shown)
+     (cl-letf (((symbol-function '+usage-coach-tip) (lambda (cmd n &rest _) (format "%s %d" cmd n)))
+               ((symbol-function 'message) (lambda (_fmt s) (push s shown))))
+       (apply #'test-usage--run (make-list 5 'next-line))
+       (should (equal shown '("next-line 3")))
+       (test-usage--run 'evil-undo 'next-line 'next-line 'next-line)
+       (should (equal shown '("next-line 3")))))))
