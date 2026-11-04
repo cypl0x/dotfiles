@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 21:02] — M-ß takes directions: @model, @inline, @replace, @transient
+- =@model= picks who answers this one turn: any model of any gptel
+  backend, or a coding agent already running (agent-shell gets the prompt
+  and the context). =@model:NAME= completes after the colon.
+- =@inline= writes the answer right where you are (at point, after the
+  region, on a new line in normal state), in the buffer's own language;
+  =@replace= swaps the region. One undo takes it all back.
+- =@transient= stops after RET and lets you choose all of that first.
+- =SPC '= now remembers the last 30 minibuffers; =C-'= / =C-"= in any
+  minibuffer step through them, like =+popup/other= through popups.
+
 ** [2026-11-04 Mi 20:45] — Your list, bugs first: freezes gone, buffers found
 - =M-S-x= no longer freezes for 8–10 s: 0.09 s now.
 - =M-ö= / =M-ü= visit =*new*= buffers too; they join the main workspace.

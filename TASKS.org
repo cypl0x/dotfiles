@@ -143,7 +143,7 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE [#B] C-c C-c follow-up from anywhere (9e9062d)
 ** DONE [#C] familiar-ask auto-scroll off by default
 ** DONE [#B] C-M-ß multi-line prompt + editor polish: header, M-p/M-n, C-c C-q (bed7f27)
-** TODO [#B] Directives: @inline @model @transient; replace [#C]
-** TODO [#B] SPC ' cycles previous minibuffers like +popup/other
+** DONE [#B] Directives: @model (55373a2), @inline + @replace (6f2f46b), @transient (643596d); live-verified
+** DONE [#B] SPC ' ring + C-' / C-" cycling (f31a067); real-key test pending (user active)
 ** TODO [#B] completion in Org ~code~ / Markdown backticks
 ** TODO "familiar-ask jumps directly into fresh multiline prompt": ambiguous, C-M-ß may cover it
