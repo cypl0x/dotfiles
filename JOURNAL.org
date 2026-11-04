@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 08:02] — The input lag in Turm buffers: one missing glyph
+- The Turm session (turm-b5) measured your lag on h/j/k/l and C-d/u: the
+  daemon at 49.5% CPU *while idle*, half of it under the mode line. The
+  mode line is mine, so I took it.
+- Cause: in a git worktree (Turm-emacs-integration is one), doom-modeline
+  shows a worktree icon, U+EC7E, that *no font has*: not your NFM.ttf, not
+  even Nerd Fonts 3.4.0. Measuring the mode line's width with that glyph
+  sends Emacs through every font, 175 ms, about four times a second.
+- Fix: a stand-in icon that exists (repo_forked). One render: 92 ms →
+  0.6 ms. Idle CPU: 49.5% → *1%*. Also flycheck is off in Turm buffers,
+  which report through flymake.
+- Your call: your config points =turm-program= at an Oct 28 build that
+  lacks =occurrences --types=, so after a restart variable types, ElDoc
+  types and case split stop. A newer one is at
+  =~/dev/Turm-book-rolling/target/release/turm=.
 ** [2026-11-04 Mi 07:36] — C-SPC that knows where you are, and a look ahead
 - *=C-SPC=* completes by context: links after =[[=, keywords and tags in
   Org, code in src blocks, dictionary words in prose (English *and* German:
