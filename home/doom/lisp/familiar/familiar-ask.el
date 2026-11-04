@@ -22,7 +22,8 @@
 ;;   C-c '  (prompt)  edit the prompt in a buffer; C-c C-c sends, C-c C-k keeps it
 ;;   @fast/@smart/@deep in the prompt picks the model (gptel presets)
 ;;   C-r  (prompt)    pick an earlier prompt
-;;   RET / S-RET      in the conversation: send a follow-up / newline
+;;   C-c C-c          in the conversation: send the follow-up (from anywhere)
+;;   RET / S-RET      at its end: send a follow-up / newline
 ;;   C-c C-e          copy the conversation as Markdown or Org
 ;;   C-c ! / C-c $    apply a suggestion from the latest answer (command, keys,
 ;;                    elisp block, shell command at the prompt) / the first one
@@ -56,6 +57,10 @@
 (defcustom familiar-ask-directory (locate-user-emacs-file "familiar-ask/")
   "Where conversations are saved, one Org file each."
   :type 'directory :group 'familiar)
+
+(defcustom familiar-ask-auto-scroll nil
+  "Whether the conversation window follows the answer as it streams."
+  :type 'boolean :group 'familiar)
 
 (defcustom familiar-ask-follow-up nil
   "Whether `familiar-ask' continues the running conversation.
@@ -410,6 +415,7 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
 (defvar familiar-ask-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'familiar-ask-ret)
+    (define-key map (kbd "C-c C-c") #'familiar-ask-send-follow-up)
     (define-key map (kbd "<S-return>") #'newline)
     (define-key map (kbd "C-c C-k") #'gptel-abort)
     (define-key map (kbd "C-c C-e") #'familiar-ask-export)
@@ -421,6 +427,18 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
 (define-minor-mode familiar-ask-mode
   "A `familiar-ask' conversation: RET at the end sends a follow-up."
   :lighter " ✦ask")
+
+(defun familiar-ask-send-follow-up ()
+  "Send the follow-up typed under the last prompt heading, from anywhere.
+RET only sent with point at the very end, and evil's or Org's RET may
+win over this mode's map; C-c C-c is free in both."
+  (interactive)
+  (goto-char (point-max))
+  (skip-chars-backward " \t\n")
+  (if (looking-back "^\\*+ *" (line-beginning-position))
+      (user-error "Type the follow-up after the last ** first")
+    (goto-char (point-max))
+    (gptel-send)))
 
 (defun familiar-ask-ret ()
   "Send a follow-up when point is in the last, unanswered prompt; else newline."
@@ -479,8 +497,9 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
                 gptel-response-prefix-alist '((org-mode . "")))
     (familiar-ask-mode 1)
     (add-hook 'gptel-post-response-functions #'familiar-ask--after-response nil t)
-    ;; Follow the answer as it streams.
-    (add-hook 'gptel-post-stream-hook #'gptel-auto-scroll nil t)
+    ;; Follow the answer as it streams, if wanted.
+    (when familiar-ask-auto-scroll
+      (add-hook 'gptel-post-stream-hook #'gptel-auto-scroll nil t))
     (setq header-line-format '(:eval (familiar-ask--header-line)))
     buf))
 
@@ -532,26 +551,23 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
 
 (defun familiar-ask--history ()
   "Record the latest turn in the familiar history, linked to this conversation."
-  (when-let* ((bounds (familiar-ask--last-answer-bounds)))
-    (save-excursion
-      (goto-char (car bounds))
-      (when (re-search-backward "^\\*\\* \\(.*\\)$" nil t)
-        (let* ((heading (match-string-no-properties 1))
-               (title (replace-regexp-in-string "  \\[[^]]*\\]\\'" "" heading))
-               (body (buffer-substring-no-properties
-                      (line-beginning-position 2)
-                      (if (re-search-forward "^#\\+begin_context" (car bounds) t)
-                          (match-beginning 0)
-                        (line-beginning-position 2)))))
-          (familiar-history-record
-           :prompt (string-trim (string-replace familiar-ask--echo-instruction ""
-                                                (concat title "\n" body)))
-           :answer (substring-no-properties (familiar-ask--answer-text bounds))
-           :task 'ask :model familiar-ask--last-model
-           :tokens familiar-ask--last-tokens :cost familiar-ask--last-cost
-           :link (and buffer-file-name
-                      (format "[[file:%s::*%s][conversation]]"
-                              (abbreviate-file-name buffer-file-name) heading))))))))
+  (when-let* ((turn (familiar-ask--last-turn)))
+    (let* ((heading (plist-get turn :title))
+           (title (replace-regexp-in-string "  \\[[^]]*\\]\\'" "" heading))
+           (body (save-excursion
+                   (goto-char (plist-get turn :heading))
+                   (buffer-substring-no-properties
+                    (min (line-beginning-position 2) (plist-get turn :prompt-end))
+                    (plist-get turn :prompt-end)))))
+      (familiar-history-record
+       :prompt (string-trim (string-replace familiar-ask--echo-instruction ""
+                                            (concat title "\n" body)))
+       :answer (substring-no-properties (familiar-ask--answer-text (plist-get turn :answer)))
+       :task 'ask :model familiar-ask--last-model
+       :tokens familiar-ask--last-tokens :cost familiar-ask--last-cost
+       :link (and buffer-file-name
+                  (format "[[file:%s::*%s][conversation]]"
+                          (abbreviate-file-name buffer-file-name) heading))))))
 
 (defun familiar-ask--echo-answer ()
   "Show the latest answer in the echo area, as Org shows it."
@@ -598,14 +614,38 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
 
 ;;;; Applying a suggestion
 
-(defun familiar-ask--last-answer-bounds ()
-  "Start and end of the latest answer: after the last context block."
+(defun familiar-ask--last-turn ()
+  "The latest answered turn: plist (:heading POS :title STRING :prompt-end POS
+:answer (BEG . END)), or nil.
+The answer is what gptel wrote (text property `gptel': response, tool
+calls); a follow-up typed in the conversation has no context block, so
+\"after the last #+end_context\" took the turn before it.  Without the
+property (an older saved conversation), the answer starts after the context."
   (save-excursion
     (goto-char (point-max))
-    (when (re-search-backward "^#\\+end_context$" nil t)
-      (cons (line-beginning-position 2)
-            (progn (goto-char (point-max))
-                   (if (re-search-backward "^\\*\\* *$" nil t) (point) (point-max)))))))
+    (let ((end (if (re-search-backward "^\\*\\* *$" nil t) (point) (point-max))))
+      (goto-char end)
+      (when (re-search-backward "^\\*\\* \\(.*\\)$" nil t)
+        (let* ((heading (point))
+               (title (match-string-no-properties 1))
+               (context (save-excursion
+                          (and (re-search-forward "^#\\+begin_context$" end t)
+                               (match-beginning 0))))
+               (answer (let ((p (next-single-property-change heading 'gptel nil end)))
+                         (cond ((and (< p end) (get-text-property p 'gptel)) p)
+                               ((get-text-property heading 'gptel) heading)
+                               (context (save-excursion
+                                          (goto-char context)
+                                          (and (re-search-forward "^#\\+end_context$" end t)
+                                               (line-beginning-position 2))))))))
+          (when answer
+            (list :heading heading :title title
+                  :prompt-end (min answer (or context answer))
+                  :answer (cons answer end))))))))
+
+(defun familiar-ask--last-answer-bounds ()
+  "Start and end of the latest answer (see `familiar-ask--last-turn')."
+  (plist-get (familiar-ask--last-turn) :answer))
 
 (defun familiar-ask-suggestions ()
   "What the latest answer suggests, in order: a list of (KIND VALUE LABEL).

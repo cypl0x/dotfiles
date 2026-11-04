@@ -1250,5 +1250,49 @@ prompt turns and the callback)."
     (with-temp-buffer (insert "find-file input") (familiar-ask--keep-prompt-h))
     (should (equal familiar-ask-history '("half a question")))))
 
+(ert-deftest familiar-ask/c-c-c-c-sends-the-follow-up-from-anywhere ()
+  (skip-unless test-familiar-available)
+  (let (sent)
+    (cl-letf (((symbol-function 'gptel-send) (lambda (&rest _) (setq sent (point)))))
+      (with-temp-buffer
+        (org-mode)
+        (insert "** q\nanswer\n\n** and then?\n")
+        (goto-char (point-min))
+        (familiar-ask-send-follow-up)
+        (should (= sent (point-max))))
+      ;; Nothing typed yet under the last heading: nothing sent.
+      (setq sent nil)
+      (with-temp-buffer
+        (org-mode)
+        (insert "** q\nanswer\n\n** ")
+        (goto-char (point-min))
+        (should-error (familiar-ask-send-follow-up) :type 'user-error)
+        (should-not sent)))))
+
+(ert-deftest familiar-ask/a-typed-follow-up-is-its-own-turn ()
+  ;; It has no context block: the history took the turn before it.
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (org-mode)
+    (insert "** First  [2026-11-04 Wed 20:00]\n#+begin_context\nctx\n#+end_context\n"
+            (propertize "Answer one.\n" 'gptel 'response)
+            "\n** \nAnd the follow-up?\n"
+            (propertize "#+begin_tool (x)\n" 'gptel '(tool . "id1"))
+            "r\n#+end_tool\n"
+            (propertize "Answer two.\n" 'gptel 'response)
+            "\n** ")
+    (let ((turn (familiar-ask--last-turn)))
+      (should (equal (plist-get turn :title) ""))
+      (should (equal (buffer-substring-no-properties (plist-get turn :heading) (plist-get turn :prompt-end))
+                     "** \nAnd the follow-up?\n"))
+      (should (string-prefix-p "#+begin_tool"
+                               (buffer-substring-no-properties (car (plist-get turn :answer))
+                                                               (cdr (plist-get turn :answer))))))
+    (let (recorded)
+      (cl-letf (((symbol-function 'familiar-history-record) (lambda (&rest args) (setq recorded args))))
+        (familiar-ask--history))
+      (should (equal (plist-get recorded :prompt) "And the follow-up?"))
+      (should (string-match-p "\\`Answer two\\.\\'" (string-trim (plist-get recorded :answer)))))))
+
 (provide 'familiar-ask-test)
 ;;; familiar-ask-test.el ends here

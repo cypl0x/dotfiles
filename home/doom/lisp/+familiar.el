@@ -46,6 +46,10 @@
   (require 'familiar-history))
 
 (after! familiar-ask
+  ;; RET sends at the end of a conversation in insert state too: evil's RET
+  ;; won over the mode's map.  (C-c C-c sends from anywhere.)
+  (after! evil
+    (evil-define-key* 'insert familiar-ask-mode-map (kbd "RET") #'familiar-ask-ret))
   ;; @github, @nixos-mcp…: the MCP servers Claude Code knows for the project.
   (require 'familiar-mcp-client)
   (add-to-list 'familiar-ask-prompt-capfs #'+completion-prose-capf t)
