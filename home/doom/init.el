@@ -187,7 +187,7 @@
        (turm +tree-sitter +evil +session +pg)
        web               ; the tubes
        yaml              ; JSON, but readable
-       ;;zig               ; C, but simpler
+       (zig +lsp +tree-sitter) ; C, but simpler (zls, grammar from Nix: home/common.nix)
 
        :email
        (mu4e +org +gmail)
