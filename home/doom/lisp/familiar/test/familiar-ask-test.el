@@ -480,6 +480,69 @@ du -sh .
      (familiar-ask "fix it @model:agent-shell")
      (should-not (get-buffer familiar-ask--buffer-name))
      (should (string-prefix-p "fix it\n\n" handed)))))
+
+(defmacro test-familiar-ask--inline (text prompt &rest body)
+  "Ask PROMPT about TEXT (point after POINT, region from [ to ] if any),
+answered \"one \" \"two\" in chunks; BODY sees the buffer, the request in
+`asked'."
+  (declare (indent 2))
+  `(with-temp-buffer
+     (buffer-enable-undo)
+     (setq-local transient-mark-mode t)
+     (insert ,text)
+     (goto-char (point-min))
+     (when (search-forward "[" nil t)
+       (delete-char -1)
+       (push-mark (point) t t)
+       (search-forward "]")
+       (delete-char -1))
+     (unless (mark t)
+       (goto-char (point-min))
+       (search-forward "POINT")
+       (replace-match ""))
+     (undo-boundary)
+     (let (asked)
+       (cl-letf (((symbol-function 'familiar-request)
+                  (lambda (request &rest args)
+                    (setq asked (list request (plist-get args :system)))
+                    (dolist (r '("one " "two" t))
+                      (funcall (plist-get args :callback) r nil))))
+                 ((symbol-function 'pulse-momentary-highlight-region) #'ignore))
+         (familiar-ask ,prompt)
+         ,@body))))
+
+(ert-deftest familiar-ask/inline-writes-at-point-and-undoes-at-once ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--inline "Dear POINT,\nbye" "a name @inline"
+    (should (equal (buffer-string) "Dear one two,\nbye"))
+    (should (string-match-p "Dear ⟦here⟧,\nbye" (car asked)))
+    (should (string-match-p "What to write: a name\\'" (car asked)))
+    (should (string-match-p "only" (cadr asked)))
+    (undo-boundary)
+    (primitive-undo 1 (cdr buffer-undo-list))   ; past the boundary
+    (should (equal (buffer-string) "Dear ,\nbye"))))
+
+(ert-deftest familiar-ask/inline-goes-after-the-region-replace-into-it ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--inline "a [old] b" "translate @inline"
+    (should (equal (buffer-string) "a oldone two b"))
+    (should (string-match-p "a ⟦selection⟧old⟦/selection⟧⟦here⟧ b" (car asked))))
+  (test-familiar-ask--inline "a [old] b" "translate @replace"
+    (should (equal (buffer-string) "a one two b"))
+    (should (string-match-p "⟦selection⟧old⟦/selection⟧" (car asked)))
+    ;; One undo: the answer out, the old text back.
+    (undo-boundary)
+    (primitive-undo 1 (cdr buffer-undo-list))
+    (should (equal (buffer-string) "a old b")))
+  (with-temp-buffer
+    (should-error (familiar-ask "x @replace") :type 'user-error)))
+
+(ert-deftest familiar-ask/inline-in-normal-state-opens-a-line ()
+  (skip-unless test-familiar-available)
+  (dlet ((evil-state 'normal))
+    (test-familiar-ask--inline "first POINTline\nlast" "more @inline"
+      (should (equal (buffer-string) "first line\none two\nlast"))
+      (should (string-match-p "first line\n⟦here⟧\n\nlast" (car asked))))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"

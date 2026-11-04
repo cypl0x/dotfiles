@@ -260,15 +260,16 @@ Add it to `familiar-model-prices'." model)))
     (when escalate (setq pos (min (1+ pos) (1- (length tiers)))))
     (alist-get (nth pos tiers) familiar-models)))
 
-(cl-defun familiar-request (prompt &key task system escalate stream callback tools)
+(cl-defun familiar-request (prompt &key task system escalate stream callback tools model backend)
   "Send PROMPT for TASK with SYSTEM prompt; call CALLBACK like `gptel-request'.
-The model comes from TASK's tier (one higher when ESCALATE).  The request is
-priced and recorded once it completes.  TOOLS (gptel tools) are offered;
-when the model calls them, the streamed segment ends (`t') with the calls in
-INFO's :tool-use and :stop-reason \"tool_use\", before gptel runs them and
-continues.  Returns the model used."
-  (let* ((model (familiar--model task escalate))
-         (gptel-backend (or familiar-backend gptel-backend))
+The model comes from TASK's tier (one higher when ESCALATE), unless MODEL
+\(on BACKEND) is given.  The request is priced and recorded once it
+completes.  TOOLS (gptel tools) are offered; when the model calls them, the
+streamed segment ends (`t') with the calls in INFO's :tool-use and
+:stop-reason \"tool_use\", before gptel runs them and continues.  Returns the
+model used."
+  (let* ((model (or model (familiar--model task escalate)))
+         (gptel-backend (or backend familiar-backend gptel-backend))
          (gptel-model model)
          (gptel-tools tools)
          (gptel-use-tools (and tools t))

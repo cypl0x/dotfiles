@@ -24,6 +24,9 @@
 ;;   @fast/@smart/@deep in the prompt picks the model (gptel presets)
 ;;   @model[:NAME]    who answers this turn: any gptel model, or a running agent
 ;;                    (agent-shell, claude-code) that gets the prompt and context
+;;   @inline          write the answer into the buffer: at point, after the region,
+;;                    or on a new line (evil normal state); one undo takes it back
+;;   @replace         write it in place of the region
 ;;   C-r  (prompt)    pick an earlier prompt
 ;;   C-c C-c          in the conversation: send the follow-up (from anywhere)
 ;;   RET / S-RET      at its end: send a follow-up / newline
@@ -77,7 +80,9 @@ arg.  RET at the end of an answer always follows up."
   '(("follow-up" . "continue the running conversation")
     ("new" . "start a fresh conversation")
     ("echo" . "short answer in the echo area, no window")
-    ("model" . "pick who answers: any gptel model, or a running agent (@model:NAME)"))
+    ("model" . "pick who answers: any gptel model, or a running agent (@model:NAME)")
+    ("inline" . "write the answer into the buffer, at point or after the region")
+    ("replace" . "write the answer in place of the region"))
   "Words a prompt may contain as @WORD; taken out before it is sent.
 Next to gptel's presets (@fast, @smart, @deep), which gptel applies.")
 
@@ -813,6 +818,110 @@ colon: a model name (the current backend's first) or an agent."
                prompt))
     (message "familiar: asked %s" target)))
 
+;;;; @inline and @replace: the answer goes where you are
+
+(defconst familiar-ask--inline-system
+  "You write text that goes straight into an Emacs buffer, where the excerpt \
+shows ⟦here⟧ (or, when replacing, in place of the text between ⟦selection⟧ \
+and ⟦/selection⟧).  Reply with that text only: no preamble, no explanation, \
+no markers, no code fences around it, nothing repeated from around it.  \
+Write in the buffer's language and markup (its major mode: Org markup in \
+Org, Markdown in Markdown, code in a programming mode, comments as that \
+language writes them), and match the indentation, style and natural \
+language of the surrounding text."
+  "System prompt of @inline and @replace turns.")
+
+(defcustom familiar-ask-inline-excerpt 4000
+  "Characters before the place written to that an @inline turn sends along.
+Half as many after it."
+  :type 'natnum :group 'familiar)
+
+(defun familiar-ask--inline-place (origin replace)
+  "Where an answer to ORIGIN goes: (BEG END NEWLINE).
+REPLACE: in place of the region, BEG to END.  Else at one place: after the
+region; at point in insert state (or without evil); in normal state at the
+end of point's line, NEWLINE meaning on a new line after it (point's line
+holds text)."
+  (let ((region (plist-get origin :region))
+        (buf (plist-get origin :buffer)))
+    (with-current-buffer buf
+      (save-excursion
+        (goto-char (plist-get origin :point))
+        (cond (replace (if region (list (car region) (cdr region) nil)
+                         (user-error "@replace needs a region")))
+              (region (list (cdr region) (cdr region) nil))
+              ((not (memq (bound-and-true-p evil-state) '(normal motion visual)))
+               (list (point) (point) nil))
+              (t (let ((blank (string-blank-p (buffer-substring (line-beginning-position)
+                                                                 (line-end-position)))))
+                   (list (line-end-position) (line-end-position) (not blank)))))))))
+
+(defun familiar-ask--inline-excerpt (origin place replace)
+  "Text around PLACE in ORIGIN's buffer, marked where the answer goes."
+  (pcase-let ((`(,beg ,end ,newline) place)
+              (region (plist-get origin :region)))
+    (with-current-buffer (plist-get origin :buffer)
+      (let* ((from (max (point-min) (- (if region (car region) beg) familiar-ask-inline-excerpt)))
+             (to (min (point-max) (+ end (/ familiar-ask-inline-excerpt 2))))
+             (text (lambda (a b) (buffer-substring-no-properties a b))))
+        (format "Buffer %s (%s%s)\n\n%s"
+                (buffer-name) major-mode
+                (if buffer-file-name (format ", file %s" (abbreviate-file-name buffer-file-name)) "")
+                (cond (replace
+                       (concat (funcall text from beg) "⟦selection⟧" (funcall text beg end)
+                               "⟦/selection⟧" (funcall text end to)))
+                      (region
+                       (concat (funcall text from (car region)) "⟦selection⟧"
+                               (funcall text (car region) beg) "⟦/selection⟧⟦here⟧"
+                               (funcall text beg to)))
+                      (t (concat (funcall text from beg) (if newline "\n⟦here⟧\n" "⟦here⟧")
+                                 (funcall text beg to)))))))))
+
+(defun familiar-ask--inline (prompt origin replace model)
+  "Write the answer to PROMPT into ORIGIN's buffer as it streams.
+Where: `familiar-ask--inline-place'; REPLACE puts it in place of the region.
+MODEL (BACKEND . MODEL) answers, else `familiar-ask-tier'.  One undo takes
+the whole of it back (and the replaced text with it)."
+  (let* ((buf (plist-get origin :buffer))
+         (place (familiar-ask--inline-place origin replace))
+         (request (concat (familiar-ask--inline-excerpt origin place replace)
+                          "\n\nWhat to write: " prompt))
+         start end deleted)
+    (with-current-buffer buf
+      (barf-if-buffer-read-only)
+      ;; Chunks go in without undo records; one record of the whole goes in
+      ;; at the end, so a single undo removes it (and restores a replaced
+      ;; region), however many chunks it came in.
+      (let ((buffer-undo-list t))
+        (pcase-let ((`(,beg ,end* ,newline) place))
+          (when replace
+            (setq deleted (buffer-substring beg end*))
+            (delete-region beg end*))
+          (setq start (copy-marker beg)
+                end (copy-marker beg t))
+          (when newline (save-excursion (goto-char end) (insert "\n"))))))
+    (message "✦ Writing into %s…" (buffer-name buf))
+    (familiar-request
+     request :task 'ask :system familiar-ask--inline-system :stream t
+     :model (or (cdr model) (alist-get familiar-ask-tier familiar-models))
+     :backend (car model)
+     :callback
+     (lambda (response _info)
+       (when (buffer-live-p buf)
+         (with-current-buffer buf
+           (cond ((stringp response)
+                  (let ((buffer-undo-list t))
+                    (save-excursion (goto-char end) (insert response))))
+                 ((memq response '(t nil))
+                  (unless (eq buffer-undo-list t)
+                    (undo-boundary)
+                    (when deleted (push (cons deleted (marker-position start)) buffer-undo-list))
+                    (push (cons (marker-position start) (marker-position end)) buffer-undo-list)
+                    (undo-boundary))
+                  (when response
+                    (pulse-momentary-highlight-region start end)
+                    (message "✦ Written into %s (undo takes it back)" (buffer-name buf)))))))))))
+
 (defvar familiar-ask-minibuffer-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c '") #'familiar-ask-edit-prompt)
@@ -910,11 +1019,15 @@ ask's, which could be another buffer minutes ago."
            (echo (memq 'echo keywords))
            (origin (or origin (familiar-ask--capture)))
            (model (and spec (familiar-ask--resolve-model spec))))
-      (if (eq (car model) 'agent)
-          (familiar-ask--hand-off prompt (cdr model) origin)
+      (cond
+       ((eq (car model) 'agent)
+        (familiar-ask--hand-off prompt (cdr model) origin))
+       ((or (memq 'inline keywords) (memq 'replace keywords))
+        (familiar-ask--inline prompt origin (memq 'replace keywords) model))
+       (t
         (familiar-ask--send
          (if echo (concat prompt "\n\n" familiar-ask--echo-instruction) prompt)
-         follow echo origin keywords model)))))
+         follow echo origin keywords model))))))
 
 (defun familiar-ask--show (buf win)
   "Display BUF, from WIN when it's still there, unless BUF is on screen.
