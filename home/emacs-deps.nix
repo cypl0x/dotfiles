@@ -39,6 +39,8 @@ in {
 
     # LSP servers (tools/lsp +eglot module)
     rust-analyzer # lang/rust +lsp
+    zls # lang/zig +lsp (Zig language server, same version as zig)
+    zig # lang/zig: compiler, zig fmt, zig build (flycheck, formatting)
     typescript-language-server # lang/javascript +lsp
     bash-language-server # lang/sh +lsp
     copilot-language-server
