@@ -1334,6 +1334,42 @@ and a temp exec-path where bin/tar links to store/tar."
   ;; Starred text keeps its subtrees together.
   (should (equal (+org-ai-capture--entries "** A\nbody\n*** sub\n** B")
                  '("** A\nbody\n*** sub" "** B"))))
+
+(require 'transient)
+(load (expand-file-name "+nix" test-lisp-dir) nil t)
+
+(ert-deftest nix/develop-env-from-print-dev-env ()
+  (let* ((process-environment (cons "PATH=/usr/bin" process-environment))
+         (pairs (+nix-develop--pairs
+                 "{\"variables\": {
+                    \"PATH\": {\"type\": \"exported\", \"value\": \"/nix/store/x-zig/bin\"},
+                    \"CC\": {\"type\": \"exported\", \"value\": \"gcc\"},
+                    \"HOME\": {\"type\": \"exported\", \"value\": \"/homeless-shelter\"},
+                    \"TMPDIR\": {\"type\": \"exported\", \"value\": \"/build\"},
+                    \"buildInputs\": {\"type\": \"var\", \"value\": \"a b\"},
+                    \"phases\": {\"type\": \"array\", \"value\": [\"x\"]}}}")))
+    ;; Exported only; the sandbox's HOME/TMPDIR left out; its PATH in front.
+    (should (equal (sort (mapcar #'car pairs) #'string<) '("CC" "PATH")))
+    (should (equal (cdr (assoc "PATH" pairs)) "/nix/store/x-zig/bin:/usr/bin")))
+  ;; A buffer without .envrc in a project whose dev shell is loaded gets it;
+  ;; others go to envrc as before.
+  (let* ((root (file-name-as-directory (make-temp-file "flake" t)))
+         (+nix-develop--envs (make-hash-table :test #'equal))
+         applied original)
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "flake.nix" root) (insert "{}"))
+          (puthash root '(("CC" . "gcc")) +nix-develop--envs)
+          (cl-letf (((symbol-function 'envrc--find-env-dir) #'ignore)
+                    ((symbol-function 'envrc--apply) (lambda (_buf env) (setq applied env))))
+            (let ((default-directory root))
+              (+nix-develop--envrc-a (lambda () (setq original t))))
+            (should (equal applied '(("CC" . "gcc"))))
+            (should-not original)
+            (let ((default-directory temporary-file-directory))
+              (+nix-develop--envrc-a (lambda () (setq original t))))
+            (should original)))
+      (delete-directory root t))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))

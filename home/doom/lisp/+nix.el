@@ -111,11 +111,112 @@
 
 ;;;; Keybindings ─────────────────────────────────────────────────────────────
 
+;;;; nix develop, in Emacs ───────────────────────────────────────────────────
+
+;; `nix develop' was the second most run command here (482 times); 32 of 36
+;; flakes under ~/dev have a dev shell but no .envrc, so envrc left Emacs
+;; without their tools (compilers, LSP servers).  SPC N d loads the project's
+;; dev shell into Emacs, no .envrc needed: `nix print-dev-env --json', run
+;; in the background, applied through envrc's own `envrc--apply' to every
+;; buffer of the project, and to its buffers opened later (eshell, compile,
+;; eglot all see it).  C-u SPC N d drops it again.
+
+(declare-function envrc--apply "ext:envrc" (buf result))
+(declare-function envrc--get-current-env-or-run-direnv "ext:envrc" (&optional force))
+(declare-function envrc--find-env-dir "ext:envrc" ())
+(defvar envrc-mode)
+
+(defvar +nix-develop--envs (make-hash-table :test #'equal)
+  "Project root -> its dev shell's environment, as envrc pairs.")
+
+(defconst +nix-develop-ignored-variables
+  '("HOME" "PWD" "OLDPWD" "SHELL" "SHLVL" "TERM" "TMP" "TMPDIR" "TEMP" "TEMPDIR"
+    "NIX_BUILD_TOP" "NIX_BUILD_CORES" "NIX_LOG_FD" "NIX_STORE" "out" "outputs"
+    "builder" "system" "name" "shellHook" "stdenv" "dontAddDisableDepTrack")
+  "Dev shell variables that belong to the build sandbox, not to Emacs.")
+
+(defun +nix-develop--pairs (json)
+  "Exported variables of `nix print-dev-env --json' output JSON, as
+\(NAME . VALUE); PATH goes in front of the current one."
+  (let (pairs)
+    (maphash
+     (lambda (name var)
+       (when (and (equal (gethash "type" var) "exported")
+                  (stringp (gethash "value" var))
+                  (not (member name +nix-develop-ignored-variables)))
+         (push (cons name
+                     (if (equal name "PATH")
+                         (concat (gethash "value" var) ":" (getenv "PATH"))
+                       (gethash "value" var)))
+               pairs)))
+     (gethash "variables" (json-parse-string json)))
+    pairs))
+
+(defun +nix-develop--root (&optional dir)
+  (when-let* ((root (locate-dominating-file (or dir default-directory) "flake.nix")))
+    (expand-file-name root)))
+
+(defun +nix-develop--for (dir)
+  "The loaded dev shell environment covering DIR, or nil."
+  (when-let* ((root (+nix-develop--root dir)))
+    (gethash root +nix-develop--envs)))
+
+(defun +nix-develop--envrc-a (fn &rest args)
+  "Around envrc's lookup: no .envrc, but a dev shell loaded for the project
+\(`+nix/develop'): apply that."
+  (let ((env (and (not (envrc--find-env-dir)) (+nix-develop--for default-directory))))
+    (if env
+        (envrc--apply (current-buffer) env)
+      (apply fn args))))
+
+(defun +nix-develop--refresh (root)
+  "Re-apply the environment in ROOT's envrc buffers."
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (and (bound-and-true-p envrc-mode)
+                 (string-prefix-p root (expand-file-name default-directory)))
+        (envrc--get-current-env-or-run-direnv)))))
+
+;;;###autoload
+(defun +nix/develop (&optional drop)
+  "Load this project's flake dev shell into Emacs (`nix develop', no
+.envrc needed).  With prefix arg DROP, unload it."
+  (interactive "P")
+  (let ((root (or (+nix-develop--root) (user-error "No flake.nix above %s" default-directory))))
+    (require 'envrc)
+    (advice-add 'envrc--get-current-env-or-run-direnv :around #'+nix-develop--envrc-a)
+    (if drop
+        (progn (remhash root +nix-develop--envs)
+               (+nix-develop--refresh root)
+               (message "Dev shell of %s unloaded" (abbreviate-file-name root)))
+      (message "Loading the dev shell of %s…" (abbreviate-file-name root))
+      (let ((buf (generate-new-buffer " *nix print-dev-env*"))
+            (default-directory root))
+        (make-process
+         :name "nix-print-dev-env" :buffer buf :noquery t
+         :command '("nix" "print-dev-env" "--json")
+         :stderr (get-buffer-create "*nix develop*")
+         :sentinel
+         (lambda (proc _event)
+           (when (memq (process-status proc) '(exit signal))
+             (unwind-protect
+                 (if (zerop (process-exit-status proc))
+                     (let ((pairs (+nix-develop--pairs
+                                   (with-current-buffer buf (buffer-string)))))
+                       (puthash root pairs +nix-develop--envs)
+                       (+nix-develop--refresh root)
+                       (message "Dev shell of %s loaded: %d variables, its tools on PATH"
+                                (abbreviate-file-name root) (length pairs)))
+                   (message "nix print-dev-env failed in %s; see *nix develop*"
+                            (abbreviate-file-name root)))
+               (kill-buffer buf)))))))))
+
 (map! :leader
       (:prefix ("N" . "nix")
        :desc "NixOS menu"     "N" #'+nix/transient
        :desc "System info"    "i" #'+nix/system-info
        :desc "Nix REPL"       "r" #'+nix/repl
+       :desc "Dev shell into Emacs" "d" #'+nix/develop
        :desc "Flake update"   "u" #'+nix/flake-update
        :desc "Doom sync"      "s" #'+nix/doom-sync))
 
