@@ -160,3 +160,4 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE [#C] richer usage analytics: time per mode, cancelled minibuffers and prefixes (M-x +usage/time)
 ** DONE [#C] context-sensitive M-x: ranked by this mode + last command, weighted by M-x share (+usage.el)
 ** DONE [#C] context-sensitive Org transient: Casual org menu, SPC m m (23822a9)
+** DONE [#C] Org Roam manual: companion Info for this config (SPC n r ?), upstream SPC n r M
