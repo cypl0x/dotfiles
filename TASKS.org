@@ -104,6 +104,23 @@ there are days of data (now ~1 h, partly lab noise).
 
 * Done
 * Still waiting on the user (older items)
-- Rotate the cachix token; 34 profile-only packages; first-frame startup;
-  delete persist-buffers.pruned-20261030/; inari GC keep-roots after
-  2026-11-06; swaync/plugdev check after next login.
+- Decided 2026-11-04: keep persist-buffers.pruned-20261030/; leave the 34
+  profile-only packages; cachix token stays (user accepts the risk).
+- inari GC keep-roots after 2026-11-06; swaync/plugdev check after next login.
+* ACTIVE Profile first-frame startup (user: yes, 2026-11-04)              :perf:
+Measure the first frame after daemon start in the lab only; defer slow parts.
+
+* User list 2026-11-04 ~09:50 (verbatim intent; see JOURNAL for results)
+** TODO C-SPC is not working                                           :bug:
+** TODO Completion in M-ß prompt doesn't work                          :bug:
+** TODO Completion in insert state in org-mode doesn't work            :bug:
+** TODO M-ß popup doesn't show up (or re-popup when in background)     :bug:
+** TODO M-ß: fresh conversation by default (follow-up context costs too much); @follow-up keyword
+** TODO M-ß keywords: @echo (answer in echo area), @follow-up, more
+** TODO Line cursor (hl-line) in minibuffer: M-ß, M-x, etc.
+** TODO org-modern: bullets for every level, coloured like the heading (plain Org does that)
+** TODO Use free keys on German ISO QWERTZ (umlauts, ß); C-umlauts currently zoom
+** TODO Format prose (split paragraphs etc.), with or without AI
+** TODO +usage-mode data: insights → workflow improvements
+** TODO Big: native AI harness, all protocols (OpenAI/Anthropic HTTP, MCP, ACP, A2A client+server)
+** TODO Inspiration: hlissner dotfiles, tecosaur config (somewhere in ~/dev), awesome-emacs
