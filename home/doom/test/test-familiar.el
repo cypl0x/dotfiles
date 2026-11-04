@@ -399,4 +399,18 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
     (should (plist-get (cdr spec) :read-only))))
 
 (provide 'test-familiar)
+
+(ert-deftest familiar/name-suggestion-parses-name-and-path ()
+  (test-familiar--with "`nix-flake-notes.org`\n~/dotfiles/notes/nix-flake-notes.org\n"
+    (with-temp-buffer
+      (org-mode)
+      (insert "* Flake inputs\nnixpkgs follows ...")
+      (let (got)
+        (familiar--name-suggestion (lambda (s) (setq got s)))
+        (should (equal got '("nix-flake-notes.org" . "~/dotfiles/notes/nix-flake-notes.org")))
+        ;; Fast tier, and the contents went along.
+        (should (eq (nth 1 (car requests)) 'claude-haiku-5-5))
+        (should (string-match-p "Flake inputs" (nth 0 (car requests))))
+        (should (eq (nth 2 (car (last (familiar--ledger)))) 'name))))))
+
 ;;; test-familiar.el ends here

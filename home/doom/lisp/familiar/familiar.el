@@ -63,7 +63,7 @@
   :type '(alist :key-type symbol :value-type symbol))
 
 (defcustom familiar-task-tiers
-  '((commit . fast) (explain . fast) (diagnostic . fast) (fix . smart) (review . smart))
+  '((commit . fast) (explain . fast) (diagnostic . fast) (name . fast) (fix . smart) (review . smart))
   "Default tier for each task."
   :type '(alist :key-type symbol :value-type symbol))
 
@@ -620,6 +620,67 @@ does the work."
     (funcall (plist-get (cdr target) :send) text)
     (message "familiar: handed to %s" (car target))
     (car target)))
+
+;;;; Naming buffers
+
+(defconst familiar--name-system
+  "You name Emacs buffers after their contents. Reply with exactly two \
+lines: 1. a short buffer name: lowercase words joined by hyphens, with the \
+file extension that fits the major mode (e.g. nix-flake-notes.org); 2. a \
+file path to save it under, inside the given project directory if there is \
+one, else under ~/. No other text.")
+
+(defun familiar--name-suggestion (callback)
+  "Ask for a name and path for this buffer; call CALLBACK with (NAME . PATH)."
+  (let ((text (buffer-substring-no-properties
+               (point-min) (min (point-max) (+ (point-min) 6000)))))
+    (familiar-request
+     (format "Major mode: %s\nCurrent name: %s\nProject directory: %s\n\nContents:\n%s"
+             major-mode (buffer-name)
+             (or (and (fboundp 'project-current) (project-current)
+                      (abbreviate-file-name (project-root (project-current))))
+                 "none")
+             (familiar--fenced text))
+     :task 'name :system familiar--name-system
+     :callback (lambda (response _info)
+                 (when (stringp response)
+                   (let ((lines (split-string (string-trim response) "\n" t "[ \t`]+")))
+                     (when lines
+                       (funcall callback (cons (car lines) (cadr lines))))))))))
+
+;;;###autoload
+(defun familiar-rename-buffer (&optional save)
+  "Rename this buffer; a name suggested from its contents fills in as you wait.
+Type your own and the suggestion stays out of the way.  With prefix arg SAVE,
+then offer to save it under a suggested path."
+  (interactive "P")
+  (let* ((buf (current-buffer))
+         (suggestion nil)
+         (mb nil)
+         (name
+          (minibuffer-with-setup-hook
+              (lambda ()
+                (setq mb (current-buffer))
+                (with-current-buffer buf
+                  (familiar--name-suggestion
+                   (lambda (s)
+                     (setq suggestion s)
+                     ;; Only into an untouched prompt.
+                     (when (and (buffer-live-p mb) (minibufferp mb)
+                                (string-empty-p (with-current-buffer mb
+                                                  (minibuffer-contents-no-properties))))
+                       (with-current-buffer mb
+                         (insert (car s))
+                         (when-let* ((w (get-buffer-window mb t)))
+                           (set-window-point w (point-max)))))))))
+            (read-string (format "Rename %s to (suggestion on its way): " (buffer-name))))))
+    (unless (string-blank-p name)
+      (rename-buffer name t))
+    (when save
+      (write-file (read-file-name "Save as: " nil nil nil
+                                  (or (and suggestion (cdr suggestion)
+                                           (expand-file-name (cdr suggestion)))
+                                      (buffer-name)))))))
 
 ;;;; Commit messages
 
