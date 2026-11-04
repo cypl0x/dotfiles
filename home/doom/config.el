@@ -396,8 +396,16 @@
 (use-package! ghostel-eshell
   :hook (eshell-load . ghostel-eshell-visual-command-mode))
 
-(use-package! ghostel-compile
-  :hook (after-init . ghostel-compile-global-mode))
+;; Compilations run in ghostel.  The mode loads ghostel's native module
+;; (0.5 s at every daemon start), so it turns on at the first compilation
+;; instead, and that compilation is passed on through it.
+(defun +ghostel-compile-first-a (fn &rest args)
+  (advice-remove 'compilation-start #'+ghostel-compile-first-a)
+  (if (require 'ghostel-compile nil t)
+      (progn (ghostel-compile-global-mode 1)
+             (apply #'compilation-start args))
+    (apply fn args)))
+(advice-add 'compilation-start :around #'+ghostel-compile-first-a)
 
 (use-package! evil-ghostel
   :after (ghostel evil)
