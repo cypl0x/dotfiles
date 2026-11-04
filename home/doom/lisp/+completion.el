@@ -35,6 +35,7 @@
   (seq-filter #'file-exists-p
               (mapcan (lambda (dir)
                         (list (expand-file-name "words-en" dir)
+                              (expand-file-name "words-en-gb" dir)
                               (expand-file-name "words-de" dir)))
                       (list (expand-file-name "dict" (or (getenv "XDG_DATA_HOME") "~/.local/share")))))
   "Word lists for `cape-dict' (home/emacs-deps.nix: dict-words).")

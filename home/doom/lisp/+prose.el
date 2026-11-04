@@ -51,7 +51,7 @@ shim pkg-config script returning direct -I/-L/-l flags."
   :init
   (+prose/jinx--setup-nix-env)
   :config
-  (setq jinx-languages "en_US de_DE")
+  (setq jinx-languages "en_US en_GB de_DE")
   (setq +prose/jinx-ready t)
   (custom-set-faces!
     '(jinx-misspelled :underline (:style wave :color "#ff6c6b"))))

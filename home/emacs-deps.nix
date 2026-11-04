@@ -1,18 +1,33 @@
 {pkgs, ...}: let
-  # cape-dict (C-SPC, lisp/+completion.el): plain word lists, en and de, made
-  # from the hunspell dictionaries jinx already uses.  A .dic is a count
-  # line, then word/AFFIX-FLAGS; de_DE is ISO-8859-1 ("h\366ren").  Linked to
-  # ~/.local/share/dict: the per-user profile doesn't link share/dict.
-  dictWords = pkgs.runCommand "dict-words" {} ''
+  # cape-dict (lisp/+completion.el): plain word lists, en_US, en_GB and de,
+  # from the hunspell dictionaries jinx uses, with every inflected form:
+  # unmunch applies each .aff's rules to the .dic stems ("gehst",
+  # "Mädchens", "colour" were missing; de grew from 72k to 355k words).
+  # Converted from the .aff's SET encoding (de_DE is ISO-8859-1); lines
+  # unmunch can't expand (German compound flags: "-M/co|...") are dropped:
+  # words only.  Linked to ~/.local/share/dict: the per-user profile
+  # doesn't link share/dict.
+  dictWords = pkgs.runCommand "dict-words" {nativeBuildInputs = [pkgs.hunspell pkgs.glibc.bin];} ''
     mkdir -p $out
-    words() { tail -n +2 "$1" | cut -d/ -f1 | LC_ALL=C sort -u; }
-    words ${pkgs.hunspellDicts.en_US}/share/hunspell/en_US.dic > $out/words-en
-    words ${pkgs.hunspellDicts.de_DE}/share/hunspell/de_DE.dic \
-      | ${pkgs.glibc.bin}/bin/iconv -f ISO-8859-1 -t UTF-8 > $out/words-de
+    words() {
+      local base=$1 enc
+      enc=$(sed -n 's/^SET[[:space:]]*\([^[:space:]]*\).*/\1/p' "$base.aff" | head -n 1)
+      unmunch "$base.dic" "$base.aff" 2>/dev/null \
+        | iconv -f "''${enc:-UTF-8}" -t UTF-8 -c \
+        | LC_ALL=C.UTF-8 grep -xE "[[:alpha:]][[:alpha:]'-]*[[:alpha:]]" \
+        | LC_ALL=C sort -u
+    }
+    words ${pkgs.hunspellDicts.en_US}/share/hunspell/en_US > $out/words-en
+    words ${pkgs.hunspellDicts.en_GB-ise}/share/hunspell/en_GB > $out/words-en-gb
+    words ${pkgs.hunspellDicts.de_DE}/share/hunspell/de_DE > $out/words-de
+    for f in $out/*; do test -s "$f" || { echo "empty: $f" >&2; exit 1; }; done
   '';
 in {
-  xdg.dataFile."dict/words-en".source = "${dictWords}/words-en";
-  xdg.dataFile."dict/words-de".source = "${dictWords}/words-de";
+  xdg.dataFile = {
+    "dict/words-en".source = "${dictWords}/words-en";
+    "dict/words-en-gb".source = "${dictWords}/words-en-gb";
+    "dict/words-de".source = "${dictWords}/words-de";
+  };
 
   # Binary dependencies for Doom Emacs modules.
   # These are tools that Doom packages shell out to at runtime.

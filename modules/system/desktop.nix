@@ -95,6 +95,7 @@
     libreoffice-qt
     hunspell
     hunspellDicts.en_US
+    hunspellDicts.en_GB-ise # British spelling (jinx: en_GB in +prose.el)
     hunspellDicts.de_DE
 
     # Media and utilities
