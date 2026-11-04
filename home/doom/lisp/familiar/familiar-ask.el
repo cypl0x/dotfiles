@@ -307,6 +307,12 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
   "Make BUF a familiar-ask conversation."
   (with-current-buffer buf
     (unless (derived-mode-p 'org-mode) (org-mode))
+    ;; The model's prose isn't yours to spell- or style-check.
+    (dolist (mode '(jinx-mode flyspell-mode writegood-mode))
+      (when (and (boundp mode) (symbol-value mode)) (funcall mode -1)))
+    ;; The header line is ours (model, prompts, cost); gptel's status
+    ;; ("Waiting…", "Ready") goes to the mode line instead.
+    (setq-local gptel-use-header-line nil)
     ;; First: turning it on restores saved state, which would undo the below.
     (gptel-mode 1)
     (setq-local gptel-model (alist-get familiar-ask-tier familiar-models)
