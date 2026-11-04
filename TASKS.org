@@ -11,13 +11,17 @@ instance, preflight message first), best-in-class defaults.
 Cheap, concrete fixes first; then the central ask command (biggest item),
 which the anticipate / Atuin-like / howdoi items build on.
 
-* TODO SPC A: transient in columns like magit                     :agent:
+* DONE SPC A: transient in columns like magit                     :agent:
 Groups are stacked in one column; nest them as rows of columns.
-* TODO SPC A a: spin up an agent-shell when none exists           :agent:
+* DONE SPC A a: spin up an agent-shell when none exists           :agent:
 Long-lived until closed manually.
-* TODO familiar-handoff outside a project                         :agent:
+* DONE familiar-handoff outside a project                         :agent:
 "claude-code-normalize-project-root: Current directory is not part of a
 project" for "Can you reformat this org buffer?".
+30c5a18. Transient layout checked live (2 rows × 3 columns); SPC A a
+checked live (shell started in background, answered "ok"). Handoff:
+guard + same start helper, not yet run live (would write into the
+user's shell). Real-key check of SPC A still to do when the user is away.
 * TODO Central ask command (C-M-? or better key)                  :agent:big:
 Atuin-AI experience one key away, anywhere (incl. minibuffer, non-file
 buffers). Full context by default (buffer, region, point, modes, open
