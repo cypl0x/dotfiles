@@ -124,6 +124,6 @@ Measure the first frame after daemon start in the lab only; defer slow parts.
 ** TODO +usage-mode data: insights → workflow improvements
 ** TODO Big: native AI harness, all protocols (OpenAI/Anthropic HTTP, MCP, ACP, A2A client+server)
 ** TODO Inspiration: hlissner dotfiles, tecosaur config (somewhere in ~/dev), awesome-emacs
-** TODO From research: monet hook targets stevemolitor/claude-code.el, but yuya373's claude-code is installed → hook never fires
-** TODO From research: flyspell (+everywhere) and jinx both spellcheck text buffers
+** DONE monet hook was dead (yuya373 claude-code); removed, +monet.el covers attach
+** DONE jinx only (en+de, code comments too); :checkers spell dropped (2a15d16), doom sync done
 ** TODO familiar-ask header shows buffer model, not the @fast/@deep preset of the turn
