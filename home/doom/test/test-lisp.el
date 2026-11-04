@@ -1395,6 +1395,40 @@ and a temp exec-path where bin/tar links to store/tar."
                   ((symbol-function 'call-interactively) (lambda (&rest _) (setq dir default-directory))))
           (+zoxide/find))
         (should (equal dir "/home/u/dotfiles/"))))))
+
+(ert-deftest usage/time-per-kind-and-cancellations ()
+  (let* ((+usage-events-file (make-temp-file "usage-events" nil ".eld"))
+         (+usage--time (make-hash-table :test #'equal))
+         (+usage--cancelled (make-hash-table :test #'equal))
+         (+usage--last-time nil) (+usage--last-kind nil)
+         (clock 1000.0))
+    (unwind-protect
+        (cl-letf (((symbol-function 'float-time) (lambda (&rest _) clock)))
+          (with-temp-buffer
+            (org-mode)
+            (let ((this-command 'next-line))
+              (cl-letf (((symbol-function 'this-command-keys-vector) (lambda () [?j])))
+                (+usage--events-h)          ; starts the clock in org-mode
+                (setq clock 1030.0)
+                (+usage--events-h)          ; 30 s in org-mode
+                (setq clock 2000.0)
+                (+usage--events-h))))       ; 970 s: away, not counted
+          (should (equal (gethash "org-mode" +usage--time) 30.0))
+          ;; C-g after SPC f: that prefix abandoned.
+          (let ((this-command 'keyboard-quit))
+            (cl-letf (((symbol-function 'this-command-keys-vector) (lambda () (kbd "SPC f C-g"))))
+              (+usage--events-h)))
+          (should (= (gethash '(prefix . "SPC f") +usage--cancelled) 1))
+          ;; A prompt left with C-g: its command cancelled.
+          (let ((this-command 'abort-minibuffers) (current-minibuffer-command 'find-file))
+            (+usage--minibuffer-exit-h))
+          (should (= (gethash '(minibuffer . "find-file") +usage--cancelled) 1))
+          ;; Saved and merged across saves.
+          (+usage-save-events)
+          (puthash "org-mode" 10.0 +usage--time)
+          (+usage-save-events)
+          (should (equal (alist-get "org-mode" (plist-get (+usage--events-read) :time) nil nil #'equal) 40.0)))
+      (delete-file +usage-events-file))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))

@@ -8,6 +8,7 @@
 ;;   M-x +usage-mode     start/stop counting (off by default)
 ;;   M-x +usage/report   commands by frequency, with keys used and keys bound
 ;;   M-x +usage/suggest  familiar reads the counts and suggests keys and shortcuts
+;;   M-x +usage/time     time per mode, cancelled prompts and key prefixes
 ;;   SPC A .             anticipate: likely next commands here (C-u: ask the model)
 ;;   coach               after 12 j/l/DEL... in a row, the bigger steps bound
 ;;                       here, in the echo area (`+usage-coach' nil: off)
@@ -341,5 +342,133 @@ model anticipate edits, commands and searches from the same evidence."
 
 ;; Opt-in: M-x +usage-mode (or (+usage-mode 1) in config.el) to start counting.
 
+
+;;;; Where the time goes, and what gets cancelled
+;;
+;; From the task list: time spent per kind of buffer, cancelled popups,
+;; minibuffers and key sequences, for an AI (or you) to read later.  Cheap:
+;; a few hash increments per command, saved with the counts.
+;;
+;;   M-x +usage/time    time per mode (popups apart), cancelled prompts and
+;;                      prefixes, since counting began
+;;
+;; Time: the seconds between two commands go to the buffer kind you were in
+;; (its major mode, or "popup"); gaps over `+usage-idle-gap' are you away.
+;; A minibuffer left with C-g / ESC counts as its command cancelled; C-g in
+;; the middle of a key sequence counts as that prefix abandoned.
+
+(defvar +usage-events-file (locate-user-emacs-file "usage-events.eld")
+  "Where time and cancellations persist: (:time ALIST :cancelled ALIST),
+keys KIND (a string) and (WHAT . NAME), what being minibuffer or prefix.")
+
+(defvar +usage-idle-gap 300 "Seconds between commands that count as away.")
+
+(defvar +usage--time (make-hash-table :test #'equal) "Unsaved KIND → seconds.")
+(defvar +usage--cancelled (make-hash-table :test #'equal) "Unsaved (WHAT . NAME) → count.")
+(defvar +usage--last-time nil "When the last command ended.")
+(defvar +usage--last-kind nil "The buffer kind after the last command.")
+
+(defconst +usage--quit-commands
+  '(keyboard-quit abort-minibuffers abort-recursive-edit minibuffer-keyboard-quit
+    keyboard-escape-quit doom/escape evil-force-normal-state)
+  "Commands that cancel.")
+
+(defun +usage--kind ()
+  (if (and (fboundp '+popup-buffer-p) (+popup-buffer-p)) "popup" (symbol-name major-mode)))
+
+(defun +usage--events-h ()
+  "Time since the last command, to where you were; prefixes abandoned."
+  (unless executing-kbd-macro
+    (let ((now (float-time)))
+      (when (and +usage--last-time +usage--last-kind)
+        (let ((gap (- now +usage--last-time)))
+          (when (< 0 gap +usage-idle-gap)
+            (cl-incf (gethash +usage--last-kind +usage--time 0) gap))))
+      (let ((keys (this-command-keys-vector)))
+        (when (and (memq this-command +usage--quit-commands)
+                   (> (length keys) 1)
+                   (not (minibufferp)))
+          (cl-incf (gethash (cons 'prefix (key-description (substring keys 0 -1)))
+                            +usage--cancelled 0))))
+      (setq +usage--last-time now
+            +usage--last-kind (if (minibufferp) "minibuffer" (+usage--kind))))))
+
+(defun +usage--minibuffer-exit-h ()
+  "A minibuffer left by quitting: its command cancelled."
+  (when (and (memq this-command +usage--quit-commands)
+             (symbolp current-minibuffer-command) current-minibuffer-command)
+    (cl-incf (gethash (cons 'minibuffer (symbol-name current-minibuffer-command))
+                      +usage--cancelled 0))))
+
+(defun +usage--events-read ()
+  (and (file-exists-p +usage-events-file)
+       (ignore-errors (with-temp-buffer (insert-file-contents +usage-events-file)
+                                        (read (current-buffer))))))
+
+(defun +usage--events-merged ()
+  "Saved events plus unsaved: (:time ALIST :cancelled ALIST)."
+  (let* ((saved (+usage--events-read))
+         (merge (lambda (alist table)
+                  (let ((alist (copy-alist alist)))
+                    (maphash (lambda (k v)
+                               (let ((cell (assoc k alist)))
+                                 (if cell (setcdr cell (+ (cdr cell) v))
+                                   (push (cons k v) alist))))
+                             table)
+                    alist))))
+    (list :time (funcall merge (plist-get saved :time) +usage--time)
+          :cancelled (funcall merge (plist-get saved :cancelled) +usage--cancelled))))
+
+(defun +usage-save-events ()
+  "Merge unsaved time and cancellations into `+usage-events-file'."
+  (when (or (> (hash-table-count +usage--time) 0) (> (hash-table-count +usage--cancelled) 0))
+    (let ((data (+usage--events-merged)) (print-length nil) (print-level nil))
+      (make-directory (file-name-directory +usage-events-file) t)
+      (with-temp-file +usage-events-file (prin1 data (current-buffer)))
+      (clrhash +usage--time)
+      (clrhash +usage--cancelled))))
+
+(defvar +usage--events-timer nil)
+
+(add-hook '+usage-mode-hook
+          (defun +usage--events-setup-h ()
+            (if +usage-mode
+                (progn
+                  (add-hook 'post-command-hook #'+usage--events-h)
+                  (add-hook 'minibuffer-exit-hook #'+usage--minibuffer-exit-h)
+                  (add-hook 'kill-emacs-hook #'+usage-save-events)
+                  (unless +usage--events-timer
+                    (setq +usage--events-timer
+                          (run-with-idle-timer +usage-save-interval t #'+usage-save-events))))
+              (remove-hook 'post-command-hook #'+usage--events-h)
+              (remove-hook 'minibuffer-exit-hook #'+usage--minibuffer-exit-h)
+              (when +usage--events-timer
+                (cancel-timer +usage--events-timer)
+                (setq +usage--events-timer nil))
+              (+usage-save-events))))
+
+(defun +usage/time ()
+  "Where the time went (per buffer kind) and what was cancelled."
+  (interactive)
+  (let* ((data (+usage--events-merged))
+         (time (sort (plist-get data :time) (lambda (a b) (> (cdr a) (cdr b)))))
+         (total (max 1 (apply #'+ (mapcar #'cdr time))))
+         (cancelled (sort (plist-get data :cancelled) (lambda (a b) (> (cdr a) (cdr b))))))
+    (with-current-buffer (get-buffer-create "*usage time*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (format "* Time, %.1f h active\n" (/ total 3600.0)))
+        (dolist (e (seq-take time 25))
+          (insert (format "%7.1f h %5.1f %%  %s\n" (/ (cdr e) 3600.0) (/ (* 100.0 (cdr e)) total) (car e))))
+        (insert "\n* Cancelled minibuffers (C-g / ESC)\n")
+        (dolist (e (seq-take (seq-filter (lambda (e) (eq (caar e) 'minibuffer)) cancelled) 20))
+          (insert (format "%6d  %s\n" (cdr e) (cdar e))))
+        (insert "\n* Abandoned key prefixes\n")
+        (dolist (e (seq-take (seq-filter (lambda (e) (eq (caar e) 'prefix)) cancelled) 20))
+          (insert (format "%6d  %s\n" (cdr e) (cdar e)))))
+      (goto-char (point-min))
+      (org-mode)
+      (view-mode)
+      (pop-to-buffer (current-buffer)))))
 (provide '+usage)
 ;;; +usage.el ends here
