@@ -17,6 +17,11 @@
 ;;
 ;; The panels follow the buffer you're in and update as you pause.
 ;;
+;; Isabelle's Query panel (find theorems and constants by name across the
+;; session) is SPC c j here: Doom's consult-eglot-symbols, the server's
+;; workspace/symbol with live preview (checked with rust-analyzer: "dist"
+;; finds geometry::distance across the crate).
+;;
 ;;; Code:
 
 (require 'cl-lib)
