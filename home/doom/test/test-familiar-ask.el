@@ -136,15 +136,33 @@
 
 
 
-(ert-deftest familiar-ask/after-response-leaves-one-prompt-heading ()
-  ;; gptel runs it after the tool turn and after the answer.
+(ert-deftest familiar-ask/after-response-only-saves ()
+  ;; gptel leaves the next "** " itself; adding one doubled the headings.
   (skip-unless test-familiar-available)
   (with-temp-buffer
-    (insert "** q\nanswer\n\n")
+    (insert "** q\nanswer\n\n** ")
     (cl-letf (((symbol-function 'save-buffer) #'ignore))
       (familiar-ask--after-response nil nil)
       (familiar-ask--after-response nil nil))
     (should (equal (buffer-string) "** q\nanswer\n\n** "))))
+
+(ert-deftest familiar-ask/asks-under-the-empty-heading-gptel-left ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-ask--buffer-name "*familiar-ask-test*"))
+    (cl-letf (((symbol-function 'gptel-send) #'ignore)
+              ((symbol-function 'display-buffer) #'ignore))
+      (unwind-protect
+          (dolist (tail '("** " "**\n\n"))   ; fresh, and trimmed in older files
+            (with-current-buffer (get-buffer-create familiar-ask--buffer-name)
+              (erase-buffer)
+              (org-mode)
+              (insert "** q\nanswer\n\n" tail))
+            (test-familiar-ask--in "x POINT\n"
+              (setq familiar-ask--origin (familiar-ask--capture))
+              (with-current-buffer (familiar-ask "next")
+                (should (= 2 (how-many "^\\*\\*" (point-min) (point-max))))
+                (should (string-match-p "answer\n\n\\*\\* next  \\[" (buffer-string))))))
+        (kill-buffer familiar-ask--buffer-name)))))
 
 
 (ert-deftest familiar-ask/transcript-drops-context-and-title ()

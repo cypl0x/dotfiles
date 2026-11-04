@@ -40,7 +40,10 @@ describe/buffer_text/list_buffers/apropos, set_minibuffer); RET follow-ups,
 S-RET newline; C-u fresh; @fast/@smart/@deep + capf; history; C-c ' edit
 buffer (C-c C-c / C-c C-k keep); familiar-ask-sessions; cache; ledger.
 Live: Haiku answered via eval_elisp (approved by me), cache hit 2000 tok.
-** TODO Real-key test: C-M-? in a buffer, in M-x ("exclude X include Y" → set_minibuffer)
+** TODO Real-key test in M-x ("exclude X include Y" → set_minibuffer)
+M-ß in a buffer + follow-up + SPC A N: done with execute-kbd-macro in the
+lab frame (919f353). M-x case still open: a macro ending inside the
+minibuffer would wait for real input.
 ** TODO Suggestions applicable with one key ($ / ! / RET) from the answer
 ** DONE Picker over previous prompts: C-r in the prompt (d185743)
 ** DONE Export: C-c C-e copies as Markdown or Org (d185743, a25af0c)
@@ -59,7 +62,10 @@ review, SPC l v file. Live card made + found by awk index. Review UI not
 yet driven with real keys. config.el load! needs nrs.
 * TODO README.org learning path for all custom workflows (+ Info) :docs:
 * TODO Discoverability of own additions                           :docs:
-* TODO org-modern: richer, colours matching org                   :org:
+* DONE org-modern: richer, colours matching org                   :org:
+ccf1f4e, 706741b: labels from org-todo-keyword-faces (inverse video,
+explicit colours: uniform 18 px, survive hl-line), markup hidden + pretty
+entities. Verified in exported frames before/after.
 Markdown currently looks richer than org.
 * DONE org-fmt / org-format command                               :org:
 SPC c f (+format/dwim, 48b6611): Org tidy; C-u canonical form via diff;

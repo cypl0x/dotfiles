@@ -39,6 +39,28 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 07:10] — Looking at it the way you do
+- You asked whether I still check things the way you see them. I hadn't, for
+  a while. Now there's a lab frame that Hyprland puts on a special workspace
+  (your focus never moves). I type into it with real key sequences
+  (=execute-kbd-macro=) and look at it with =x-export-frames=, the same
+  pixels you'd see.
+- Looking caught bugs no test had:
+  - TODO / WAIT / #A labels at 14, 18 and 22 px side by side (doubled label
+    height). All 18 px now.
+  - On the cursor line, the DONE label lost its box and #C vanished
+    (hl-line's background). Inverse video fixes it.
+  - In =M-ß= answers, gptel's "Ready" replaced my header line, the model's
+    prose had spelling and passive-voice squiggles, every answer was
+    followed by a stray =**= and an empty heading, and short answers began
+    with an unpaired =/=.
+  All fixed and re-checked in pictures.
+- Org now hides =*markup*= (org-appear shows it at point, which it couldn't
+  before) and renders \alpha as α. Keyword labels use Org's own colours.
+- =C-u M-ß= never worked in normal state (=C-u= scrolls there). Use =SPC A N=
+  or =SPC u M-ß= for a fresh conversation.
+- I cleaned up after myself: a stray *leo* frame on workspace 3, and my
+  preflight and ask windows in your frame.
 ** [2026-11-04 Mi 06:57] — SPC c f for Org, flashcards from leo, screenshots everywhere
 - *Ask key moved to =M-ß=* (your call): =C-M-?= turned out to be dired's
   unmark-all. =M-ß= is unbound in every keymap and evil state; I checked them all.
