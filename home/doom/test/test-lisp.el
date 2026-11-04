@@ -1227,6 +1227,40 @@ and a temp exec-path where bin/tar links to store/tar."
     (with-temp-buffer
       (+unicode/insert ?ω 3)
       (should (equal (buffer-string) "ωωω")))))
+
+(load (expand-file-name "+org-slash" test-lisp-dir) nil t)
+
+(ert-deftest org-slash/commands-complete-and-become-org ()
+  (cl-flet ((run (text cand)
+              (with-temp-buffer
+                (org-mode)
+                (insert text)
+                (pcase-let ((`(,beg ,end ,table . ,props) (+org-slash-capf)))
+                  (should (member cand (all-completions (buffer-substring beg end) table)))
+                  (delete-region beg end)
+                  (insert cand)
+                  (funcall (plist-get props :exit-function) cand 'finished))
+                (buffer-string))))
+    (should (equal (run "* A\n/ta" "/table") "* A\n|   |   |   |\n|---+---+---|\n|   |   |   |\n"))
+    ;; COLUMNSxROWS, as org-table-create asks.
+    (should (equal (run "/table2x1" "/table2x1") "|   |   |\n"))
+    (should (equal (run "notes /che" "/check") "notes - [ ] "))
+    (should (string-match-p "\\`#\\+begin_quote\n" (run "/qu" "/quote")))
+    (should (equal (run "* A\n** B\n/to" "/todo") "* A\n** B\n*** TODO ")))
+  ;; Not inside words, paths, code or src blocks.
+  (with-temp-buffer
+    (org-mode)
+    (insert "and/or")
+    (should-not (+org-slash-capf))
+    (erase-buffer)
+    (insert "~/ta")
+    (should-not (+org-slash-capf))
+    (erase-buffer)
+    (insert "#+begin_src sh\n/ta\n#+end_src")
+    (goto-char (point-min))
+    (forward-line 1)
+    (end-of-line)
+    (should-not (+org-slash-capf))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
