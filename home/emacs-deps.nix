@@ -44,8 +44,7 @@ in {
     typescript-language-server # lang/javascript +lsp
     bash-language-server # lang/sh +lsp
     copilot-language-server
-    ltex-ls # LanguageTool language server
-    ltex-ls-plus # LanguageTool language server (plus)
+    ltex-ls-plus # LanguageTool language server for eglot-ltex (config.el; not ltex-ls 16: its stdout warnings broke eglot)
     marksman # markdown language server
     # nil (Nix LSP) is installed system-wide in hosts/thinkpad
     # dart LSP is bundled with the dart SDK in hosts/thinkpad

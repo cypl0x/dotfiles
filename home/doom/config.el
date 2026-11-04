@@ -419,11 +419,13 @@
 ;; Language Server (LSP)
 ;; ---------------------------------------------------------------------------
 
-;; LanguageTool grammar/style checker over eglot. ltex-ls is provided on PATH
-;; by home/emacs-deps.nix (pkgs.ltex-ls). eglot-ltex wants the *prefix*
-;; directory (it runs "<path>/bin/ltex-ls"), so derive it from the on-PATH
-;; binary instead of hard-coding a /nix/store path — reproducible across
-;; ltex-ls version bumps. stdio, not tcp: the binary is a plain child process.
+;; LanguageTool grammar/style checker over eglot: ltex-ls-plus (the maintained
+;; fork, 18.x), on PATH from home/emacs-deps.nix.  Not ltex-ls 16: it prints
+;; LanguageTool's "WARN: no common words file ..." lines on stdout before
+;; its first reply, jsonrpc looks for a header only within 100 characters
+;; (jsonrpc--process-filter), so eglot never saw the reply and killed the
+;; server after 30 s, in every project: it never worked.  eglot-ltex takes a
+;; file path as well as a prefix.  stdio: a plain child process.
 (use-package! eglot-ltex
   ;; A lambda on :hook can't be autoloaded, so without :defer use-package
   ;; requires eglot-ltex (and with it eglot and eldoc) at startup.
@@ -436,10 +438,7 @@
                          (eglot-ensure))))
   :init
   (setq eglot-ltex-communication-channel 'stdio
-        eglot-ltex-server-path
-        (when-let ((bin (executable-find "ltex-ls")))
-          ;; …/ltex-ls-16.0.0/bin/ltex-ls -> …/ltex-ls-16.0.0/
-          (file-name-directory (directory-file-name (file-name-directory bin)))))
+        eglot-ltex-server-path (or (executable-find "ltex-ls-plus") ""))
   :config
   ;; Mother tongue helps false-friend detection for a German native writing
   ;; English; ltex auto-detects the checked language per document otherwise.
