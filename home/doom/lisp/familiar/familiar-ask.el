@@ -7,7 +7,8 @@
 ;; undoable, nothing is written to disk unless you ask for it).
 ;;
 ;;   M-ß              ask (in the minibuffer too: "exclude tests" in M-x)
-;;   C-u M-ß          ask in a fresh conversation
+;;   SPC u M-ß        ask in a fresh conversation (C-u in insert state; in normal
+;;                    state C-u scrolls), or familiar-ask-new (SPC A N)
 ;;   C-c '  (prompt)  edit the prompt in a buffer; C-c C-c sends, C-c C-k keeps it
 ;;   @fast/@smart/@deep in the prompt picks the model (gptel presets)
 ;;   C-r  (prompt)    pick an earlier prompt
@@ -66,8 +67,9 @@ unless asked, then say in one line what you did.  When the context shows an \
 active minibuffer and the user wants its input changed, use \
 set_minibuffer.
 
-Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
-#+begin_src blocks with the language.  Lead with the answer; be brief."
+Reply in Org markup, never Markdown (this conversation is an Org buffer): \
+~code~ inline, /italic/, *bold*, #+begin_src blocks with the language, \
+- for lists; no ``` fences, no **bold**, no # headings.  Lead with the answer; be brief."
   "System prompt for `familiar-ask'."
   :type 'string :group 'familiar)
 
@@ -324,6 +326,9 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
                 gptel-include-tool-results 'auto
                 ;; Shown, it's mostly empty blocks; the answer is what matters.
                 gptel-include-reasoning nil
+                ;; The model writes Org (see `familiar-ask-system'); gptel's
+                ;; Markdown converter dropped the closing / of short answers.
+                gptel-org-convert-response nil
                 gptel-prompt-prefix-alist '((org-mode . "** "))
                 gptel-response-prefix-alist '((org-mode . "")))
     (familiar-ask-mode 1)
@@ -347,14 +352,8 @@ Reply in Org markup (this conversation is an Org buffer): ~code~ inline, \
     (familiar-ask--setup buf)))
 
 (defun familiar-ask--after-response (_beg _end)
-  "Save the conversation and leave a fresh prompt heading."
-  ;; Runs after every turn, tool turns included: one prompt heading only.
-  (save-excursion
-    (goto-char (point-max))
-    (unless (re-search-backward "^\\*\\* *\\=" (line-beginning-position 0) t)
-      (skip-chars-backward " \t\n")
-      (delete-region (point) (point-max))
-      (insert "\n\n** ")))
+  "Save the conversation.
+gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
   (let ((save-silently t) (inhibit-message t)) (save-buffer)))
 
 ;; Spend: every turn of an ask conversation lands in familiar's ledger.
@@ -417,9 +416,12 @@ With prefix arg NEW, start a fresh conversation."
     (setq familiar-ask--origin origin)
     (with-current-buffer buf
       (goto-char (point-max))
-      (unless (looking-back "^\\*\\* " (line-beginning-position))
-        (unless (bolp) (insert "\n"))
-        (insert "\n** "))
+      ;; gptel left an empty "** " (a bare "**" in older files): ask there.
+      (skip-chars-backward " \t\n")
+      (if (looking-back "^\\*\\*" (line-beginning-position))
+          (progn (delete-region (point) (point-max)) (insert " "))
+        (delete-region (point) (point-max))
+        (insert "\n\n** "))
       (let ((lines (split-string (string-trim prompt) "\n")))
         ;; Heading: the first line, stamped; the rest of the prompt below it.
         (insert (car lines) (format-time-string "  [%F %a %R]") "\n"
@@ -447,6 +449,14 @@ With prefix arg NEW, start a fresh conversation."
       (delete-minibuffer-contents)
       (insert pick))))
 
+
+;;;###autoload
+(defun familiar-ask-new (prompt)
+  "Ask PROMPT in a fresh conversation."
+  (interactive
+   (progn (setq familiar-ask--origin (familiar-ask--capture))
+          (list (familiar-ask--read))))
+  (familiar-ask prompt t))
 ;;;; Editing a prompt in a buffer
 
 (defvar familiar-ask-edit-mode-map

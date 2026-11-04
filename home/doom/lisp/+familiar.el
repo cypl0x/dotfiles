@@ -6,7 +6,7 @@
 ;;
 ;;   SPC A x / d / F / C / $   explain · explain diagnostic · fix · commit msg · spend
 ;;   SPC A E / v               explain the compilation error at point · review diff
-;;   M-ß, SPC A ? / A          ask anything (familiar-ask) · earlier conversations
+;;   M-ß, SPC A ? / N / A      ask anything (familiar-ask) · fresh conversation · earlier ones
 ;;   SPC b R                   rename buffer; a name from its contents fills in (C-u: save too)
 ;;   SPC A H                   hand context at point to agent-shell / claude-code / clipboard
 ;;   M-g, SPC m g              in a commit message buffer: write the message
@@ -28,6 +28,7 @@
 ;; pick, but dired binds it in normal state.)
 (autoload 'familiar-ask "familiar-ask" nil t)
 (autoload 'familiar-ask-sessions "familiar-ask" nil t)
+(autoload 'familiar-ask-new "familiar-ask" nil t)
 (map! "M-ß" #'familiar-ask
       ;; rename-buffer, plus a name suggested from the contents.
       :leader :desc "Rename buffer (suggests)" "b R" #'familiar-rename-buffer)
