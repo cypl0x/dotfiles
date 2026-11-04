@@ -1174,6 +1174,14 @@ Existing custom bindings using German keys:
 | =C-ö= | =doom/decrease-font-size= | Font resize on DE layout             |
 | =C-ä= | =doom/increase-font-size= | =C-M-== is unreachable on QWERTZ     |
 | =C-ü= | =doom/reset-font-size=    | =ü= sits next to =ö/ä=               |
+| =ö= =ä= (evil) | =[= =]= prefixes  | =äb= next buffer, =öe= previous error, =äh= next heading |
+| =Ö= =Ä= (evil) | paragraph back/forward | =[= =]= and ={= =}= are AltGr chords |
+| =ü= =Ü= (evil) | go to definition / jump back | Vim's =C-]= / =C-o=      |
+| =M-ß=          | =familiar-ask=   | ask anything                             |
+
+The evil umlaut keys share the =[= =]= keymaps (not a key translation), so
+=f ö=, =t ä=, =r ü= still find and replace umlauts.  Free for later: =ß=
+in normal state, =C-ß=, =M-ü=, and the shifted umlauts with modifiers.
 
 All module keybindings use ASCII characters under =SPC= leader to avoid
 layout conflicts.

@@ -111,6 +111,23 @@
       "C-ä" #'doom/increase-font-size
       "C-ü" #'doom/reset-font-size)
 
+;; Evil, where the umlauts were free: ö/ä are [/] (Doom's paired motions:
+;; ]b buffer, ]e error, ]d hunk, ]h heading; AltGr+8/9 on QWERTZ), Ö/Ä are
+;; {/} (paragraphs, AltGr+7/0), ü/Ü go to a definition and back (Vim's
+;; C-]/C-o, the usual German-layout mapping).  ö/ä get the very [ and ]
+;; keymaps, so whatever Doom or a package adds there later works too.  Not a
+;; key translation: f ö, t ä and r ü still find and replace umlauts.
+(defun +qwertz-umlaut-motions-h ()
+  (dolist (map (list evil-normal-state-map evil-motion-state-map))
+    (pcase-dolist (`(,key . ,like) '(("ö" . "[") ("ä" . "]")))
+      (when (keymapp (lookup-key map like))
+        (define-key map key (lookup-key map like)))))
+  (map! :m "Ö" #'evil-backward-paragraph
+        :m "Ä" #'evil-forward-paragraph
+        :n "ü" #'+lookup/definition
+        :m "Ü" #'evil-jump-backward))
+(add-hook 'doom-after-init-hook #'+qwertz-umlaut-motions-h)
+
 ;; ---------------------------------------------------------------------------
 ;; Packages
 ;; ---------------------------------------------------------------------------
