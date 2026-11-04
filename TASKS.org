@@ -89,7 +89,9 @@ shows "[ binary data ]" for images (cliphist): open.
 98f8256: cliphist-rofi-img script mode, 96 px icons. Not opened on screen yet.
 * TODO Ask user: retire +prompt.el (SPC i, SPC I, SPC ') in favour of familiar-ask?
 It shadows Doom's SPC i insert prefix and overlaps M-ß.
-* TODO Record usage for later AI workflow suggestions             :usage:
+* DONE Record usage for later AI workflow suggestions             :usage:
++usage-mode on by default; M-x +usage/suggest → familiar-ask. Run it once
+there are days of data (now ~1 h, partly lab noise).
 (+usage.el exists; check what it records.)
 
 * Done
