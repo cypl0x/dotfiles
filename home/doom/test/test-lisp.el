@@ -1083,3 +1083,18 @@ and a temp exec-path where bin/tar links to store/tar."
         (setq +minibuffer--last '(:command find-file :input "~/x" :vertico t))
         (+minibuffer/resume))
       (should repeated))))
+
+(ert-deftest perf/m-x-for-buffer-finds-bound-and-remapped-commands ()
+  (let* ((map (make-sparse-keymap))
+         (prefix (make-sparse-keymap)))
+    (define-key map "a" #'forward-word)
+    (define-key prefix "b" #'backward-word)
+    (define-key map "c" prefix)
+    (define-key map [remap kill-line] #'kill-whole-line)
+    (define-key map "m" '(menu-item "x" upcase-word))
+    (with-temp-buffer
+      (use-local-map map)
+      (let ((pred (+perf-command-for-buffer-a)) (buf (current-buffer)))
+        (dolist (cmd '(forward-word backward-word kill-whole-line kill-line upcase-word))
+          (should (funcall pred cmd buf)))
+        (should-not (funcall pred 'downcase-region buf))))))

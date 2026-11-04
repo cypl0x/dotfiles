@@ -389,5 +389,49 @@ to just after, still before the frame was drawn."
                    (puthash action (where-is-internal action nil t) +perf--where-is-cache))))))))
 (add-hook 'doom-after-init-hook #'+perf-dashboard-warm-h)
 
+
+;;;; M-S-x (execute-extended-command-for-buffer) without the freeze
+
+;; M-X offers the commands relevant to the buffer: marked for its modes, or
+;; bound in its keymaps.  Emacs asks `where-is-internal' once per command
+;; (11,099 of them): 7.7–9.9 s for one pass in an Org buffer, and vertico
+;; filters again as you type, so the UI froze and the fans spun up.  Here
+;; the keymaps are walked once per M-X into a table: 0.09 s, and the same
+;; commands plus those bound through remaps (`[remap fill-paragraph]').
+
+(defun +perf--bound-commands (map table seen &optional remap)
+  "Put every command bound in keymap MAP (prefix maps too) into TABLE.
+Under a remap, the remapped commands count as well."
+  (when (and map (not (gethash map seen)))
+    (puthash map t seen)
+    (map-keymap
+     (lambda (event def)
+       (when (and remap (symbolp event) (commandp event)) (puthash event t table))
+       (let ((def (pcase def
+                    (`(menu-item ,_ ,cmd . ,_) cmd)
+                    ((and `(,(pred stringp) . ,cmd) (guard (not (keymapp def)))) cmd)
+                    (_ def))))
+         (cond ((keymapp def)
+                (+perf--bound-commands (if (symbolp def) (symbol-function def) def)
+                                       table seen (eq event 'remap)))
+               ((and (symbolp def) (commandp def)) (puthash def t table)))))
+     map)))
+
+(defun +perf-command-for-buffer-a ()
+  "Override `command-completion--command-for-this-buffer-function'."
+  (let ((bound (make-hash-table :test #'eq))
+        (seen (make-hash-table :test #'eq)))
+    (dolist (map (nconc (and (current-local-map) (list (current-local-map)))
+                        (mapcar #'cdr (seq-filter (lambda (e) (symbol-value (car e)))
+                                                  minor-mode-map-alist))))
+      (+perf--bound-commands map bound seen))
+    (lambda (symbol buffer)
+      (or (command-completion-using-modes-p symbol buffer)
+          (and (gethash symbol bound)
+               (or (null (get symbol 'completion-predicate))
+                   (funcall (get symbol 'completion-predicate) symbol buffer)))))))
+(advice-add 'command-completion--command-for-this-buffer-function
+            :override #'+perf-command-for-buffer-a)
+
 (provide '+perf)
 ;;; +perf.el ends here
