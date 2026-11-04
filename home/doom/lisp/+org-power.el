@@ -275,5 +275,17 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
        :desc "Org modern look"   "o" #'org-modern-mode
        :desc "Org pretty markup" "O" #'+org-pretty-mode))
 
+;;;; Casual Org — what can be done here, as a menu ───────────────────────────
+
+;; From the task list: a discoverable, context-sensitive Org transient.
+;; Casual's Org menu (kickingvegas/casual, GPL-3.0) is that: its sections
+;; follow where point is (heading, list item, table, block), org-table
+;; included.  SPC m m in Org.
+(use-package! casual-org
+  :defer t
+  :init
+  (map! :after org :map org-mode-map :localleader
+        :desc "What can I do here (menu)" "m" #'casual-org-tmenu))
+
 (provide '+org-power)
 ;;; +org-power.el ends here

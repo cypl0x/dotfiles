@@ -172,6 +172,8 @@
 (package! autocorrect         ;; learns from jinx corrections, then fixes them as you type (tecosaur)
   :recipe (:host nil :repo "https://code.tecosaur.net/tec/autocorrect.git")
   :pin "37e25a9534af2739ec06ed695a29728d098938d0")
+(package! casual                ;; context-sensitive transient menus; Org: SPC m m (+org-power.el)
+  :pin "60259e256e34d4f6ae64ef950c740cacbe8b4d37")
 (package! minuet               ;; Copilot-like ghost-text suggestions from Claude (+suggest.el)
   :recipe (:host github :repo "milanglacier/minuet-ai.el")
   :pin "bf64c15790a71afd5dab13e08a201ad6c4526361")

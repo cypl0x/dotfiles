@@ -125,6 +125,14 @@
      "&&" "::" ":::" ":=" "=:=" ".." "..." "..<"
      "<*>" "<+>" "<$>" "?:" "??" "!!" ";;")))
 
+
+;; Mathematical letters (𝑓, 𝐱, ℝ's neighbours; U+1D400–U+1D7FF) showed as
+;; boxes: no font in the fallback chain draws them (Casual's menus use them,
+;; so do Lean and Agda).  DejaVu Math TeX Gyre, installed, does.
+(add-hook 'after-setting-font-hook
+          (defun +fonts-math-alphanumerics-h ()
+            (when (find-font (font-spec :family "DejaVu Math TeX Gyre"))
+              (set-fontset-font t '(#x1D400 . #x1D7FF) "DejaVu Math TeX Gyre"))))
 ;;;; Stylistic Sets ──────────────────────────────────────────────────────────
 
 ;; Maple Mono NF offers many character variants (`cv01'–`cv66') and stylistic
