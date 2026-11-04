@@ -133,5 +133,12 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
 (map! :i "C-SPC" #'+completion/dwim
       :after corfu :map corfu-mode-map :i "C-SPC" #'+completion/dwim)
 
+;; Typing in the minibuffer (M-x, M-ß, find-file) is insert-like: the same
+;; bar cursor as evil's insert state, not the frame's box (evil isn't
+;; active there, `evil-want-minibuffer' is nil).
+(add-hook 'minibuffer-setup-hook
+          (defun +minibuffer-bar-cursor-h ()
+            (setq-local cursor-type 'bar)))
+
 (provide '+completion)
 ;;; +completion.el ends here
