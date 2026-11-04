@@ -34,6 +34,10 @@
 (autoload 'familiar-rate-prompts "familiar-rate" nil t)
 (autoload 'familiar-prompts-insert "familiar-prompts" nil t)
 (autoload 'familiar-prompts-update "familiar-prompts" nil t)
+(autoload 'familiar-complete "familiar-complete" nil t)
+;; C-S-SPC: AI completions at point, ranked and explained (corfu-popupinfo).
+(map! "C-S-SPC" #'familiar-complete
+      :i "C-S-SPC" #'familiar-complete)
 (map! "M-ß" #'familiar-ask
       "C-M-ß" #'familiar-ask-compose          ; straight into the multi-line prompt
       ;; rename-buffer, plus a name suggested from the contents.

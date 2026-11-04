@@ -18,6 +18,9 @@
         nil t)
   (load (expand-file-name "../familiar-prompts"
                           (file-name-directory (or load-file-name buffer-file-name)))
+        nil t)
+  (load (expand-file-name "../familiar-complete"
+                          (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
 (defun test-familiar-ask--tool (name)
@@ -686,6 +689,46 @@ answered \"one \" \"two\" in chunks; BODY sees the buffer, the request in
          (should (string-match-p "INPUT:\n\nout1\n#\\+end_src\\'" sent))
          (should (string-prefix-p "fix → improve_writing → summarize\n" sent))
          (should-error (familiar-ask "x @p:nope") :type 'user-error))))))
+
+(ert-deftest familiar-complete/ranked-explained-and-dropped-when-stale ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert "(defun f ()\n  (with-cur")
+    (save-excursion (insert ")"))
+    (let (asked reply shown)
+      (cl-letf (((symbol-function 'familiar-request)
+                 (lambda (prompt &rest args) (setq asked (cons prompt args)
+                                                   reply (plist-get args :callback))))
+                ((symbol-function 'run-at-time) (lambda (_ _ fn) (funcall fn)))
+                ((symbol-function 'completion-at-point)
+                 (lambda () (setq shown (funcall (car completion-at-point-functions))))))
+        (familiar-complete)
+        ;; Marked where point is, the word typed named; a background request.
+        (should (string-match-p "typed: \"with-cur\"" (car asked)))
+        (should (string-match-p "(with-cur⟦here⟧)" (car asked)))
+        (should (plist-get (cdr asked) :silent))
+        (funcall reply "{\"completions\": [{\"text\": \"with-current-buffer\", \"why\": \"switch buffers\"},
+                        {\"text\": \"unrelated\", \"why\": \"x\"},
+                        {\"text\": \"with-current-buffer-window\", \"why\": \"and a window\"}]}" nil)
+        ;; Only what continues the word, in the model's order, explained.
+        (pcase-let ((`(,beg ,end ,table . ,props) shown))
+          (should (equal (buffer-substring beg end) "with-cur"))
+          (should (equal (all-completions "with-cur" table)
+                         '("with-current-buffer" "with-current-buffer-window")))
+          (should (eq (alist-get 'display-sort-function (cdr (funcall table "" nil 'metadata))) 'identity))
+          (with-current-buffer (funcall (plist-get props :company-doc-buffer) "with-current-buffer")
+            (should (string-prefix-p "switch buffers" (buffer-string)))))
+        ;; Typed on meanwhile: nothing pops up.
+        (setq shown nil)
+        (familiar-complete)
+        (insert "r")
+        (funcall reply "{\"completions\": [{\"text\": \"with-current-buffer\"}]}" nil)
+        (should-not shown))))
+  ;; Shown as given: no common prefix inserted, nothing filtered out.
+  (let ((table (lambda (s p a) (complete-with-action a (list "ab" "abc") s p))))
+    (should (equal (familiar-complete--try "a" table nil 1) (cons "a" 1)))
+    (should (equal (familiar-complete--all "zz" table nil 2) (quote ("ab" "abc" . 0))))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"
