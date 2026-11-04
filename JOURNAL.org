@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 12:43] — Emacs starts in 8 s, and speaks MCP over HTTP
+- *Daemon start: 13.3 s → 8.3 s; Doom's own load 9.8 s → 3.7 s.*  I
+  timed every top-level form of your config in throwaway daemons (a shim
+  that hands over to Doom's own early-init).  Seven packages loaded at
+  every start though nothing needed them yet: gh-notify (2.6 s),
+  claude-code (1.1 s), org-noter (0.9 s), consult via app-launcher and
+  consult-org-roam (0.85 s each), blamer (0.8 s), aider (0.6 s), and
+  ghostel's compile mode (0.5 s).  They now load on first use; every key
+  still works (checked in a fresh daemon, magit's aider entry included).
+- *Harness step 2*: your daemon serves its MCP tools at
+  =http://127.0.0.1:39391/mcp= (Streamable HTTP, the current spec):
+  localhost only, Origin checked, a private bearer token.  No emacsclient
+  per message any more.  Checked with curl and with mcp.el as a real
+  client from a second Emacs (connected, listed tools, called =outline=).
+  To use it from Claude Code, one command, in the README.
+
 ** [2026-11-04 Mi 12:30] — Faster frames, typos that fix themselves
 - *New frames*: 0.78 s → 0.57 s for the first after the daemon starts,
   0.43 s → 0.22 s for every later one.  Measured in throwaway daemons that
