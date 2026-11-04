@@ -39,6 +39,75 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-04 Mi 10:50] — Your list, worked through: M-ß grows up, prose, umlauts, MCP
+You sent eleven things at 09:50.  Ten are done and live in your daemon;
+the eleventh (the all-protocol harness) has a plan and its first step.
+
+*M-ß, rethought around cost and flow*
+- Each ask starts fresh: following up re-sent every earlier turn with its
+  context.  =@follow-up= (or =SPC A +=, =SPC u M-ß=) continues.
+- =@echo=: a short answer in the echo area, no window.  Asked "2+2", got
+  "2+2 is 4." without a popup.
+- The prompt completes as you type: =@keywords= with descriptions, presets,
+  and words from what's on screen plus the en/de dictionaries.  C-SPC
+  there completes too (it was =set-mark-command=: evil's insert map isn't
+  active in the minibuffer; your usage log showed exactly that).
+- The popup that "didn't show": asked from inside M-x, Emacs undid it when
+  you left M-x (=read-minibuffer-restore-windows=).  It now comes back.
+- *@github, @nixos-mcp*: every MCP server Claude Code knows for the
+  project is a keyword.  Its tools ride along for that turn only.  Live:
+  "which ripgrep is in unstable?" → the model called nixos-mcp → 15.2.0.
+  Tools that could act outside Emacs (merge, push, create) ask first.
+
+*Typing*
+- Org (and every text buffer) completes words as you type.  On the way
+  I froze your Emacs for two minutes: orderless asks completion tables
+  with "", and dabbrev then collected all 11,448 words of every Org buffer.
+  Found by timing it in a separate batch Emacs; fixed (6–12 ms now) and
+  pinned with a regression test.  Sorry for the freeze.
+- Bar cursor in the minibuffer.  (I can't see cursors in my screenshots of
+  an unfocused frame: please glance at M-x and tell me if it's right.)
+
+*Org*
+- Every heading level has its own bullet in its own colour: 8 symbols,
+  cycling like Org's level faces.  Before: from level 5 on, all ✳, a
+  green colour emoji.  Cause: the config used org-modern's old list API.
+
+*QWERTZ*
+- Evil: =ö= =ä= are =[= =]= (=äb= next buffer, =öe= previous error, =äh=
+  next heading), =Ö= =Ä= paragraphs, =ü= =Ü= definition and back.  Not a
+  key translation, so =f ö= still finds an ö in German text.
+
+*Prose*
+- =M-q= fills, again unfills.  =SPC P L= one sentence per line ("am 3. Mai",
+  "z.B." stay intact).  =SPC P P= joins paragraphs.  =SPC P p= lets the fast
+  model split where the topic shifts, applied only if every word is
+  unchanged; then filled at 80, as you write.
+
+*Spelling*
+- One checker: jinx (English + German) in text and in code comments and
+  docstrings.  flyspell ran on top of it in 6 buffers.  =z== and =äs=/=ös=
+  go to jinx.
+
+*From your own usage data*
+- A coach: after 12 =j=/=l=/DEL in a row, the echo area names the bigger
+  steps bound right there, e.g. =l×14 → 14l counted · w word · s to 2
+  chars · f to a char=.  Once per command per 10 minutes.  Your data:
+  ~1,900 line scrolls in PDFs against 220 half screens, 272 =l= in a row in
+  Turm code.
+
+*Research (tecosaur, hlissner, awesome-emacs, protocols)*
+- Two real bugs it found, both fixed: a monet hook that never ran (it
+  belongs to a different claude-code package than the one installed), and
+  the double spellchecking above.
+- The harness plan is in =lisp/familiar/ROADMAP.org=: what exists, the gap
+  per protocol (MCP HTTP server, sampling, Emacs as ACP agent, an
+  OpenAI-compatible endpoint, A2A: no usable Elisp implementation exists),
+  and the order of work.  Step 1 (MCP client per turn) landed today.
+- Next from tecosaur's config: better defaults, evil defaults
+  (=evil-ex-substitute-global=, no cursor-back), jinx autocorrect learned
+  from your corrections, per-level heading sizes.
+
 ** [2026-11-04 Mi 09:37] — One door to ask, and your keys back
 =+prompt.el= is gone. It had squatted on =SPC i= (Doom's insert menu), =SPC '=
 (resume last search) and =SPC I= (system overview), and quietly handed every
