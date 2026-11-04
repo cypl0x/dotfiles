@@ -93,6 +93,18 @@
   (map! :map vertico-map
         "C-c C-o" #'+vertico-preview-candidate))
 
+;; Defaults from tecosaur's and hlissner's configs that change no keys or
+;; motions: one-character ellipsis, splits share space evenly, the cursor
+;; covers wide characters (tabs), deletions in dired go to the trash (still
+;; recoverable), and n/N put the match in the middle of the window.
+(setq truncate-string-ellipsis "…"
+      window-combination-resize t
+      x-stretch-cursor t
+      delete-by-moving-to-trash t)
+(after! evil
+  (advice-add #'evil-ex-search-next :after #'doom-recenter-a)
+  (advice-add #'evil-ex-search-previous :after #'doom-recenter-a))
+
 ;; Wrap long candidates in the minibuffer (useful for consult-yank-pop).
 (add-hook 'minibuffer-setup-hook
           (lambda ()
