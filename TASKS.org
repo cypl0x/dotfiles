@@ -158,3 +158,5 @@ Entries tagged :incomplete: → ask before implementing. Progress noted here.
 ** DONE "familiar-ask jumps directly into fresh multiline prompt": user: C-M-ß covers it
 ** DONE familiar footprint ledger: tools + @inline changes recorded apart from user edits; SPC A L; take back (f13176d)
 ** DONE [#C] richer usage analytics: time per mode, cancelled minibuffers and prefixes (M-x +usage/time)
+** DONE [#C] context-sensitive M-x: ranked by this mode + last command, weighted by M-x share (+usage.el)
+** DONE [#C] context-sensitive Org transient: Casual org menu, SPC m m (23822a9)
