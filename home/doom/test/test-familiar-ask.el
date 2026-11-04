@@ -439,7 +439,6 @@ du -sh .
     (with-temp-buffer
       (setq-local gptel-model 'claude-sonnet-5-5)
       (familiar-ask-mode 1)
-      (cl-letf (((symbol-function 'gptel-fsm-info) (lambda (_) '(:model claude-haiku-5-5))))
-        (let ((gptel--fsm-last 'fsm))
-          (gptel--update-token-usage '(:input 10 :output 2 :cached 0))))
+      (let ((gptel--fsm-last (gptel-make-fsm :info '(:model claude-haiku-5-5))))
+        (familiar-ask--record-a '(:input 10 :output 2 :cached 0)))
       (should (string-match-p "claude-haiku-5-5" (familiar-ask--header-line))))))
