@@ -29,5 +29,8 @@
       (let ((dir (expand-file-name pkg build)))
         (when (file-directory-p dir) (add-to-list 'load-path dir))))))
 
+;; familiar-ask requires familiar from its own directory.
+(add-to-list 'load-path (expand-file-name "../lisp/familiar" (file-name-directory (or load-file-name buffer-file-name))))
+
 (provide 'shims)
 ;;; shims.el ends here

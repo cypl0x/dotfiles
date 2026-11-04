@@ -1,0 +1,137 @@
+;;; test/test-familiar-ask.el --- Batch tests for familiar-ask -*- lexical-binding: t; -*-
+;;
+;; No network: `gptel-send' is replaced by a fake that records the buffer it
+;; was called in.  Reuses `test-familiar--with' for the ledger.
+;;
+;;; Code:
+
+(require 'ert)
+(unless (fboundp 'test-familiar--with)        ; when run on its own
+  (load (expand-file-name "test-familiar" (file-name-directory (or load-file-name buffer-file-name))) nil t))
+
+(when test-familiar-available
+  (load (expand-file-name "../lisp/familiar/familiar-ask"
+                          (file-name-directory (or load-file-name buffer-file-name)))
+        nil t))
+
+(defun test-familiar-ask--tool (name)
+  (gptel-tool-function (seq-find (lambda (tl) (equal (gptel-tool-name tl) name))
+                                 familiar-ask-tools)))
+
+(defmacro test-familiar-ask--in (text &rest body)
+  "Run BODY in an Org buffer holding TEXT, with point after \"POINT\"."
+  (declare (indent 1))
+  `(with-temp-buffer
+     (org-mode)
+     (insert ,text)
+     (goto-char (point-min))
+     (search-forward "POINT")
+     ,@body))
+
+(ert-deftest familiar-ask/context-describes-buffer-point-and-text ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--in "* Notes\nSome text POINT here\n"
+    (let ((ctx (familiar-ask--context (familiar-ask--capture))))
+      (should (string-match-p "^#\\+begin_context" ctx))
+      (should (string-match-p "(visits no file), org-mode" ctx))
+      (should (string-match-p "Point: line 2, column 15" ctx))
+      (should (string-match-p "Around point, lines 1-3" ctx))
+      (should (string-match-p "Some text POINT here" ctx))
+      (should (string-match-p "#\\+end_context\\'" ctx)))))
+
+(ert-deftest familiar-ask/context-prefers-the-region ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--in "one\ntwo POINT\nthree\n"
+    (let ((transient-mark-mode t))
+      (set-mark (line-beginning-position))
+      (goto-char (line-end-position))
+      (activate-mark)
+      (let ((ctx (familiar-ask--context (familiar-ask--capture))))
+        (should (string-match-p "Region, lines 2-2" ctx))
+        (should (string-match-p "two POINT" ctx))
+        (should-not (string-match-p "three" ctx))))))
+
+(ert-deftest familiar-ask/context-escapes-org-in-the-text ()
+  ;; A "* heading" inside the src block would end the block in Org.
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--in "* heading POINT\n"
+    (should (string-match-p "^,\\* heading POINT"
+                            (familiar-ask--context (familiar-ask--capture))))))
+
+(ert-deftest familiar-ask/buffer-text-tool-reads-lines ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (rename-buffer "familiar-ask-test-buffer" t)
+    (insert "a\nb\nc\nd\n")
+    (should (equal (funcall (test-familiar-ask--tool "buffer_text") (buffer-name) 2 3)
+                   "b\nc\n"))
+    (should (equal (funcall (test-familiar-ask--tool "buffer_text") (buffer-name))
+                   "a\nb\nc\nd\n"))))
+
+(ert-deftest familiar-ask/replace-tool-is-an-undoable-unique-edit ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (rename-buffer "familiar-ask-test-replace" t)
+    (buffer-enable-undo)
+    (insert "alpha beta gamma beta")
+    (undo-boundary)
+    (let ((replace (test-familiar-ask--tool "replace_in_buffer")))
+      (should-error (funcall replace (buffer-name) "beta" "B"))   ; twice
+      (should-error (funcall replace (buffer-name) "delta" "D"))  ; never
+      (funcall replace (buffer-name) "alpha" "ALPHA")
+      (should (equal (buffer-string) "ALPHA beta gamma beta"))
+      (primitive-undo 1 buffer-undo-list)
+      (should (equal (buffer-string) "alpha beta gamma beta")))))
+
+(ert-deftest familiar-ask/set-minibuffer-needs-a-minibuffer ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-ask--origin (list :buffer (current-buffer))))
+    (should-error (funcall (test-familiar-ask--tool "set_minibuffer") "foo"))))
+
+(ert-deftest familiar-ask/ask-appends-prompt-and-folded-context-then-sends ()
+  (skip-unless test-familiar-available)
+  (let* ((familiar-ask-directory (make-temp-file "familiar-ask" t))
+         (familiar-ask--buffer-name "*familiar-ask-test*")
+         (sent nil))
+    (cl-letf (((symbol-function 'gptel-send) (lambda (&rest _) (setq sent (current-buffer))))
+              ((symbol-function 'display-buffer) #'ignore))
+      (unwind-protect
+          (test-familiar-ask--in "text POINT\n"
+            (setq familiar-ask--origin (familiar-ask--capture))
+            (let ((buf (familiar-ask "What is this?" t)))
+              (should (eq sent buf))
+              (with-current-buffer buf
+                (should familiar-ask-mode)
+                (should (equal gptel-tools familiar-ask-tools))
+                (should (eq gptel-model (alist-get familiar-ask-tier familiar-models)))
+                (should (string-match-p "^\\*\\* What is this\\?\n#\\+begin_context" (buffer-string)))
+                (should (string-prefix-p (expand-file-name familiar-ask-directory) buffer-file-name))
+                ;; The same conversation takes the next question.
+                (setq familiar-ask--origin (familiar-ask--capture))
+                (should (eq (familiar-ask "And this?") buf))
+                (should (= 2 (how-many "^\\*\\* " (point-min) (point-max)))))))
+        (when-let* ((b (get-buffer familiar-ask--buffer-name)))
+          (with-current-buffer b (set-buffer-modified-p nil))
+          (kill-buffer b))
+        (delete-directory familiar-ask-directory t)))))
+
+(ert-deftest familiar-ask/turns-are-recorded-in-the-ledger ()
+  (test-familiar--with "unused"
+    (with-temp-buffer
+      (setq-local gptel-model 'claude-haiku-5-5)
+      (familiar-ask-mode 1)
+      (gptel--update-token-usage '(:input 1000 :output 200 :cached 0))
+      (let ((entry (car (last (familiar--ledger)))))
+        (should (eq (nth 1 entry) 'claude-haiku-5-5))
+        (should (eq (nth 2 entry) 'ask))))))
+
+(ert-deftest familiar-ask/edit-keep-revives-the-draft ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-ask--draft nil))
+    (with-temp-buffer
+      (insert "  a longer prompt  ")
+      (cl-letf (((symbol-function 'quit-window) #'ignore))
+        (familiar-ask-edit-keep)))
+    (should (equal familiar-ask--draft "a longer prompt"))))
+
+;;; test-familiar-ask.el ends here

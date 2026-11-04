@@ -169,6 +169,8 @@ A started shell lives until you kill its buffer."
       ("c" "gptel chat"       gptel)
       ("m" "Set model"        +agent/set-model)]]
     [["✦ familiar"
+      ("?" "Ask anything"       familiar-ask)
+      ("A" "Ask: earlier"       familiar-ask-sessions)
       ("x" "Explain"            familiar-explain)
       ("d" "Explain diagnostic" familiar-explain-diagnostic)
       ("F" "Fix (smerge)"       familiar-fix)
