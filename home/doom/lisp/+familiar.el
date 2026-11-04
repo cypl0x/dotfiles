@@ -30,7 +30,9 @@
 (autoload 'familiar-ask-sessions "familiar-ask" nil t)
 (autoload 'familiar-ask-new "familiar-ask" nil t)
 (autoload 'familiar-ask-continue "familiar-ask" nil t)
+(autoload 'familiar-ask-compose "familiar-ask" nil t)
 (map! "M-ß" #'familiar-ask
+      "C-M-ß" #'familiar-ask-compose          ; straight into the multi-line prompt
       ;; rename-buffer, plus a name suggested from the contents.
       :leader :desc "Rename buffer (suggests)" "b R" #'familiar-rename-buffer)
 (set-popup-rule! "^\\*familiar-ask\\*$" :side 'right :size 0.45 :select nil :quit nil :ttl nil

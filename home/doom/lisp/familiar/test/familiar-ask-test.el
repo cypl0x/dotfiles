@@ -1294,5 +1294,35 @@ prompt turns and the callback)."
       (should (equal (plist-get recorded :prompt) "And the follow-up?"))
       (should (string-match-p "\\`Answer two\\.\\'" (string-trim (plist-get recorded :answer)))))))
 
+(ert-deftest familiar-ask/compose-opens-the-prompt-buffer-about-here ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-ask-history '("second" "first")) (familiar-ask--draft nil)
+        (familiar-ask-prompt-capfs nil))
+    (cl-letf (((symbol-function 'pop-to-buffer) (lambda (b &rest _) (set-buffer b))))
+      (with-current-buffer (get-buffer-create "notes.org")
+        (insert "some text")
+        (familiar-ask-compose))
+      (with-current-buffer "*familiar-ask prompt*"
+        (unwind-protect
+            (progn
+              (should familiar-ask-edit-mode)
+              (should (memq #'familiar-ask--keywords-capf completion-at-point-functions))
+              (should (string-match-p "about notes.org" (familiar-ask--edit-header)))
+              ;; M-p / M-n go through the history and back to an empty prompt.
+              (familiar-ask-edit-previous 1)
+              (should (equal (buffer-string) "second"))
+              (familiar-ask-edit-previous 1)
+              (should (equal (buffer-string) "first"))
+              (should-error (familiar-ask-edit-previous 1) :type 'user-error)
+              (familiar-ask-edit-next 2)
+              (should (equal (buffer-string) ""))
+              ;; Discarding keeps the text in the history.
+              (insert "a draft")
+              (cl-letf (((symbol-function 'quit-window) #'ignore))
+                (familiar-ask-edit-discard))
+              (should (equal (car familiar-ask-history) "a draft")))
+          (kill-buffer)
+          (kill-buffer "notes.org"))))))
+
 (provide 'familiar-ask-test)
 ;;; familiar-ask-test.el ends here

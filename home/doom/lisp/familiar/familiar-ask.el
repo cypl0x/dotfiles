@@ -19,6 +19,7 @@
 ;;                    (also SPC u M-ß; `familiar-ask-follow-up' flips the default)
 ;;   @echo             in the prompt: a short answer in the echo area, no window
 ;;   C-SPC  (prompt)  complete @keywords, @presets and words
+;;   C-M-ß            write the prompt in a buffer right away (multi-line)
 ;;   C-c '  (prompt)  edit the prompt in a buffer; C-c C-c sends, C-c C-k keeps it
 ;;   @fast/@smart/@deep in the prompt picks the model (gptel presets)
 ;;   C-r  (prompt)    pick an earlier prompt
@@ -906,30 +907,89 @@ add tools for this turn (`familiar-ask-turn-tools-functions')."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'familiar-ask-edit-send)
     (define-key map (kbd "C-c C-k") #'familiar-ask-edit-keep)
+    (define-key map (kbd "C-c C-q") #'familiar-ask-edit-discard)
+    (define-key map (kbd "M-p") #'familiar-ask-edit-previous)
+    (define-key map (kbd "M-n") #'familiar-ask-edit-next)
     map))
 
 (define-minor-mode familiar-ask-edit-mode
-  "Editing a `familiar-ask' prompt.  C-c C-c sends, C-c C-k keeps it for later."
+  "Writing a `familiar-ask' prompt: C-c C-c sends, C-c C-k keeps it for
+later, C-c C-q discards it (into the history), M-p / M-n go through the
+history;  and words complete as in the minibuffer."
   :lighter " ✦prompt"
   (when familiar-ask-edit-mode
-    (setq header-line-format
-          (substitute-command-keys
-           " ✦ Prompt for familiar-ask.  \\[familiar-ask-edit-send] send · \\[familiar-ask-edit-keep] keep for later"))))
+    (setq header-line-format '(:eval (familiar-ask--edit-header)))))
+
+(defun familiar-ask--edit-header ()
+  "Header line of the prompt buffer: where it asks from, and the keys."
+  (let* ((origin familiar-ask--origin)
+         (buf (plist-get origin :buffer))
+         (region (plist-get origin :region)))
+    (substitute-command-keys
+     (format " ✦ Ask%s%s   \\[familiar-ask-edit-send] send · \\[familiar-ask-edit-keep] keep · \\[familiar-ask-edit-discard] discard · \\[familiar-ask-edit-previous]/\\[familiar-ask-edit-next] history"
+             (if (buffer-live-p buf) (format " about %s" (buffer-name buf)) "")
+             (if region (format " (region, %d chars)" (- (cdr region) (car region))) "")))))
+
+(defun familiar-ask--open-editor (text)
+  "Open the prompt buffer with TEXT, asking about `familiar-ask--origin'."
+  (let ((origin-buf (plist-get familiar-ask--origin :buffer)))
+    (pop-to-buffer (get-buffer-create "*familiar-ask prompt*"))
+    (erase-buffer)
+    (org-mode)
+    ;; @server keywords and words come from the place asked about.
+    (when (buffer-live-p origin-buf)
+      (setq default-directory (buffer-local-value 'default-directory origin-buf)))
+    (insert (or text ""))
+    (familiar-ask-edit-mode 1)
+    (add-hook 'completion-at-point-functions #'familiar-ask--keywords-capf nil t)
+    (dolist (capf (reverse familiar-ask-prompt-capfs))
+      (add-hook 'completion-at-point-functions capf 50 t))
+    (setq-local familiar-ask--history-index -1)
+    (when (fboundp 'evil-insert-state) (evil-insert-state))))
+
+;;;###autoload
+(defun familiar-ask-compose ()
+  "Write a prompt in a buffer right away (multi-line), about where you are."
+  (interactive)
+  (setq familiar-ask--origin (familiar-ask--capture))
+  (familiar-ask--open-editor (prog1 familiar-ask--draft (setq familiar-ask--draft nil))))
 
 (defun familiar-ask-edit-prompt ()
   "Move the prompt being typed into a buffer, like `org-edit-special'."
   (interactive)
   (let ((text (minibuffer-contents-no-properties)))
     (setq familiar-ask--draft text)
-    (run-at-time 0 nil
-                 (lambda ()
-                   (pop-to-buffer (get-buffer-create "*familiar-ask prompt*"))
-                   (erase-buffer)
-                   (org-mode)
-                   (insert (or familiar-ask--draft ""))
-                   (familiar-ask-edit-mode 1)
-                   (when (fboundp 'evil-insert-state) (evil-insert-state))))
+    (run-at-time 0 nil (lambda ()
+                         (familiar-ask--open-editor
+                          (prog1 familiar-ask--draft (setq familiar-ask--draft nil)))))
     (abort-recursive-edit)))
+
+(defvar-local familiar-ask--history-index -1
+  "Position in `familiar-ask-history' shown in the prompt buffer (-1: own text).")
+
+(defun familiar-ask-edit-previous (n)
+  "Replace the prompt with the Nth earlier one from the history."
+  (interactive "p")
+  (let ((i (+ familiar-ask--history-index n)))
+    (cond ((>= i (length familiar-ask-history)) (user-error "No earlier prompt"))
+          ((< i -1) (user-error "No later prompt"))
+          (t (setq familiar-ask--history-index i)
+             (erase-buffer)
+             (when (>= i 0) (insert (nth i familiar-ask-history)))))))
+
+(defun familiar-ask-edit-next (n)
+  "Replace the prompt with the Nth later one from the history."
+  (interactive "p")
+  (familiar-ask-edit-previous (- n)))
+
+(defun familiar-ask-edit-discard ()
+  "Close the prompt buffer without sending; the text stays in the history."
+  (interactive)
+  (let ((text (string-trim (buffer-string))))
+    (unless (string-empty-p text) (add-to-history 'familiar-ask-history text))
+    (setq familiar-ask--draft nil)
+    (quit-window t)
+    (message "Prompt discarded (it is in the history: M-p)")))
 
 (defun familiar-ask-edit-send ()
   "Send the prompt in this buffer; its major mode goes along."
