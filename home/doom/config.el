@@ -563,6 +563,7 @@
 (load! "lisp/+org-ai-capture") ;; SPC m C: write headings, AI files them where they belong
 (load! "lisp/+suggest")      ;; ghost-text suggestions in code (minuet, Claude): TAB takes them
 (load! "lisp/+zoxide")       ;; SPC f z: zoxide ranking in Emacs; Emacs visits feed it
+(load! "lisp/+tailscale")    ;; SPC o n: tailnet peers, settings transient, tailscaled log
 (load! "lisp/+vocab")        ;; leo lookups → org-fc cards; SPC l r review, SPC l v file
 (load! "lisp/+docs")         ;; SPC h /: every own command; learning path, Info manual
 (load! "lisp/+completion")   ;; C-SPC: completion sources by context (links, tags, words, code)

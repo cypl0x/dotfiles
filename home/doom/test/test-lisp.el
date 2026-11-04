@@ -1455,6 +1455,25 @@ and a temp exec-path where bin/tar links to store/tar."
       ;; next-line: run by keys only, so not ranked despite its count.
       (should (equal (funcall vertico-sort-override-function '("abc" "next-line" "forward-word"))
                      '("forward-word" "abc" "next-line"))))))
+
+(load (expand-file-name "+tailscale" test-lisp-dir) nil t)
+
+(ert-deftest tailscale/peers-online-first-with-how-they-are-reached ()
+  (cl-letf (((symbol-function '+tailscale--json)
+             (lambda (&rest _)
+               '(:Peer (:a (:HostName "zeta" :TailscaleIPs ("100.1.1.1") :OS "linux" :Online t
+                            :CurAddr "65.1.1.1:41641" :ExitNodeOption t :ExitNode t)
+                        :b (:HostName "alpha" :TailscaleIPs ("100.2.2.2") :OS "iOS" :Online nil
+                            :LastSeen "2020-01-01T00:00:00Z")
+                        :c (:HostName "mid" :TailscaleIPs ("100.3.3.3") :OS "linux" :Online t
+                            :CurAddr "" :Relay "fra"))))))
+    (let ((rows (mapcar (lambda (r) (append (cadr r) nil)) (+tailscale--rows))))
+      ;; Online first, then by name; offline ones say when they were seen.
+      (should (equal (mapcar #'car rows) '("mid" "zeta" "alpha")))
+      (should (equal (nth 4 (nth 0 rows)) "relay fra"))
+      (should (equal (nth 4 (nth 1 rows)) "direct 65.1.1.1:41641"))
+      (should (equal (nth 5 (nth 1 rows)) "← in use"))
+      (should (string-match-p "days ago" (nth 3 (nth 2 rows)))))))
 (ert-deftest completion/minibuffer-cycles-like-popup-other ()
   (let ((+minibuffer--ring (list '(:command a :input "1") '(:command b :input "2")))
         (+minibuffer--leaving nil))
