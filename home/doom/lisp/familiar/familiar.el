@@ -259,6 +259,10 @@ Add it to `familiar-model-prices'." model)))
          (pos (or (cl-position tier tiers) 0)))
     (when escalate (setq pos (min (1+ pos) (1- (length tiers)))))
     (alist-get (nth pos tiers) familiar-models)))
+(defvar familiar-footprint--actor nil
+  "What of familiar's changes buffers right now (a tool name, \"@inline\"), or nil.
+Changes made meanwhile go in familiar-footprint.el's ledger.")
+
 
 (cl-defun familiar-request (prompt &key task system escalate stream callback tools model backend silent)
   "Send PROMPT for TASK with SYSTEM prompt; call CALLBACK like `gptel-request'.

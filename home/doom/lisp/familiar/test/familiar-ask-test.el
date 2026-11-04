@@ -21,6 +21,9 @@
         nil t)
   (load (expand-file-name "../familiar-complete"
                           (file-name-directory (or load-file-name buffer-file-name)))
+        nil t)
+  (load (expand-file-name "../familiar-footprint"
+                          (file-name-directory (or load-file-name buffer-file-name)))
         nil t))
 
 (defun test-familiar-ask--tool (name)
@@ -743,6 +746,43 @@ answered \"one \" \"two\" in chunks; BODY sees the buffer, the request in
         (insert ":PROPERTIES:\n:GPTEL_MODEL: claude-sonnet-5-5\n:END:\n#+title: old\n")
         (familiar-ask--setup (current-buffer))
         (should restored)))))
+
+(ert-deftest familiar-footprint/model-changes-recorded-yours-not ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-footprint--log nil))
+    (with-temp-buffer
+      (rename-buffer "fp-test" t)
+      (insert "hello world")
+      ;; Yours: not recorded.
+      (should-not familiar-footprint--log)
+      ;; A tool's, by name: through the real replace_in_buffer, wrapped.
+      (funcall (test-familiar-ask--tool "replace_in_buffer") (buffer-name) "world" "there")
+      (should (equal (buffer-string) "hello there"))
+      (let ((e (car familiar-footprint--log)))
+        (should (equal (plist-get e :actor) "replace_in_buffer"))
+        (should (equal (plist-get e :old) "world"))
+        (should (equal (plist-get e :new) "there")))
+      ;; A streamed answer: chunks join into one change.
+      (let ((familiar-footprint--actor "@inline"))
+        (goto-char (point-max))
+        (insert ", one") (insert " two"))
+      (should (= (length familiar-footprint--log) 2))
+      (should (equal (plist-get (car familiar-footprint--log) :new) ", one two"))
+      ;; Taken back from the ledger while untouched; refused once edited.
+      (with-current-buffer (get-buffer-create "*familiar footprint*")
+        (familiar-footprint-mode)
+        (tabulated-list-print)
+        (goto-char (point-min))
+        (familiar-footprint-revert))
+      (should (equal (buffer-string) "hello there"))
+      (with-current-buffer "*familiar footprint*"
+        (tabulated-list-print)
+        (goto-char (point-min))
+        (forward-line 1)
+        (with-current-buffer "fp-test"
+          (goto-char (point-max)) (insert "!"))
+        (should-error (familiar-footprint-revert) :type 'user-error))
+      (kill-buffer "*familiar footprint*"))))
 (ert-deftest familiar-ask/header-shows-the-model-that-answered ()
   ;; An @fast turn was shown with the conversation's default model.
   (test-familiar--with "unused"

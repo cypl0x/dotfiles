@@ -900,7 +900,8 @@ the whole of it back (and the replaced text with it)."
       ;; Chunks go in without undo records; one record of the whole goes in
       ;; at the end, so a single undo removes it (and restores a replaced
       ;; region), however many chunks it came in.
-      (let ((buffer-undo-list t))
+      (let ((buffer-undo-list t)
+            (familiar-footprint--actor (if replace "@replace" "@inline")))
         (pcase-let ((`(,beg ,end* ,newline) place))
           (when replace
             (setq deleted (buffer-substring beg end*))
@@ -918,7 +919,8 @@ the whole of it back (and the replaced text with it)."
        (when (buffer-live-p buf)
          (with-current-buffer buf
            (cond ((stringp response)
-                  (let ((buffer-undo-list t))
+                  (let ((buffer-undo-list t)
+                        (familiar-footprint--actor (if replace "@replace" "@inline")))
                     (save-excursion (goto-char end) (insert response))))
                  ((memq response '(t nil))
                   (unless (eq buffer-undo-list t)

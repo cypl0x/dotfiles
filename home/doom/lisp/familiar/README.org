@@ -24,6 +24,7 @@ Emacs 29.1+, gptel 0.9.9+.  Optional: [[https://github.com/laurynas-biveinis/mcp
 | =familiar-rate.el=       | prompts rated as you type them; =familiar-rate-prompts= reviews your habits, quoting only your prompts |
 | =familiar-prompts.el=    | a prompt library: yours ({{vars}}) and Fabric's 266 patterns; =@p:NAME= in M-ß, several compose like pipes |
 | =familiar-complete.el=   | AI completions at point, ranked by fit, each explained in the popup |
+| =familiar-footprint.el=  | a ledger of what the model changed (tools, @inline), apart from your edits; take a change back |
 
 * Setup
 

@@ -35,6 +35,7 @@
 (autoload 'familiar-prompts-insert "familiar-prompts" nil t)
 (autoload 'familiar-prompts-update "familiar-prompts" nil t)
 (autoload 'familiar-complete "familiar-complete" nil t)
+(autoload 'familiar-footprint "familiar-footprint" nil t)
 ;; C-S-SPC: AI completions at point, ranked and explained (corfu-popupinfo).
 (map! "C-S-SPC" #'familiar-complete
       :i "C-S-SPC" #'familiar-complete)
@@ -58,7 +59,9 @@
 (after! familiar-ask
   (require 'familiar-rate)
   ;; @p:NAME: your prompts and Fabric's patterns (familiar-prompts.el).
-  (require 'familiar-prompts))
+  (require 'familiar-prompts)
+  ;; What the model changed, apart from what you did (familiar-footprint.el).
+  (require 'familiar-footprint))
 
 (after! familiar-ask
   ;; RET sends at the end of a conversation in insert state too: evil's RET
