@@ -138,7 +138,8 @@ Add it to `familiar-model-prices'." model)))
          1e6))))
 
 (defun familiar--ledger ()
-  "All ledger entries: (TIME MODEL TASK INPUT OUTPUT CACHED COST)."
+  "All ledger entries: (TIME MODEL TASK INPUT OUTPUT CACHED COST . REST).
+REST, in newer entries: SECONDS PROJECT STATUS (see `familiar--record')."
   (when (file-readable-p familiar-ledger-file)
     (with-temp-buffer
       (insert-file-contents familiar-ledger-file)
@@ -156,15 +157,18 @@ Add it to `familiar-model-prices'." model)))
       (setq familiar--spent
             (apply #'+ 0 (mapcar (lambda (e) (nth 6 e)) (familiar--ledger))))))
 
-(defun familiar--record (model task tokens)
-  "Append a ledger entry for TASK on MODEL with TOKENS; return its cost."
+(defun familiar--record (model task tokens &optional seconds project status)
+  "Append a ledger entry for TASK on MODEL with TOKENS; return its cost.
+SECONDS the request took, PROJECT it was made in, STATUS (nil: answered,
+`error': failed) go at the entry's end, for familiar-analytics."
   (let* ((cost (familiar-cost model tokens))
          (before (familiar-spent))
          (entry (list (format-time-string "%FT%T%z") model task
                       (or (plist-get tokens :input) 0)
                       (or (plist-get tokens :output) 0)
                       (or (plist-get tokens :cached) 0)
-                      cost)))
+                      cost
+                      (and seconds (/ (round (* seconds 100)) 100.0)) project status)))
     (make-directory (file-name-directory familiar-ledger-file) t)
     (let ((print-length nil) (print-level nil))
       (write-region (concat (prin1-to-string entry) "\n") nil
@@ -282,7 +286,9 @@ Returns the model used."
          (gptel-model model)
          (gptel-tools tools)
          (gptel-use-tools (and tools t))
-         (gptel-use-context nil))
+         (gptel-use-context nil)
+         (started (float-time))
+         (project (familiar--ledger-project)))
     (gptel-request prompt
       :system system
       :stream stream
@@ -292,7 +298,7 @@ Returns the model used."
           (when (stringp response) (setq answer (concat answer response)))
           (when (or (eq response t) (and (stringp response) (not stream)))
             (let* ((tokens (plist-get info :tokens))
-                   (cost (and tokens (familiar--record model task tokens))))
+                   (cost (and tokens (familiar--record model task tokens (- (float-time) started) project))))
               ;; One Org history of every turn (familiar-history.el).
               (when (and (not silent) (fboundp 'familiar-history-record))
                 (familiar-history-record
@@ -302,6 +308,8 @@ Returns the model used."
                                   (format "%s %S" (plist-get call :name) (plist-get call :args)))
                                 (plist-get info :tool-use))))
               (setq answer "")))
+          (when (null response)
+            (familiar--record model task nil (- (float-time) started) project 'error))
           (when (and (null response) (not silent))
             (funcall familiar-notify-function "familiar: request failed"
                      (or (plist-get info :status) "no response")))
@@ -310,6 +318,15 @@ Returns the model used."
 
 
 ;;;; Context
+
+(defun familiar--ledger-project ()
+  "The project of `default-directory' for the ledger: its git root's name.
+Not looked up on remote or handled directories (TRAMP, /github), where a
+lookup would cost a round trip per request."
+  (unless (or (file-remote-p default-directory)
+              (find-file-name-handler default-directory 'file-exists-p))
+    (when-let* ((root (locate-dominating-file default-directory ".git")))
+      (file-name-nondirectory (directory-file-name root)))))
 
 (defun familiar--project-name ()
   (when-let* ((pr (project-current)))

@@ -504,3 +504,44 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
             (should (save-excursion (goto-char (point-min)) (search-forward s nil t))))
           (should (save-excursion (goto-char (point-min)) (re-search-forward "[▁▂▃▄▅▆▇█]" nil t))))
       (delete-file familiar-ledger-file))))
+
+(ert-deftest familiar-analytics/speed-failures-projects-and-the-period-before ()
+  "Newer ledger entries carry seconds, project and status; old ones still
+read.  The buffer shows the strip, the speed table, projects, the cache's
+saving and the change against the period before."
+  (skip-unless test-familiar-available)
+  (require 'familiar-analytics)
+  (let* ((now (format-time-string "%FT%T%z"))
+         (old (format-time-string "%FT%T%z" (time-subtract nil (* 10 86400))))
+         (familiar-ledger-file
+          (test-familiar--ledger-lines
+           (append
+            `((,old claude-haiku-5-5 commit 1000 100 0 0.001))   ; an old entry: no extra fields
+            (cl-loop repeat 9 collect `(,now claude-sonnet-5-5 fix 2000 400 1000 0.02 4.0 "dotfiles" nil))
+            (cl-loop repeat 3 collect `(,now claude-sonnet-5-5 fix 0 0 0 0.0 30.0 "dotfiles" error)))))
+         (familiar-budget 10.0))
+    (unwind-protect
+        (cl-letf (((symbol-function 'familiar-cost)
+                   (lambda (_m tokens) (* 1e-5 (+ (or (plist-get tokens :input) 0) (or (plist-get tokens :output) 0))))))
+          (let ((reqs (familiar-analytics--requests)))
+            (should (null (familiar-analytics--req-seconds (car reqs))))
+            (should (equal (familiar-analytics--req-project (cadr reqs)) "dotfiles"))
+            (should (eq (familiar-analytics--req-status (car (last reqs))) 'error))
+            ;; Cached input billed in full would have cost more.
+            (should (> (familiar-analytics--saved reqs) 0))
+            ;; 3 of 12 timed fail: a warning.
+            (should (cl-find-if (lambda (i) (string-match-p "fails 25%" (nth 1 i)))
+                                (familiar-analytics-more-insights reqs nil))))
+          (with-temp-buffer
+            (familiar-analytics-mode)
+            (setq familiar-analytics--days 7)
+            (familiar-analytics--render)
+            (let ((text (buffer-string)))
+              (should (string-match-p "Where the money goes" text))
+              (should (string-match-p "Speed and reliability per model" text))
+              (should (string-match-p "claude-sonnet-5-5 +12 +3 (25%)" text))
+              (should (string-match-p "Where it goes: projects" text))
+              (should (string-match-p "The cache saved" text))
+              ;; Against the 7 days before: 1 request then, 12 now.
+              (should (string-match-p "▲" text)))))
+      (delete-file familiar-ledger-file))))

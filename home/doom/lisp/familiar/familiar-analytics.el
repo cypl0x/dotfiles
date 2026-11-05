@@ -5,16 +5,24 @@
 ;; (each prompt):
 ;;
 ;;   Figures          spend, requests, tokens, cache hits, budget left and
-;;                    when it runs out at the recent pace
+;;                    when it runs out at the recent pace; against the period
+;;                    before (▲▼), and what the cache saved in dollars
+;;   Illustration     where the money goes, as one strip cut by task
 ;;   Plots            spend per day (bars) with the cumulative line against
 ;;                    the budget; tokens in/out per day; when you ask, as a
-;;                    weekday × hour heatmap; cost per task and per model
+;;                    weekday × hour heatmap; cost per task, model and
+;;                    project; the model mix week by week (stacked bars)
 ;;   Statistics       per task and per model: requests, share of spend,
-;;                    mean / median / p95 cost, tokens, output per input
+;;                    mean / median / p95 cost, tokens, output per input;
+;;                    speed (median, p95 seconds, output tokens a second) and
+;;                    failures, from the seconds and status each request now
+;;                    records
 ;;   Data             the most expensive requests, linked to their prompts
 ;;   Insights and     rules over all of the above, each with the numbers
 ;;   recommendations  behind it: a task on a dearer tier than its answers
-;;                    need, prompts that would cache, bursts, the forecast
+;;                    need, prompts that would cache, bursts, the forecast,
+;;                    a failing model, a slow task, one project taking most,
+;;                    spend growing against the period before
 ;;
 ;; Graphics are SVG where Emacs can show them, text (▁▂▃▅▇) otherwise.
 ;; Keys: r range (all, 30, 7 days, today) · g refresh · RET the request's
@@ -60,7 +68,7 @@ so short answers and bursts are how they work, not a waste."
 
 (cl-defstruct (familiar-analytics--req (:constructor familiar-analytics--req-make)
                                        (:copier nil))
-  time model task in out cached cost)
+  time model task in out cached cost seconds project status)
 
 (defun familiar-analytics--requests (&optional since)
   "Ledger entries as structs, oldest first; only from SINCE (a time) on."
@@ -70,7 +78,9 @@ so short answers and bursts are how they work, not a waste."
         (when (and time (or (null since) (not (time-less-p time since))))
           (push (familiar-analytics--req-make
                  :time time :model (nth 1 e) :task (nth 2 e) :in (or (nth 3 e) 0)
-                 :out (or (nth 4 e) 0) :cached (or (nth 5 e) 0) :cost (or (nth 6 e) 0.0))
+                 :out (or (nth 4 e) 0) :cached (or (nth 5 e) 0) :cost (or (nth 6 e) 0.0)
+                 ;; Newer entries only (older ones end at the cost).
+                 :seconds (nth 7 e) :project (nth 8 e) :status (nth 9 e))
                 out))))
     (nreverse out)))
 
@@ -401,6 +411,216 @@ so short answers and bursts are how they work, not a waste."
     (ignore all)
     (nreverse out)))
 
+;;;; More figures: against the period before, what the cache saved
+
+(defun familiar-analytics--saved (reqs)
+  "USD the cache saved on REQS: their cost with cached input billed in full,
+less what they cost."
+  (familiar-analytics--sum
+   (lambda (r)
+     (if (zerop (familiar-analytics--req-cached r)) 0
+       (or (ignore-errors
+             (- (familiar-cost (familiar-analytics--req-model r)
+                               (list :input (+ (familiar-analytics--req-in r) (familiar-analytics--req-cached r))
+                                     :output (familiar-analytics--req-out r)))
+                (familiar-analytics--req-cost r)))
+           0)))
+   reqs))
+
+(defun familiar-analytics--change (now before &optional lower-is-better)
+  "NOW against BEFORE as \"▲ 12%\" or \"▼ 30%\", colored by whether it's good
+\(spending less is, unless LOWER-IS-BETTER is nil and more means more work)."
+  (cond ((or (null before) (zerop before)) "")
+        (t (let* ((pct (* 100.0 (/ (- now before) before)))
+                  (up (> pct 0))
+                  (good (if lower-is-better (not up) up)))
+             (propertize (format " %s%.0f%%" (if up "▲" "▼") (abs pct))
+                         'face (cond ((< (abs pct) 5) 'shadow) (good 'success) (t 'warning)))))))
+
+;;;; Illustration: where the money goes, as one strip
+
+(defun familiar-analytics--strip (groups total)
+  "One bar the width of the window, cut into GROUPS by their share of TOTAL."
+  (when (and groups (> total 0))
+    (let* ((p (familiar-analytics--palette))
+           (colors (list (plist-get p :a) (plist-get p :b) (plist-get p :c) (plist-get p :d)
+                         (familiar-analytics--color 'font-lock-keyword-face :foreground "#c678dd")
+                         (familiar-analytics--color 'font-lock-constant-face :foreground "#46d9ff")
+                         (plist-get p :dim)))
+           ;; The biggest six, the rest as one.
+           (shown (seq-take groups 6))
+           (rest (nthcdr 6 groups))
+           (parts (append (mapcar (lambda (g) (cons (format "%s" (car g))
+                                                    (familiar-analytics--sum #'familiar-analytics--req-cost (cdr g))))
+                                  shown)
+                          (and rest (list (cons (format "%d more" (length rest))
+                                                (familiar-analytics--sum #'familiar-analytics--req-cost (apply #'append (mapcar #'cdr rest)))))))))
+      (if (not (familiar-analytics--svg-p))
+          (let ((w (max 20 (- (window-body-width) 4))))
+            (insert "  ")
+            (cl-loop for (name . cost) in parts for i from 0
+                     do (insert (propertize (make-string (max 1 (round (* w (/ cost total)))) (aref "█▓▒░█▓▒" i))
+                                            'help-echo name)))
+            (insert "\n  " (mapconcat (lambda (pt) (format "%s %.0f%%" (car pt) (* 100 (/ (cdr pt) total)))) parts " · ") "\n"))
+        (let* ((w (familiar-analytics--chart-width)) (h 64) (x 0.0)
+               (svg (svg-create w h)))
+          (svg-rectangle svg 0 0 w h :fill (plist-get p :bg))
+          (cl-loop for (name . cost) in parts for color in colors
+                   do (let ((bw (* (- w 2) (/ cost total))))
+                        (svg-rectangle svg (+ 1 x) 4 (max 1 (- bw 1)) 30 :fill color :fill-opacity 0.85 :rx 3)
+                        ;; The name inside when it fits, else nothing (the legend has it).
+                        (when (> bw (* 7 (+ 5 (length name))))
+                          (svg-text svg (format "%s %.0f%%" name (* 100 (/ cost total)))
+                                    :x (+ x 6) :y 24 :fill (plist-get p :bg) :font-size 12 :font-weight "bold"))
+                        (setq x (+ x bw))))
+          ;; Legend underneath.
+          (let ((lx 2))
+            (cl-loop for (name . cost) in parts for color in colors
+                     do (let ((label (format "%s %s" name (familiar-analytics--usd cost))))
+                          (when (< (+ lx 40) w)
+                            (svg-rectangle svg lx 44 10 10 :fill color :rx 2)
+                            (svg-text svg label :x (+ lx 14) :y 53 :fill (plist-get p :dim) :font-size 11)
+                            (setq lx (+ lx 24 (* 6.5 (length label))))))))
+          (familiar-analytics--insert-svg svg (format "[spend by %s]" (mapconcat #'car parts ", "))))))))
+
+;;;; Graph: the model mix, week by week
+
+(defun familiar-analytics--weeks (reqs)
+  "REQS by ISO week, in order: alist (\"2026-W45\" . REQS)."
+  (let (weeks)
+    (dolist (r reqs)
+      (let ((k (format-time-string "%G-W%V" (familiar-analytics--req-time r))))
+        (if (equal (caar weeks) k) (push r (cdar weeks)) (push (list k r) weeks))))
+    (nreverse (mapcar (lambda (w) (cons (car w) (nreverse (cdr w)))) weeks))))
+
+(defun familiar-analytics--mix-chart (reqs)
+  "Stacked bars: each week's spend split by model."
+  (let* ((weeks (familiar-analytics--weeks reqs))
+         (models (mapcar #'car (familiar-analytics--group #'familiar-analytics--req-model reqs)))
+         (cost-of (lambda (rs m) (familiar-analytics--sum #'familiar-analytics--req-cost
+                                                          (seq-filter (lambda (r) (equal (familiar-analytics--req-model r) m)) rs)))))
+    (if (not (familiar-analytics--svg-p))
+        (dolist (w weeks)
+          (insert (format "  %s  %s\n" (car w)
+                          (mapconcat (lambda (m) (format "%s %s" m (familiar-analytics--usd (funcall cost-of (cdr w) m))))
+                                     models ", "))))
+      (let* ((p (familiar-analytics--palette))
+             (colors (list (plist-get p :a) (plist-get p :b) (plist-get p :c) (plist-get p :d)
+                           (familiar-analytics--color 'font-lock-keyword-face :foreground "#c678dd")
+                           (plist-get p :dim)))
+             (w (familiar-analytics--chart-width)) (h 160) (left 56) (bottom 22) (top 24)
+             (n (length weeks)) (bw (min 80 (/ (float (- w left 10)) (max 1 n))))
+             (totals (mapcar (lambda (wk) (familiar-analytics--sum #'familiar-analytics--req-cost (cdr wk))) weeks))
+             (mx (apply #'max 1e-9 totals)) (plot-h (- h top bottom))
+             (svg (svg-create w h)))
+        (svg-rectangle svg 0 0 w h :fill (plist-get p :bg))
+        (cl-loop for wk in weeks for i from 0
+                 do (let ((y (- h bottom)))
+                      (cl-loop for m in models for color in colors
+                               do (let ((bh (* plot-h (/ (funcall cost-of (cdr wk) m) mx))))
+                                    (when (> bh 0)
+                                      (svg-rectangle svg (+ left (* i bw) 2) (- y bh) (max 1 (- bw 4)) bh
+                                                     :fill color :fill-opacity 0.85)
+                                      (setq y (- y bh)))))
+                      (svg-text svg (substring (car wk) 5) :x (+ left (* i bw) 2) :y (- h 6)
+                                :fill (plist-get p :dim) :font-size 10)))
+        (svg-text svg (familiar-analytics--usd mx) :x 2 :y (+ top 10) :fill (plist-get p :dim) :font-size 11)
+        (let ((lx left))
+          (cl-loop for m in models for color in colors
+                   do (let ((label (format "%s" m)))
+                        (svg-rectangle svg lx 6 10 10 :fill color)
+                        (svg-text svg label :x (+ lx 14) :y 15 :fill (plist-get p :dim) :font-size 11)
+                        (setq lx (+ lx 24 (* 6.5 (length label)))))))
+        (familiar-analytics--insert-svg svg "[spend per week by model]")))))
+
+;;;; Statistics: speed and reliability (newer ledger entries)
+
+(defun familiar-analytics--speed-table (groups label)
+  "Per group of GROUPS: answered, failed, median and p95 seconds, output
+tokens a second.  Only requests that recorded their time count."
+  (let* ((rows
+          (cons (list label "timed" "failed" "median s" "p95 s" "out tok/s")
+                (delq nil
+                      (mapcar
+                       (lambda (g)
+                         (let* ((timed (seq-filter #'familiar-analytics--req-seconds (cdr g)))
+                                (ok (seq-remove (lambda (r) (eq (familiar-analytics--req-status r) 'error)) timed))
+                                (failed (- (length timed) (length ok)))
+                                (secs (mapcar #'familiar-analytics--req-seconds ok))
+                                (rate (let ((s (apply #'+ 0 secs)))
+                                        (if (> s 0) (/ (familiar-analytics--sum #'familiar-analytics--req-out ok) s) 0))))
+                           (when timed
+                             (list (format "%s" (car g)) (number-to-string (length timed))
+                                   (if (zerop failed) "0" (format "%d (%.0f%%)" failed (familiar-analytics--pct failed (length timed))))
+                                   (if secs (format "%.1f" (familiar-analytics--quantile secs 0.5)) "–")
+                                   (if secs (format "%.1f" (familiar-analytics--quantile secs 0.95)) "–")
+                                   (format "%.0f" rate)))))
+                       groups))))
+         (widths (apply #'cl-mapcar (lambda (&rest col) (apply #'max (mapcar #'string-width col))) rows)))
+    (if (null (cdr rows))
+        (insert (propertize "  Requests record their time from now on; nothing timed in this range yet.\n" 'face 'shadow))
+      (cl-loop for row in rows for first = t then nil
+               do (insert "  " (mapconcat #'identity
+                                          (cl-loop for cell in row for w in widths for i from 0
+                                                   collect (if (zerop i) (string-pad cell w) (string-pad cell w nil t)))
+                                          "  ")
+                          "\n")
+               (when first
+                 (insert "  " (propertize (make-string (+ (apply #'+ widths) (* 2 (1- (length widths)))) ?─) 'face 'shadow) "\n"))))))
+
+(defun familiar-analytics-more-insights (reqs before)
+  "Insights from speed, failures, projects and the period BEFORE REQS."
+  (let (out)
+    ;; A model that fails often.
+    (dolist (g (familiar-analytics--group #'familiar-analytics--req-model reqs))
+      (let* ((timed (seq-filter #'familiar-analytics--req-seconds (cdr g)))
+             (failed (cl-count 'error timed :key #'familiar-analytics--req-status)))
+        (when (and (>= (length timed) 10) (> (familiar-analytics--pct failed (length timed)) 10))
+          (push (list 'warning (format "%s fails %.0f%% of the time" (car g) (familiar-analytics--pct failed (length timed)))
+                      (format "%d of %d timed requests got no answer. Check its backend (key, quota, network) or move its tasks to another model in familiar-models."
+                              failed (length timed)))
+                out))))
+    ;; A slow task: the user waits on it.
+    (dolist (g (familiar-analytics--group #'familiar-analytics--req-task reqs))
+      (let* ((secs (delq nil (mapcar (lambda (r) (and (not (eq (familiar-analytics--req-status r) 'error))
+                                                       (familiar-analytics--req-seconds r)))
+                                     (cdr g))))
+             (median (familiar-analytics--quantile secs 0.5)))
+        (when (and (>= (length secs) 5) (> median 8)
+                   (not (eq (alist-get (car g) (bound-and-true-p familiar-task-tiers)) 'fast)))
+          (push (list 'recommend (format "%s takes %.0f s at the median" (car g) median)
+                      (format "%d answers, p95 %.0f s. If you wait on them, the fast tier answers in a fraction: (setf (alist-get '%s familiar-task-tiers) 'fast)."
+                              (length secs) (familiar-analytics--quantile secs 0.95) (car g)))
+                out))))
+    ;; One project takes most of it.
+    (let* ((with (seq-filter #'familiar-analytics--req-project reqs))
+           (spend (familiar-analytics--sum #'familiar-analytics--req-cost with))
+           (top (car (familiar-analytics--group #'familiar-analytics--req-project with))))
+      (when (and top (>= (length with) 10) (> spend 0))
+        (let ((share (familiar-analytics--pct (familiar-analytics--sum #'familiar-analytics--req-cost (cdr top)) spend)))
+          (when (> share 60)
+            (push (list 'info (format "%s is %.0f%% of the spend with a known project" (car top) share)
+                        (format "%d requests there, %s." (length (cdr top))
+                                (familiar-analytics--usd (familiar-analytics--sum #'familiar-analytics--req-cost (cdr top)))))
+                  out)))))
+    ;; Against the period before.
+    (when before
+      (let ((now (familiar-analytics--sum #'familiar-analytics--req-cost reqs))
+            (then (familiar-analytics--sum #'familiar-analytics--req-cost before)))
+        (when (and (> then 0) (> now (* 2 then)) (> (- now then) 0.05))
+          (let ((grew (car (sort (mapcar (lambda (g)
+                                           (cons (car g) (- (familiar-analytics--sum #'familiar-analytics--req-cost (cdr g))
+                                                            (familiar-analytics--sum #'familiar-analytics--req-cost
+                                                                                     (seq-filter (lambda (r) (eq (familiar-analytics--req-task r) (car g))) before)))))
+                                         (familiar-analytics--group #'familiar-analytics--req-task reqs))
+                                 (lambda (a b) (> (cdr a) (cdr b)))))))
+            (push (list 'warning (format "Spend is %.1f× the period before" (/ now then))
+                        (format "%s against %s; most of the growth is %s (+%s)."
+                                (familiar-analytics--usd now) (familiar-analytics--usd then)
+                                (car grew) (familiar-analytics--usd (cdr grew))))
+                  out)))))
+    (nreverse out)))
+
 ;;;; The buffer
 
 (defvar-local familiar-analytics--days nil "The range shown: nil (all) or a number of days.")
@@ -416,6 +636,12 @@ so short answers and bursts are how they work, not a waste."
                          (date-to-time (format-time-string "%F 00:00"))
                        (time-subtract nil (* 86400 familiar-analytics--days)))))
          (reqs (if since (familiar-analytics--requests since) all))
+         ;; The period of the same length just before, to compare with.
+         (before (and since
+                      (let ((from (time-subtract since (if (zerop familiar-analytics--days) 86400
+                                                         (* 86400 familiar-analytics--days)))))
+                        (seq-filter (lambda (r) (time-less-p (familiar-analytics--req-time r) since))
+                                    (familiar-analytics--requests from)))))
          (figs (familiar-analytics--figures reqs all))
          (total (plist-get figs :spent))
          (days (familiar-analytics--days reqs)))
@@ -428,12 +654,21 @@ so short answers and bursts are how they work, not a waste."
         (insert "\nNo requests in this range.\n")
       ;; Figures
       (familiar-analytics--heading "Figures")
-      (let ((in (plist-get figs :in)) (cached (plist-get figs :cached)))
-        (insert (format "  %s spent on %d requests  ·  %s a request  ·  %s in, %s out  ·  %.0f%% of input from cache\n"
-                        (propertize (familiar-analytics--usd total) 'face 'bold) (plist-get figs :requests)
+      (let ((in (plist-get figs :in)) (cached (plist-get figs :cached))
+            (saved (familiar-analytics--saved reqs)))
+        (insert (format "  %s%s spent on %d%s requests  ·  %s a request  ·  %s in, %s out  ·  %.0f%% of input from cache\n"
+                        (propertize (familiar-analytics--usd total) 'face 'bold)
+                        (if before (familiar-analytics--change total (familiar-analytics--sum #'familiar-analytics--req-cost before) t) "")
+                        (plist-get figs :requests)
+                        (if before (familiar-analytics--change (plist-get figs :requests) (length before)) "")
                         (familiar-analytics--usd (/ total (max 1 (plist-get figs :requests))))
                         (familiar-analytics--tokens in) (familiar-analytics--tokens (plist-get figs :out))
                         (familiar-analytics--pct cached (+ in cached))))
+        (when (> saved 0)
+          (insert (format "  The cache saved %s (%s of input billed at a tenth)%s\n"
+                          (propertize (familiar-analytics--usd saved) 'face 'success)
+                          (familiar-analytics--tokens cached)
+                          (if before (propertize "  ·  ▲▼ against the period before" 'face 'shadow) ""))))
         (when (plist-get figs :left)
           (insert (format "  Budget: %s of %s used (%.1f%%), %s left; last week %s a day%s\n"
                           (familiar-analytics--usd (plist-get figs :spent-all)) (familiar-analytics--usd familiar-budget)
@@ -441,6 +676,9 @@ so short answers and bursts are how they work, not a waste."
                           (familiar-analytics--usd (plist-get figs :left)) (familiar-analytics--usd (plist-get figs :rate))
                           (if (plist-get figs :runs-out)
                               (format-time-string ", runs out around %Y-%m-%d" (plist-get figs :runs-out)) "")))))
+      ;; Illustration
+      (familiar-analytics--heading "Where the money goes")
+      (familiar-analytics--strip (familiar-analytics--group #'familiar-analytics--req-task reqs) total)
       ;; Plots
       (familiar-analytics--heading "Spend per day, and in total")
       (familiar-analytics--daily-chart days (and (null since) familiar-budget))
@@ -452,14 +690,26 @@ so short answers and bursts are how they work, not a waste."
       (familiar-analytics--bars (familiar-analytics--group #'familiar-analytics--req-task reqs) total)
       (familiar-analytics--heading "Where it goes: models")
       (familiar-analytics--bars (familiar-analytics--group #'familiar-analytics--req-model reqs) total)
+      (when (cdr (familiar-analytics--weeks reqs))
+        (familiar-analytics--heading "The model mix, week by week")
+        (familiar-analytics--mix-chart reqs))
+      (when-let* ((with (seq-filter #'familiar-analytics--req-project reqs)))
+        (familiar-analytics--heading "Where it goes: projects")
+        (familiar-analytics--bars (familiar-analytics--group #'familiar-analytics--req-project with)
+                                  (familiar-analytics--sum #'familiar-analytics--req-cost with)))
       ;; Statistics
       (familiar-analytics--heading "Statistics per task")
       (familiar-analytics--stats-table (familiar-analytics--group #'familiar-analytics--req-task reqs) "task" total)
       (familiar-analytics--heading "Statistics per model")
       (familiar-analytics--stats-table (familiar-analytics--group #'familiar-analytics--req-model reqs) "model" total)
+      (familiar-analytics--heading "Speed and reliability per model")
+      (familiar-analytics--speed-table (familiar-analytics--group #'familiar-analytics--req-model reqs) "model")
+      (familiar-analytics--heading "Speed and reliability per task")
+      (familiar-analytics--speed-table (familiar-analytics--group #'familiar-analytics--req-task reqs) "task")
       ;; Insights
       (familiar-analytics--heading "Insights and recommendations")
-      (dolist (i (familiar-analytics-insights reqs all figs))
+      (dolist (i (append (familiar-analytics-insights reqs all figs)
+                         (familiar-analytics-more-insights reqs before)))
         (pcase-let ((`(,level ,title ,text) i))
           (insert "  " (pcase level ('warning (propertize "⚠" 'face 'warning))
                          ('recommend (propertize "➜" 'face 'success))
@@ -512,13 +762,15 @@ so short answers and bursts are how they work, not a waste."
   "Write every request in the ledger to FILE as CSV."
   (interactive (list (read-file-name "CSV file: " nil nil nil "familiar-requests.csv")))
   (with-temp-file file
-    (insert "time,model,task,input,output,cached,usd\n")
+    (insert "time,model,task,input,output,cached,usd,seconds,project,status\n")
     (dolist (r (familiar-analytics--requests))
-      (insert (format "%s,%s,%s,%d,%d,%d,%.7f\n"
+      (insert (format "%s,%s,%s,%d,%d,%d,%.7f,%s,%s,%s\n"
                       (format-time-string "%FT%T%z" (familiar-analytics--req-time r))
                       (familiar-analytics--req-model r) (familiar-analytics--req-task r)
                       (familiar-analytics--req-in r) (familiar-analytics--req-out r)
-                      (familiar-analytics--req-cached r) (familiar-analytics--req-cost r)))))
+                      (familiar-analytics--req-cached r) (familiar-analytics--req-cost r)
+                      (or (familiar-analytics--req-seconds r) "") (or (familiar-analytics--req-project r) "")
+                      (if (eq (familiar-analytics--req-status r) 'error) "error" "ok")))))
   (message "Wrote %s" (abbreviate-file-name file)))
 
 (defvar-keymap familiar-analytics-mode-map

@@ -651,7 +651,8 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
           (or (and gptel--fsm-last (plist-get (gptel-fsm-info gptel--fsm-last) :model))
               gptel-model))
     (setq familiar-ask--last-tokens tokens
-          familiar-ask--last-cost (familiar--record familiar-ask--last-model 'ask tokens))
+          familiar-ask--last-cost (familiar--record familiar-ask--last-model 'ask tokens nil
+                                                    (familiar--ledger-project)))
     (cl-incf familiar-ask--cost familiar-ask--last-cost)))
 (advice-add 'gptel--update-token-usage :after #'familiar-ask--record-a)
 
