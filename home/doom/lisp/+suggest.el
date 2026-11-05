@@ -29,9 +29,16 @@ asks before every request)."
 (use-package! minuet
   :hook (prog-mode . minuet-auto-suggestion-mode)
   :config
+  ;; Fast enough to see while you pause (measured 13:25: three continuations
+  ;; took ~2 s and one request 15 s, past the 3 s timeout): one
+  ;; continuation as you pause (M-] asks for more), half the context, 0.4 s
+  ;; debounce, a 5 s timeout.
   (setq minuet-provider 'claude
-        minuet-auto-suggestion-debounce-delay 0.8
-        minuet-auto-suggestion-throttle-delay 2.0)
+        minuet-n-completions 1
+        minuet-context-window 8000
+        minuet-request-timeout 5
+        minuet-auto-suggestion-debounce-delay 0.4
+        minuet-auto-suggestion-throttle-delay 1.0)
   (plist-put minuet-claude-options :api-key #'+suggest-api-key)
   (map! :map minuet-active-mode-map
         "TAB"   #'minuet-accept-suggestion
@@ -77,8 +84,8 @@ cursor, then the context before it.
 (defconst +suggest-prose-guidelines
   "Guidelines:
 1. Continue exactly at `<cursorPosition>`; start with a space only if one is needed.
-2. Offer different continuations: a short one (finish the sentence), a longer one \
-(finish the paragraph or block), and one taking another direction.
+2. Offer the most likely continuation first; when asked for several, also a \
+longer one (finish the paragraph or block) and one taking another direction.
 3. Return completions separated by the marker <endCompletion>.
 4. No comments, no code fences, no quotes around the text.
 5. Never repeat text that is already before or after the cursor.
@@ -172,16 +179,35 @@ push it sideways, so in prose only M-n asks for one."
 
 (defun +suggest-ask-a (&rest _)
   "Remember where and on what text suggestions were asked for."
+  (+suggest--count :asked)
   (setq +suggest--asked (cons (point) (buffer-chars-modified-tick))))
+
+(defvar +suggest--stats (list :asked 0 :shown 0 :empty 0 :talking 0 :stale 0)
+  "Since Emacs started: suggestions asked for, shown, and dropped by reason.")
+
+(defun +suggest--count (key &optional n)
+  (setq +suggest--stats (plist-put +suggest--stats key (+ (or n 1) (plist-get +suggest--stats key)))))
 
 (defun +suggest-sane-a (args)
   "Filter for `minuet--display-suggestion' ARGS: drop stale and talking ones."
-  (let ((items (seq-remove (lambda (s) (or (not (stringp s)) (string-match-p +suggest-meta-re s)))
-                             (car args))))
-    (when (and +suggest--asked (eq (point) (car +suggest--asked))
-               (/= (buffer-chars-modified-tick) (cdr +suggest--asked)))
-      (setq items nil))
+  (let* ((all (seq-filter #'stringp (car args)))
+         (items (seq-remove (lambda (s) (string-match-p +suggest-meta-re s)) all))
+         (stale (and +suggest--asked (eq (point) (car +suggest--asked))
+                     (/= (buffer-chars-modified-tick) (cdr +suggest--asked)))))
+    (+suggest--count :talking (- (length all) (length items)))
+    (cond ((null all) (+suggest--count :empty))
+          (stale (+suggest--count :stale) (setq items nil))
+          (items (+suggest--count :shown)))
     (cons items (cdr args))))
+
+(defun +suggest/stats ()
+  "How inline suggestions fared since Emacs started, in the echo area."
+  (interactive)
+  (message "Suggestions: %d asked, %d shown; dropped: %d empty, %d stale (text changed meanwhile), %d talking.  Not answered in %ss or answered after you moved on: the rest."
+           (plist-get +suggest--stats :asked) (plist-get +suggest--stats :shown)
+           (plist-get +suggest--stats :empty) (plist-get +suggest--stats :stale)
+           (plist-get +suggest--stats :talking)
+           (bound-and-true-p minuet-request-timeout)))
 (with-eval-after-load 'minuet
   (advice-add 'minuet-show-suggestion :before #'+suggest-ask-a)
   (advice-add 'minuet--display-suggestion :filter-args #'+suggest-sane-a)
