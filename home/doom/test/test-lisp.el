@@ -2880,3 +2880,22 @@ directory taken that way loses its /./."
       (delete-directory dir t)))
   (should (equal (+completion--directory-first-a (lambda () "file:~/Pictures/Screenshots/./")) "file:~/Pictures/Screenshots/"))
   (should (equal (+completion--directory-first-a (lambda () "file:./")) "file:./")))
+
+(ert-deftest org-capture/one-template-per-key-into-the-inbox ()
+  "Ours replace Doom's personal templates (t n j took two keys each), Doom's
+project groups and packages' templates stay; ours go to the inbox."
+  (require 'org)
+  (with-temp-buffer
+    (insert-file-contents (expand-file-name "+org-power.el" test-lisp-dir))
+    (goto-char (point-min)) (search-forward "(defvar +org-capture-inbox") (beginning-of-line)
+    (let ((end (save-excursion (search-forward "(defun +org-capture--merge") (forward-sexp) (point))))
+      (while (< (point) end) (eval (read (current-buffer)) t))))
+  (let* ((doom '(("t" "Personal todo") ("n" "Personal notes") ("j" "Journal")
+                 ("p" "Templates for projects") ("pt" "Project-local todo") ("V" "Vellumory feedback")))
+         (keys (mapcar #'car (+org-capture--merge doom))))
+    (should (equal keys (delete-dups (copy-sequence keys))))
+    (should (member "pt" keys)) (should (member "V" keys))
+    (should (equal (nth 1 (assoc "t" (+org-capture--merge doom))) "TODO (for me)"))
+    (should (cl-every (lambda (tp) (or (not (nth 3 tp)) (equal (nth 3 tp) '(file +org-capture-inbox))
+                                       (eq (car (nth 3 tp)) 'file+olp+datetree)))
+                      +org-capture-templates))))

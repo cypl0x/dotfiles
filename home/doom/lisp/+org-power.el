@@ -251,23 +251,50 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
 
 ;;;; Enhanced capture templates ──────────────────────────────────────────────
 
+;; Everything goes to ~/vault/inbox.org first, as a top-level entry stamped
+;; with when it came in (date and time); you or an agent sort it later.
+;; Doom's personal templates are replaced (they and these had both t and
+;; n, and the second t and n couldn't be reached), its project groups (p,
+;; o) stay.  No org-roam IDs: SPC m I gives one when a note needs it.
+(defvar +org-capture-inbox (expand-file-name "inbox.org" "~/vault/")
+  "Where captures land before they are sorted.")
+
+(defvar +org-capture-templates
+  `(("t" "TODO (for me)" entry (file +org-capture-inbox)
+     "* TODO %?\n%U\n" :empty-lines 1)
+    ("n" "Note" entry (file +org-capture-inbox)
+     "* %U %?\n" :empty-lines 1)
+    ("a" "TODO for an agent" entry (file +org-capture-inbox)
+     "* TODO %? :agent:\n%U\n" :empty-lines 1)
+    ("h" "TODO here (links back to where you are)" entry (file +org-capture-inbox)
+     "* TODO %?\n%U\n%a\n" :empty-lines 1)
+    ("q" "Quote the selection (with where it is from)" entry (file +org-capture-inbox)
+     "* %U %?\n#+begin_quote\n%i\n#+end_quote\nFrom: %a\n" :empty-lines 1)
+    ("l" "Link (the URL on the clipboard)" entry (file +org-capture-inbox)
+     "* %(+org-capture--clip-link)%?\n%U\n" :empty-lines 1)
+    ("i" "Idea" entry (file +org-capture-inbox)
+     "* IDEA %?\n%U\n" :empty-lines 1)
+    ("m" "Meeting" entry (file +org-capture-inbox)
+     "* %U Meeting: %?\n** Attendees\n** Notes\n** Actions\n" :empty-lines 1)
+    ("j" "Journal (journal.org, by date)" entry (file+olp+datetree "journal.org")
+     "* %U %?\n" :empty-lines 1))
+  "The capture templates in front of Doom's project groups.")
+
+(defun +org-capture--clip-link ()
+  "The clipboard's URL as an Org link (titled when org-cliplink can), or empty."
+  (let ((clip (ignore-errors (current-kill 0 t))))
+    (cond ((not (and (stringp clip) (string-match-p "\\`https?://" (string-trim clip)))) "")
+          ((fboundp 'org-cliplink-capture) (or (ignore-errors (org-cliplink-capture)) (format "[[%s]] " (string-trim clip))))
+          (t (format "[[%s]] " (string-trim clip))))))
+
+(defun +org-capture--merge (templates)
+  "Ours, then TEMPLATES without the keys ours take: Doom's project groups
+and whatever packages added (vellumory's V) stay."
+  (append +org-capture-templates
+          (seq-remove (lambda (tp) (assoc (car tp) +org-capture-templates)) templates)))
+
 (after! org
-  ;; Extend org-capture beyond org-roam (which handles note capture).
-  ;; These are for quick task/inbox capture.
-  (setq org-capture-templates
-        (append org-capture-templates
-                '(("t" "Task" entry
-                   (file+headline "inbox.org" "Tasks")
-                   "* TODO %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n"
-                   :empty-lines 1)
-                  ("n" "Note" entry
-                   (file+headline "inbox.org" "Notes")
-                   "* %? :note:\n:PROPERTIES:\n:CREATED: %U\n:END:\n"
-                   :empty-lines 1)
-                  ("l" "Link" entry
-                   (file+headline "inbox.org" "Links")
-                   "* %? :link:\n:PROPERTIES:\n:URL: %^{URL}\n:CREATED: %U\n:END:\n"
-                   :empty-lines 1)))))
+  (setq org-capture-templates (+org-capture--merge org-capture-templates)))
 
 ;;;; Keybindings — SPC n (notes) ─────────────────────────────────────────────
 
