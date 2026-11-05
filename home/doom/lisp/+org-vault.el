@@ -1,0 +1,268 @@
+;;; lisp/+org-vault.el --- Obsidian's panels and tools, for the vault -*- lexical-binding: t; -*-
+;;
+;; What Obsidian has beside its graph (lisp/+org-graph.el), here, reading
+;; the vault the same way (file: and id: links, not org-roam's id-only
+;; database):
+;;
+;;   eldoc      on a link to a note: its title and first lines in the echo
+;;              area (Obsidian's page preview, without the mouse)
+;;   SPC n r p  that note, read-only, in a window below (q closes it)
+;;   SPC n r l  links of this note: backlinks (with the line), outgoing,
+;;              unlinked mentions both ways; RET goes there
+;;   SPC n r t  every tag in the vault, how often; RET lists what has it
+;;   SPC n r P  every property, how often, its values; RET lists them
+;;   SPC n r u  a new note named by the time (Obsidian's unique note)
+;;   SPC n r a  record audio into the vault; again stops and links it here
+;;
+;;; Code:
+
+(require 'cl-lib)
+(require 'subr-x)
+
+(declare-function +org-graph-read "+org-graph" (&optional root))
+(declare-function +org-graph-mentions "+org-graph" (graph))
+(declare-function +org-graph--root "+org-graph" ())
+(declare-function org-element-context "org-element" (&optional element))
+(declare-function org-element-type "org-element-ast" (node &optional anonymous))
+(declare-function org-element-property "org-element-ast" (property node &optional dflt force-undefer))
+(declare-function org-roam-db-query "ext:org-roam-db" (sql &rest args))
+
+;;;; The note a link points to
+
+(defun +org-vault--link-target ()
+  "The Org file the link at point points to, or nil."
+  (let ((ctx (and (derived-mode-p 'org-mode) (save-match-data (org-element-context)))))
+    (when (eq (org-element-type ctx) 'link)
+      (let ((type (org-element-property :type ctx)) (path (org-element-property :path ctx)))
+        (pcase type
+          ("file" (let ((f (expand-file-name path (and buffer-file-name (file-name-directory buffer-file-name)))))
+                    (and (string-suffix-p ".org" f) (file-readable-p f) f)))
+          ("id" (ignore-errors (caar (org-roam-db-query [:select file :from nodes :where (= id $s1)] path)))))))))
+
+(defun +org-vault--summary (file &optional lines)
+  "FILE's title and its first LINES (3) lines of text."
+  (with-temp-buffer
+    (insert-file-contents file nil 0 6000)
+    (goto-char (point-min))
+    (let ((title (if (re-search-forward "^#\\+title:[ \t]*\\(.+\\)$" nil t) (match-string 1) (file-name-base file)))
+          text)
+      (goto-char (point-min))
+      (while (and (< (length text) (or lines 3)) (not (eobp)))
+        (let ((l (string-trim (buffer-substring-no-properties (line-beginning-position) (line-end-position)))))
+          (unless (or (string-empty-p l) (string-prefix-p "#+" l) (string-prefix-p ":" l))
+            (push l text)))
+        (forward-line 1))
+      (cons title (nreverse text)))))
+
+(defun +org-vault-eldoc (callback &rest _)
+  "Eldoc for a link to a note: its title and opening (CALLBACK gets it)."
+  (when-let* ((file (+org-vault--link-target)))
+    (pcase-let ((`(,title . ,text) (+org-vault--summary file)))
+      (funcall callback (concat (propertize title 'face 'bold) "  "
+                                (propertize (string-join text " · ") 'face 'shadow))))))
+
+(add-hook 'org-mode-hook
+          (defun +org-vault-eldoc-h ()
+            (add-hook 'eldoc-documentation-functions #'+org-vault-eldoc nil t)))
+
+;;;###autoload
+(defun +org-vault/peek ()
+  "The note the link at point points to, read-only, in a window below."
+  (interactive)
+  (let ((file (or (+org-vault--link-target) (user-error "No link to a note here"))))
+    (with-current-buffer (find-file-noselect file)
+      (view-mode 1)
+      (display-buffer (current-buffer) '((display-buffer-below-selected) (window-height . 0.35))))))
+
+;;;; Links of this note
+
+(defun +org-vault--line-with (file target)
+  "The first line of FILE linking to TARGET (a file), trimmed, or nil."
+  (with-temp-buffer
+    (insert-file-contents file)
+    (let ((name (regexp-quote (file-name-nondirectory target))))
+      (goto-char (point-min))
+      (when (re-search-forward (concat "\\[\\[\\(?:file\\|id\\):[^]]*" name) nil t)
+        (string-trim (buffer-substring-no-properties (line-beginning-position) (line-end-position)))))))
+
+(defun +org-vault--button (file &optional label)
+  (insert-text-button (or label (car (+org-vault--summary file 0)))
+                      'action (lambda (_) (find-file-other-window file))
+                      'follow-link t 'help-echo (abbreviate-file-name file)))
+
+;;;###autoload
+(defun +org-vault/links ()
+  "This note's backlinks (with their lines), outgoing links and unlinked
+mentions, file: links included, in a side window."
+  (interactive)
+  (let* ((me (or (and buffer-file-name (expand-file-name buffer-file-name)) (user-error "Not a file")))
+         (graph (+org-graph-read))
+         (edges (cdr graph))
+         (mentions (+org-graph-mentions graph))
+         (back (delete-dups (mapcar #'car (seq-filter (lambda (e) (equal (cdr e) me)) edges))))
+         (out (delete-dups (mapcar #'cdr (seq-filter (lambda (e) (equal (car e) me)) edges))))
+         (named-here (mapcar #'cdr (seq-filter (lambda (e) (equal (car e) me)) mentions)))
+         (naming-me (mapcar #'car (seq-filter (lambda (e) (equal (cdr e) me)) mentions))))
+    (with-current-buffer (get-buffer-create "*note links*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (propertize (car (+org-vault--summary me 0)) 'face '(:inherit bold :height 1.2)) "\n")
+        (cl-flet ((section (title files &optional context)
+                    (insert "\n" (propertize (format "%s (%d)" title (length files)) 'face 'bold) "\n")
+                    (if (null files) (insert (propertize "  none\n" 'face 'shadow))
+                      (dolist (f files)
+                        (insert "  ")
+                        (if (string-suffix-p ".org" f) (+org-vault--button f)
+                          (+org-vault--button f (abbreviate-file-name f)))
+                        (insert "\n")
+                        (when-let* ((line (and context (funcall context f))))
+                          (insert (propertize (format "    %s\n" (truncate-string-to-width line 90 nil nil "…"))
+                                              'face 'shadow)))))))
+          (section "Backlinks" back (lambda (f) (+org-vault--line-with f me)))
+          (section "Outgoing" out)
+          (section "Mentions you, unlinked" naming-me)
+          (section "You mention, unlinked" named-here)))
+      (special-mode)
+      (goto-char (point-min))
+      (display-buffer (current-buffer) '((display-buffer-in-side-window) (side . right) (window-width . 0.35))))))
+
+;;;; Tags and properties of the vault
+
+(defun +org-vault--files ()
+  (directory-files-recursively (+org-graph--root) "\\.org\\'" nil
+                               (lambda (d) (not (string-match-p "/\\.git\\'" d)))))
+
+(defun +org-vault-tags ()
+  "Every tag in the vault: hash TAG → list of (FILE POS TITLE)."
+  (let ((h (make-hash-table :test #'equal)))
+    (dolist (f (+org-vault--files))
+      (with-temp-buffer
+        (insert-file-contents f)
+        (goto-char (point-min))
+        (when (re-search-forward "^#\\+filetags:[ \t]*\\(.+\\)$" nil t)
+          (dolist (tag (split-string (match-string 1) "[: \t]+" t))
+            (push (list f 1 (file-name-base f)) (gethash tag h))))
+        (goto-char (point-min))
+        (while (re-search-forward "^\\*+ \\(.*?\\)[ \t]+:\\([[:alnum:]_@#%:]+\\):[ \t]*$" nil t)
+          (let ((title (match-string 1)) (pos (line-beginning-position)))
+            (dolist (tag (split-string (match-string 2) ":" t))
+              (push (list f pos title) (gethash tag h)))))))
+    h))
+
+(defun +org-vault-properties ()
+  "Every property in the vault's drawers: hash KEY → list of (FILE POS VALUE)."
+  (let ((h (make-hash-table :test #'equal)))
+    (dolist (f (+org-vault--files))
+      (with-temp-buffer
+        (insert-file-contents f)
+        (goto-char (point-min))
+        (while (re-search-forward "^[ \t]*:PROPERTIES:[ \t]*$" nil t)
+          (let ((end (save-excursion (re-search-forward "^[ \t]*:END:" nil t))))
+            (while (and end (re-search-forward "^[ \t]*:\\([^: \t\n]+\\):[ \t]*\\(.*\\)$" end t))
+              (unless (equal (match-string 1) "END")
+                (push (list f (line-beginning-position) (string-trim (match-string 2))) (gethash (match-string 1) h))))))))
+    h))
+
+(defun +org-vault--list (title items fmt)
+  "A buffer TITLE listing ITEMS (FILE POS LABEL) with FMT for the label."
+  (with-current-buffer (get-buffer-create (format "*%s*" title))
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert (propertize title 'face 'bold) "\n\n")
+      (pcase-dolist (`(,file ,pos ,label) items)
+        (insert "  ")
+        (insert-text-button (funcall fmt label file)
+                            'action (lambda (_) (find-file-other-window file) (goto-char pos))
+                            'follow-link t 'help-echo (abbreviate-file-name file))
+        (insert (propertize (format "  %s\n" (file-name-base file)) 'face 'shadow))))
+    (special-mode)
+    (goto-char (point-min))
+    (pop-to-buffer (current-buffer))))
+
+(defun +org-vault--counts (title table describe on-ret)
+  (with-current-buffer (get-buffer-create (format "*%s*" title))
+    (let ((inhibit-read-only t) rows)
+      (erase-buffer)
+      (maphash (lambda (k v) (push (cons k v) rows)) table)
+      (insert (propertize title 'face 'bold) (propertize (format "   %d, RET lists them\n\n" (length rows)) 'face 'shadow))
+      (dolist (row (sort rows (lambda (a b) (> (length (cdr a)) (length (cdr b))))))
+        (insert (format "%4d  " (length (cdr row))))
+        (insert-text-button (car row) 'action (let ((r row)) (lambda (_) (funcall on-ret r))) 'follow-link t)
+        (insert (propertize (funcall describe row) 'face 'shadow) "\n")))
+    (special-mode)
+    (goto-char (point-min))
+    (pop-to-buffer (current-buffer))))
+
+;;;###autoload
+(defun +org-vault/tags ()
+  "Every tag of the vault, how often; RET lists the notes and headings."
+  (interactive)
+  (+org-vault--counts "Tags of the vault" (+org-vault-tags) (lambda (_) "")
+                      (lambda (row) (+org-vault--list (format "Tagged %s" (car row)) (reverse (cdr row))
+                                                      (lambda (label _) label)))))
+
+;;;###autoload
+(defun +org-vault/properties ()
+  "Every property of the vault, how often and with which values; RET lists them."
+  (interactive)
+  (+org-vault--counts "Properties of the vault" (+org-vault-properties)
+                      (lambda (row) (let ((vals (delete-dups (mapcar #'caddr (cdr row)))))
+                                      (format "  %s%s" (string-join (seq-take vals 4) ", ") (if (cdr (nthcdr 3 vals)) " …" ""))))
+                      (lambda (row) (+org-vault--list (format "Property %s" (car row)) (reverse (cdr row))
+                                                      (lambda (value _) (if (string-empty-p value) "(empty)" value))))))
+
+;;;; A note named by the time
+
+;;;###autoload
+(defun +org-vault/unique-note ()
+  "A new note in the vault named by the time (as Obsidian's unique note)."
+  (interactive)
+  (let* ((stamp (format-time-string "%Y%m%d%H%M%S"))
+         (file (expand-file-name (concat stamp ".org") (+org-graph--root))))
+    (find-file file)
+    (insert (format "#+title: %s\n\n" (format-time-string "%Y-%m-%d %H:%M")))
+    (when (fboundp 'evil-insert-state) (evil-insert-state))))
+
+;;;; Audio into the vault
+
+(defvar +org-vault--recording nil "(PROCESS FILE START BUFFER POINT) of the recording running.")
+
+;;;###autoload
+(defun +org-vault/record ()
+  "Record audio (FLAC) into the vault's audio/; again to stop, which links
+the recording at point (where you started)."
+  (interactive)
+  (if-let* ((rec +org-vault--recording))
+      (pcase-let ((`(,proc ,file ,start ,buf ,pos) rec))
+        (setq +org-vault--recording nil)
+        (when (process-live-p proc) (interrupt-process proc))
+        (let ((secs (round (float-time (time-subtract nil start)))))
+          (run-at-time 0.5 nil
+                       (lambda ()
+                         (when (buffer-live-p buf)
+                           (with-current-buffer buf
+                             (save-excursion
+                               (goto-char pos)
+                               (insert (format "[[file:%s][Recording %s (%d:%02d)]]"
+                                               (file-relative-name file (file-name-directory (or buffer-file-name file)))
+                                               (format-time-string "%H:%M" start) (/ secs 60) (% secs 60))))))
+                         (message "Recorded %d s: %s" secs (abbreviate-file-name file))))))
+    (unless (executable-find "pw-record") (user-error "pw-record (PipeWire) isn't installed"))
+    (let* ((dir (expand-file-name "audio/" (+org-graph--root)))
+           (file (expand-file-name (format-time-string "%Y-%m-%d_%H%M%S.flac") dir)))
+      (make-directory dir t)
+      (setq +org-vault--recording
+            (list (start-process "vault-recording" nil "pw-record" file) file (current-time)
+                  (current-buffer) (point-marker)))
+      (message "● Recording into %s; SPC n r a again stops and links it here" (abbreviate-file-name file)))))
+
+(map! :leader
+      :desc "Peek the linked note"  "n r p" #'+org-vault/peek
+      :desc "Links of this note"    "n r l" #'+org-vault/links
+      :desc "Tags of the vault"     "n r t" #'+org-vault/tags
+      :desc "Properties of the vault" "n r P" #'+org-vault/properties
+      :desc "Unique note (by time)" "n r u" #'+org-vault/unique-note
+      :desc "Record audio here"     "n r a" #'+org-vault/record)
+
+(provide '+org-vault)
+;;; +org-vault.el ends here

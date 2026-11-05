@@ -2930,3 +2930,43 @@ layout inside the picture."
                 ;; One clickable area per node.
                 (should (= (length (cdr drawn)) 5))))))
       (delete-directory dir t))))
+
+(ert-deftest org-vault/preview-links-tags-properties-unique-note ()
+  "A link's note previews in eldoc; the links panel has backlinks with their
+line; tags and properties of the vault are found; a unique note is named
+by the time."
+  (require 'org)
+  (load (expand-file-name "+org-graph" test-lisp-dir) nil t)
+  (load (expand-file-name "+org-vault" test-lisp-dir) nil t)
+  (let* ((dir (file-name-as-directory (make-temp-file "vault" t)))
+         (+org-graph-directory dir)
+         (home (expand-file-name "home.org" dir)) (a (expand-file-name "a.org" dir)))
+    (unwind-protect
+        (progn
+          (write-region "#+title: Home\n#+filetags: :hub:\n* Plan :work:\n:PROPERTIES:\n:STATUS: open\n:END:\nSee [[file:a.org][A]] today.\n" nil home)
+          (write-region "#+title: Alpha\nThe first line of A.\nThe second.\n" nil a)
+          (cl-letf (((symbol-function '+org-graph--ids) (lambda () (make-hash-table :test #'equal))))
+            (with-current-buffer (find-file-noselect home)
+              (unwind-protect
+                  (progn
+                    (goto-char (point-min)) (search-forward "[[file:a")
+                    (should (equal (+org-vault--link-target) a))
+                    (let (doc) (+org-vault-eldoc (lambda (s) (setq doc s)))
+                         (should (string-match-p "Alpha.*The first line of A" (substring-no-properties doc))))
+                    (with-current-buffer (find-file-noselect a)
+                      (save-window-excursion (+org-vault/links))
+                      (kill-buffer))
+                    (with-current-buffer "*note links*"
+                      (should (string-match-p "Backlinks (1)" (buffer-string)))
+                      (should (string-match-p "See \\[\\[file:a.org\\]\\[A\\]\\] today" (buffer-string)))))
+                (kill-buffer)))
+            (let ((tags (+org-vault-tags)))
+              (should (= (length (gethash "hub" tags)) 1))
+              (should (equal (nth 2 (car (gethash "work" tags))) "Plan")))
+            (should (equal (nth 2 (car (gethash "STATUS" (+org-vault-properties)))) "open"))
+            (save-window-excursion
+              (+org-vault/unique-note)
+              (should (string-match-p "\\`[0-9]\\{14\\}\\.org\\'" (file-name-nondirectory buffer-file-name)))
+              (set-buffer-modified-p nil) (kill-buffer))))
+      (when (get-buffer "*note links*") (kill-buffer "*note links*"))
+      (delete-directory dir t))))
