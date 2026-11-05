@@ -30,30 +30,36 @@ lua_str() { # a Lua string literal
 }
 pixels() { # "exact A B,SELECTOR" or "A B,SELECTOR" -> x = A, y = B, relative, window
   local spec=${1%%,*} sel=${1#*,} relative=true
-  [[ $spec == exact* ]] && { relative=false; spec=${spec#exact }; }
+  [[ $spec == exact* ]] && {
+    relative=false
+    spec=${spec#exact }
+  }
   read -r a b <<<"$spec"
   printf 'x = %s, y = %s, relative = %s, window = %s' "$a" "$b" "$relative" "$(lua_str "$sel")"
 }
 
 case $dispatcher in
-  focuswindow) expr="hl.dsp.focus({ window = $(lua_str "$args") })" ;;
-  workspace) expr="hl.dsp.focus({ workspace = $(lua_str "$args") })" ;;
-  togglespecialworkspace) expr="hl.dsp.workspace.toggle_special($(lua_str "${args:-}"))" ;;
-  resizewindowpixel) expr="hl.dsp.window.resize({ $(pixels "$args") })" ;;
-  movewindowpixel) expr="hl.dsp.window.move({ $(pixels "$args") })" ;;
-  exec)
-    if [[ $args =~ ^\[([^]]*)\][[:space:]]*(.*)$ ]]; then
-      rules=${BASH_REMATCH[1]} cmd=${BASH_REMATCH[2]}
-      key=${rules%% *} value=${rules#* }
-      expr="hl.dsp.exec_cmd($(lua_str "$cmd"), { $key = $(lua_str "$value") })"
-    else
-      expr="hl.dsp.exec_cmd($(lua_str "$args"))"
-    fi
-    ;;
-  *)
-    echo "hypr-dispatch: no Lua translation for '$dispatcher' yet" >&2
-    exit 2
-    ;;
+focuswindow) expr="hl.dsp.focus({ window = $(lua_str "$args") })" ;;
+workspace) expr="hl.dsp.focus({ workspace = $(lua_str "$args") })" ;;
+togglespecialworkspace) expr="hl.dsp.workspace.toggle_special($(lua_str "${args:-}"))" ;;
+resizewindowpixel) expr="hl.dsp.window.resize({ $(pixels "$args") })" ;;
+movewindowpixel) expr="hl.dsp.window.move({ $(pixels "$args") })" ;;
+exec)
+  if [[ $args =~ ^\[([^]]*)\][[:space:]]*(.*)$ ]]; then
+    rules=${BASH_REMATCH[1]} cmd=${BASH_REMATCH[2]}
+    key=${rules%% *} value=${rules#* }
+    expr="hl.dsp.exec_cmd($(lua_str "$cmd"), { $key = $(lua_str "$value") })"
+  else
+    expr="hl.dsp.exec_cmd($(lua_str "$args"))"
+  fi
+  ;;
+*)
+  echo "hypr-dispatch: no Lua translation for '$dispatcher' yet" >&2
+  exit 2
+  ;;
 esac
-[ -n "${HYPR_DISPATCH_DRY:-}" ] && { printf '%s\n' "$expr"; exit 0; }
+[ -n "${HYPR_DISPATCH_DRY:-}" ] && {
+  printf '%s\n' "$expr"
+  exit 0
+}
 exec hyprctl dispatch "$expr"
