@@ -1445,6 +1445,28 @@ and a temp exec-path where bin/tar links to store/tar."
   (should (seq-find (lambda (c) (eq (org-lint-checker-name c) '+org-lint-list-bullets))
                     org-lint--checkers)))
 
+(ert-deftest org-lint/over-budget-waits-for-save ()
+  "A lint over budget isn't redone while the buffer is modified: the last
+findings stand, following the text; once saved it runs again."
+  (require 'org-lint)
+  (with-temp-buffer
+    (org-mode)
+    (insert "* A\n\n\n\ntext\n")
+    (let ((+org-lint-budget 0) (runs 0))
+      (cl-letf* ((orig (symbol-function '+org-lint-findings))
+                 ((symbol-function '+org-lint-findings)
+                  (lambda () (cl-incf runs) (funcall orig))))
+        (+org-lint-current)                 ; first run: no cost known yet
+        (should (= runs 1))
+        (let ((pos (marker-position (car (car +org-lint--last)))))
+          (goto-char (point-min)) (insert "#+title: x\n")
+          (+org-lint-current)               ; modified, over budget: kept
+          (should (= runs 1))
+          (should (= (marker-position (car (car +org-lint--last))) (+ pos 11))))
+        (set-buffer-modified-p nil)         ; as if saved
+        (+org-lint-current)
+        (should (= runs 2))))))
+
 (ert-deftest org-lint/markup-headings-languages-links ()
   (require 'org-lint)
   (cl-flet ((lint (rule text)

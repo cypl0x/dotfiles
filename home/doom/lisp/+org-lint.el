@@ -371,12 +371,40 @@ saying how many more; M-x org-lint lists them all."
 ~170 ms for 100k characters); M-x org-lint still works there."
   :type 'natnum :group 'org)
 
+(defcustom +org-lint-budget 0.1
+  "Seconds a lint may take while you write.  A buffer whose last lint took
+longer is linted once saved, not between keystrokes: the cost follows the
+buffer and the Emacs (natively compiled or not), not a fixed size."
+  :type 'number :group 'org)
+
+(defvar-local +org-lint--cost nil "Seconds this buffer's last lint took.")
+(defvar-local +org-lint--last nil
+  "This buffer's last findings, with markers: shown again while a lint waits.")
+
+(defun +org-lint-due-p ()
+  "Whether to lint now (else the last findings stand): cheap enough, or saved."
+  (or (not (buffer-modified-p))
+      (null +org-lint--cost)
+      (< +org-lint--cost +org-lint-budget)))
+
+(defun +org-lint-current ()
+  "Findings for flycheck: fresh when `+org-lint-due-p', else the last ones
+(their markers moved with your edits)."
+  (if (+org-lint-due-p)
+      (progn
+        (dolist (f +org-lint--last) (set-marker (car f) nil))
+        (setq +org-lint--last
+              (mapcar (pcase-lambda (`(,pos ,level ,msg)) (list (copy-marker pos) level msg))
+                      (+org-lint-findings))))
+    +org-lint--last))
+
 (defun +org-lint-findings ()
   "This buffer's `org-lint' findings: (POS LEVEL MESSAGE) ...
 Org's checks are warnings, the style rules above info; a style rule with
 more than `+org-lint-max-per-rule' findings gives its first, with a count."
   (require 'org-lint)
-  (let ((ast (org-element-parse-buffer nil nil 'defer))
+  (let ((start (float-time))
+        (ast (org-element-parse-buffer nil nil 'defer))
         (style (mapcar #'car +org-lint-rules))
         findings)
     (dolist (checker org-lint--checkers)
@@ -396,6 +424,7 @@ more than `+org-lint-max-per-rule' findings gives its first, with a count."
                           (format "%s, and %d more like it (M-x org-lint lists them)" msg more)
                         msg))
                 findings))))
+    (setq +org-lint--cost (- (float-time) start))
     (sort findings (lambda (a b) (< (car a) (car b))))))
 
 ;; In place of flycheck's own org-lint checker (an Emacs subprocess
@@ -408,8 +437,8 @@ more than `+org-lint-max-per-rule' findings gives its first, with a count."
              (condition-case err
                  (funcall callback 'finished
                           (mapcar (pcase-lambda (`(,pos ,level ,msg))
-                                    (flycheck-error-new-at-pos pos level msg :checker checker))
-                                  (+org-lint-findings)))
+                                    (flycheck-error-new-at-pos (marker-position pos) level msg :checker checker))
+                                  (+org-lint-current)))
                (error (funcall callback 'errored (error-message-string err)))))
     :modes '(org-mode)
     :predicate (lambda () (< (buffer-size) +org-lint-max-size)))
