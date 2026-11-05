@@ -39,6 +39,23 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 16:06] — Obsidian matched, org-roam discoverable, screenshots in one key
+- ✔ *Obsidian*: all 29 core features have a counterpart (28 complete; sync
+  needs the vault's first commit and a remote). The list is in
+  [[file:~/vault/obsidian.org]]. New: graph (=SPC n r g=, with unlinked
+  mentions drawn dashed), peek, links panel, tags and properties views,
+  bases as editable Org tables, canvas, publish, sync, unique note, audio.
+- ✔ *org-roam*: one menu (=SPC n r m=), a step-by-step workflow guide
+  (=SPC n r w=), a tour (=SPC n r e=).
+- ✔ *Capture* (=SPC X=): templates for TODO, note, agent, here, quote,
+  link, idea, meeting, journal into ~/vault/inbox.org.
+- ✔ *Links*: link and markup syntax shows again under the cursor; insert
+  state =RET= inside a link opens it.
+- ✔ *C-SPC* in normal state set the mark; now it completes too.
+- ✔ *Latest screenshot*: =SPC i S= (Org/Markdown also =SPC m l p=) links
+  the newest shot, no prompt; =SPC u 2 SPC i S= the one before.
+- Tests: 342/342.
+
 ** [2026-11-05 Do 13:43] — Your new items: files, themes, suggestions, flows
 - ✔ *SPC f f* wasn't cached; new files were just sorted out of sight. Now
   folders first, then newest first, and the folder updates while the
