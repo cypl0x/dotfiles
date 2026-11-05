@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 04:42] — Fixes for everything, and seven papercuts
+- =SPC P x= fixes any well-formed finding.  A long sentence gets split
+  where its clauses meet ("…in the spring. The team then…").  "The file
+  was deleted by the script" becomes "The script deleted the file".  Any
+  finding can also go to the AI rewrite, which shows the change word by
+  word.
+- *bold* now stands out in headlines: headlines are SemiBold, bold is
+  ExtraBold.
+- C-RET makes headings with the blank line =SPC c f= expects.
+- The completion popups (C-SPC, C-S-SPC) have their own color and stand out
+  everywhere; C-S-SPC selects its best guess and shows the reason at once.
+- Diagnostics appear right under the line, not above with a gap.
+- =SPC f r= lists remote files again (/ssh:…inari…).
+- C-ä / C-ö resize Org buffers too; they were pinned to one size.
+- =SPC '= reopens the last menu or minibuffer, whichever closed last.
+
 ** [2026-11-05 Do 04:20] — ✦ well-formed: a writing assistant with no Java
 - LanguageTool is gone: 2.8 GB of Java, 30 s to start, and the reason
   =SPC X= capture crawled (eglot retried it in every buffer of the vault).
