@@ -88,6 +88,12 @@ in {
   # view_mode: icon | compact | thumbnail | list  (list = detailed list view)
   # sort: <col>;ascending|descending  — cols: name, mtime, size, type, …
   xdg.configFile = {
+    # The Lua config: Hyprland (0.55+) prefers hyprland.lua over hyprland.conf
+    # whenever both exist, but only when it starts (or `hyprctl reload
+    # full-reset`; a plain reload keeps the file it runs), so this takes
+    # effect at the next login.  hyprland.conf stays as the fallback.
+    "hypr/hyprland.lua".source = ./hyprland/hyprland.lua;
+
     # force: PCManFM rewrites this when the GUI is used, and a stale
     # pcmanfm.conf.bak would then make HM activation refuse to back up.
     "pcmanfm/default/pcmanfm.conf" = {

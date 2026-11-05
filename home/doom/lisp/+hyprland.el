@@ -21,7 +21,15 @@
 (declare-function evil-make-overriding-map "ext:evil" (keymap &optional state copy))
 
 (defvar +hyprland-config (expand-file-name "~/dotfiles/home/hyprland/hyprland.conf")
-  "The config the binds list jumps into (the repo's, not the deployed copy).")
+  "The hyprlang config binds jump into (in the repo, not the deployed copy).")
+
+(defvar +hyprland-config-lua (expand-file-name "~/dotfiles/home/hyprland/hyprland.lua")
+  "The Lua config, when Hyprland runs it.")
+
+(defun +hyprland-lua-p ()
+  "Non-nil when the running Hyprland uses the Lua config."
+  (not (string-match-p "only supported with the lua config"
+                       (with-output-to-string (call-process "hyprctl" nil standard-output nil "repl" "return 1")))))
 
 (defun +hyprland--json (&rest args)
   (with-temp-buffer
@@ -138,12 +146,32 @@
                                               " ")
                                  (or (plist-get b :submap) "")))))
 
+(defun +hyprland--lua-bind-line (key arg)
+  "In the Lua config buffer: go to the bind of KEY (ARG's first word
+ disambiguates); non-nil if found."
+  (let (hits)
+    (goto-char (point-min))
+    (while (re-search-forward (concat "^[ \t]*bind([^,]*,[ \t]*\"" (regexp-quote key) "\"") nil t)
+      (push (line-beginning-position) hits))
+    (setq hits (nreverse hits))
+    (when hits
+      (goto-char (or (and (not (string-empty-p arg))
+                          (seq-find (lambda (p) (save-excursion (goto-char p)
+                                                                (search-forward (car (split-string arg)) (line-end-position) t)))
+                                    hits))
+                     (car hits)))
+      t)))
+
 (defun +hyprland-bind-source ()
-  "The line in hyprland.conf that makes the bind at point."
+  "The line in the running config (.lua or .conf) making the bind at point."
   (interactive)
   (let* ((b (or (tabulated-list-get-id) (user-error "No bind here")))
          (arg (string-trim (or (plist-get b :arg) "")))
          (key (plist-get b :key)))
+    (if (+hyprland-lua-p)
+        (progn (find-file-other-window +hyprland-config-lua)
+               (unless (+hyprland--lua-bind-line key arg)
+                 (message "No bind(…, \"%s\") in hyprland.lua" key)))
     (find-file-other-window +hyprland-config)
     (goto-char (point-min))
     (if (re-search-forward (concat "^[ \t]*bind[a-z]*[ \t]*=.*,[ \t]*" (regexp-quote key) "[ \t]*,.*"
@@ -151,7 +179,7 @@
                                    (if (string-empty-p arg) "" (concat ".*" (regexp-quote (car (split-string arg))))))
                            nil t)
         (beginning-of-line)
-      (message "Not found by key and dispatcher; it may come from a variable or a submap"))))
+      (message "Not found by key and dispatcher; it may come from a variable or a submap")))))
 
 (defun +hyprland-binds-filter (regexp)
   "Show binds matching REGEXP (keys or what they do; empty: all)."
