@@ -536,6 +536,7 @@
 (load! "lisp/+messages")    ;; *Messages* with times, colors, rendered markup, buttons
 (load! "lisp/+org-roam")    ;; Org-roam: make notes of files, one menu (SPC n r m), a tour
 (load! "lisp/+org-subtree-edit") ;; C-c ' on a heading: the subtree in its own buffer
+(load! "lisp/+systemd")     ;; systemd units, timers and the journal, proced-style (SPC o s, SPC o j)
 (load! "lisp/+org-slash")    ;; /table5x2, /code, /todo ... in Org (Notion-like)
 (load! "lisp/+org-cheatsheet") ;; SPC m ?: Org by example, from the manual
 (load! "lisp/+org-ai-capture") ;; SPC m C: write headings, AI files them where they belong
