@@ -2341,3 +2341,20 @@ in the background; nothing synchronous."
     (should (= 0 (n #'+org-lint-final-newline "text\n")))
     (should (= 1 (n #'+org-lint-several-titles "#+title: A\n#+title: B\n")))
     (should (= 0 (n #'+org-lint-several-titles "#+title: A\n")))))
+
+(ert-deftest neomacs/zoom-by-face-height ()
+  (load (expand-file-name "+neomacs" test-lisp-dir) nil t)
+  (let ((+neomacs--initial-height nil)
+        (orig (face-attribute 'default :height)))
+    (unwind-protect
+        (progn
+          (set-face-attribute 'default nil :height 140)
+          (+neomacs-adjust-font-size-a #'ignore 2)
+          (should (= (face-attribute 'default :height) 160))
+          (+neomacs-adjust-font-size-a #'ignore 3)
+          (should (= (face-attribute 'default :height) 190))
+          (+neomacs-adjust-font-size-a #'ignore nil)
+          (should (= (face-attribute 'default :height) 140))
+          (+neomacs-adjust-font-size-a #'ignore 12 t)
+          (should (= (face-attribute 'default :height) 120)))
+      (set-face-attribute 'default nil :height orig))))

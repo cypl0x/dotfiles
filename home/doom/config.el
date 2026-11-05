@@ -554,6 +554,7 @@
 (load! "lisp/+org-babel")   ;; Babel results that end in a blank line come back (Org bug, report drafted)
 (load! "lisp/+hunks")       ;; SPC g H: this change: diff, stage, unstage, revert, commit just it, history; fringe clicks
 (load! "lisp/+dired")       ;; dired/dirvish: how long ago (2h 13min ago) next to the exact time
+(load! "lisp/+neomacs")     ;; under neomacs: zoom by face height (its x-list-fonts is a stub)
 (load! "lisp/+org-slash")    ;; /table5x2, /code, /todo ... in Org (Notion-like)
 (load! "lisp/+org-cheatsheet") ;; SPC m ?: Org by example, from the manual
 (load! "lisp/+org-ai-capture") ;; SPC m C: write headings, AI files them where they belong

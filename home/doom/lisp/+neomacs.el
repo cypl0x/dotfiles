@@ -1,0 +1,37 @@
+;;; lisp/+neomacs.el --- This config under NEO Emacs (neomacs): what differs -*- lexical-binding: t; -*-
+;;
+;; neomacs (home/neomacs.nix, the `neomacs' command) runs this same Doom
+;; config.  Where it differs from GNU Emacs, here:
+;;
+;; Zoom   (C-ä, SPC t b …) failed: "No fonts match `-*-Maple Mono NF-…-20-…'".
+;;        Not the font (fontconfig has Maple Mono NF): neomacs' `x-list-fonts'
+;;        is a stub returning nil in a graphical session (upstream main,
+;;        2026-11-05), so resolving any font by name fails, and Doom's zoom
+;;        re-applies `doom-font' by name.  Here zoom scales the default face's
+;;        :height instead, which neomacs renders (same steps, same reset).
+;;
+;;; Code:
+
+(defvar +neomacs-p (and (getenv "NEOMACS_DOOM") t)
+  "Non-nil when this Emacs is neomacs running this config.")
+
+(defvar +neomacs--initial-height nil "The default face's :height before zooming.")
+
+(defun +neomacs-adjust-font-size-a (_fn increment &optional fixed-size-p _font-alist)
+  "Around `doom-adjust-font-size': zoom by face :height (no font lookup).
+INCREMENT is in points as there (nil resets); FIXED-SIZE-P makes it the size."
+  (let ((height (face-attribute 'default :height nil t)))
+    (unless +neomacs--initial-height (setq +neomacs--initial-height height))
+    (let ((new (cond ((null increment) +neomacs--initial-height)
+                     (fixed-size-p (* 10 increment))
+                     (t (+ height (* 10 increment))))))
+      (when (<= new 0) (user-error "Can't make the font any smaller"))
+      (set-face-attribute 'default nil :height new)
+      (unless increment (setq +neomacs--initial-height nil))
+      t)))
+
+(when +neomacs-p
+  (advice-add 'doom-adjust-font-size :around #'+neomacs-adjust-font-size-a))
+
+(provide '+neomacs)
+;;; +neomacs.el ends here
