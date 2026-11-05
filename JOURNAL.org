@@ -39,6 +39,27 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 10:17] — Measured, then fixed: wiggle, neomacs, org-lint, agents
+- ✔ *The zoom wiggle*: measured at 4x in a hidden frame — org-appear
+  revealed markers under the cursor while you merely moved; a link shifted
+  the rest of its line 50 px. Now markup appears only while you write:
+  moving through prose shifts 0 px.
+- 🔎 *neomacs zoom*: not your font — neomacs' =x-list-fonts= is a stub (also
+  on upstream main), so every font lookup by name fails. Under neomacs zoom
+  scales the face height now. *Scrolling*: neomacs sends wheel steps as
+  lines (GNU pgtk gets pixels), so ultra-scroll jumped; now interpolated
+  pixel scrolling. Both need your try in neomacs (I couldn't test its GUI
+  hidden — it ignores -T; my two runs likely flashed a window, sorry).
+- ✔ *org-lint*: 22 style rules now (tabs, tables, 1./1), bare URLs, empty
+  links, images without alt, =x = spacing, final newline, two titles).
+- ✔ *SPC h !*: hand-off verified live with a real agent (answered in 9 s,
+  reused when idle); =f= hands it the freeze recorder's last report.
+- ✔ Echo area for rule explanations and tailscale ping; usage recorder
+  fixed (M-DEL was filed as kill-region); themes re-verified at 7:1;
+  mail tools as a shared module; Flutter in its own file; kill archive.
+- Your decisions recorded: home-manager stays; inari: nothing deleted,
+  no deploy yet, builder later; reports not filed.
+
 ** [2026-11-05 Do 09:03] — Your freezes were mine; kills archived; ages in dired
 - 🧊 *Read your freeze profiles*: 4 today (39–85 s), each after opening a
   GitHub owner — dired asked every repository for a date and each made 3
