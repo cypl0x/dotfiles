@@ -144,6 +144,8 @@ counted in :count; newest first."
   (require 'magit-section)
   (with-current-buffer (get-buffer-create name)
     (+gh-page-mode)
+    (setq default-directory (if (eq (car how) '+gh/profile) (format "%s/%s/" +gh-fs-root (cadr how))
+                              (concat +gh-fs-root "/")))
     (setq +gh-page--how how
           +gh-page--render (lambda () (let ((inhibit-read-only t) (pos (point)))
                                         (erase-buffer)

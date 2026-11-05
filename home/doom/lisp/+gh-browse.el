@@ -409,6 +409,7 @@ repository, else as Markdown with its comments."
         (let ((inhibit-read-only t)) (erase-buffer) (insert text))
         (if (fboundp 'gfm-view-mode) (gfm-view-mode) (view-mode))
         (setq-local +gh-browse--list-place place)
+        (setq default-directory (file-name-as-directory (+gh-browse--file (+gh-browse--with place :path ""))))
         (goto-char (point-min))
         (pop-to-buffer (current-buffer))))))
 
@@ -576,6 +577,9 @@ In a /github buffer the other way: clone it, open it locally (`+gh/clone')."
 PLACE: the repository; MORE: fetches more rows; HOW: (FN . ARGS) to redo it."
   (with-current-buffer (get-buffer-create name)
     (+gh-list-mode)
+    ;; SPC f f, SPC p f and dired start here: the repository, or /github/.
+    (setq default-directory (if place (file-name-as-directory (+gh-browse--file (+gh-browse--with place :path "")))
+                              (concat +gh-fs-root "/")))
     (setq tabulated-list-format format
           +gh-list--all (+gh-list--propertize rows)
           +gh-list--more more
@@ -914,6 +918,7 @@ PLACE: the repository; MORE: fetches more rows; HOW: (FN . ARGS) to redo it."
       (let ((inhibit-read-only t))
         (erase-buffer)
         (+gh-render-mode)
+        (setq default-directory (file-name-directory file))
         (setq +gh-render--source file
               +gh-browse--list-place p)
         (let ((dom (with-temp-buffer (insert html) (libxml-parse-html-region (point-min) (point-max) base)))
