@@ -32,9 +32,9 @@ in =~/.authinfo= (=machine api.anthropic.com password …=), as gptel reads it.
 * Usage
 | Key            | What                                                    |
 |----------------+---------------------------------------------------------|
-| =SPC z=        | everything familiar does, and its settings (the menu) |
+| =SPC z=        | the menu: everything familiar does, and its settings    |
 | =M-ß=          | ask anything; =@name= offers an MCP server's tools      |
-| =SPC A=        | the menu: explain, fix, commit message, spend, sessions |
+| =SPC A=        | the agent menu: explain, fix, commit, spend, sessions   |
 | =SPC A w=      | write to a running Claude Code session                  |
 | =SPC o $=      | analytics: spend, plots, speed, recommendations         |
 | =C-c p= in M-ß | insert a saved prompt                                   |
