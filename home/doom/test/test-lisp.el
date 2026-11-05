@@ -2369,3 +2369,18 @@ in the background; nothing synchronous."
           (should pixel-scroll-precision-mode)
           (should pixel-scroll-precision-interpolate-mice))
       (pixel-scroll-precision-mode -1))))
+
+(ert-deftest system/views-read-this-machine ()
+  "Each view's rows come from this machine (skipped where a tool is absent)."
+  (load (expand-file-name "+system" test-lisp-dir) nil t)
+  (when (file-directory-p "/sys/bus/usb/devices")
+    (should (listp (+system--usb-rows))))
+  (when (file-directory-p "/sys/class/hwmon")
+    (dolist (row (+system--sensor-rows))
+      (should (string-match-p "°C\\|rpm" (substring-no-properties (aref (cadr row) 2))))))
+  (when (executable-find "lsmod")
+    (should (cl-every (lambda (r) (stringp (car r))) (+system--module-rows))))
+  (when (executable-find "getent")
+    (should (assoc "root" (+system--user-rows))))
+  (when (executable-find "ss")
+    (should (listp (+system--port-rows)))))

@@ -546,6 +546,7 @@
 (load! "lisp/+info")        ;; Info: readable, highlighted, remembers where you were; own manuals in C-h i
 (load! "lisp/+hyprland")    ;; Hyprland windows, binds, workspaces, monitors (SPC o h)
 (load! "lisp/+desktop")     ;; SPC o y: network, Bluetooth, audio, disks, NixOS generations, power
+(load! "lisp/+system")      ;; SPC o y: containers, ports, USB/PCI, temperatures, modules, users, machine
 (load! "lisp/+gh-fs")       ;; /github/OWNER/REPO[@REF]/…: GitHub as a read-only file system
 (load! "lisp/+gh-browse")   ;; SPC o G: GitHub menu: browse, dashboard, search, profiles, clone, report
 (load! "lisp/+gh-cli")      ;; SPC o G x every gh command; write issues/PRs/gists; Actions; code grep
