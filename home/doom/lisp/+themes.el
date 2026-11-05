@@ -287,5 +287,36 @@ spec that sets it, else the face's own default spec; nil when none does."
 
 (add-hook 'enable-theme-functions #'+themes--audit-after-load-h 90)
 
+;;;; One light/dark switch
+;;
+;; Themes were switched 21 times by name in the log (load-theme 8,
+;; vellumory's 13).  SPC t D goes to the other side; each side remembers the
+;; theme you used last there.  Vellumory follows by itself (its `tint' and
+;; `auto' recolour on `enable-theme-functions').
+
+(defvar +themes-light 'modus-operandi "The light theme SPC t D switches to.")
+(defvar +themes-dark 'doom-vibrant "The dark theme SPC t D switches to.")
+
+(defun +themes-dark-p ()
+  "Non-nil if the current theme's background is dark."
+  (let ((bg (face-background 'default nil t)))
+    (and (+themes--color-p bg) (< (or (+themes--luminance bg) 1) 0.2))))
+
+(defun +themes-remember-side-h (theme)
+  "The theme just enabled becomes its side's choice for SPC t D."
+  (when (eq theme (car custom-enabled-themes))
+    (if (+themes-dark-p) (setq +themes-dark theme) (setq +themes-light theme))))
+
+(add-hook 'enable-theme-functions #'+themes-remember-side-h 95)
+
+;;;###autoload
+(defun +themes/toggle-dark ()
+  "Switch to the other side: the light theme or the dark one."
+  (interactive)
+  (load-theme (if (+themes-dark-p) +themes-light +themes-dark) t)
+  (message "%s" (car custom-enabled-themes)))
+
+(map! :leader :desc "Light / dark theme" "t D" #'+themes/toggle-dark)
+
 (provide '+themes)
 ;;; +themes.el ends here
