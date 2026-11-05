@@ -856,6 +856,20 @@ and a temp exec-path where bin/tar links to store/tar."
       (insert "re")
       (should-not (+completion-next-word-capf)))))
 
+(ert-deftest completion/paths-by-their-shape ()
+  (let ((dir (make-temp-file "pathcomp" t)))
+    (make-directory (expand-file-name "vault" dir))
+    (dolist (case '("See =%s/va" "See ~/x %s/va" "[[file:%s/va" "Run %s/va"))
+      (with-temp-buffer
+        (insert (format case dir))
+        (let ((r (+completion-path-capf)))
+          (should r)
+          (should (equal (all-completions (buffer-substring (nth 0 r) (nth 1 r)) (nth 2 r)) '("vault/"))))))
+    (with-temp-buffer
+      (insert "Plain words va")
+      (should-not (+completion-path-capf)))
+    (delete-directory dir t)))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)

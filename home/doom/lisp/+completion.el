@@ -142,6 +142,28 @@ first, each with its count.  C-SPC after a space offered nothing before."
               :exclusive 'no
               :company-kind (lambda (_) 'text))))))
 
+(defun +completion-path-capf ()
+  "Complete a file or directory name before point, recognized by its
+shape (~/…, /…, ./…, ../…, file:…) after a space or an Org/Markdown
+markup character: in =verbatim=, ~code~, links, prose and prompts alike.
+\"~/dotfiles/ho\" had looked like the start of ~code~ and got Lisp names;
+an unclosed \"=~/va\" like prose and got words."
+  (let ((start (save-excursion
+                 (skip-chars-backward "^ \t\n=~[(\"'`<" (line-beginning-position))
+                 ;; "~/x": the ~ belongs to the path, not to markup.
+                 (when (and (eq (char-before) ?~) (eq (char-after) ?/)) (backward-char))
+                 (point))))
+    (when (let ((pt (point)))
+            (save-excursion
+              (goto-char start)
+              (and (looking-at "\\(?:file:\\)?\\(?:~\\|\\.\\.?\\)?/[^ \t\n]*")
+                   (= (match-end 0) pt))))
+      (let ((beg (if (save-excursion (goto-char start) (looking-at "file:")) (+ start 5) start)))
+        (list beg (point) #'read-file-name-internal
+              :exclusive 'no
+              :annotation-function (lambda (c) (if (string-suffix-p "/" c) "  dir" ""))
+              :company-kind (lambda (c) (if (string-suffix-p "/" c) 'folder 'file)))))))
+
 (defun +completion--prose ()
   (list #'+completion-prose-capf #'+completion-next-word-capf))
 
@@ -213,7 +235,11 @@ backticks on the line."
         (t 'code)))
 
 (defun +completion-capfs (&optional context)
-  "Completion functions for CONTEXT (default: `+completion-context')."
+  "Completion functions for CONTEXT (default: `+completion-context'),
+after the path completion, which recognizes a path wherever it is."
+  (cons #'+completion-path-capf (+completion--capfs-for context)))
+
+(defun +completion--capfs-for (context)
   (pcase (or context (+completion-context))
     ('org-link (delq nil (list (and (fboundp 'org-roam-complete-link-at-point)
                                     #'org-roam-complete-link-at-point)
