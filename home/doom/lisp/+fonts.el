@@ -42,6 +42,7 @@
           90)
 
 (declare-function +themes-doom-p "+themes" ())
+(declare-function +themes-dim "+themes" (fg bg &optional ratio))
 (after! doom-themes
   (custom-set-faces!
     ;; Use italic weight for comments — Maple Mono NF has a beautiful italic.
@@ -52,7 +53,7 @@
     ;; Slightly dimmed line numbers to reduce visual noise.
     ;; Colors from doom-color only under a doom theme (lisp/+themes.el): under
     ;; modus-operandi it answered black line numbers.
-    `(line-number ,@(and (+themes-doom-p) (list :foreground (doom-darken (doom-color 'fg) 0.6))))
+    `(line-number ,@(and (+themes-doom-p) (list :foreground (+themes-dim (doom-color 'fg) (doom-color 'bg)))))
     `(line-number-current-line ,@(and (+themes-doom-p) (list :foreground (doom-color 'fg))) :weight bold)
     ;; pulse.el's olive #AAAA33 (gptel flashes each answer with it, pulsar's
     ;; generic face inherits it) under the light text: contrast 1.38.  Blue

@@ -154,7 +154,6 @@ Can be an integer to determine the exact padding."
     :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
    (mode-line-emphasis
     :foreground (if doom-modus-vibrant-light-brighter-modeline base8 highlight))
-   (shadow :foreground base4)
    (tooltip :background base1 :foreground fg)
 
    ;;;; centaur-tabs
@@ -186,6 +185,14 @@ Can be an integer to determine the exact padding."
    ;;;; outline <built-in>
    ((outline-1 &override) :foreground red)
    ((outline-2 &override) :foreground orange)
+   ;; The base theme lightens levels 4-8 (blue and magenta 25-80% lighter),
+   ;; under 4.5:1 on white (level 4: 4.0): the palette's 7:1 colors instead,
+   ;; a family each.
+   ((outline-4 &override) :foreground blue)
+   ((outline-5 &override) :foreground magenta)
+   ((outline-6 &override) :foreground cyan)
+   ((outline-7 &override) :foreground green)
+   ((outline-8 &override) :foreground yellow)
    ;;;; org <built-in>
    ((org-block &override) :background base1)
    ((org-block-begin-line &override) :foreground fg :slant 'italic)

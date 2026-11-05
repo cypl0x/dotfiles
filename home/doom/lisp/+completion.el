@@ -303,13 +303,16 @@ after the path completion, which recognizes a path wherever it is."
 ;; Colors from doom-color only under a doom theme (lisp/+themes.el): after
 ;; doom-modus-vibrant, modus-operandi's popup came out its dark navy.
 (declare-function +themes-doom-p "+themes" ())
+(declare-function +themes-tint "+themes" (color bg fg alpha &optional ratio))
 (defmacro +completion--doom (&rest attrs)
   "ATTRS (a plist) while a doom theme is on, else nothing."
   `(and (+themes-doom-p) (list ,@attrs)))
 (custom-set-faces!
   `(corfu-default ,@(+completion--doom :background (doom-blend 'blue 'bg 0.10) :foreground (doom-color 'fg)))
   `(corfu-border ,@(+completion--doom :background (doom-blend 'blue 'bg 0.10)))
-  `(corfu-current ,@(+completion--doom :background (doom-blend 'blue 'bg 0.32) :foreground (doom-color 'fg))
+  ;; As much blue as keeps the text at 4.5:1 (32% left 4.3:1 in a dark theme).
+  `(corfu-current ,@(+completion--doom :background (+themes-tint (doom-color 'blue) (doom-color 'bg) (doom-color 'fg) 0.32)
+                                       :foreground (doom-color 'fg))
                   :weight bold :extend t)
   `(corfu-bar ,@(+completion--doom :background (doom-color 'blue)))
   `(corfu-annotations ,@(+completion--doom :foreground (doom-color 'base7)) :slant italic)

@@ -2771,3 +2771,32 @@ with a description (C-u 1); elsewhere and with an argument nothing changes."
     (should (equal (+org-links-preview-described-a '((4) 6 40)) '((4) 6 40)))
     (goto-char (point-max))
     (should (equal (+org-links-preview-described-a '(nil 6 40)) '(nil 6 40)))))
+
+(ert-deftest themes/audit-finds-leftovers-and-unreadable-faces ()
+  "The audit reports a face still at its pre-switch color though its spec
+says otherwise, and faces under readable contrast; the dim and tint
+helpers stop at 4.5:1."
+  (load (expand-file-name "+themes" test-lisp-dir) nil t)
+  (cl-letf (((symbol-function 'doom-blend)       ; linear, as doom-themes'
+             (lambda (a b alpha)
+               (apply #'format "#%02x%02x%02x"
+                      (cl-mapcar (lambda (x y) (round (* 255 (+ (* alpha x) (* (- 1 alpha) y)))))
+                                 (+themes--rgb a) (+themes--rgb b))))))
+    (let ((dim (+themes-dim "#000000" "#ffffff")))
+      (should (<= 4.5 (+themes-contrast dim "#ffffff") 5.2)))
+    (let ((tint (+themes-tint "#0000ff" "#ffffff" "#000000" 0.9)))
+      (should (>= (+themes-contrast "#000000" tint) 4.5))))
+  (defface claude-audit-face '((t)) "A face for this test.")
+  (set-face-attribute 'claude-audit-face (selected-frame) :foreground "#eeeeee" :background "#ffffff")
+  (let ((+themes--before (make-hash-table :test #'eq))
+        (+themes-audit-faces '(claude-audit-face))
+        (custom-enabled-themes nil))
+    (puthash 'claude-audit-face (cons "#eeeeee" "#ffffff") +themes--before)
+    (cl-letf (((symbol-function '+themes--spec-attr)
+               (lambda (face attr _frame) (and (eq face 'claude-audit-face) (eq attr :foreground) "#000000"))))
+      (let ((found (+themes-audit-findings)))
+        (should (cl-find "claude-audit-face :foreground" found :key #'cadr :test #'equal))
+        (should (cl-find-if (lambda (f) (and (eq (car f) 'error) (equal (cadr f) "claude-audit-face"))) found))
+        ;; Changed by the switch: not a leftover.
+        (puthash 'claude-audit-face (cons "#111111" "#ffffff") +themes--before)
+        (should-not (cl-find "claude-audit-face :foreground" (+themes-audit-findings) :key #'cadr :test #'equal))))))
