@@ -822,6 +822,26 @@ and a temp exec-path where bin/tar links to store/tar."
       (should (string-match-p "\\+org-lint · blank-lines" text))
       (should (string-match-p "\n● Second" text)))))
 
+(ert-deftest transient/resume-reopens-what-closed-last ()
+  (load (expand-file-name "+transient" test-lisp-dir) nil t)
+  (let ((+transient--ring nil) (+minibuffer--ring '((:command x))) (+minibuffer--closed-at 100.0)
+        (opened nil) (mini nil))
+    (dlet ((transient--prefix 'stub))
+      (cl-letf (((symbol-function 'eieio-oref) (lambda (_o _s) nil)))
+        (+transient--record-a 'magit-log)
+        (+transient--record-a 'well-formed-menu)
+        (+transient--record-a 'magit-log)))
+    (should (equal (mapcar (lambda (e) (plist-get e :prefix)) +transient--ring) '(magit-log well-formed-menu)))
+    (cl-letf (((symbol-function 'call-interactively) (lambda (c &rest _) (setq opened c)))
+              ((symbol-function '+minibuffer/resume) (lambda () (setq mini t))))
+      ;; The menu opened after the minibuffer closed: the menu comes back.
+      (+resume/last)
+      (should (eq opened 'magit-log))
+      ;; A minibuffer closed since: that comes back.
+      (setq +minibuffer--closed-at (+ (float-time) 10))
+      (+resume/last)
+      (should mini))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)

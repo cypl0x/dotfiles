@@ -247,9 +247,13 @@ S is the `vertico-repeat' session of a completion session (candidate too).")
                             (eq (car-safe session) cmd)
                             session))))))
 
+(defvar +minibuffer--closed-at nil
+  "When a minibuffer was last remembered (`float-time'), for `+resume/last'.")
+
 (defun +minibuffer--remember (entry)
   "Put ENTRY first in `+minibuffer--ring', once."
   (when entry
+    (setq +minibuffer--closed-at (float-time))
     (setq +minibuffer--ring
           (seq-take (cons entry
                           (seq-remove (lambda (e)
@@ -318,7 +322,7 @@ a reopened one keeps its edits."
   (interactive)
   (+minibuffer--swap -1))
 
-(map! :leader :desc "Reopen last minibuffer" "'" #'+minibuffer/resume
+(map!
       :map minibuffer-local-map
       "C-'" #'+minibuffer/older
       "C-\"" #'+minibuffer/newer)
