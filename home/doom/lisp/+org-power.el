@@ -189,7 +189,8 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
   :config
   (setq org-appear-trigger 'manual)
   (setq org-appear-autoemphasis t
-        org-appear-autolinks t
+        ;; Links: lisp/+org-links.el shows one as written while point is on it.
+        org-appear-autolinks nil
         org-appear-autosubmarkers t
         org-appear-autoentities t
         org-appear-delay 0.3

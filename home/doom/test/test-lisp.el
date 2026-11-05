@@ -2734,3 +2734,40 @@ opened (not ones already open)."
               (should-not (find-buffer-visiting a))
               (should-not (find-buffer-visiting b)))))
       (delete-directory dir t))))
+
+(ert-deftest org-links/link-shown-as-written-while-point-is-on-it ()
+  "A descriptive link shows its target while point is on it, and hides it
+again once point has left."
+  (require 'org)
+  (load (expand-file-name "+org-links" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (org-mode)
+    (setq-local org-link-descriptive t)
+    (insert "See [[https://example.org][Site]] here.")
+    (font-lock-ensure)
+    (let ((target (save-excursion (goto-char (point-min)) (search-forward "example") (1- (point)))))
+      (should (invisible-p target))
+      (goto-char (point-min)) (search-forward "Si")
+      (+org-links-reveal-h)
+      (should-not (invisible-p target))
+      ;; Moving within the link: it stays shown.
+      (goto-char target) (+org-links-reveal-h)
+      (should-not (invisible-p target))
+      ;; Leaving it: hidden again (once re-fontified).
+      (goto-char (point-max)) (+org-links-reveal-h)
+      (font-lock-ensure)
+      (should (invisible-p target)))))
+
+(ert-deftest org-links/ret-previews-described-image-links-too ()
+  "On a link, Doom's region call to org-link-preview also previews links
+with a description (C-u 1); elsewhere and with an argument nothing changes."
+  (require 'org)
+  (load (expand-file-name "+org-links" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (org-mode)
+    (insert "Text [[file:shot.png][a description]] and more.")
+    (goto-char (point-min)) (search-forward "a desc")
+    (should (equal (+org-links-preview-described-a '(nil 6 40)) '(1 6 40)))
+    (should (equal (+org-links-preview-described-a '((4) 6 40)) '((4) 6 40)))
+    (goto-char (point-max))
+    (should (equal (+org-links-preview-described-a '(nil 6 40)) '(nil 6 40)))))

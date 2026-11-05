@@ -114,6 +114,68 @@ minor modes."
 
 (add-hook 'org-mode-hook #'+org-links-mode)
 
+;;;; A link shows its real text while point is on it
+;;
+;; Links read as their description (or an icon); to edit one it has to show
+;; what it is.  org-appear revealed links only in insert state (its manual
+;; trigger, which keeps prose from wiggling), so a link flipped between its
+;; two forms as states changed and couldn't be edited where it stood.  Now
+;; a link is shown as written, [[target][description]], as long as point is
+;; on it, in any state, at once; leaving it hides it again.  Emphasis
+;; markers stay org-appear's.
+
+(defvar-local +org-links--revealed nil "(BEG . END) markers of the link shown as written.")
+(declare-function org-element-context "org-element" (&optional element))
+(declare-function org-element-type "org-element-ast" (node &optional anonymous))
+(declare-function org-element-property "org-element-ast" (property node &optional dflt force-undefer))
+
+(defun +org-links--link-at-point ()
+  "Bounds (BEG . END) of the link at point, or nil.  Cheap off links."
+  (when (or (memq 'org-link (ensure-list (get-text-property (point) 'face)))
+            (and (> (point) (point-min))
+                 (memq 'org-link (ensure-list (get-text-property (1- (point)) 'face)))))
+    (let ((ctx (save-match-data (org-element-context))))
+      (when (eq (org-element-type ctx) 'link)
+        (cons (org-element-property :begin ctx)
+              (- (org-element-property :end ctx) (or (org-element-property :post-blank ctx) 0)))))))
+
+(defun +org-links-reveal-h ()
+  "Show the link at point as written; hide the one left."
+  (let ((shown +org-links--revealed))
+    (unless (and shown (<= (car shown) (point) (cdr shown)))
+      (when shown
+        (setq +org-links--revealed nil)
+        (font-lock-flush (car shown) (cdr shown))
+        (set-marker (car shown) nil) (set-marker (cdr shown) nil))
+      (when-let* ((bounds (+org-links--link-at-point)))
+        (with-silent-modifications
+          (remove-text-properties (car bounds) (cdr bounds) '(invisible nil display nil composition nil)))
+        (setq +org-links--revealed (cons (copy-marker (car bounds)) (copy-marker (cdr bounds) t)))))))
+
+(add-hook 'org-mode-hook
+          (defun +org-links-reveal-setup-h ()
+            (add-hook 'post-command-hook #'+org-links-reveal-h nil t)))
+
+;;;; RET on an image link: its preview, whatever the link's form
+;;
+;; Doom's RET on an image link toggles its preview through `org-link-preview'
+;; without an argument, which previews links without a description only:
+;; file:shot.png showed inline, [[file:shot.png][a description]] did nothing.
+;; Org's own C-u 1 includes described links; RET on a link now asks for that.
+
+(defun +org-links-preview-described-a (args)
+  "Filter for `org-link-preview' ARGS: include described links when the call
+is for the link at point (Doom's RET passes that link's region)."
+  (if (and (null (car args)) (cadr args)
+           (derived-mode-p 'org-mode)
+           (eq (org-element-type (save-match-data (org-element-context))) 'link))
+      (cons 1 (cdr args))
+    args))
+
+(with-eval-after-load 'ol
+  (when (fboundp 'org-link-preview)
+    (advice-add 'org-link-preview :filter-args #'+org-links-preview-described-a)))
+
 ;;;; Completing links as you type them
 ;;
 ;; In [[file:… and a bare file:… (and the other link types that take a
