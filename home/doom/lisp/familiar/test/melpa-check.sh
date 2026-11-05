@@ -25,15 +25,17 @@ else
 fi
 
 echo "== checkdoc"
-found=$("$emacs" -Q --batch -l "$helper" --eval "(add-to-list 'load-path \"$work\")" --eval '
-(progn
-  (require (quote checkdoc))
-  (setq checkdoc-diagnostic-buffer "*checkdoc*")
-  (dolist (f (directory-files "." nil "\\.el\\'"'"'"))
-    (with-current-buffer (find-file-noselect f)
-      (ignore-errors (checkdoc-current-buffer t))))
-  (with-current-buffer (get-buffer-create "*checkdoc*") (princ (buffer-string))))' 2>&1 |
-  grep -E '^[a-z-]+\.el:[0-9]+' || true)
+cat >"$work/.checkdoc-all.el" <<'EOF'
+;;; -*- lexical-binding: t; -*-
+(require 'checkdoc)
+(setq checkdoc-diagnostic-buffer "*checkdoc*")
+(dolist (f (directory-files "." nil "\\.el\\'"))
+  (with-current-buffer (find-file-noselect f)
+    (ignore-errors (checkdoc-current-buffer t))))
+(with-current-buffer (get-buffer-create "*checkdoc*") (princ (buffer-string)))
+EOF
+found=$("$emacs" -Q --batch -l "$helper" --eval "(add-to-list 'load-path \"$work\")" \
+  -l "$work/.checkdoc-all.el" 2>&1 | grep -E '^[a-z-]+\.el:[0-9]+' || true)
 if [ -n "$found" ]; then
   echo "$found"
   status=1
