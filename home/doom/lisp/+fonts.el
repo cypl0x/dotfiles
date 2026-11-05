@@ -65,10 +65,16 @@
   "Org's *bold* markup: a step heavier than headlines."
   :group 'org-faces)
 
-(custom-set-faces!
-  '((org-level-1 org-level-2 org-level-3 org-level-4
-     org-level-5 org-level-6 org-level-7 org-level-8)
-    :weight semi-bold))
+;; Only the weight, after the theme has set the rest: a `custom-set-faces!'
+;; spec of just :weight replaced the theme's whole spec for these faces, and
+;; headings (and org-modern's stars, which take their colors) lost their
+;; colors.
+(defun +fonts-org-level-weight-h ()
+  (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4
+                  org-level-5 org-level-6 org-level-7 org-level-8))
+    (when (facep face) (set-face-attribute face nil :weight 'semi-bold))))
+(add-hook 'doom-load-theme-hook #'+fonts-org-level-weight-h)
+(with-eval-after-load 'org-faces (+fonts-org-level-weight-h))
 
 (after! org
   (setf (alist-get "*" org-emphasis-alist nil nil #'equal) '(+org-bold))
