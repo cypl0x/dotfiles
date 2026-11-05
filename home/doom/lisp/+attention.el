@@ -256,7 +256,6 @@ cause, fix, numbers."
     (let* ((default-directory (expand-file-name "~/dotfiles/"))
            (buf (agent-shell--start :config (agent-shell-anthropic-make-claude-code-config)
                                     :no-focus t :new-session t :session-strategy 'new)))
-      (with-current-buffer buf (rename-buffer (format "*attention: %s*" complaint) t))
       (agent-shell-insert :text (format +attention-brief complaint file)
                           :submit t :no-focus t :shell-buffer buf)
       (display-buffer buf)
