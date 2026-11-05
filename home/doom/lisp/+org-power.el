@@ -336,3 +336,40 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
   (advice-add 'consult-org--annotate :around #'+org-consult-priority-only-a))
 (provide '+org-power)
 ;;; +org-power.el ends here
+
+;;;; The fringe: wide enough to click, and clicks that do something
+
+;; In Org the left fringe is `+org-fringe-width' pixels (Emacs' default is
+;; 8, hard to hit).  A click there shows the change on that line (diff-hl)
+;; if there is one; on a heading without one it folds or unfolds it.
+(defvar +org-fringe-width 16 "Left fringe width in Org buffers, in pixels.")
+
+(declare-function diff-hl-hunk-overlay-at "ext:diff-hl" (pos))
+(declare-function diff-hl-show-hunk "ext:diff-hl-show-hunk" ())
+(declare-function org-at-heading-p "org" (&optional invisible-not-ok))
+(declare-function org-cycle "org-cycle" (&optional arg))
+
+(defun +org-wide-fringe-h ()
+  "A clickable left fringe in this Org buffer and its windows."
+  (setq-local left-fringe-width +org-fringe-width)
+  (dolist (w (get-buffer-window-list nil nil t))
+    (set-window-fringes w +org-fringe-width nil)))
+
+(defun +org-fringe-click (event)
+  "Show the change at the clicked line, or fold the heading there."
+  (interactive "e")
+  (posn-set-point (event-start event))
+  (cond ((and (bound-and-true-p diff-hl-mode) (diff-hl-hunk-overlay-at (point)))
+         (diff-hl-show-hunk))
+        ((and (derived-mode-p 'org-mode) (save-excursion (beginning-of-line) (org-at-heading-p)))
+         (beginning-of-line) (org-cycle))))
+
+(defun +org-fringe-click-a (fn event)
+  "Around diff-hl's fringe click (FN): in Org, headings fold where no change is."
+  (if (derived-mode-p 'org-mode) (+org-fringe-click event) (funcall fn event)))
+
+(add-hook 'org-mode-hook #'+org-wide-fringe-h)
+(with-eval-after-load 'org
+  (define-key org-mode-map [left-fringe mouse-1] #'+org-fringe-click))
+(with-eval-after-load 'diff-hl-show-hunk
+  (advice-add 'diff-hl-show-hunk--click :around #'+org-fringe-click-a))
