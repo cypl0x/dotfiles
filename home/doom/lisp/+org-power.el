@@ -303,5 +303,36 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
   (map! :after org :map org-mode-map :localleader
         :desc "What can I do here (menu)" "m" #'casual-org-tmenu))
 
+
+;;;; SPC m . (consult-org-heading): TODO states in front, as in the agenda
+
+;; consult puts the TODO keyword in a right-aligned annotation, after the
+;; longest outline path, which in a big file is past the window edge.  It
+;; goes in front of the heading now, in Org's colors; the annotation keeps
+;; the priority.
+(defun +org-consult-todo-first-a (cands)
+  "Filter for `consult-org--headings' CANDS: the TODO keyword first."
+  (mapcar (lambda (cand)
+            (pcase-let* ((props (text-properties-at 0 cand))
+                         (`(,_level ,todo ,_prio . ,buffer) (plist-get props 'consult-org--heading)))
+              (if (not todo) cand
+                (let* ((cut (if (and buffer (string-prefix-p buffer cand)) (1+ (length buffer)) 0))
+                       (new (concat (substring cand 0 cut) todo " " (substring cand cut))))
+                  (add-text-properties 0 1 props new)
+                  new))))
+          cands))
+
+(defun +org-consult-priority-only-a (fn cand)
+  "Around `consult-org--annotate' (FN): the priority only (TODO is in front)."
+  (let* ((props (get-text-property 0 'consult-org--heading cand))
+         (stripped (copy-sequence props)))
+    (setf (nth 1 stripped) nil)
+    (let ((copy (copy-sequence cand)))
+      (put-text-property 0 1 'consult-org--heading stripped copy)
+      (funcall fn copy))))
+
+(with-eval-after-load 'consult-org
+  (advice-add 'consult-org--headings :filter-return #'+org-consult-todo-first-a)
+  (advice-add 'consult-org--annotate :around #'+org-consult-priority-only-a))
 (provide '+org-power)
 ;;; +org-power.el ends here
