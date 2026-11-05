@@ -35,6 +35,7 @@
 (defvar +gh-fs-cache-directory (expand-file-name "gh-fs/" (or (getenv "XDG_CACHE_HOME") "~/.cache"))
   "Content-addressed cache of file contents (blob hashes).")
 
+(defvar +gh-fs--regexp)
 (defvar +gh-fs--memo (make-hash-table :test #'equal)
   "API answers for this session: repositories, trees, listings.")
 
@@ -81,7 +82,8 @@ With RAW-FILE, write the raw body to that file and return it."
 
 (defun +gh-fs--parse (file)
   "FILE under `+gh-fs-root' as a `+gh-fs-path' (nil parts where absent)."
-  (let* ((rel (string-remove-prefix +gh-fs-root (directory-file-name (expand-file-name file))))
+  (let* ((rel (replace-regexp-in-string (concat "\\`" (regexp-quote +gh-fs-root) "[:/]?") ""
+                                   (directory-file-name (expand-file-name file))))
          (parts (split-string rel "/" t))
          (repo-ref (nth 1 parts)))
     (+gh-fs-path-make :owner (nth 0 parts)
@@ -122,7 +124,6 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
                          table)
                 (push (file-name-nondirectory path)
                       (gethash (cons :children (directory-file-name dir)) table))))
-            (puthash :mtime (+gh-fs--commit-time p ref) table)
             (puthash key table +gh-fs--memo))))))
 
 (defun +gh-fs--commit-time (p ref)
@@ -136,31 +137,190 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
 
 ;;;; What a path is
 
-(defun +gh-fs--entry (file)
-  "What FILE is: (TYPE SIZE SHA MODE MTIME), or nil if it doesn't exist."
+;;;; Completion that never waits: owners and repositories
+
+;; SPC f f /github:… completes owners and repositories without freezing:
+;; owners you know (you, your organizations, people you follow, owners of
+;; repositories you starred or visited) come from a cache on disk, refreshed
+;; in the background; a name not among them is searched on GitHub in the
+;; background as you type; an owner's repositories and a repository's tree
+;; arrive in the background too, and the candidates fill in as they come.
+
+(defvar +gh-fs--owners (make-hash-table :test #'equal) "Login → why it is known.")
+(defvar +gh-fs--searched (make-hash-table :test #'equal) "Prefixes already searched.")
+(defvar +gh-fs--loading (make-hash-table :test #'equal) "Keys being fetched in the background.")
+(defvar +gh-fs--search-timer nil)
+(defvar vertico--input)
+(declare-function vertico--exhibit "ext:vertico" ())
+
+(defun +gh-fs--owners-file () (expand-file-name "owners.eld" +gh-fs-cache-directory))
+
+(defun +gh-fs--owners-load ()
+  (when (file-readable-p (+gh-fs--owners-file))
+    (dolist (o (with-temp-buffer (insert-file-contents (+gh-fs--owners-file)) (ignore-errors (read (current-buffer)))))
+      (puthash (car o) (cdr o) +gh-fs--owners))))
+
+(defun +gh-fs--owners-save ()
+  (make-directory +gh-fs-cache-directory t)
+  (let (all) (maphash (lambda (k v) (push (cons k v) all)) +gh-fs--owners)
+       (with-temp-file (+gh-fs--owners-file) (prin1 all (current-buffer)))))
+
+(defun +gh-fs--note-owners (logins why)
+  (let ((new nil))
+    (dolist (l logins) (when (and l (not (gethash l +gh-fs--owners))) (puthash l why +gh-fs--owners) (setq new t)))
+    (when new (+gh-fs--owners-save) (+gh-fs--refresh-completion))))
+
+(defun +gh-fs--async-api (path callback)
+  "GET PATH with gh in the background; CALLBACK gets the parsed JSON."
+  (let ((buf (generate-new-buffer " *gh-fs*"))
+        (default-directory temporary-file-directory))
+    (make-process :name "gh-fs" :buffer buf :command (list "gh" "api" path) :noquery t
+                  :connection-type 'pipe
+                  :stderr (make-pipe-process :name "gh-fs-stderr" :buffer nil :noquery t :sentinel #'ignore)
+                  :sentinel (lambda (proc _)
+                              (unless (process-live-p proc)
+                                (let ((json (and (zerop (process-exit-status proc))
+                                                 (with-current-buffer buf
+                                                   (goto-char (point-min))
+                                                   (ignore-errors
+                                                     (json-parse-buffer :object-type 'plist :array-type 'list
+                                                                        :null-object nil :false-object nil))))))
+                                  (kill-buffer buf)
+                                  (when json (funcall callback json))))))))
+
+(defun +gh-fs--refresh-completion ()
+  "Show new candidates in the minibuffer if it is completing a /github name."
+  (when-let* ((win (active-minibuffer-window)))
+    (with-current-buffer (window-buffer win)
+      (when (and (string-match-p +gh-fs--regexp (minibuffer-contents-no-properties))
+                 (boundp 'vertico--input) (fboundp 'vertico--exhibit))
+        (setq vertico--input t)
+        (with-selected-window win (vertico--exhibit))))))
+
+(defun +gh-fs-refresh-owners ()
+  "Learn owners in the background: you, your organizations, people you
+follow, owners of repositories you starred."
+  (interactive)
+  (+gh-fs--async-api "user" (lambda (u) (puthash "user" u +gh-fs--memo) (+gh-fs--note-owners (list (plist-get u :login)) 'you)))
+  (+gh-fs--async-api "user/orgs" (lambda (os) (+gh-fs--note-owners (mapcar (lambda (o) (plist-get o :login)) os) 'org)))
+  (+gh-fs--async-api "user/following?per_page=100"
+                     (lambda (us) (+gh-fs--note-owners (mapcar (lambda (u) (plist-get u :login)) us) 'following)))
+  (+gh-fs--async-api "user/starred?per_page=100"
+                     (lambda (rs) (+gh-fs--note-owners (mapcar (lambda (r) (plist-get (plist-get r :owner) :login)) rs) 'starred)))
+  (when (fboundp '+gh-browse--visits)
+    (+gh-fs--note-owners (mapcar (lambda (v) (or (plist-get v :user) (car (split-string (or (plist-get v :repo) "") "/" t))))
+                                 (funcall '+gh-browse--visits))
+                         'visited)))
+
+(defun +gh-fs--search-owners (prefix)
+  "Search GitHub for logins starting with PREFIX, in the background."
+  (unless (gethash prefix +gh-fs--searched)
+    (puthash prefix t +gh-fs--searched)
+    (when (timerp +gh-fs--search-timer) (cancel-timer +gh-fs--search-timer))
+    (setq +gh-fs--search-timer
+          (run-with-idle-timer
+           0.3 nil
+           (lambda ()
+             (+gh-fs--async-api (format "search/users?q=%s+in:login&per_page=20" (url-hexify-string prefix))
+                                (lambda (r) (+gh-fs--note-owners (mapcar (lambda (u) (plist-get u :login)) (plist-get r :items))
+                                                                 'found))))))))
+
+(defun +gh-fs--owner-repos (owner)
+  "OWNER's repository names, or what has arrived of them so far (a fetch
+starts in the background; in the minibuffer it never waits)."
+  (let ((key (list :repos owner)))
+    (or (gethash key +gh-fs--memo)
+        (if (not (minibufferp))
+            (puthash key (mapcar (lambda (r) (plist-get r :name))
+                                 (+gh-fs--paginate (if (equal owner (plist-get (gethash "user" +gh-fs--memo) :login))
+                                                       "user/repos?affiliation=owner&sort=pushed"
+                                                     (format "users/%s/repos?sort=pushed" owner))))
+                     +gh-fs--memo)
+          (unless (gethash key +gh-fs--loading)
+            (puthash key t +gh-fs--loading)
+            (let ((acc nil))
+              (cl-labels ((page (n)
+                            (+gh-fs--async-api
+                             (format "users/%s/repos?sort=pushed&per_page=100&page=%d" owner n)
+                             (lambda (rs)
+                               (setq acc (append acc (mapcar (lambda (r) (plist-get r :name)) rs)))
+                               (puthash (list :partial owner) acc +gh-fs--memo)
+                               (+gh-fs--refresh-completion)
+                               (if (and (= (length rs) 100) (< n 10)) (page (1+ n))
+                                 (puthash key acc +gh-fs--memo)
+                                 (remhash key +gh-fs--loading))))))
+                (page 1))))
+          (gethash (list :partial owner) +gh-fs--memo)))))
+
+(defun +gh-fs--tree-soon (p)
+  "P's tree if known; else nil now and fetched in the background (in the
+minibuffer), or right away (elsewhere)."
+  (let* ((owner (+gh-fs-path-owner p)) (repo (+gh-fs-path-repo p))
+         (info-path (format "repos/%s/%s" owner repo)))
+    (if (or (not (minibufferp))
+            (and (or (+gh-fs-path-ref p) (gethash info-path +gh-fs--memo))
+                 (gethash (format "repos/%s/%s/git/trees/%s?recursive=1" owner repo
+                                  (url-hexify-string (+gh-fs--ref p)))
+                          +gh-fs--memo)))
+        (+gh-fs--tree p)
+      (let ((key (list :tree-soon owner repo (+gh-fs-path-ref p))))
+        (unless (gethash key +gh-fs--loading)
+          (puthash key t +gh-fs--loading)
+          (cl-labels ((tree (ref)
+                        (let ((path (format "repos/%s/%s/git/trees/%s?recursive=1" owner repo (url-hexify-string ref))))
+                          (+gh-fs--async-api path (lambda (answer)
+                                                    (puthash path answer +gh-fs--memo)
+                                                    (remhash key +gh-fs--loading)
+                                                    (+gh-fs--refresh-completion))))))
+            (if (+gh-fs-path-ref p) (tree (+gh-fs-path-ref p))
+              (+gh-fs--async-api info-path (lambda (info) (puthash info-path info +gh-fs--memo)
+                                             (tree (plist-get info :default_branch)))))))
+        nil))))
+
+(defun +gh-fs--known-owner-p (owner)
+  (or (gethash owner +gh-fs--owners) (gethash (list :repos owner) +gh-fs--memo)))
+
+(defun +gh-fs--entry (file &optional with-mtime)
+  "What FILE is: (TYPE SIZE SHA MODE MTIME), or nil if it doesn't exist.
+Owners and repositories already listed answer without a request; MTIME
+\(the commit date, one more request) only WITH-MTIME."
   (let ((p (+gh-fs--parse file)))
     (cond
      ((null (+gh-fs-path-owner p)) (list 'dir 0 nil "040000" nil))
      ((null (+gh-fs-path-repo p))
-      (when (+gh-fs--api (format "users/%s" (+gh-fs-path-owner p))) (list 'dir 0 nil "040000" nil)))
-     (t (when-let* ((tree (+gh-fs--tree p))
+      (when (or (+gh-fs--known-owner-p (+gh-fs-path-owner p))
+                (and (not (minibufferp)) (+gh-fs--api (format "users/%s" (+gh-fs-path-owner p)))))
+        (list 'dir 0 nil "040000" nil)))
+     ((and (string-empty-p (+gh-fs-path-path p)) (not with-mtime)
+           (member (+gh-fs-path-repo p) (gethash (list :repos (+gh-fs-path-owner p)) +gh-fs--memo)))
+      (list 'dir 0 nil "040000" nil))
+     (t (when-let* ((tree (if with-mtime (+gh-fs--tree p) (+gh-fs--tree-soon p)))
                     (e (gethash (+gh-fs-path-path p) tree)))
-          (append e (list (gethash :mtime tree))))))))
+          (append e (list (and with-mtime
+                               (or (gethash :mtime tree)
+                                   (puthash :mtime (+gh-fs--commit-time p (+gh-fs--ref p)) tree))))))))))
 
 (defun +gh-fs--children (dir)
-  "Names in DIR (directories without a slash), or nil."
+  "Names in DIR (directories without a slash), or nil (or what has arrived)."
   (let ((p (+gh-fs--parse dir)))
     (cond
      ((null (+gh-fs-path-owner p))
-      (delete-dups (cons (+gh-fs--me) (mapcar (lambda (o) (plist-get o :login)) (+gh-fs--api "user/orgs")))))
-     ((null (+gh-fs-path-repo p))
-      (mapcar (lambda (r) (plist-get r :name))
-              (let ((owner (+gh-fs-path-owner p)))
-                (if (equal owner (+gh-fs--me))
-                    (+gh-fs--paginate "user/repos?affiliation=owner&sort=pushed")
-                  (+gh-fs--paginate (format "users/%s/repos?sort=pushed" owner))))))
-     (t (when-let* ((tree (+gh-fs--tree p)))
+      (let (all) (maphash (lambda (k _) (push k all)) +gh-fs--owners) (sort all #'string<)))
+     ((null (+gh-fs-path-repo p)) (+gh-fs--owner-repos (+gh-fs-path-owner p)))
+     (t (when-let* ((tree (+gh-fs--tree-soon p)))
           (reverse (gethash (cons :children (+gh-fs-path-path p)) tree)))))))
+
+(defun +gh-fs--child-dir-p (dir name)
+  "Whether NAME in DIR is a directory, without a request when avoidable."
+  (let ((p (+gh-fs--parse dir)))
+    (or (null (+gh-fs-path-repo p))   ; owners and repositories
+        (eq (car (+gh-fs--entry (concat (file-name-as-directory dir) name))) 'dir))))
+
+(+gh-fs--owners-load)
+(run-with-idle-timer 20 nil #'+gh-fs-refresh-owners)
+(defvar +gh-fs--daily nil "The daily owner refresh (one, even after reloading this file).")
+(when (timerp +gh-fs--daily) (cancel-timer +gh-fs--daily))
+(setq +gh-fs--daily (run-at-time "24 hours" (* 24 3600) #'+gh-fs-refresh-owners))
 
 (defun +gh-fs--blob (file)
   "A local file with FILE's content (fetched once, kept by hash)."
@@ -210,7 +370,7 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
     ('file-executable-p (let ((e (+gh-fs--entry (car args)))) (or (eq (car e) 'dir) (equal (nth 3 e) "100755"))))
     ('file-writable-p nil)
     ('file-symlink-p nil)
-    ('file-attributes (when-let* ((e (+gh-fs--entry (car args)))) (+gh-fs--attributes e (car args) (cadr args))))
+    ('file-attributes (when-let* ((e (+gh-fs--entry (car args) t))) (+gh-fs--attributes e (car args) (cadr args))))
     ('file-modes (let ((e (+gh-fs--entry (car args)))) (and e (if (eq (car e) 'dir) #o555 #o444))))
     ('file-newer-than-file-p nil)
     ('file-remote-p
@@ -219,8 +379,8 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
        ('host (let ((p (+gh-fs--parse (car args)))) (and (+gh-fs-path-repo p) (concat (+gh-fs-path-owner p) "/" (+gh-fs-path-repo p)))))
        ('localname (concat "/" (+gh-fs-path-path (+gh-fs--parse (car args)))))
        (_ (concat +gh-fs-root "/"))))
-    ((or 'file-truename 'file-name-case-insensitive-p)
-     (if (eq operation 'file-truename) (car args) nil))
+    ('file-truename (+gh-fs-canonical (car args)))
+    ('file-name-case-insensitive-p nil)
     ;; Listings
     ('directory-files
      (pcase-let ((`(,dir ,full ,match ,nosort ,count) args))
@@ -240,10 +400,12 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
     ('file-name-all-completions
      (pcase-let ((`(,prefix ,dir) args))
        (let ((case-fold-search completion-ignore-case))
+         (when (and (null (+gh-fs-path-owner (+gh-fs--parse dir))) (>= (length prefix) 2)
+                    (< (cl-count-if (lambda (o) (string-prefix-p prefix o t)) (+gh-fs--children dir)) 3))
+           (+gh-fs--search-owners (downcase prefix)))
          (cl-loop for n in (+gh-fs--children dir)
                   when (string-prefix-p prefix n completion-ignore-case)
-                  collect (if (eq (car (+gh-fs--entry (concat (file-name-as-directory dir) n))) 'dir)
-                              (concat n "/") n)))))
+                  collect (if (+gh-fs--child-dir-p dir n) (concat n "/") n)))))
     ('file-name-completion
      (pcase-let ((`(,prefix ,dir ,pred) args))
        (try-completion prefix (+gh-fs-handler 'file-name-all-completions prefix dir)
@@ -260,7 +422,7 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
                         (insert-file-contents blob nil beg end replace))))
          (when visit
            (setq buffer-file-name (expand-file-name file)
-                 buffer-file-truename buffer-file-name
+                 buffer-file-truename (+gh-fs-canonical buffer-file-name)
                  buffer-read-only t)
            (set-buffer-modified-p nil)
            (+gh-fs-handler 'set-visited-file-modtime))
@@ -270,11 +432,11 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
        (copy-file (+gh-fs--blob (car args)) tmp t) tmp))
     ('copy-file                         ; out of GitHub: allowed
      (pcase-let ((`(,from ,to ,ok-if-exists . ,_) args))
-       (if (string-prefix-p +gh-fs-root (expand-file-name to)) (+gh-fs--read-only to)
+       (if (string-match-p +gh-fs--regexp (expand-file-name to)) (+gh-fs--read-only to)
          (copy-file (+gh-fs--blob from) to ok-if-exists))))
     ('set-visited-file-modtime
      (let ((inhibit-file-name-handlers (cons #'+gh-fs-handler inhibit-file-name-handlers)))
-       (set-visited-file-modtime (or (car args) (nth 4 (+gh-fs--entry buffer-file-name)) (current-time)))))
+       (set-visited-file-modtime (or (car args) (nth 4 (+gh-fs--entry buffer-file-name t)) (current-time)))))
     ('verify-visited-file-modtime t)
     ((or 'vc-registered 'file-notify-add-watch 'file-system-info 'get-free-disk-space
          'file-selinux-context 'file-acl 'file-locked-p 'lock-file 'unlock-file 'make-lock-file-name
@@ -295,8 +457,21 @@ with \"\" the root; plus children lists under (:children . DIR).  nil if none."
     ;; Name-only operations, and everything else.
     (_ (+gh-fs--default operation args))))
 
-(defconst +gh-fs--regexp (concat "\\`" (regexp-quote +gh-fs-root) "\\(?:/\\|\\'\\)"))
-(add-to-list 'file-name-handler-alist (cons +gh-fs--regexp #'+gh-fs-handler))
+(defconst +gh-fs--regexp (concat "\\`" (regexp-quote +gh-fs-root) "\\(?:[:/]\\|\\'\\)")
+  "GitHub file names: /github/OWNER/REPO/… or, as TRAMP spells remote
+files, /github:OWNER/REPO/…")
+
+(defun +gh-fs-canonical (file)
+  "FILE spelled /github/…: the one name both spellings share (so the
+same file is one buffer)."
+  (replace-regexp-in-string (concat "\\`" (regexp-quote +gh-fs-root) ":/?") (concat +gh-fs-root "/") file))
+
+(defun +gh-fs--register ()
+  "Put the handler first, ahead of TRAMP (which claims /METHOD: names)."
+  (let ((entry (cons +gh-fs--regexp #'+gh-fs-handler)))
+    (setq file-name-handler-alist (cons entry (delete entry file-name-handler-alist)))))
+(+gh-fs--register)
+(with-eval-after-load 'tramp (+gh-fs--register))
 
 ;;;; Projects: SPC p f lists the whole repository (one call)
 

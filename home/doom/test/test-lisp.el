@@ -2110,7 +2110,13 @@ and a temp exec-path where bin/tar links to store/tar."
      (should (equal (project-root pr) "/github/o/r/"))
      (should (equal (project-files pr) '("/github/o/r/README.md" "/github/o/r/src/a.el"))))
    ;; The same tree for a ref given explicitly.
-   (should (file-regular-p "/github/o/r@main/README.md"))))
+   (should (file-regular-p "/github/o/r@main/README.md"))
+   ;; TRAMP's spelling: /github:OWNER/REPO/…, the same file.
+   (should (file-regular-p "/github:o/r/src/a.el"))
+   (should (file-regular-p "/github:o/r@main/README.md"))
+   (should (equal (directory-files "/github:o/r/src") '("." ".." "a.el" "b")))
+   (should (equal (file-truename "/github:o/r/src/a.el") "/github/o/r/src/a.el"))
+   (should (eq (find-file-name-handler "/github:o/r/x" 'file-exists-p) '+gh-fs-handler))))
 
 (ert-deftest gh-browse/visits-and-report-counts ()
   (load (expand-file-name "+gh-browse" test-lisp-dir) nil t)
@@ -2182,3 +2188,27 @@ and a temp exec-path where bin/tar links to store/tar."
       (should (equal (string-trim staged) "+line 2 CHANGED"))
       (should (equal (string-trim unstaged) "+line 15 CHANGED")))
     (delete-directory root t)))
+
+(ert-deftest gh-fs/completion-never-waits ()
+  "In the minibuffer, owners and repositories come from the cache or arrive
+in the background; nothing synchronous."
+  (load (expand-file-name "+gh-fs" test-lisp-dir) nil t)
+  (let ((+gh-fs--memo (make-hash-table :test #'equal))
+        (+gh-fs--owners (make-hash-table :test #'equal))
+        (+gh-fs--loading (make-hash-table :test #'equal))
+        (+gh-fs-cache-directory (make-temp-file "ghfs" t))
+        (pending nil))
+    (puthash "cypl0x" 'you +gh-fs--owners)
+    (puthash "sindresorhus" 'starred +gh-fs--owners)
+    (cl-letf (((symbol-function 'minibufferp) (lambda (&rest _) t))
+              ((symbol-function '+gh-fs--api) (lambda (&rest _) (error "Synchronous call in the minibuffer")))
+              ((symbol-function '+gh-fs--async-api) (lambda (path cb) (push (cons path cb) pending))))
+      (should (equal (+gh-fs--children "/github:") '("cypl0x" "sindresorhus")))
+      (should (equal (file-name-all-completions "si" "/github:") '("sindresorhus/")))
+      ;; Repositories: nothing yet, a request in flight …
+      (should-not (+gh-fs--children "/github:sindresorhus/"))
+      (should (string-match-p "users/sindresorhus/repos" (caar pending)))
+      ;; … then they arrive.
+      (funcall (cdar pending) '((:name "awesome") (:name "ky")))
+      (should (equal (+gh-fs--children "/github:sindresorhus/") '("awesome" "ky")))
+      (should (equal (file-name-all-completions "aw" "/github:sindresorhus/") '("awesome/"))))))

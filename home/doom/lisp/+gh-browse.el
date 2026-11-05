@@ -52,6 +52,7 @@
 (declare-function evil-make-overriding-map "ext:evil" (keymap &optional state copy))
 (defvar +gh-fs-root)
 (defvar +gh-fs-cache-directory)
+(defvar +gh-fs--regexp)
 (declare-function +gh-fs-file "+gh-fs" (owner repo &optional ref path))
 (declare-function +gh-fs--parse "+gh-fs" (file))
 (declare-function +gh-fs--ref "+gh-fs" (p))
@@ -123,7 +124,7 @@ isn't one.  With URL-ONLY, only a github.com URL counts (links in files)."
 (defun +gh-browse--place-at (&optional file)
   "The place of FILE (default: this buffer's file or directory), or nil."
   (let ((file (or file buffer-file-name default-directory)))
-    (when (and file (string-prefix-p (concat +gh-fs-root "/") (expand-file-name file)))
+    (when (and file (string-match-p +gh-fs--regexp (expand-file-name file)))
       (let ((p (+gh-fs--parse file)))
         (when (+gh-fs-path-repo p)
           (+gh-place-make :owner (+gh-fs-path-owner p) :repo (+gh-fs-path-repo p)
