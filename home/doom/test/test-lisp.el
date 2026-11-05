@@ -2220,3 +2220,15 @@ in the background; nothing synchronous."
   (should (member "/github:" (tramp-get-completion-methods "gi")))
   (should-not (member "/github:" (tramp-get-completion-methods "ss")))
   (should (member "/ssh:" (tramp-get-completion-methods "ss"))))
+
+(ert-deftest perf/old-kills-are-archived-not-lost ()
+  (load (expand-file-name "+perf" test-lisp-dir) nil t)
+  (let ((+perf-kill-keep 2)
+        (+perf-kill-archive-file (make-temp-file "kills" nil ".eld"))
+        (+perf--kill-archived nil))
+    (should (equal (+perf-kills-to-persist '("e" "d" "c" "b" "a")) '("e" "d")))
+    (should (equal (+perf--kill-archive-read) '("a" "b" "c")))
+    ;; Saving again: nothing archived twice; newer overflow appended.
+    (+perf-kills-to-persist '("f" "e" "d" "c" "b" "a"))
+    (should (equal (+perf--kill-archive-read) '("a" "b" "c" "d")))
+    (delete-file +perf-kill-archive-file)))

@@ -320,11 +320,70 @@ elements containing secrets; the kill ring also loses huge entries."
                          (+perf--without-secrets (symbol-value v)))
                        vars)))
     ;; The kill ring also loses entries too long to persist.
-    (let ((kill-ring (+perf--without-secrets (+perf-persistable-kills kill-ring))))
+    (let ((kill-ring (+perf-kills-to-persist (+perf--without-secrets (+perf-persistable-kills kill-ring)))))
       (cl-progv vars vals (apply fn args)))))
 (advice-add 'savehist-save :around #'+perf-savehist-filter-a)
 
 
+
+;;;; The kill ring's archive: never discarded, not loaded at startup
+
+;; savehist reads the whole kill ring at startup (9,759 kills: 76 ms on
+;; 2026-11-05, growing with every kill).  The newest `+perf-kill-keep' stay
+;; there; older ones go, once each, into an append-only archive that only
+;; SPC i Y reads (the live ring, then the archive, newest first).  Nothing
+;; is discarded; M-y stays quick.
+
+(defvar +perf-kill-keep 3000
+  "Kills persisted in savehist; older ones go to `+perf-kill-archive-file'.")
+
+(defvar +perf-kill-archive-file
+  (expand-file-name "kill-archive.eld" (or (bound-and-true-p doom-data-dir) user-emacs-directory))
+  "Kills too old for savehist, one printed string per line, oldest first.")
+
+(defvar +perf--kill-archived nil "md5s of archived kills (loaded on first use).")
+
+(defun +perf--kill-archive-read ()
+  "Every archived kill, oldest first."
+  (when (file-readable-p +perf-kill-archive-file)
+    (with-temp-buffer
+      (insert-file-contents +perf-kill-archive-file)
+      (let (out)
+        (goto-char (point-min))
+        (condition-case nil (while t (push (read (current-buffer)) out)) (end-of-file nil))
+        (nreverse out)))))
+
+(defun +perf-kill-archive (kills)
+  "Append KILLS (newest first) not yet archived to the archive."
+  (unless +perf--kill-archived
+    (setq +perf--kill-archived (make-hash-table :test #'equal))
+    (dolist (k (+perf--kill-archive-read)) (puthash (md5 k) t +perf--kill-archived)))
+  (let ((new (seq-remove (lambda (k) (gethash (md5 k) +perf--kill-archived)) (reverse kills))))
+    (when new
+      (make-directory (file-name-directory +perf-kill-archive-file) t)
+      (with-temp-buffer
+        (dolist (k new) (puthash (md5 k) t +perf--kill-archived) (prin1 (substring-no-properties k) (current-buffer)) (insert "\n"))
+        (let ((coding-system-for-write 'utf-8-emacs)) (write-region nil nil +perf-kill-archive-file 'append 'silent))))
+    (length new)))
+
+(defun +perf-kills-to-persist (kills)
+  "The newest `+perf-kill-keep' of KILLS; the rest archived on the way."
+  (when (> (length kills) +perf-kill-keep)
+    (+perf-kill-archive (nthcdr +perf-kill-keep kills)))
+  (seq-take kills +perf-kill-keep))
+
+(defun +kill/yank-archived ()
+  "Yank any kill ever: the live ring, then the archive (newest first)."
+  (interactive)
+  (let* ((all (delete-dups (append (mapcar #'substring-no-properties kill-ring)
+                                   (nreverse (+perf--kill-archive-read)))))
+         (pick (completing-read (format "Yank (%d kills): " (length all))
+                                (lambda (s p a) (if (eq a 'metadata) '(metadata (display-sort-function . identity))
+                                                  (complete-with-action a all s p)))
+                                nil t)))
+    (insert pick)))
+
+(map! :leader :desc "Yank from every kill (archive too)" "i Y" #'+kill/yank-archived)
 ;;;; doom-modeline in git worktrees: a glyph no font has
 
 ;; In a git worktree doom-modeline's vcs segment shows nf-cod-worktree,
