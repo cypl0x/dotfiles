@@ -50,6 +50,13 @@
 (setq well-formed-rewrite-function
       (lambda (beg end goal)
         (+prose--improve-ask (current-buffer) (copy-marker beg) (copy-marker end t) goal)))
+
+;; Not in AI conversations (familiar-ask, gptel): the findings there were
+;; mostly about the model's answers.
+(add-hook 'well-formed-inhibit-functions
+          (defun +well-formed-ai-chat-p ()
+            (or (bound-and-true-p gptel-mode)
+                (string-match-p "\\`\\*\\(?:familiar\\|gptel\\|claude\\)" (buffer-name)))))
 (map! :leader
       (:prefix ("P" . "prose")
        :desc "Writing assistant menu" "m" #'well-formed-menu

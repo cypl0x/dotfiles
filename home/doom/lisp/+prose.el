@@ -337,29 +337,32 @@ Shows Flesch Reading Ease, Flesch-Kincaid Grade Level, and Coleman-Liau Index."
 
 ;;;; org-reading-mode — Distraction-free reading ─────────────────────────────
 
+(defvar +prose-reading-modes
+  '(flycheck-mode flymake-mode flyspell-mode jinx-mode well-formed-mode
+    minuet-auto-suggestion-mode sideline-mode eglot-inlay-hints-mode display-line-numbers-mode)
+  "Modes `+prose/reading-mode' turns off, and back on afterwards.")
+
+(defvar-local +prose--reading-restore nil
+  "The modes reading mode turned off here, to turn back on.")
+
 (define-minor-mode +prose/reading-mode
-  "Hide inline diagnostics, spelling, and lint overlays for distraction-free reading.
-Disables flycheck, flymake, flyspell, jinx, eglot inlay hints, and sideline;
-off turns jinx back on."
+  "Read without marks: no squiggles, spelling, lint, writing findings,
+inline suggestions, sideline or line numbers.  Off again, exactly the
+modes that were on come back (it used to bring back flymake under
+flycheck, and never flycheck itself)."
   :lighter " 📖"
   :global nil
   (if +prose/reading-mode
       (progn
-        (when (bound-and-true-p flycheck-mode) (flycheck-mode -1))
-        (when (bound-and-true-p flymake-mode) (flymake-mode -1))
-        (when (bound-and-true-p flyspell-mode) (flyspell-mode -1))
-        (when (bound-and-true-p jinx-mode) (jinx-mode -1))
-        (when (bound-and-true-p sideline-mode) (sideline-mode -1))
-        (when (bound-and-true-p eglot--managed-mode)
-          (eglot-inlay-hints-mode -1))
-        (when (bound-and-true-p display-line-numbers-mode)
-          (display-line-numbers-mode -1))
-        (message "Reading mode ON — diagnostics hidden"))
-    (when (bound-and-true-p flycheck-mode) (flycheck-mode 1))
-    (when (derived-mode-p 'prog-mode) (flymake-mode 1))
-    (when (derived-mode-p 'text-mode 'prog-mode) (+prose/jinx-mode-safe))
-    (display-line-numbers-mode 1)
-    (message "Reading mode OFF")))
+        (setq +prose--reading-restore
+              (seq-filter (lambda (m) (and (boundp m) (symbol-value m))) +prose-reading-modes))
+        (dolist (m +prose--reading-restore) (funcall m -1))
+        (when (fboundp '+diagnostics-hide) (+diagnostics-hide))
+        (message "Reading mode: marks hidden (SPC P r again shows them)"))
+    (dolist (m +prose--reading-restore)
+      (when (fboundp m) (funcall m 1)))
+    (setq +prose--reading-restore nil)
+    (message "Reading mode off: marks back")))
 
 ;;;; Keybindings ─────────────────────────────────────────────────────────────
 
@@ -465,7 +468,11 @@ text: no quotes, no explanation.")
     (+prose-improve-mode)                ; (it resets buffer-local variables)
     (setq +prose--improve state)
     (goto-char (point-min))
-    (display-buffer (current-buffer))))
+    ;; Focused, so C-c C-c / g / q work at once, but only if you are still
+    ;; in the buffer you asked from (the answer comes later).
+    (let ((window (display-buffer (current-buffer))))
+      (when (and window (eq (window-buffer (selected-window)) (car state)))
+        (select-window window)))))
 
 (defun +prose--improve-ask (buf beg end goal)
   (let ((original (with-current-buffer buf (buffer-substring-no-properties beg end))))
@@ -521,7 +528,7 @@ text: no quotes, no explanation.")
 (map! :leader
       (:prefix ("P" . "prose")
        :desc "Writing mode"      "w" #'+prose/writing-mode
-       :desc "Reading mode"      "r" #'+prose/reading-mode
+       :desc "Reading mode (no marks)" "r" #'+prose/reading-mode
        :desc "Text stats"        "s" #'+prose/text-stats
        :desc "Word frequency"    "f" #'+prose/word-frequency
        :desc "Readability"       "R" #'+prose/readability
@@ -530,6 +537,8 @@ text: no quotes, no explanation.")
        :desc "Jinx correct"      "j" #'jinx-correct
        :desc "Jinx correct all"  "J" #'jinx-correct-all
        :desc "Leo translate"     "l" #'leo-translate-word))
+
+(map! :leader :desc "Marks off (reading mode)" "t m" #'+prose/reading-mode)
 
 (provide '+prose)
 ;;; +prose.el ends here

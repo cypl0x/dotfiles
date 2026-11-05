@@ -632,10 +632,28 @@ Findings are (BEG END RULE LEVEL MESSAGE FIXES ORIGINAL)."
            (lambda (a b) (< (car a) (car b)))))))
 
 (defun well-formed--check-quietly ()
-  "`well-formed-check', abandoned when a key is pressed; nil then."
+  "`well-formed-check', abandoned when a key is pressed: :interrupted then."
   (unless (> (buffer-size) well-formed-max-buffer-size)
     (let ((result (while-no-input (well-formed-check))))
-      (unless (eq result t) result))))
+      (if (eq result t) :interrupted result))))
+
+(defvar-local well-formed--recheck-timer nil)
+
+(defun well-formed--recheck-later ()
+  "Check this buffer again once Emacs is idle (an interrupted check had
+left it without findings: the squiggles vanished until the next edit)."
+  (unless (timerp well-formed--recheck-timer)
+    (let ((buf (current-buffer)))
+      (setq well-formed--recheck-timer
+            (run-with-idle-timer
+             (max 0.5 well-formed-idle-delay) nil
+             (lambda ()
+               (when (buffer-live-p buf)
+                 (with-current-buffer buf
+                   (setq well-formed--recheck-timer nil)
+                   (cond ((and (bound-and-true-p flycheck-mode) (fboundp 'flycheck-buffer))
+                          (funcall 'flycheck-buffer))
+                         ((bound-and-true-p flymake-mode) (funcall 'flymake-start)))))))))))
 
 ;;;; Mode
 
@@ -665,8 +683,13 @@ consistency.  Findings show through flycheck or flymake."
     (add-hook 'flymake-diagnostic-functions #'well-formed-flymake nil t)
     (unless (bound-and-true-p flymake-mode) (funcall 'flymake-mode 1)))))
 
+(defvar well-formed-inhibit-functions nil
+  "Functions of no arguments; when one returns non-nil in a buffer,
+`global-well-formed-mode' leaves that buffer alone.")
+
 (defun well-formed--turn-on ()
   (when (and (apply #'derived-mode-p well-formed-modes)
+             (not (run-hook-with-args-until-success 'well-formed-inhibit-functions))
              (not (minibufferp))
              (not (string-prefix-p " " (buffer-name))))
     (well-formed-mode 1)))
@@ -683,6 +706,7 @@ consistency.  Findings show through flycheck or flymake."
 (declare-function flycheck-valid-checker-p "ext:flycheck" (checker))
 (defvar flycheck-checkers)
 (declare-function flycheck-buffer "ext:flycheck" ())
+(declare-function flymake-start "flymake" (&optional deferred force))
 (declare-function flycheck-mode "ext:flycheck" (&optional arg))
 (declare-function flycheck-may-enable-mode "ext:flycheck" ())
 
@@ -691,7 +715,9 @@ consistency.  Findings show through flycheck or flymake."
                  (error (funcall callback 'errored (error-message-string err)) :failed))))
     (cond
      ((eq found :failed))
-     ((and (null found) (input-pending-p)) (funcall callback 'interrupted))
+     ((eq found :interrupted)
+      (funcall callback 'interrupted)
+      (well-formed--recheck-later))
      (t (funcall callback 'finished
                  (mapcar (lambda (f)
                            (pcase-let ((`(,b ,e ,id ,level ,msg . ,_) f))
@@ -728,13 +754,15 @@ consistency.  Findings show through flycheck or flymake."
 (defun well-formed-flymake (report-fn &rest _)
   "A flymake backend for well-formed."
   (let ((found (well-formed--check-quietly)))
+    (if (eq found :interrupted)
+        (well-formed--recheck-later)
     (funcall report-fn
              (mapcar (lambda (f)
                        (pcase-let ((`(,b ,e ,_id ,level ,msg . ,_) f))
                          (flymake-make-diagnostic (current-buffer) b e
                                                   (pcase level ('error :error) ('warning :warning) (_ :note))
                                                   msg)))
-                     found))))
+                     found)))))
 
 ;;;; Commands
 
