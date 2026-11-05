@@ -7,7 +7,7 @@
 ;;                     ended, how long it took and when:
 ;;                         nrs     ✔  2m10s  3h   ~/dotfiles
 ;;                     Narrow (consult): s succeeded, f failed, d run in this
-;;                     directory, h on this host.  RET:
+;;                     directory, p in this project, h on this host.  RET:
 ;;                       in a shell buffer (eshell, shell, vterm, ghostel,
 ;;                       eat)  → onto its prompt, unrun
 ;;                       in a shell-command prompt (M-!, M-&, compile) → there
@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'subr-x)
+(require 'project)
 
 (defvar consult--narrow)
 (declare-function consult--read "ext:consult")
@@ -42,6 +43,8 @@
 
 (defvar +atuin-record t
   "Non-nil: commands Emacs runs (compile, M-!, M-&, eshell) go into Atuin.")
+
+(defvar +atuin--project nil "The project root while choosing (for narrowing with p).")
 
 (defvar +atuin-author "emacs"
   "Who ran a recorded command, as Atuin's --author has it.")
@@ -93,11 +96,13 @@
       (?f (> (plist-get e :exit) 0))
       (?d (file-equal-p (plist-get e :dir) default-directory))
       (?h (equal (plist-get e :host) (system-name)))
+      (?p (and +atuin--project (string-prefix-p +atuin--project (file-name-as-directory (expand-file-name (plist-get e :dir))))))
       (_ t))))
 
 (defun +atuin--read (prompt)
   "Choose a command from Atuin's history; its entry plist."
   (let* ((dir default-directory)
+         (+atuin--project (when-let* ((p (project-current))) (file-name-as-directory (expand-file-name (project-root p)))))
          (cands (mapcar #'+atuin--candidate (+atuin--entries)))
          (cand (if (require 'consult nil t)
                    (consult--read cands
@@ -108,7 +113,8 @@
                                   :annotate #'+atuin--annotate
                                   :narrow (list :predicate (lambda (c) (let ((default-directory dir)) (+atuin--narrow-p c)))
                                                 :keys '((?s . "Succeeded") (?f . "Failed")
-                                                        (?d . "Run here") (?h . "This host")))
+                                                        (?d . "Run here") (?p . "In this project")
+                                                        (?h . "This host")))
                                   :history '+atuin--history)
                  (completing-read prompt (lambda (s p a) (if (eq a 'metadata)
                                                              '(metadata (display-sort-function . identity)

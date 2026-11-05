@@ -2020,3 +2020,10 @@ and a temp exec-path where bin/tar links to store/tar."
   (cl-letf (((symbol-function '+atuin--matches) (lambda (_) '("nrs" "nrs --fast")))
             ((symbol-function 'yes-or-no-p) (lambda (&rest _) (error "asked"))))
     (should-error (+atuin-embark-delete (propertize "nrs" '+atuin '(:command "nrs"))) :type 'user-error)))
+
+(ert-deftest atuin/narrows-to-this-project ()
+  (load (expand-file-name "+atuin" test-lisp-dir) nil t)
+  (dlet ((consult--narrow ?p) (+atuin--project "/home/u/dev/turm/"))
+    (should (+atuin--narrow-p (propertize "x" '+atuin '(:dir "/home/u/dev/turm/src" :exit 0))))
+    (should (+atuin--narrow-p (propertize "x" '+atuin '(:dir "/home/u/dev/turm" :exit 0))))
+    (should-not (+atuin--narrow-p (propertize "x" '+atuin '(:dir "/home/u/dev/turm2" :exit 0))))))
