@@ -36,4 +36,4 @@ id=$(printf '%s\n' "$list" | sed -n "$((idx + 1))p" | cut -f1)
 
 addr=$(hyprctl clients -j |
   jq -r '.[] | select(.class|test("firefox";"i")) | .address' | head -n1)
-[ -n "$addr" ] && hyprctl dispatch focuswindow "address:$addr"
+[ -n "$addr" ] && hypr-dispatch focuswindow "address:$addr"

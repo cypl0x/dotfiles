@@ -29,4 +29,4 @@ emacsclient --eval "(switch-to-buffer \"$esc\")" >/dev/null 2>&1 || true
 
 addr=$(hyprctl clients -j |
   jq -r '.[] | select(.class|test("emacs";"i")) | .address' | head -n1)
-[ -n "$addr" ] && hyprctl dispatch focuswindow "address:$addr"
+[ -n "$addr" ] && hypr-dispatch focuswindow "address:$addr"

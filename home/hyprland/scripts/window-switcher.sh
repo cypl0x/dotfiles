@@ -22,4 +22,4 @@ choice=$(printf '%s\n' "$rows" | rofi -dmenu -i \
 
 [ -z "$choice" ] && exit 0
 addr=$(printf '%s' "$choice" | cut -f1)
-hyprctl dispatch focuswindow "address:$addr"
+hypr-dispatch focuswindow "address:$addr"

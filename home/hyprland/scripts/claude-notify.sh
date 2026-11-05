@@ -42,7 +42,7 @@ if [ -n "$addr" ]; then
     # listeners: 175, ~1 GiB on 2026-11-04).
     act=$(notify-wait 30m --app-name="Claude Code" --urgency=normal \
       --action="default=Jump to session" "$title" "$msg" 2>/dev/null || true)
-    [ "$act" = "default" ] && hyprctl dispatch focuswindow "address:$addr"
+    [ "$act" = "default" ] && hypr-dispatch focuswindow "address:$addr"
   ) &
   disown 2>/dev/null || true
 else

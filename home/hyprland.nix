@@ -53,7 +53,11 @@
     '';
 in {
   # notify-send --wait that ends: home/hyprland/scripts/notify-wait.sh
-  home.packages = [(pkgs.writeShellScriptBin "notify-wait" (builtins.readFile ./hyprland/scripts/notify-wait.sh))];
+  # hypr-dispatch: hyprctl dispatch for hyprlang and Lua configs alike
+  home.packages = [
+    (pkgs.writeShellScriptBin "notify-wait" (builtins.readFile ./hyprland/scripts/notify-wait.sh))
+    (pkgs.writeShellScriptBin "hypr-dispatch" (builtins.readFile ./hyprland/scripts/hypr-dispatch.sh))
+  ];
 
   # Hyprland home-manager configuration — thinkpad only (added via sharedModules).
   # Mirrors the Doom Emacs aesthetic from tmux/wezterm: Doom Vibrant palette,

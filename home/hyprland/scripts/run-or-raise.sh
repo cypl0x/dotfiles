@@ -7,7 +7,7 @@ class="$1"
 shift
 
 if hyprctl clients -j | grep -q "\"class\": \"${class}\""; then
-  hyprctl dispatch focuswindow "class:^(${class})$"
+  hypr-dispatch focuswindow "class:^(${class})$"
 else
   setsid -f "$@" >/dev/null 2>&1
 fi
