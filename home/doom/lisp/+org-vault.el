@@ -312,6 +312,7 @@ its Emacs buffer, saved unless it had edits of yours waiting."
 ;;;; Publish: the vault as a website, locally
 
 (defvar org-publish-project-alist)
+(defvar org-export-with-broken-links)
 (declare-function org-publish "ox-publish" (project &optional force async))
 
 ;;;###autoload
