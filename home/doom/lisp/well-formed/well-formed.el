@@ -757,41 +757,92 @@ consistency.  Findings show through flycheck or flymake."
           (t (let ((choices (mapcar (lambda (f) (cons (nth 4 f) f)) here)))
                (cdr (assoc (completing-read (or prompt "Which finding: ") choices nil t) choices)))))))
 
-(defun well-formed--apply (finding replacement)
-  "Replace FINDING's text with REPLACEMENT if it's still there."
+(defcustom well-formed-rewrite-function nil
+  "A function of (BEG END GOAL) that rewrites the text BEG..END toward
+GOAL (a sentence), e.g. with a language model.  When set, every finding
+offers \"Rewrite with AI\" among its fixes; rule-based fixes come first."
+  :type '(choice (const nil) function))
+
+;; A fix is one of:
+;;   STRING                       replaces the finding's text
+;;   (:edit LABEL BEG END STRING)  replaces BEG..END, offsets from the
+;;                                finding's start (a split, a reordering)
+;;   (:call LABEL FUNCTION)        calls FUNCTION with the finding
+
+(defun well-formed--fix-label (fix)
+  (pcase fix
+    ((pred stringp) (if (string-empty-p fix) "(delete it)" fix))
+    (`(:edit ,label . ,_) label)
+    (`(:call ,label . ,_) label)))
+
+(defun well-formed--sentence-bounds (pos)
+  "The sentence around POS in the buffer, (BEG . END)."
+  (save-excursion
+    (goto-char pos)
+    (let ((end (progn (forward-sentence) (point)))
+          (beg (progn (backward-sentence) (point))))
+      (when (> beg pos) (setq beg (save-excursion (goto-char pos) (line-beginning-position))))
+      (cons beg (max end pos)))))
+
+(defun well-formed--fixes (finding)
+  "FINDING's fixes, and \"Rewrite with AI\" when
+`well-formed-rewrite-function' is set."
+  (append (nth 5 finding)
+          (when well-formed-rewrite-function
+            (list (list :call "Rewrite the sentence with AI…"
+                        (lambda (f)
+                          (pcase-let ((`(,sb . ,se) (well-formed--sentence-bounds (car f))))
+                            (funcall well-formed-rewrite-function (min sb (car f)) (max se (cadr f))
+                                     (format "Fix this: %s.  Keep the meaning, the language and any markup."
+                                             (nth 4 f))))))))))
+
+(defun well-formed--apply (finding fix)
+  "Apply FIX (see above) to FINDING if its text is still there."
   (pcase-let ((`(,b ,e ,_ ,_ ,_ ,_ ,original) finding))
     (unless (equal (buffer-substring-no-properties b e) original)
       (user-error "The text changed since it was checked"))
-    (save-excursion
-      (goto-char b)
-      (delete-region b e)
-      (if (string-empty-p replacement)
-          ;; Deleting a phrase: one of the spaces around it goes too.
-          (cond ((and (memq (char-after) '(?\s)) (memq (char-before) '(?\s nil ?\n)))
-                 (delete-char 1))
-                ((memq (char-before) '(?\s)) (delete-char -1)))
-        (insert replacement)))
+    (pcase fix
+      (`(:call ,_ ,fn) (funcall fn finding))
+      (`(:edit ,_ ,rb ,re ,string)
+       (save-excursion
+         (goto-char (+ b rb))
+         (delete-region (+ b rb) (+ b re))
+         (insert string)))
+      ((pred stringp)
+       (save-excursion
+         (goto-char b)
+         (delete-region b e)
+         (if (string-empty-p fix)
+             ;; Deleting a phrase: one of the spaces around it goes too.
+             (cond ((and (memq (char-after) '(?\s)) (memq (char-before) '(?\s nil ?\n)))
+                    (delete-char 1))
+                   ((memq (char-before) '(?\s)) (delete-char -1)))
+           (insert fix)))))
     (setq well-formed--tick nil)))
 
 ;;;###autoload
 (defun well-formed-fix ()
-  "Apply the suggestion for the finding at point (choose when there are several)."
+  "Fix the finding at point: its suggestion, or a choice when there are
+several (a rewrite with AI among them when `well-formed-rewrite-function'
+is set)."
   (interactive)
   (let* ((f (well-formed--current "Fix which: "))
-         (fixes (nth 5 f)))
+         (fixes (well-formed--fixes f)))
     (unless fixes (user-error "%s (no automatic fix)" (nth 4 f)))
-    (well-formed--apply f (if (cdr fixes)
-                              (completing-read (format "%s → " (nth 6 f)) fixes nil t)
-                            (car fixes)))
+    (well-formed--apply
+     f (if (cdr fixes)
+           (let ((choices (mapcar (lambda (x) (cons (well-formed--fix-label x) x)) fixes)))
+             (cdr (assoc (completing-read (format "%s → " (nth 4 f)) choices nil t) choices)))
+         (car fixes)))
     (when (and (featurep 'flycheck) (bound-and-true-p flycheck-mode)) (funcall 'flycheck-buffer))))
 
 ;;;###autoload
 (defun well-formed-fix-all (rule)
-  "Walk the buffer's findings of RULE, applying each fix you accept."
+  "Walk the buffer's findings of RULE, applying each first fix you accept."
   (interactive
    (let* ((found (well-formed--ensure-findings))
           (ids (delete-dups (cl-loop for f in found when (nth 5 f) collect (symbol-name (nth 2 f))))))
-     (unless ids (user-error "Nothing here has an automatic fix"))
+     (unless ids (user-error "Nothing here has a rule-based fix"))
      (list (intern (completing-read "Fix all of rule: " ids nil t nil nil
                                     (when-let* ((f (car (well-formed--at (point)))))
                                       (symbol-name (nth 2 f))))))))
@@ -803,11 +854,12 @@ consistency.  Findings show through flycheck or flymake."
       (let ((ov (make-overlay (nth 0 f) (nth 1 f))))
         (overlay-put ov 'face 'highlight)
         (unwind-protect
-            (when (y-or-n-p (format "%s  →  %s? " (nth 6 f) (car (nth 5 f))))
+            (when (y-or-n-p (format "%s  →  %s? " (nth 6 f) (well-formed--fix-label (car (nth 5 f)))))
               (well-formed--apply f (car (nth 5 f)))
               (cl-incf n))
           (delete-overlay ov))))
     (message "well-formed: %d fixed" n)))
+
 
 ;;;###autoload
 (defun well-formed-ignore (scope)

@@ -44,7 +44,7 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
   =SPC X= capture crawled (eglot retried it in every buffer of the vault).
 - In its place, =well-formed=: Grammarly's five kinds of findings
   (correctness, clarity, engagement, delivery, consistency) as rules and
-  statistics in Emacs Lisp, English and German.  About 60 rules: a/an by
+  statistics in Emacs Lisp, English and German.  44 rules: a/an by
   sound, then/than, das/dass, a missing comma before "dass", wordy and
   redundant phrases, passive voice, clichés, hedges, US and UK spelling
   mixed in one document, and more.

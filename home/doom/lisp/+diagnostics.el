@@ -52,7 +52,10 @@ at most 90."
                   (string-trim (flycheck-error-message err)))
           (let ((source (string-join (delq nil (list (and (flycheck-error-checker err)
                                                           (symbol-name (flycheck-error-checker err)))
-                                                     (flycheck-error-id err)))
+                                                     (flycheck-error-id err)
+                                                     ;; well-formed fixes every finding
+                                                     (and (eq (flycheck-error-checker err) 'well-formed)
+                                                          "SPC P x fixes")))
                                      " · ")))
             (unless (string-empty-p source)
               (insert "  " (propertize source 'face 'shadow))))

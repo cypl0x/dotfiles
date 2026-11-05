@@ -639,6 +639,42 @@ Nominalstil (\"zur Anwendung bringen\" is \"anwenden\")."
   (let ((limit (or (plist-get (well-formed-para-style para) :sentence) 30)))
     (if (equal (well-formed-para-lang para) "de") (round (* limit 1.15)) limit)))
 
+(defconst well-formed--split-points
+  '(("en" ("; " . "") (", and " . "") (", but " . "But ") (", so " . "So ") (", yet " . "Yet ")
+          (" – " . "") (" — " . "") (", while " . "Meanwhile, ") (", whereas " . "In contrast, ")
+          (", because " . "That is because ") (", which means " . "This means "))
+    ("de" ("; " . "") (", und " . "") (", aber " . "Aber ") (", denn " . "Denn ") (", sondern " . "Vielmehr ")
+          (" – " . "") (", weshalb " . "Deshalb ") (", wobei " . "Dabei ") (", doch " . "Doch ")))
+  "Where a sentence can be cut in two: (LINK . WHAT THE SECOND SENTENCE
+STARTS WITH).")
+
+(defun well-formed--splits (para b e)
+  "Ways to cut PARA's sentence B..E in two at a clause boundary, the most
+balanced first: fixes (:edit LABEL RB RE STRING), offsets from B.  Each
+half keeps at least five words; masked markup is never touched."
+  (let* ((text (well-formed-para-text para))
+         (total (well-formed--word-count text b e))
+         (case-fold-search nil) out)
+    (pcase-dolist (`(,link . ,start) (alist-get (well-formed-para-lang para) well-formed--split-points nil nil #'equal))
+      (let ((pos b))
+        (while (and (setq pos (string-search link text pos)) (< pos e))
+          (let* ((after (+ pos (length link)))
+                 (left (well-formed--word-count text b pos)))
+            (when (and (>= left 5) (>= (- total left) 5)
+                       (< after e)
+                       (string-match-p "[[:alpha:]]" (string (aref text after))))
+              (let* ((next (string (aref text after)))
+                     (first (if (string-empty-p start) (upcase next) (concat start next)))
+                     (label (format "Split: …%s. %s…"
+                                    (string-trim (substring text (max b (- pos 24)) pos))
+                                    (string-trim (concat first (substring text (1+ after) (min e (+ after 20))))))))
+                (push (list (abs (- left (/ total 2.0)))
+                            (list :edit (replace-regexp-in-string "\0" "" label)
+                                  (- pos b) (1+ (- after b)) (concat ". " first)))
+                      out)))
+            (setq pos after)))))
+    (mapcar #'cadr (seq-take (sort out (lambda (x y) (< (car x) (car y)))) 3))))
+
 (well-formed-define-rule long-sentence
   :category 'clarity :level 'warning
   :doc "A sentence over the style's limit (general 30 words, business 25,
@@ -652,7 +688,7 @@ academic 40; German a little more).  Split it where its ideas split."
             (when (> n limit)
               (push (list b e (format "%s sentence: %d words (limit %d); split it?"
                                       (if (> n (* 1.5 limit)) "Very long" "Long") n limit)
-                          nil)
+                          (well-formed--splits para b e))
                     out)))))
       (nreverse out))))
 
@@ -678,7 +714,8 @@ and many of them; Amstad's version for German)."
               (let ((score (well-formed--flesch n 1 (apply #'+ (mapcar (lambda (w) (well-formed--syllables (car w))) words))
                                                 (well-formed-para-lang para))))
                 (when (< score 25)
-                  (push (list b e (format "Hard to read (reading ease %d): shorter words, or two sentences?" (round score)) nil)
+                  (push (list b e (format "Hard to read (reading ease %d): shorter words, or two sentences?" (round score))
+                              (well-formed--splits para b e))
                         out)))))))
       (nreverse out))))
 
@@ -690,6 +727,56 @@ and many of them; Amstad's version for German)."
                 "put" "read" "ridden" "run" "said" "seen" "sold" "sent" "set" "shaken" "shown" "shut" "sung"
                 "spoken" "spent" "split" "spread" "stolen" "struck" "sworn" "taken" "taught" "thought"
                 "thrown" "told" "torn" "understood" "won" "worn" "written")))
+
+(defconst well-formed--past-of-participle
+  '(("been" . "was") ("born" . "bore") ("beaten" . "beat") ("begun" . "began") ("bitten" . "bit")
+    ("blown" . "blew") ("broken" . "broke") ("chosen" . "chose") ("done" . "did") ("drawn" . "drew")
+    ("driven" . "drove") ("eaten" . "ate") ("fallen" . "fell") ("forgotten" . "forgot")
+    ("forgiven" . "forgave") ("frozen" . "froze") ("given" . "gave") ("gone" . "went") ("grown" . "grew")
+    ("hidden" . "hid") ("known" . "knew") ("ridden" . "rode") ("run" . "ran") ("seen" . "saw")
+    ("shaken" . "shook") ("shown" . "showed") ("spoken" . "spoke") ("stolen" . "stole") ("sworn" . "swore")
+    ("taken" . "took") ("thrown" . "threw") ("torn" . "tore") ("worn" . "wore") ("written" . "wrote")
+    ("won" . "won"))
+  "Participles whose simple past differs; the rest (built, told, -ed) are the same.")
+
+(defconst well-formed--agent-pronouns
+  '(("me" . "I") ("him" . "he") ("her" . "she") ("us" . "we") ("them" . "they") ("you" . "you") ("it" . "it")))
+
+(defun well-formed--active (para s-beg s-end vb ve pb pe)
+  "The active form of a past passive with its actor, as a fix:
+\"The file was deleted by the script\" → \"The script deleted the file\".
+VB..VE is was/were, PB..PE the participle, in PARA's sentence S-BEG..S-END.
+Returns (CLAUSE-BEG CLAUSE-END FIX) or nil when it isn't that simple."
+  (let* ((text (well-formed-para-text para))
+         (case-fold-search nil)
+         (be (downcase (substring text vb ve))))
+    (when (member be '("was" "were"))
+      (let* ((clause-beg (let ((i vb))
+                           (while (and (> i s-beg) (not (memq (aref text (1- i)) '(?, ?\; ?:)))) (setq i (1- i)))
+                           (or (string-match "[^[:space:]]" text i) i)))
+             (subject (string-trim (substring text clause-beg vb)))
+             (by (and (eql pe (string-match "\\([^.,;:!?\0]*?\\) ?\\<by \\([^.,;:!?\0]+?\\)\\(?: \\(?:and\\|but\\|or\\|when\\|while\\|because\\|after\\|before\\|so\\)\\>\\|[.,;:!?]\\|\\'\\)" text pe))
+                      (<= (match-end 0) s-end)
+                      (list (string-trim (match-string 1 text)) (string-trim (match-string 2 text))
+                            (match-end 2)))))
+        (when (and by (not (string-empty-p subject))
+                   (not (string-search "\0" (substring text clause-beg (nth 2 by))))
+                   (<= (length (split-string subject)) 8)
+                   (<= (length (split-string (nth 1 by))) 6))
+          (pcase-let* ((`(,middle ,agent ,end) by)
+                       (participle (downcase (substring text pb pe)))
+                       (past (or (cdr (assoc participle well-formed--past-of-participle)) participle))
+                       (starts (= clause-beg s-beg))
+                       (agent (or (cdr (assoc (downcase agent) well-formed--agent-pronouns)) agent))
+                       (agent (if starts (concat (upcase (substring agent 0 1)) (substring agent 1)) agent))
+                       (subject (if (and starts (string-match-p "\\`\\(?:The\\|A\\|An\\|This\\|That\\|These\\|Those\\|Our\\|My\\|Your\\|His\\|Her\\|Its\\|Their\\|Every\\|Each\\|Some\\|Many\\|Most\\|All\\)\\>" subject))
+                                    (concat (downcase (substring subject 0 1)) (substring subject 1))
+                                  subject))
+                       (active (string-join (delq nil (list agent past subject
+                                                            (unless (string-empty-p middle) middle)))
+                                            " ")))
+            (list clause-beg end
+                  (list :edit (format "Active: %s" active) 0 (- end clause-beg) active))))))))
 
 (well-formed-define-rule passive
   :category 'clarity :level 'info
@@ -712,12 +799,20 @@ Active: \"Anna fixed the bug.\"  Fine when the actor doesn't matter
                                    "allowed" "advanced" "detailed" "experienced" "qualified" "talented" "red" "bed"
                                    "need" "seed" "speed" "feed" "shed" "embed" "indeed" "exceed" "proceed" "succeed"
                                    "gesagt" "genug" "gerade" "gestern" "gegen" "geht" "gern" "gesamt" "genau"))
-              (push (list (match-beginning 0) (match-end 0)
-                          (if (equal (well-formed-para-lang para) "de")
-                              "Passiv: wer handelt? Aktiv ist oft klarer"
-                            "Passive voice: who does it? Active is often clearer")
-                          nil)
-                    out)))
+              (let* ((s (cl-find-if (lambda (s) (and (<= (car s) (match-beginning 0)) (<= (match-end 0) (cdr s))))
+                                    (well-formed-para-sentences para)))
+                     (active (and s (equal (well-formed-para-lang para) "en")
+                                  (save-match-data
+                                    (well-formed--active para (car s) (cdr s) (match-beginning 1) (match-end 1)
+                                                         (match-beginning 2) (match-end 2))))))
+                (push (if active
+                          (list (nth 0 active) (nth 1 active) "Passive voice: active is clearer" (list (nth 2 active)))
+                        (list (match-beginning 0) (match-end 0)
+                              (if (equal (well-formed-para-lang para) "de")
+                                  "Passiv: wer handelt? Aktiv ist oft klarer"
+                                "Passive voice: who does it? Active is often clearer")
+                              nil))
+                      out))))
           (setq pos (match-end 0))))
       (nreverse out))))
 
@@ -901,7 +996,7 @@ does their work (ran quickly → sprinted)."
           (when (or (>= (length advs) 3)
                     (and (eq (plist-get (well-formed-para-style para) :name) 'creative) advs))
             (dolist (w advs)
-              (push (list (cadr w) (cddr w) (format "Adverb %s: a stronger verb or adjective?" (well-formed-quote (car w))) nil)
+              (push (list (cadr w) (cddr w) (format "Adverb %s: a stronger verb or adjective?" (well-formed-quote (car w))) (list ""))
                     out)))))
       (nreverse out))))
 
@@ -1066,7 +1161,13 @@ or an impersonal phrasing)."
     (let ((text (well-formed-para-text para)) out (case-fold-search nil))
       (pcase-dolist (`(,b . ,_e) (well-formed-para-sentences para))
         (when (and (eql b (string-match "\\(And\\|But\\|So\\|Or\\|Also\\)\\>" text b)))
-          (push (list b (match-end 0) (format "Sentence starts with %s" (well-formed-quote (match-string 1 text))) nil) out)))
+          (let* ((conj (match-string 1 text)) (me (match-end 0))
+                 (next (and (< (1+ me) (length text)) (eq (aref text me) ?\s) (aref text (1+ me)))))
+            (push (list b me (format "Sentence starts with %s" (well-formed-quote conj))
+                        (when (and next (memq (get-char-code-property next (quote general-category)) (quote (Ll Lu))))
+                          (list (list :edit (format "Drop %s" (well-formed-quote conj)) 0 (+ 2 (- me b))
+                                      (upcase (string next))))))
+                  out))))
       (nreverse out))))
 
 (well-formed-define-rule shouting
@@ -1224,7 +1325,15 @@ DESCRIBE gets the minority key, majority key and its count."
                           (lambda (k major n) (format "%s quotes; %d elsewhere are %s" k n major)))
                          out))))
     (mapcar (lambda (f) (list (nth 0 f) (nth 1 f) (nth 2 f) (nth 3 f)
-                              (and (not (memq (nth 2 f) '(oxford-comma quote-style))) (nth 4 f))))
+                              (pcase (nth 2 f)
+                                ('quote-style nil)
+                                ('oxford-comma
+                                 ;; Toward the majority: add or drop the comma before and/or.
+                                 (let ((m (buffer-substring-no-properties (nth 0 f) (nth 1 f))))
+                                   (list (if (string-match-p ", \\(?:and\\|or\\) \\'" m)
+                                             (replace-regexp-in-string ", \\(and\\|or\\) \\'" " \\1 " m)
+                                           (replace-regexp-in-string " \\(and\\|or\\) \\'" ", \\1 " m)))))
+                                (_ (nth 4 f)))))
             out)))
 
 (well-formed-define-rule spelling-variety

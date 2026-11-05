@@ -9,7 +9,8 @@
 ;; findings through flycheck after the mode's own checker, keys.
 ;;
 ;;   SPC P m   the menu: the finding here, the text, style, categories
-;;   SPC P x   fix the finding at point     SPC P X   fix one rule throughout
+;;   SPC P x   fix the finding at point (rule-based, or rewritten with AI)
+;;   SPC P X   fix one rule throughout
 ;;   SPC P g   ignore it (here, the rule here, everywhere)
 ;;   SPC P e   explain its rule             SPC P L   every finding (consult)
 ;;   SPC P v   the report: scores, readability, tone, plots
@@ -38,6 +39,17 @@
                                    (require 'well-formed-report)
                                    (global-well-formed-mode 1)))))
 
+
+;; Every finding can be fixed: rule-based fixes first (a split for a long
+;; sentence, the active form of "was done by", the word to use), and for
+;; any finding "Rewrite the sentence with AI…": familiar rewrites the
+;; sentence toward the finding's message and +prose/improve shows the
+;; change word by word (C-c C-c applies it, g asks again, q keeps yours).
+(declare-function +prose--improve-ask "+prose" (buf beg end goal))
+(defvar well-formed-rewrite-function)
+(setq well-formed-rewrite-function
+      (lambda (beg end goal)
+        (+prose--improve-ask (current-buffer) (copy-marker beg) (copy-marker end t) goal)))
 (map! :leader
       (:prefix ("P" . "prose")
        :desc "Writing assistant menu" "m" #'well-formed-menu

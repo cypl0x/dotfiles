@@ -242,5 +242,53 @@
   (should (equal (well-formed-test--find #'text-mode "This - and that." 'typography) '(" - " (" – "))))
   (should (equal (well-formed-test--find #'text-mode "We waited. This means we lost." 'vague-this) '("This means" nil)))
   (should (memq 'negative (well-formed-test--rules #'text-mode "#+well_formed: business\n\nDon't forget the report."))))
+
+(defun well-formed-test--apply-first (mode text rule)
+  "TEXT after applying RULE's first fix in MODE."
+  (well-formed-test--with mode text
+    (let ((f (cl-find rule (well-formed-check) :key (lambda (f) (nth 2 f)))))
+      (should f)
+      (should (nth 5 f))
+      (well-formed--apply f (car (nth 5 f)))
+      (buffer-string))))
+
+(ert-deftest well-formed-test-fix-long-sentence-split ()
+  (let ((s (concat "We built the parser for the new language over three long weeks in the spring, "
+                   "and the team then tested every single part of it against the old suite of programs "
+                   "that we had kept from the earlier project.")))
+    (should (equal (well-formed-test--apply-first #'text-mode s 'long-sentence)
+                   (concat "We built the parser for the new language over three long weeks in the spring. "
+                           "The team then tested every single part of it against the old suite of programs "
+                           "that we had kept from the earlier project.")))))
+
+(ert-deftest well-formed-test-fix-passive-to-active ()
+  (should (equal (well-formed-test--apply-first #'text-mode "The file was deleted by the script." 'passive)
+                 "The script deleted the file."))
+  (should (equal (well-formed-test--apply-first #'text-mode "Yesterday, the report was written by Anna and nobody read it." 'passive)
+                 "Yesterday, Anna wrote the report and nobody read it."))
+  ;; No actor: no rule-based fix (the AI rewrite can still do it).
+  (well-formed-test--with #'text-mode "The file was deleted."
+    (should-not (nth 5 (cl-find 'passive (well-formed-check) :key (lambda (f) (nth 2 f)))))))
+
+(ert-deftest well-formed-test-fix-conjunction-adverb-oxford ()
+  (should (equal (well-formed-test--apply-first #'text-mode "#+well_formed: academic\n\nIt rained. And we left." 'conjunction-start)
+                 "#+well_formed: academic\n\nIt rained. We left."))
+  (should (string-match-p "dropped to the" (well-formed-test--apply-first
+                                            #'text-mode "It quickly, quietly and suddenly dropped to the floor." 'adverb)))
+  (should (equal (well-formed-test--apply-first
+                  #'text-mode "Red, green, and blue. Cats, dogs, and birds. Salt, pepper and oil." 'oxford-comma)
+                 "Red, green, and blue. Cats, dogs, and birds. Salt, pepper, and oil.")))
+
+(ert-deftest well-formed-test-every-finding-offers-ai-rewrite ()
+  (let (called)
+    (well-formed-test--with #'text-mode "We go. We stay. We leave."
+      (let ((well-formed-rewrite-function (lambda (b e goal) (setq called (list b e goal))))
+            (f (cl-find 'monotonous-start (well-formed-check) :key (lambda (f) (nth 2 f)))))
+        (should-not (nth 5 f))
+        (let ((fixes (well-formed--fixes f)))
+          (should (= (length fixes) 1))
+          (well-formed--apply f (car fixes)))
+        (should (string-match-p "Third sentence" (nth 2 called)))
+        (should (< (nth 0 called) (nth 1 called)))))))
 (provide 'well-formed-test)
 ;;; well-formed-test.el ends here
