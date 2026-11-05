@@ -92,8 +92,58 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
               :exclusive 'no
               :company-kind (lambda (_) 'text))))))
 
+(defvar +completion-next-word-limit 400000
+  "Characters of text (this buffer first, then others of its mode) read
+for `+completion-next-word-capf'.")
+
+(defun +completion--next-words (prev)
+  "Words that followed PREV in this buffer and others of its mode, as
+\(WORD . COUNT), most frequent first."
+  (let ((counts (make-hash-table :test #'equal))
+        (re (concat "\\_<" (regexp-quote prev) "[[:space:]]+\\([[:alpha:]][[:alpha:]'’-]+\\)"))
+        (budget +completion-next-word-limit)
+        (mode major-mode)
+        (case-fold-search t))
+    (dolist (buf (cons (current-buffer) (remq (current-buffer) (buffer-list))))
+      (when (and (> budget 0) (eq (buffer-local-value 'major-mode buf) mode))
+        (with-current-buffer buf
+          (save-excursion
+            (save-restriction
+              (widen)
+              (goto-char (point-min))
+              (let ((limit (min (point-max) (+ (point-min) budget))))
+                (while (re-search-forward re limit t)
+                  (cl-incf (gethash (downcase (match-string-no-properties 1)) counts 0)))
+                (setq budget (- budget (- limit (point-min))))))))))
+    (let (out)
+      (maphash (lambda (w n) (push (cons w n) out)) counts)
+      (sort out (lambda (a b) (> (cdr a) (cdr b)))))))
+
+(defun +completion-next-word-capf ()
+  "With nothing typed yet: the words that followed the previous word
+elsewhere (in this buffer and the others of its mode), most frequent
+first, each with its count.  C-SPC after a space offered nothing before."
+  (when (and (or (minibufferp) (eq (+completion-context) 'prose))
+             (not (looking-back "[[:alpha:]]" (1- (point)))))
+    (let* ((prev (save-excursion
+                   (skip-chars-backward " \t")
+                   (and (looking-back "\\b\\([[:alpha:]][[:alpha:]'’-]*\\)" (line-beginning-position))
+                        (match-string-no-properties 1))))
+           (found (and prev (+completion--next-words prev)))
+           (cands (mapcar (lambda (e) (propertize (car e) '+count (cdr e))) found)))
+      (when cands
+        (list (point) (point)
+              (lambda (string pred action)
+                (if (eq action 'metadata)
+                    '(metadata (display-sort-function . identity) (cycle-sort-function . identity))
+                  (complete-with-action action cands string pred)))
+              :annotation-function
+              (lambda (c) (format "  after “%s” ×%d" prev (or (cdr (assoc (substring-no-properties c) found)) 0)))
+              :exclusive 'no
+              :company-kind (lambda (_) 'text))))))
+
 (defun +completion--prose ()
-  (list #'+completion-prose-capf))
+  (list #'+completion-prose-capf #'+completion-next-word-capf))
 
 ;; corfu completes as you type, but in Org nothing offered words: Org's
 ;; capfs are keywords, tags and src blocks only.

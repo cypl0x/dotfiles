@@ -842,6 +842,20 @@ and a temp exec-path where bin/tar links to store/tar."
       (+resume/last)
       (should mini))))
 
+(ert-deftest completion/next-word-after-a-space ()
+  (with-temp-buffer
+    (text-mode)
+    (insert "The parser reads tokens. The parser builds trees. The parser reads input. The parser ")
+    (cl-letf (((symbol-function '+completion-context) (lambda () 'prose)))
+      (let ((r (+completion-next-word-capf)))
+        (should r)
+        (should (= (nth 0 r) (nth 1 r) (point)))
+        (should (equal (all-completions "" (nth 2 r)) '("reads" "builds")))
+        (should (string-match-p "×2" (funcall (plist-get (nthcdr 3 r) :annotation-function) "reads"))))
+      ;; Mid-word it leaves the job to the word completion.
+      (insert "re")
+      (should-not (+completion-next-word-capf)))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)
