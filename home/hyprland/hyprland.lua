@@ -587,6 +587,15 @@ hl.window_rule({
 })
 
 -- ── Floating rules ────────────────────────────────────────────────────────────
+-- Agent test frames (Emacs frames titled CLAUDE-LAB or claude-*) open on the
+-- hidden special:claude workspace and never take focus: a test frame once
+-- took the keyboard from a minibuffer you were typing in.
+hl.window_rule({
+    name  = "agent-test-frames",
+    match = { title = "^(CLAUDE-LAB|claude-.*)$" },
+    workspace = "special:claude silent",
+    no_initial_focus = true,
+})
 hl.window_rule({
     name  = "float-misc",
     match = { class = [[^(nm-applet|blueman-manager|pavucontrol|wlogout|org\.kde\.ark|org\.kde\.kcalc|gnome-calculator|swappy|hyprpicker)$]] },

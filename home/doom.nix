@@ -34,6 +34,7 @@ in {
     (lib.mkIf live {
       ".config/doom/lisp".source = checkout "lisp";
       ".config/doom/snippets".source = checkout "snippets";
+      ".config/doom/themes".source = checkout "themes";
     })
     (lib.mkIf (!live) {
       ".config/doom/lisp/app-launcher.el".source = ./doom/lisp/app-launcher.el;
