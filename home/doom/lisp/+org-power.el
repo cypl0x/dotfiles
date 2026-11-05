@@ -324,12 +324,12 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
 
 (defun +org-consult-priority-only-a (fn cand)
   "Around `consult-org--annotate' (FN): the priority only (TODO is in front)."
-  (let* ((props (get-text-property 0 'consult-org--heading cand))
-         (stripped (copy-sequence props)))
-    (setf (nth 1 stripped) nil)
-    (let ((copy (copy-sequence cand)))
-      (put-text-property 0 1 'consult-org--heading stripped copy)
-      (funcall fn copy))))
+  ;; The property is a dotted (LEVEL TODO PRIO . BUFFER): rebuilt, not
+  ;; `copy-sequence'd, which older Emacsen (neomacs) refuse on dotted lists.
+  (pcase-let ((`(,level ,_todo ,prio . ,buffer) (get-text-property 0 'consult-org--heading cand))
+              (copy (copy-sequence cand)))
+    (put-text-property 0 1 'consult-org--heading `(,level nil ,prio . ,buffer) copy)
+    (funcall fn copy)))
 
 (with-eval-after-load 'consult-org
   (advice-add 'consult-org--headings :filter-return #'+org-consult-todo-first-a)
