@@ -521,7 +521,8 @@
 (load! "lisp/+prose")       ;; Writing mode, jinx, text stats, readability
 (load! "lisp/+well-formed") ;; well-formed: the writing assistant (rules, not LanguageTool)
 (load! "lisp/+dtt")         ;; Dependently typed language enhancements
-(load! "lisp/+familiar")    ;; familiar: AI woven into magit, flycheck, smerge, embark
+;; familiar (AI woven into magit, flycheck, smerge, embark): the module
+;; :tools familiar (modules/tools/familiar/), the package in lisp/familiar/.
 (load! "lisp/+agent")       ;; AI agent integration, gptel, transient
 (load! "lisp/+brave-search") ;; Brave Web Search API
 (load! "lisp/+persist")     ;; Persistent scratch/new buffers (Sublime-like)

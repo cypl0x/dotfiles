@@ -108,6 +108,7 @@
        ;;pass              ; password manager for nerds
        pdf               ; pdf enhancements
        vellumory         ; reading PDFs (cypl0x/vellumory), before pdf
+       familiar          ; an AI familiar in your buffers (lisp/familiar/), built on gptel
        ;;prodigy           ; FIXME managing external services & code builders
        rgb               ; creating color strings
        ;;taskrunner        ; taskrunner for all your projects

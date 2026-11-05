@@ -131,7 +131,8 @@ Its own readOnlyHint when it gives one, else the server, else the name."
           (t (string-match-p familiar-mcp-client-read-only-regexp (plist-get spec :name))))))
 
 (defun familiar-mcp-client--wrap (tool name &optional read-only)
-  "TOOL (a gptel tool plist from mcp.el) capped, asking first unless READ-ONLY."
+  "TOOL (a gptel tool plist from mcp.el) capped, asking first unless READ-ONLY.
+NAME is its server's, for the question and the tool's category."
   (let* ((tool-name (plist-get tool :name))
          (fn (plist-get tool :function))
          (asks (and familiar-mcp-client-confirm-writes (not read-only))))

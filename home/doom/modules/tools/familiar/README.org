@@ -1,0 +1,44 @@
+#+title:    :tools familiar
+#+subtitle: An AI familiar in your buffers
+#+created:  November 05, 2026
+
+* Description
+[[file:../../../lisp/familiar/familiar.el][familiar]] puts a language model (through gptel) where you already work:
+commit messages in the repository's style, explanations of code and
+diagnostics, fixes as smerge conflicts to accept or reject, a conversation
+(=M-ß=) that can act on Emacs, MCP servers as tools, Claude Code sessions to
+write to, analytics of what it all costs.  This module installs it and wires
+it into Doom.
+
+- The package lives in =lisp/familiar/= of this config, MELPA-ready (headers,
+  package-lint, byte-compile clean).  It is built without byte-compiling, so
+  a saved file is live after =load-file=.
+- Doom glue: popups, =SPC A= (the menu), =M-ß=, =SPC o $= (analytics), =X= on
+  embark targets, =M-g= in commit messages, the spend in the mode line, the
+  MCP bridge and the ACP server an Emacs daemon starts.
+
+** Module flags
+/This module has no flags./
+
+** Packages
+- familiar (local: =lisp/familiar/=)
+- [[doom-package:mcp]] (MCP servers as tools, their sampling requests)
+- [[doom-package:mcp-server-lib]] (the bridge agents use)
+
+* Installation
+Enable =familiar= under =:tools= in =init.el=, run =doom sync=.  A Claude key
+in =~/.authinfo= (=machine api.anthropic.com password …=), as gptel reads it.
+
+* Usage
+| Key            | What                                                    |
+|----------------+---------------------------------------------------------|
+| =M-ß=          | ask anything; =@name= offers an MCP server's tools      |
+| =SPC A=        | the menu: explain, fix, commit message, spend, sessions |
+| =SPC A w=      | write to a running Claude Code session                  |
+| =SPC o $=      | analytics: spend, plots, speed, recommendations         |
+| =C-c p= in M-ß | insert a saved prompt                                   |
+
+* Configuration
+=familiar-budget=, =familiar-models= (the tiers), =familiar-task-tiers=,
+=familiar-mcp-sampling= (=ask=, =always=, =never=); see =M-x customize-group
+RET familiar=.

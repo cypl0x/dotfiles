@@ -336,9 +336,11 @@ its answer as text."
                                   (familiar-a2a-send name request
                                                      (lambda (answer) (funcall callback answer))))))))
 
-(with-eval-after-load 'familiar-ask
-  (add-hook 'familiar-ask-keyword-functions #'familiar-a2a-keywords)
-  (add-hook 'familiar-ask-turn-tools-functions #'familiar-a2a-turn-tools))
+;; Both hooks default to nil: adding before familiar-ask loads is safe.
+(defvar familiar-ask-keyword-functions)
+(defvar familiar-ask-turn-tools-functions)
+(add-hook 'familiar-ask-keyword-functions #'familiar-a2a-keywords)
+(add-hook 'familiar-ask-turn-tools-functions #'familiar-a2a-turn-tools)
 
 (provide 'familiar-a2a)
 ;;; familiar-a2a.el ends here

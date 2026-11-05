@@ -66,8 +66,7 @@
 (package! aider)             ;; aider.el — CLI pair-programming, drives `aider` on PATH
 
 ;; MCP (Model Context Protocol) tooling
-(package! mcp)
-(package! mcp-server-lib)
+;; mcp and mcp-server-lib: in modules/tools/familiar/packages.el (familiar uses them).
 (package! org-mcp)
 (package! elisp-dev-mcp)
 

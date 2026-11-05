@@ -14,7 +14,7 @@
 ;;
 ;;   M-x familiar-mcp-http-start   serve on 127.0.0.1:`familiar-mcp-http-port'
 ;;   M-x familiar-mcp-http-stop
-;;   claude mcp add --transport http emacs http://127.0.0.1:PORT/mcp \
+;;   claude mcp add --transport http "emacs" http://127.0.0.1:PORT/mcp \
 ;;     --header "Authorization: Bearer $(cat ~/.local/state/emacs/familiar-mcp-http-token)"
 ;;
 ;; What the spec asks of a minimal server, and this does:
@@ -36,7 +36,7 @@
 (declare-function familiar-mcp-start "familiar-mcp" ())
 
 (defgroup familiar-mcp-http nil
-  "familiar's MCP server over HTTP."
+  "Familiar's MCP server over HTTP."
   :group 'familiar)
 
 (defcustom familiar-mcp-http-port 39391
@@ -50,15 +50,16 @@
   :type 'file)
 
 (defcustom familiar-mcp-http-server-id "familiar"
-  "mcp-server-lib server whose tools are served."
+  "The mcp-server-lib server whose tools are served."
   :type 'string)
 
 (defvar familiar-mcp-http-protocol-versions '("2024-11-05" "2025-03-26" "2025-06-18" "2025-11-25")
   "MCP-Protocol-Version values accepted; others get 400.")
 
 (defvar familiar-mcp-http-process-function #'mcp-server-lib-process-jsonrpc
-  "Called with a JSON-RPC string and the server id; returns the response
-string, or nil/\"\" for notifications.")
+  "Function answering a JSON-RPC message.
+Called with the message (a string) and the server id; returns the
+response string, or nil/\"\" for notifications.")
 
 (defvar familiar-mcp-http--server nil "The listening process.")
 
@@ -68,9 +69,10 @@ string, or nil/\"\" for notifications.")
 (defvar familiar-mcp-http-routes nil
   "Alist PATH-PREFIX → HANDLER for endpoints besides /mcp (same token).
 HANDLER is called with METHOD PATH HEADERS BODY and returns
-(STATUS EXTRA-HEADERS BODY), (:async FN) where FN is called with a
+\(STATUS EXTRA-HEADERS BODY), (:async FN) where FN is called with a
 function taking those three, or (:sse FN) where FN is called with SEND
-(one event's data, and optionally its name) and CLOSE.  nil passes the request on.")
+\(one event's data, and optionally its name) and CLOSE.  nil passes the
+request on.")
 
 ;;;; Token
 
@@ -97,9 +99,9 @@ function taking those three, or (:sse FN) where FN is called with SEND
 ;;;; Requests
 
 (defun familiar-mcp-http--parse (raw)
-  "RAW bytes of an HTTP request: (METHOD PATH HEADERS BODY), or nil if
-incomplete.  HEADERS is an alist with downcased names; BODY is decoded
-UTF-8.  `:bad' when it can never become a request."
+  "Parse RAW bytes of an HTTP request into (METHOD PATH HEADERS BODY).
+Nil if incomplete, `:bad' when it can never become a request.  HEADERS
+is an alist with downcased names; BODY is decoded UTF-8."
   (when-let* ((end (string-search "\r\n\r\n" raw)))
     (let* ((lines (split-string (substring raw 0 end) "\r\n"))
            (start (split-string (car lines) " "))
@@ -120,7 +122,8 @@ UTF-8.  `:bad' when it can never become a request."
       (string-match-p "\\`https?://\\(?:localhost\\|127\\.0\\.0\\.1\\|\\[::1\\]\\)\\(?::[0-9]+\\)?\\'" origin)))
 
 (defun familiar-mcp-http-respond (method path headers body)
-  "The response to an HTTP request: (STATUS EXTRA-HEADERS BODY-STRING)."
+  "The response to an HTTP request: (STATUS EXTRA-HEADERS BODY-STRING).
+METHOD, PATH, HEADERS and BODY are the request's, as parsed."
   (let ((header (lambda (name) (alist-get name headers nil nil #'equal))))
     (cond
      ((not (familiar-mcp-http--origin-ok-p (funcall header "origin")))
@@ -156,6 +159,7 @@ UTF-8.  `:bad' when it can never become a request."
                     "")))))))))
 
 (defun familiar-mcp-http--reason (status)
+  "The reason phrase for HTTP STATUS."
   (pcase status (200 "OK") (202 "Accepted") (400 "Bad Request") (401 "Unauthorized")
          (403 "Forbidden") (404 "Not Found") (405 "Method Not Allowed") (_ "Error")))
 
@@ -164,6 +168,7 @@ UTF-8.  `:bad' when it can never become a request."
   (if (multibyte-string-p s) (encode-coding-string s 'utf-8) s))
 
 (defun familiar-mcp-http--send (proc status extra body)
+  "Answer on PROC with STATUS, EXTRA headers and BODY, then close it."
   (let ((bytes (familiar-mcp-http--bytes (or body ""))))
     (process-send-string
      proc
@@ -175,6 +180,7 @@ UTF-8.  `:bad' when it can never become a request."
     (process-send-eof proc)))
 
 (defun familiar-mcp-http--filter (proc chunk)
+  "Add CHUNK to PROC's request and answer it once it is complete."
   (let ((raw (concat (or (process-get proc :raw) "") chunk)))
     (process-put proc :raw raw)
     (pcase (familiar-mcp-http--parse raw)

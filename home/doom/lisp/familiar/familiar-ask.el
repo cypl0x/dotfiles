@@ -94,8 +94,8 @@ Next to gptel's presets (@fast, @smart, @deep), which gptel applies.")
 Called in the buffer asked from (e.g. MCP servers known for its project).")
 
 (defvar familiar-ask-turn-tools-functions nil
-  "Functions called with a turn's keywords (symbols) and its origin plist,
-each returning gptel tools offered on that turn besides `familiar-ask-tools'.")
+  "Functions returning gptel tools for a turn, besides `familiar-ask-tools'.
+Each is called with the turn's keywords (symbols) and its origin plist.")
 
 (defvar familiar-ask-prompt-capfs nil
   "Completion functions in the prompt, after @keyword completion.")
@@ -165,7 +165,8 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
   "Plist describing where the pending prompt was asked from.")
 
 (defvar familiar-ask--draft nil
-  "A prompt edited in a buffer and then kept with C-c C-k.")
+  "A prompt edited in a buffer and kept for later.
+See `familiar-ask-edit-keep'.")
 
 (defvar familiar-ask--buffer-name "*familiar-ask*")
 
@@ -274,6 +275,7 @@ Reply in Markdown (gptel converts it to Org for this buffer): `code` inline, \
                     (- (length text) familiar-ask-tool-result-max)))))
 
 (defun familiar-ask--get-buffer (name)
+  "Return the buffer named NAME, or signal an error."
   (or (get-buffer name) (error "No buffer named %s" name)))
 
 (declare-function ghostel-paste-string "ext:ghostel" (string))
@@ -469,7 +471,8 @@ An @model in it picks who answers, as in the M-ß prompt."
 (defun familiar-ask-send-follow-up ()
   "Send the follow-up typed under the last prompt heading, from anywhere.
 RET only sent with point at the very end, and evil's or Org's RET may
-win over this mode's map; C-c C-c is free in both."
+win over this mode's map;
+\\<familiar-ask-mode-map>\\[familiar-ask-send-follow-up] is free in both."
   (interactive)
   (goto-char (point-max))
   (skip-chars-backward " \t\n")
@@ -630,6 +633,7 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
 ;; Added after the converter's own cleanup, so it runs first (add-hook
 ;; prepends) while the converter's buffer still exists.
 (defun familiar-ask--flush-converter-a (convert start-marker)
+  "Call CONVERT with START-MARKER; flush the converter when the answer ends."
   (let ((converter (funcall convert start-marker)) flush)
     (setq flush
           (lambda (beg end)
@@ -645,6 +649,7 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
 (advice-add 'gptel--stream-convert-markdown->org :around #'familiar-ask--flush-converter-a)
 ;; Spend: every turn of an ask conversation lands in familiar's ledger.
 (defun familiar-ask--record-a (tokens &optional _tokens-full)
+  "Record an ask turn's TOKENS in familiar's ledger."
   (when (and tokens (bound-and-true-p familiar-ask-mode))
     ;; The request's model: an @preset in the prompt overrides `gptel-model'.
     (setq familiar-ask--last-model
@@ -659,8 +664,8 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
 ;;;; Applying a suggestion
 
 (defun familiar-ask--last-turn ()
-  "The latest answered turn: plist (:heading POS :title STRING :prompt-end POS
-:answer (BEG . END)), or nil.
+  "The latest answered turn, or nil.
+A plist (:heading POS :title STRING :prompt-end POS :answer (BEG . END)).
 The answer is what gptel wrote (text property `gptel': response, tool
 calls); a follow-up typed in the conversation has no context block, so
 \"after the last #+end_context\" took the turn before it.  Without the
@@ -764,9 +769,10 @@ KIND is `command', `keys', `elisp' or `shell'."
 ;;;; @model: who answers this turn
 
 (defun familiar-ask--model-choices ()
-  "What @model can pick: alist of (LABEL . (BACKEND . MODEL)) for every
-model of every gptel backend, and (LABEL . (agent . TARGET)) for each coding
-agent running now (`familiar-handoff-targets', clipboard aside)."
+  "What @model can pick, as an alist.
+\(LABEL . (BACKEND . MODEL)) for every model of every gptel backend, and
+\(LABEL . (agent . TARGET)) for each coding agent running now
+\(`familiar-handoff-targets', clipboard aside)."
   (append
    (cl-loop for (name . backend) in gptel--known-backends
             nconc (cl-loop for model in (gptel-backend-models backend)
@@ -798,7 +804,7 @@ colon: a model name (the current backend's first) or an agent."
                                      choices)))
             (cdr (or (seq-find (lambda (c) (eq (cadr c) current)) matches)
                      (car matches))))
-          (user-error "@model: no model or agent named %s" spec)))))
+          (user-error "%s: no model or agent named %s" "@model" spec)))))
 
 (defun familiar-ask--model-capf ()
   "Complete the NAME of @model:NAME in the prompt."
@@ -991,7 +997,8 @@ which conversation, who answers."
     (familiar-ask--open-editor (familiar-ask--transient-prompt prompt args))))
 
 (defun familiar-ask--transient (prompt origin keywords spec)
-  "Open `familiar-ask-transient' for PROMPT (keywords out) asked at ORIGIN."
+  "Open `familiar-ask-transient' for PROMPT (keywords out) asked at ORIGIN.
+The prompt's KEYWORDS and @model SPEC set its starting arguments."
   (transient-setup 'familiar-ask-transient nil nil
                    :scope (list prompt origin)
                    :value (familiar-ask--transient-value keywords spec)))
@@ -1042,8 +1049,8 @@ From the minibuffer, for the buffer the prompt is about."
 
 (defun familiar-ask--keep-prompt-h ()
   "Keep the prompt in `familiar-ask-history' however its minibuffer closes.
-Sent prompts were kept anyway; abandoned ones (C-g) were lost.  A prompt
-equal to the newest one isn't added again (`add-to-history')."
+Sent prompts were kept anyway; abandoned ones (\\[keyboard-quit]) were lost.
+A prompt equal to the newest one isn't added again (`add-to-history')."
   (when familiar-ask--prompt-p
     (let ((text (string-trim (minibuffer-contents-no-properties))))
       (unless (string-empty-p text)
@@ -1118,7 +1125,7 @@ From WIN: asked from the minibuffer, the minibuffer window is selected."
 FOLLOW continues the running conversation; ECHO shows the answer in the
 echo area instead of the conversation's window.  KEYWORDS (symbols) may
 add tools for this turn (`familiar-ask-turn-tools-functions'); MODEL
-(BACKEND . MODEL) answers it instead of the conversation's model."
+\(BACKEND . MODEL) answers it instead of the conversation's model."
   (let* ((context (familiar-ask--context origin))
          (buf (if (and follow (get-buffer familiar-ask--buffer-name))
                   (get-buffer familiar-ask--buffer-name)
@@ -1182,7 +1189,8 @@ add tools for this turn (`familiar-ask-turn-tools-functions'); MODEL
 
 ;;;###autoload
 (defun familiar-ask-new (prompt &optional origin)
-  "Ask PROMPT in a fresh conversation."
+  "Ask PROMPT in a fresh conversation.
+ORIGIN is where it was asked from, as `familiar-ask--capture' describes."
   (interactive
    (let ((origin (familiar-ask--capture)))
      (setq familiar-ask--origin origin)
@@ -1191,7 +1199,8 @@ add tools for this turn (`familiar-ask-turn-tools-functions'); MODEL
 
 ;;;###autoload
 (defun familiar-ask-continue (prompt &optional origin)
-  "Ask PROMPT in the running conversation (like @follow-up)."
+  "Ask PROMPT in the running conversation (like @follow-up).
+ORIGIN is where it was asked from, as `familiar-ask--capture' describes."
   (interactive
    (let ((origin (familiar-ask--capture)))
      (setq familiar-ask--origin origin)
@@ -1210,9 +1219,12 @@ add tools for this turn (`familiar-ask-turn-tools-functions'); MODEL
     map))
 
 (define-minor-mode familiar-ask-edit-mode
-  "Writing a `familiar-ask' prompt: C-c C-c sends, C-c C-k keeps it for
-later, C-c C-q discards it (into the history), M-p / M-n go through the
-history;  and words complete as in the minibuffer."
+  "Minor mode for writing a `familiar-ask' prompt.
+\\<familiar-ask-edit-mode-map>\\[familiar-ask-edit-send] sends,
+\\[familiar-ask-edit-keep] keeps it for later, \\[familiar-ask-edit-discard]
+discards it (into the history), \\[familiar-ask-edit-previous] and
+\\[familiar-ask-edit-next] go through the history, and words complete as
+in the minibuffer."
   :lighter " ✦prompt"
   (when familiar-ask-edit-mode
     (setq header-line-format '(:eval (familiar-ask--edit-header)))))

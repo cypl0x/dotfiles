@@ -1,8 +1,8 @@
-;;; familiar.el --- An AI familiar woven into Emacs -*- lexical-binding: t; -*-
+;;; familiar.el --- An AI familiar woven into your editing -*- lexical-binding: t; -*-
 ;;
 ;; Author: Wolfhard Prell <mail@wolfhard.dev>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "29.1") (gptel "0.9.9"))
+;; Package-Requires: ((emacs "29.1") (gptel "0.9.9") (transient "0.7.0"))
 ;; Keywords: tools, convenience, vc
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 ;; URL: https://github.com/cypl0x/familiar.el
@@ -71,7 +71,7 @@
   :type '(alist :key-type symbol :value-type symbol))
 
 (defcustom familiar-backend nil
-  "gptel backend to use, or nil for the current `gptel-backend'."
+  "The gptel backend to use, or nil for the current `gptel-backend'."
   :type '(choice (const :tag "gptel-backend" nil) (sexp :tag "Backend")))
 
 (defcustom familiar-budget 10.0
@@ -201,6 +201,7 @@ SECONDS the request took, PROJECT it was made in, STATUS (nil: answered,
   "Built once: the segment is evaluated on every redisplay.")
 
 (defun familiar--mode-line ()
+  "The mode line segment: spend so far, colored against `familiar-budget'."
   (when familiar-budget
     (let ((spent (familiar-spent)))
       (propertize (format (if (< spent 1) " ✦$%.3f" " ✦$%.2f") spent)
@@ -271,10 +272,11 @@ Changes made meanwhile go in familiar-footprint.el's ledger.")
 (cl-defun familiar-request (prompt &key task system escalate stream callback tools model backend silent)
   "Send PROMPT for TASK with SYSTEM prompt; call CALLBACK like `gptel-request'.
 The model comes from TASK's tier (one higher when ESCALATE), unless MODEL
-\(on BACKEND) is given.  The request is priced and recorded once it
-completes.  TOOLS (gptel tools) are offered; when the model calls them, the
-streamed segment ends (`t') with the calls in INFO's :tool-use and
-:stop-reason \"tool_use\", before gptel runs them and continues.  SILENT: a
+\(on BACKEND) is given.  STREAM gets the answer in pieces as it arrives.
+The request is priced and recorded once it completes.  TOOLS (gptel
+tools) are offered; when the model calls them, the streamed segment ends
+\(with t) with the calls in INFO's :tool-use and :stop-reason
+\"tool_use\", before gptel runs them and continues.  SILENT: a
 background request, priced but not kept in the history, failing quietly.
 Returns the model used."
   (let* ((model (or model (familiar--model task escalate)))
@@ -329,6 +331,7 @@ lookup would cost a round trip per request."
       (file-name-nondirectory (directory-file-name root)))))
 
 (defun familiar--project-name ()
+  "The current project's directory name, or nil outside a project."
   (when-let* ((pr (project-current)))
     (file-name-nondirectory (directory-file-name (project-root pr)))))
 
@@ -343,6 +346,7 @@ lookup would cost a round trip per request."
                             (line-end-position))))))))
 
 (defun familiar--describe-location (beg)
+  "Describe BEG for a prompt: file or buffer, mode, line, Emacs, project."
   (format "%s (%s, line %d%s%s)"
           (if buffer-file-name (file-name-nondirectory buffer-file-name) (buffer-name))
           (string-remove-suffix "-mode" (symbol-name major-mode))
@@ -356,6 +360,7 @@ lookup would cost a round trip per request."
           (if-let* ((p (familiar--project-name))) (format ", project %s" p) "")))
 
 (defun familiar--fenced (text)
+  "TEXT in a Markdown code fence named after the major mode."
   (format "```%s\n%s\n```" (string-remove-suffix "-mode" (symbol-name major-mode)) text))
 
 (defun familiar--unfence (text)
@@ -618,6 +623,7 @@ Each entry is (NAME :available PREDICATE :send FUNCTION-OF-TEXT)."
   :type '(repeat (cons symbol plist)))
 
 (defun familiar--relative (file)
+  "FILE relative to the current project's root, else abbreviated."
   (if-let* ((pr (project-current)) (root (project-root pr)))
       (file-relative-name file root)
     (abbreviate-file-name file)))
@@ -743,6 +749,7 @@ language). Subject at most 72 characters, imperative. Add a body, wrapped at \
 message.")
 
 (defun familiar--git (&rest args)
+  "Output of git with ARGS, or nil if it fails."
   (with-temp-buffer
     (when (zerop (apply #'process-file "git" nil t nil args))
       (buffer-string))))

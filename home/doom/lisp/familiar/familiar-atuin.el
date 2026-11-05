@@ -50,6 +50,7 @@ pretend to have run anything."
 (defvar familiar-atuin--suggest-tool nil)
 
 (defun familiar-atuin--suggest-tool ()
+  "The suggest_command tool, made once."
   (or familiar-atuin--suggest-tool
       (setq familiar-atuin--suggest-tool
             (gptel-make-tool
@@ -86,7 +87,8 @@ pretend to have run anything."
     (nreverse turns)))
 
 (defun familiar-atuin-handle (method path _headers body)
-  "Route handler for /api/cli/ (see `familiar-mcp-http-routes')."
+  "Route handler for /api/cli/ (see `familiar-mcp-http-routes').
+METHOD, PATH and BODY are the request's."
   (let ((req (and (equal method "POST") (equal (car (split-string path "?")) "/api/cli/chat")
                   (ignore-errors (json-parse-string body :object-type 'alist :array-type 'list
                                                     :null-object nil :false-object nil)))))
@@ -95,6 +97,8 @@ pretend to have run anything."
       (list :sse (lambda (send close) (familiar-atuin--answer req send close))))))
 
 (defun familiar-atuin--answer (req send close)
+  "Answer chat request REQ as server-sent events.
+SEND takes each event's data and name; CLOSE ends the stream."
   (let* ((turns (familiar-atuin-conversation (alist-get 'messages req)))
          (context (alist-get 'context req))
          (system (concat familiar-atuin-system

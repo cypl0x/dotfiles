@@ -42,9 +42,11 @@
   "Tier for a request naming no known model.")
 
 (defun familiar-openai--json (object)
+  "OBJECT (an alist) as a JSON string."
   (json-serialize object :null-object :null :false-object :false))
 
 (defun familiar-openai--error (status message &optional type)
+  "An OpenAI-style error response with STATUS, MESSAGE and error TYPE."
   (list status '(("Content-Type" . "application/json"))
         (familiar-openai--json `((error . ((message . ,message)
                                            (type . ,(or type "invalid_request_error"))))))))
@@ -72,8 +74,9 @@
         (t "")))
 
 (defun familiar-openai-conversation (messages)
-  "OpenAI MESSAGES as (SYSTEM . TURNS): TURNS alternate from the user, as
-`gptel-request' takes a list prompt; consecutive turns of one role merge."
+  "OpenAI MESSAGES as (SYSTEM . TURNS).
+TURNS alternate from the user, as `gptel-request' takes a list prompt;
+consecutive turns of one role merge."
   (let (system turns last)
     (dolist (m messages)
       (let ((role (alist-get 'role m))
@@ -95,11 +98,14 @@
     (familiar-ask--context (familiar-ask--capture))))
 
 (defun familiar-openai--chunk (id model created delta &optional finish)
+  "A streamed chunk of completion ID: DELTA, and FINISH as its finish reason.
+MODEL and CREATED are the completion's."
   (familiar-openai--json
    `((id . ,id) (object . "chat.completion.chunk") (created . ,created) (model . ,model)
      (choices . [((index . 0) (delta . ,delta) (finish_reason . ,(or finish :null)))]))))
 
 (defun familiar-openai--completion (id model created text tokens)
+  "Completion ID of TEXT by MODEL, made at CREATED, its usage from TOKENS."
   (let ((in (or (plist-get tokens :input) 0)) (out (or (plist-get tokens :output) 0)))
     (familiar-openai--json
      `((id . ,id) (object . "chat.completion") (created . ,created) (model . ,model)
@@ -108,7 +114,8 @@
        (usage . ((prompt_tokens . ,in) (completion_tokens . ,out) (total_tokens . ,(+ in out))))))))
 
 (defun familiar-openai-handle (method path _headers body)
-  "Route handler for /v1/ (see `familiar-mcp-http-routes')."
+  "Route handler for /v1/ (see `familiar-mcp-http-routes').
+METHOD, PATH and BODY are the request's."
   (pcase (cons method (car (split-string path "?")))
     (`("GET" . "/v1/models")
      (list 200 '(("Content-Type" . "application/json"))
@@ -126,6 +133,7 @@
     (_ (familiar-openai--error 404 (format "No %s %s here" method path) "not_found"))))
 
 (defun familiar-openai--chat (req)
+  "Answer chat completion request REQ, streamed if it asks."
   (pcase-let* ((`(,tier . ,context) (familiar-openai--resolve (alist-get 'model req)))
                (`(,system . ,turns) (familiar-openai-conversation (alist-get 'messages req)))
                (system (string-join (delq nil (list system

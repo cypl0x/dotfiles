@@ -13,7 +13,7 @@
 ;;                   typed and the context (region, text around point)
 ;;   @p:A @p:B       composed like Fabric's pipes: B runs on A's output;
 ;;                   the last one answers in the conversation
-;;   C-c p (prompt)  pick one, its purpose shown: inserts @p:NAME
+;;   C-c C-p (prompt)  pick one, its purpose shown: inserts @p:NAME
 ;;                   (M-x familiar-prompts-insert elsewhere: its text)
 ;;
 ;; Where they come from:
@@ -56,8 +56,9 @@
 ;;;; The library
 
 (defun familiar-prompts--purpose (text)
-  "What the prompt TEXT does: the first sentence of its identity part, else
-of its first line of prose (headings and // comments skipped)."
+  "What the prompt TEXT does.
+The first sentence of its identity part, else of its first line of prose
+\(headings and // comments skipped)."
   (let* ((body (if (string-match "^#+ *IDENTITY[^\n]*\n+" text)
                    (substring text (match-end 0))
                  text))
@@ -105,6 +106,7 @@ Read again when a directory changed."
     (cdr familiar-prompts--cache)))
 
 (defun familiar-prompts--get (name)
+  "The prompt named NAME, a plist, or a user error if there is none."
   (or (cdr (assoc name (familiar-prompts)))
       (user-error "No prompt named %s (M-x familiar-prompts-update fetches Fabric's)" name)))
 
@@ -139,14 +141,14 @@ Without {{input}}, INPUT goes after the text."
     (cons (string-trim prompt) (nreverse names))))
 
 (defun familiar-prompts--wrap (heading text)
-  "A turn: HEADING, then TEXT (a prompt filled in) as Markdown, quoted as
-Org quotes code (a line starting with * stays text)."
+  "A turn: HEADING, then TEXT (a prompt filled in) as Markdown.
+TEXT is quoted as Org quotes code (a line starting with * stays text)."
   (format "%s\n#+begin_src markdown\n%s\n#+end_src"
           heading (org-escape-code-in-string (string-trim text))))
 
 (defun familiar-prompts--run-chain (names input origin finish)
-  "Run prompts NAMES but the last on INPUT, each on the one before's output;
-call FINISH with the last output."
+  "Run prompts NAMES on INPUT, each on the one before's output.
+Call FINISH with the last output.  ORIGIN is where it was asked from."
   (if (null names)
       (funcall finish input)
     (let ((p (familiar-prompts--get (car names))))
@@ -160,10 +162,11 @@ call FINISH with the last output."
            (familiar-prompts--run-chain (cdr names) response origin finish)))))))
 
 (defun familiar-prompts--ask-a (fn prompt &rest args)
-  "Around `familiar-ask': @p:NAMEs in PROMPT apply those prompts.
-One: its instructions with what you typed and the context.  Several: all
-but the last run first, each on the one before's output (input: what you
-typed and the context); the last answers in the conversation."
+  "Around `familiar-ask' (FN): @p:NAMEs in PROMPT apply those prompts.
+ARGS are the rest of FN's.  One: its instructions with what you typed
+and the context.  Several: all but the last run first, each on the one
+before's output (input: what you typed and the context); the last
+answers in the conversation."
   (pcase-let ((`(,text . ,names) (familiar-prompts--spec prompt)))
     (if (null names)
         (apply fn prompt args)
@@ -190,6 +193,7 @@ typed and the context); the last answers in the conversation."
 ;;;; Completion and picking
 
 (defun familiar-prompts--annotate (name)
+  "The completion annotation of prompt NAME: ★ if yours, and its purpose."
   (when-let* ((p (cdr (assoc name (familiar-prompts)))))
     (format "  %s%s" (if (eq (plist-get p :source) 'yours) "★ " "")
             (or (plist-get p :purpose) ""))))
@@ -201,7 +205,8 @@ typed and the context); the last answers in the conversation."
           :annotation-function #'familiar-prompts--annotate
           :exclusive 'no)))
 
-(define-key familiar-ask-minibuffer-map (kbd "C-c p") #'familiar-prompts-insert)
+;; C-c C-p: C-c and a plain letter are yours (the Doom glue binds C-c p).
+(define-key familiar-ask-minibuffer-map (kbd "C-c C-p") #'familiar-prompts-insert)
 
 (add-hook 'familiar-ask-prompt-setup-hook
           (defun familiar-prompts-setup-h ()
@@ -226,8 +231,8 @@ typed and the context); the last answers in the conversation."
 
 ;;;###autoload
 (defun familiar-prompts-update ()
-  "Download Fabric's patterns at `familiar-prompts-fabric-ref' (~1 MB),
-one file each, into `familiar-prompts-fabric-directory'."
+  "Download Fabric's patterns at `familiar-prompts-fabric-ref' (~1 MB).
+One file each, into `familiar-prompts-fabric-directory'."
   (interactive)
   (let* ((ref familiar-prompts-fabric-ref)
          (tree (with-current-buffer

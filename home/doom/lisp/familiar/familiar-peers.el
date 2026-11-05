@@ -60,6 +60,7 @@
 ;;;; Sessions
 
 (defun familiar-peers--read-json (file)
+  "FILE's JSON as a plist, or nil if it can't be read."
   (ignore-errors
     (with-temp-buffer
       (insert-file-contents file)
@@ -67,6 +68,7 @@
       (json-parse-buffer :object-type 'plist :null-object nil :false-object nil))))
 
 (defun familiar-peers--alive-p (pid)
+  "Non-nil if process PID is running."
   (and (integerp pid) (process-attributes pid) t))
 
 (defun familiar-peers-list ()
@@ -91,6 +93,7 @@
 ;;;; Sending
 
 (defun familiar-peers--uuid ()
+  "A random (version 4) UUID."
   (let ((b (mapcar (lambda (_) (random 256)) (make-list 16 0))))
     (setf (nth 6 b) (logior #x40 (logand (nth 6 b) #x0f))
           (nth 8 b) (logior #x80 (logand (nth 8 b) #x3f)))
@@ -125,6 +128,7 @@
       (run-at-time 0.3 nil (lambda () (when (process-live-p proc) (delete-process proc)))))))
 
 (defun familiar-peers--read-peer (&optional prompt)
+  "Ask, with PROMPT, which running session to write to."
   (let* ((peers (or (familiar-peers-list) (user-error "No Claude Code session is running")))
          (label (lambda (p) (format "%s  [%s]  %s" (plist-get p :name) (or (plist-get p :status) "?")
                                     (abbreviate-file-name (or (plist-get p :cwd) "")))))
@@ -139,7 +143,9 @@
   "C-c C-c" #'familiar-peers-compose-send  "C-c C-k" #'familiar-peers-compose-cancel)
 
 (define-minor-mode familiar-peers-compose-mode
-  "Writing to a Claude Code session: C-c C-c sends, C-c C-k drops."
+  "Minor mode for writing to a Claude Code session.
+\\<familiar-peers-compose-mode-map>\\[familiar-peers-compose-send] sends,
+\\[familiar-peers-compose-cancel] drops."
   :lighter " ✉Claude")
 
 ;;;###autoload

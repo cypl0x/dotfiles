@@ -1,8 +1,9 @@
-;;; lisp/+familiar.el --- Doom integration for familiar (lisp/familiar/) -*- lexical-binding: t; -*-
+;;; tools/familiar/config.el -*- lexical-binding: t; -*-
 ;;
-;; familiar is an AI layer woven into Emacs, built on gptel; see
-;; lisp/familiar/familiar.el.  This file only wires it into Doom: lazy loading,
-;; popups, keys, and the spend counter in the mode line.
+;; familiar is an AI layer woven into Emacs, built on gptel: a package of its
+;; own (lisp/familiar/, see familiar.el there), installed by this module's
+;; packages.el.  This file only wires it into Doom: popups, keys, the spend
+;; counter in the mode line, the bridges an Emacs daemon starts.
 ;;
 ;;   SPC A x / d / F / C / $   explain · explain diagnostic · fix · commit msg · spend
 ;;   SPC A E / v               explain the compilation error at point · review diff
@@ -13,8 +14,6 @@
 ;;   X                         embark action on regions, defuns and identifiers
 ;;
 ;;; Code:
-
-(add-to-list 'load-path (expand-file-name "lisp/familiar" doom-user-dir))
 
 (dolist (cmd '(familiar-explain familiar-explain-diagnostic familiar-fix
                familiar-explain-compilation-error familiar-review familiar-handoff
@@ -169,5 +168,9 @@
   (map! :map (embark-region-map embark-defun-map embark-identifier-map)
         "X" #'familiar-explain))
 
-(provide '+familiar)
-;;; +familiar.el ends here
+;; C-c p picks a saved prompt in M-ß (the package itself binds C-c C-p:
+;; C-c and a plain letter are the user's).
+(after! familiar-prompts
+  (define-key familiar-ask-minibuffer-map (kbd "C-c p") #'familiar-prompts-insert))
+
+;;; config.el ends here

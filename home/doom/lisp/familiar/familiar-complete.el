@@ -50,8 +50,8 @@ prose: the same language and tone.  Reply with JSON only: {\"completions\": \
     (cons beg (point))))
 
 (defun familiar-complete--request (beg)
-  "What `familiar-complete' sends: an excerpt marked at point, the word
-typed from BEG, the mode."
+  "What `familiar-complete' sends.
+An excerpt marked at point, the word typed from BEG, the mode."
   (let ((from (max (point-min) (- (point) familiar-complete-excerpt)))
         (to (min (point-max) (+ (point) (/ familiar-complete-excerpt 2)))))
     (format "Buffer %s (%s).  typed: %S.  Up to %d completions.\n\n%s⟦here⟧%s"
@@ -61,8 +61,8 @@ typed from BEG, the mode."
             (buffer-substring-no-properties (point) to))))
 
 (defun familiar-complete--candidates (answer typed)
-  "ANSWER's completions that continue TYPED, best first, each with its
-explanation as the text property `familiar-why'."
+  "ANSWER's completions that continue TYPED, best first.
+Each has its explanation as the text property `familiar-why'."
   (let ((case-fold-search t))
     (delete-dups
      (seq-keep (lambda (c)
@@ -97,9 +97,11 @@ explanation as the text property `familiar-why'."
 ;; it was taken and the rest (a two-line block among them) were gone.  This
 ;; style shows them as given; typing on filters with your usual styles.
 (defun familiar-complete--try (string _table _pred point)
+  "Leave STRING and POINT as they are."
   (cons string point))
 
 (defun familiar-complete--all (_string table pred _point)
+  "Every completion in TABLE that PRED allows, as given."
   (when-let* ((all (all-completions "" table pred)))
     (nconc all 0)))
 

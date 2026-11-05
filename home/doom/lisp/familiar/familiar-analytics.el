@@ -1,5 +1,7 @@
 ;;; familiar-analytics.el --- What familiar costs, does and could do better -*- lexical-binding: t; -*-
 ;;
+;;; Commentary:
+;;
 ;; M-x familiar-analytics (Doom: SPC o $): one buffer about every request
 ;; familiar made, from its ledger (each request priced) and its history
 ;; (each prompt):
@@ -53,8 +55,9 @@
   :type 'integer)
 
 (defcustom familiar-analytics-conversation-tasks (quote (ask acp a2a openai atuin))
-  "Tasks that are conversations: each tool-call round is its own request,
-so short answers and bursts are how they work, not a waste."
+  "Tasks that are conversations.
+Each tool-call round is its own request, so short answers and bursts
+are how they work, not a waste."
   :type (quote (repeat symbol)))
 
 (defun familiar-analytics--automatic (groups)
@@ -84,7 +87,9 @@ so short answers and bursts are how they work, not a waste."
                 out))))
     (nreverse out)))
 
-(defun familiar-analytics--sum (fn reqs) (apply #'+ 0 (mapcar fn reqs)))
+(defun familiar-analytics--sum (fn reqs)
+  "The sum of FN over REQS."
+  (apply #'+ 0 (mapcar fn reqs)))
 
 (defun familiar-analytics--quantile (values q)
   "The Q quantile (0–1) of VALUES (numbers), nearest rank."
@@ -92,7 +97,9 @@ so short answers and bursts are how they work, not a waste."
     (let ((sorted (sort (copy-sequence values) #'<)))
       (nth (min (1- (length sorted)) (max 0 (1- (ceiling (* q (length sorted)))))) sorted))))
 
-(defun familiar-analytics--day (time) (format-time-string "%Y-%m-%d" time))
+(defun familiar-analytics--day (time)
+  "TIME's day as YYYY-MM-DD."
+  (format-time-string "%Y-%m-%d" time))
 
 (defun familiar-analytics--group (key reqs)
   "REQS grouped by KEY (a function): alist (VALUE . REQS), biggest spend first."
@@ -118,12 +125,16 @@ so short answers and bursts are how they work, not a waste."
 ;;;; Numbers
 
 (defun familiar-analytics--usd (x)
+  "X dollars as a string, with more decimals the smaller it is."
   (cond ((>= x 1) (format "$%.2f" x)) ((>= x 0.01) (format "$%.3f" x)) (t (format "$%.5f" x))))
 
 (defun familiar-analytics--tokens (n)
+  "N tokens as a short string: 812, 4.2k, 1.3M."
   (cond ((>= n 1e6) (format "%.1fM" (/ n 1e6))) ((>= n 1e3) (format "%.1fk" (/ n 1e3))) (t (format "%d" n))))
 
-(defun familiar-analytics--pct (part whole) (if (zerop whole) 0 (* 100.0 (/ (float part) whole))))
+(defun familiar-analytics--pct (part whole)
+  "PART as a percentage of WHOLE, 0 when WHOLE is 0."
+  (if (zerop whole) 0 (* 100.0 (/ (float part) whole))))
 
 (defun familiar-analytics--figures (reqs all)
   "Headline numbers for REQS (the range) and ALL (for the budget): a plist."
@@ -142,12 +153,16 @@ so short answers and bursts are how they work, not a waste."
 
 ;;;; Charts
 
-(defun familiar-analytics--svg-p () (and (display-graphic-p) (image-type-available-p 'svg)))
+(defun familiar-analytics--svg-p ()
+  "Non-nil if charts can be shown as SVG here."
+  (and (display-graphic-p) (image-type-available-p 'svg)))
 
 (defun familiar-analytics--color (face attr fallback)
+  "FACE's color attribute ATTR, or FALLBACK when it has none."
   (let ((c (face-attribute face attr nil t))) (if (and (stringp c) (not (string-prefix-p "unspecified" c))) c fallback)))
 
 (defun familiar-analytics--palette ()
+  "The chart colors, from the theme: plist of :fg :bg :dim and :a to :d."
   (list :fg (familiar-analytics--color 'default :foreground "#bbc2cf")
         :bg (familiar-analytics--color 'default :background "#242730")
         :dim (familiar-analytics--color 'shadow :foreground "#5b6268")
@@ -157,18 +172,22 @@ so short answers and bursts are how they work, not a waste."
         :d (familiar-analytics--color 'error :foreground "#ff665c")))
 
 (defun familiar-analytics--chart-width ()
+  "Chart width in pixels: the window's, within 360 to 1100."
   (max 360 (min 1100 (- (window-body-width nil t) 40))))
 
 (defun familiar-analytics--insert-svg (svg alt)
+  "Insert SVG as an image on its own line, ALT as its text."
   (insert-image (svg-image svg :ascent 'center) alt)
   (insert "\n"))
 
 (defun familiar-analytics--spark (values)
+  "VALUES as a text sparkline of block characters."
   (let ((max (apply #'max 1e-9 values)))
     (mapconcat (lambda (v) (string (aref "▁▂▃▄▅▆▇█" (min 7 (floor (* 7.99 (/ (float v) max))))))) values "")))
 
 (defun familiar-analytics--daily-chart (days budget)
-  "Bars of spend per day, the cumulative line, BUDGET as a rule."
+  "Bars of spend per day of DAYS, the cumulative line, BUDGET as a rule.
+DAYS is an alist (DAY . REQS)."
   (let* ((costs (mapcar (lambda (d) (familiar-analytics--sum #'familiar-analytics--req-cost (cdr d))) days))
          (cum (let ((s 0)) (mapcar (lambda (c) (setq s (+ s c))) costs))))
     (if (not (familiar-analytics--svg-p))
@@ -212,7 +231,7 @@ so short answers and bursts are how they work, not a waste."
         (familiar-analytics--insert-svg svg (format "[spend per day, total %s]" (familiar-analytics--usd (car (last cum)))))))))
 
 (defun familiar-analytics--tokens-chart (days)
-  "Tokens in (up) and out (down) per day, mirrored."
+  "Tokens in (up) and out (down) per day of DAYS, mirrored."
   (let ((ins (mapcar (lambda (d) (familiar-analytics--sum #'familiar-analytics--req-in (cdr d))) days))
         (outs (mapcar (lambda (d) (familiar-analytics--sum #'familiar-analytics--req-out (cdr d))) days)))
     (if (not (familiar-analytics--svg-p))
@@ -232,7 +251,7 @@ so short answers and bursts are how they work, not a waste."
         (familiar-analytics--insert-svg svg "[tokens per day]")))))
 
 (defun familiar-analytics--heatmap (reqs)
-  "Requests by weekday and hour."
+  "REQS by weekday and hour."
   (let ((grid (make-vector 168 0)))
     (dolist (r reqs)
       (let ((d (decode-time (familiar-analytics--req-time r))))
@@ -307,6 +326,7 @@ so short answers and bursts are how they work, not a waste."
 ;;;; Insights
 
 (defun familiar-analytics--tier-of (model)
+  "The tier in `familiar-models' that MODEL serves, if any."
   (car (rassoc model (bound-and-true-p familiar-models))))
 
 (defun familiar-analytics-insights (reqs all figures)
@@ -414,8 +434,8 @@ so short answers and bursts are how they work, not a waste."
 ;;;; More figures: against the period before, what the cache saved
 
 (defun familiar-analytics--saved (reqs)
-  "USD the cache saved on REQS: their cost with cached input billed in full,
-less what they cost."
+  "USD the cache saved on REQS.
+That is their cost with cached input billed in full, less what they cost."
   (familiar-analytics--sum
    (lambda (r)
      (if (zerop (familiar-analytics--req-cached r)) 0
@@ -428,8 +448,9 @@ less what they cost."
    reqs))
 
 (defun familiar-analytics--change (now before &optional lower-is-better)
-  "NOW against BEFORE as \"▲ 12%\" or \"▼ 30%\", colored by whether it's good
-\(spending less is, unless LOWER-IS-BETTER is nil and more means more work)."
+  "NOW against BEFORE as \"▲ 12%\" or \"▼ 30%\".
+Colored by whether it's good (spending less is, unless LOWER-IS-BETTER
+is nil and more means more work)."
   (cond ((or (null before) (zerop before)) "")
         (t (let* ((pct (* 100.0 (/ (- now before) before)))
                   (up (> pct 0))
@@ -494,7 +515,7 @@ less what they cost."
     (nreverse (mapcar (lambda (w) (cons (car w) (nreverse (cdr w)))) weeks))))
 
 (defun familiar-analytics--mix-chart (reqs)
-  "Stacked bars: each week's spend split by model."
+  "Stacked bars: each week's spend on REQS split by model."
   (let* ((weeks (familiar-analytics--weeks reqs))
          (models (mapcar #'car (familiar-analytics--group #'familiar-analytics--req-model reqs)))
          (cost-of (lambda (rs m) (familiar-analytics--sum #'familiar-analytics--req-cost
@@ -536,8 +557,9 @@ less what they cost."
 ;;;; Statistics: speed and reliability (newer ledger entries)
 
 (defun familiar-analytics--speed-table (groups label)
-  "Per group of GROUPS: answered, failed, median and p95 seconds, output
-tokens a second.  Only requests that recorded their time count."
+  "A table of speed per group of GROUPS (first column LABEL).
+Answered, failed, median and p95 seconds, output tokens a second.
+Only requests that recorded their time count."
   (let* ((rows
           (cons (list label "timed" "failed" "median s" "p95 s" "out tok/s")
                 (delq nil
@@ -626,9 +648,11 @@ tokens a second.  Only requests that recorded their time count."
 (defvar-local familiar-analytics--days nil "The range shown: nil (all) or a number of days.")
 
 (defun familiar-analytics--heading (title)
+  "Insert TITLE as a section heading."
   (insert "\n" (propertize title 'face 'familiar-analytics-heading) "\n\n"))
 
 (defun familiar-analytics--render ()
+  "Fill the analytics buffer for the range in `familiar-analytics--days'."
   (let* ((inhibit-read-only t)
          (all (familiar-analytics--requests))
          (since (and familiar-analytics--days
@@ -755,6 +779,7 @@ tokens a second.  Only requests that recorded their time count."
   (familiar-analytics--render))
 
 (defun familiar-analytics-refresh ()
+  "Read the ledger again and redraw."
   (interactive)
   (familiar-analytics--render))
 

@@ -49,8 +49,9 @@
   :group 'familiar)
 
 (defcustom familiar-mcp-sampling 'ask
-  "Whether MCP servers get completions: `ask' each time (a server can be
-allowed for the session), `always', or `never'."
+  "Whether MCP servers get completions.
+`ask' each time (a server can be allowed for the session), `always', or
+`never'."
   :type '(choice (const ask) (const always) (const never)))
 
 (defcustom familiar-mcp-sampling-max-tokens 2000
@@ -64,17 +65,20 @@ allowed for the session), `always', or `never'."
 ;;;; Deferring jsonrpc's reply
 
 (defun familiar-mcp-sampling--receive-a (fn conn message)
-  "Around `jsonrpc-connection-receive': the request's id, for the dispatcher."
+  "Around `jsonrpc-connection-receive': the request's id, for the dispatcher.
+FN receives MESSAGE on CONN with the id bound."
   (let ((familiar-mcp-sampling--incoming (plist-get message :id)))
     (funcall fn conn message)))
 
 (defun familiar-mcp-sampling--reply-a (fn conn id &rest args)
-  "Around `jsonrpc--reply': drop the automatic reply of a deferred request."
+  "Around `jsonrpc--reply': drop the automatic reply of a deferred request.
+FN replies to request ID on CONN with ARGS, unless that is deferred."
   (unless (member (cons conn id) familiar-mcp-sampling--deferred)
     (apply fn conn id args)))
 
 (defun familiar-mcp-sampling--send (conn id &rest result-or-error)
-  "Reply to CONN's request ID now: :result R or :error E."
+  "Reply to CONN's request ID now.
+RESULT-OR-ERROR is :result R or :error E."
   (setq familiar-mcp-sampling--deferred (delete (cons conn id) familiar-mcp-sampling--deferred))
   (apply #'jsonrpc--reply conn id "sampling/createMessage" result-or-error))
 
@@ -87,8 +91,9 @@ allowed for the session), `always', or `never'."
     (type (format "[%s content not shown]" type))))
 
 (defun familiar-mcp-sampling--prompt (messages)
-  "MESSAGES (MCP's) as gptel's conversation: alternating user and assistant
-strings, starting with the user's (consecutive turns of one role joined)."
+  "MESSAGES (MCP's) as gptel's conversation.
+Alternating user and assistant strings, starting with the user's
+\(consecutive turns of one role joined)."
   (let (turns role)
     (seq-doseq (m messages)
       (let ((r (plist-get m :role)) (text (familiar-mcp-sampling--text (plist-get m :content))))
@@ -158,7 +163,8 @@ strings, starting with the user's (consecutive turns of one role joined)."
                                         (list :code -32603 :message (error-message-string err))))))
 
 (defun familiar-mcp-sampling--dispatch-a (fn name method params)
-  "Around `mcp-request-dispatcher': sampling is answered later, by familiar."
+  "Around `mcp-request-dispatcher': sampling is answered later, by familiar.
+FN handles METHOD with PARAMS from server NAME otherwise."
   (if (and (eq method 'sampling/createMessage) familiar-mcp-sampling--incoming)
       (let ((conn (gethash name mcp-server-connections)) (id familiar-mcp-sampling--incoming))
         (push (cons conn id) familiar-mcp-sampling--deferred)

@@ -39,10 +39,13 @@
 (defvar-local familiar-footprint--before nil "(BEG . OLD-TEXT) of a change under way.")
 
 (defun familiar-footprint--before-h (beg end)
+  "While familiar acts, keep the text between BEG and END before it changes."
   (when familiar-footprint--actor
     (setq familiar-footprint--before (cons beg (buffer-substring-no-properties beg end)))))
 
 (defun familiar-footprint--after-h (beg end _len)
+  "Log the change familiar just made between BEG and END.
+A streamed answer's next chunk joins the entry before it."
   (when (and familiar-footprint--actor familiar-footprint--before)
     (let ((old (cdr familiar-footprint--before))
           (new (buffer-substring-no-properties beg end))
@@ -88,10 +91,12 @@
 ;;;; The ledger
 
 (defun familiar-footprint--line (s)
+  "S on one line, cut to 50 columns."
   (let ((s (replace-regexp-in-string "\n" "⏎" (string-trim s))))
     (truncate-string-to-width s 50 nil nil "…")))
 
 (defun familiar-footprint--rows ()
+  "The ledger's rows for `tabulated-list-entries'."
   (cl-loop for e in familiar-footprint--log for id from 0
            collect (list id
                          (vector (format-time-string "%F %R" (plist-get e :time))
@@ -104,6 +109,7 @@
                                            (concat "+" (familiar-footprint--line (plist-get e :new)))))))))
 
 (defun familiar-footprint--entry ()
+  "The logged change on the ledger line at point."
   (or (nth (tabulated-list-get-id) familiar-footprint--log)
       (user-error "No change here")))
 

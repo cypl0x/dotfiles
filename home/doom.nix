@@ -35,9 +35,11 @@ in {
       ".config/doom/lisp".source = checkout "lisp";
       ".config/doom/snippets".source = checkout "snippets";
       ".config/doom/themes".source = checkout "themes";
+      ".config/doom/modules/tools/familiar".source = checkout "modules/tools/familiar";
     })
     (lib.mkIf (!live) {
       ".config/doom/lisp/app-launcher.el".source = ./doom/lisp/app-launcher.el;
+      ".config/doom/modules/tools/familiar".source = ./doom/modules/tools/familiar;
     })
   ];
 }

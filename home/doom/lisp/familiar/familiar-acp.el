@@ -42,7 +42,7 @@
 (declare-function gptel-make-tool "ext:gptel" (&rest slots))
 
 (defgroup familiar-acp nil
-  "familiar as an ACP agent."
+  "Familiar as an ACP agent."
   :group 'familiar)
 
 (defcustom familiar-acp-port 39392
@@ -83,16 +83,20 @@ user agrees there; otherwise show changes instead of claiming them."
                   "\n"))))
 
 (defun familiar-acp--result (proc id result)
+  "Answer request ID on PROC with RESULT."
   (familiar-acp--send proc `((jsonrpc . "2.0") (id . ,id) (result . ,result))))
 
 (defun familiar-acp--error (proc id code message)
+  "Answer request ID on PROC with error CODE and MESSAGE."
   (familiar-acp--send proc `((jsonrpc . "2.0") (id . ,id)
                              (error . ((code . ,code) (message . ,message))))))
 
 (defun familiar-acp--notify (proc method params)
+  "Send notification METHOD with PARAMS to PROC."
   (familiar-acp--send proc `((jsonrpc . "2.0") (method . ,method) (params . ,params))))
 
 (defun familiar-acp--filter (proc chunk)
+  "Add CHUNK to what PROC sent so far and handle each complete line."
   (let ((pending (concat (or (process-get proc :pending) "") chunk))
         line)
     (while (string-match "\n" pending)
@@ -133,7 +137,8 @@ user agrees there; otherwise show changes instead of claiming them."
 ;;;; Tools: the client's files, through the client
 
 (defun familiar-acp--tool-update (proc sid call-id fields)
-  "Send a tool_call (FIELDS with :title) or tool_call_update for CALL-ID."
+  "Send a tool_call (FIELDS with :title) or tool_call_update for CALL-ID.
+It goes to session SID on PROC."
   (familiar-acp--notify
    proc "session/update"
    `((sessionId . ,sid)
@@ -141,8 +146,9 @@ user agrees there; otherwise show changes instead of claiming them."
                 (toolCallId . ,call-id) ,@fields)))))
 
 (defun familiar-acp--tools (proc sid cwd)
-  "gptel tools for session SID on PROC: what its client can do with files.
-Reads go straight to the client; writes ask the user there first."
+  "Return gptel tools for what session SID's client on PROC can do with files.
+Relative paths resolve against CWD.  Reads go straight to the client;
+writes ask the user there first."
   (let* ((caps (alist-get 'fs (process-get proc :caps)))
          (absolute (lambda (path) (expand-file-name path (or cwd default-directory))))
          (calls 0)
@@ -233,7 +239,8 @@ Reads go straight to the client; writes ask the user there first."
 
 (defun familiar-acp--run (proc sid id command dir callback)
   "Run COMMAND in DIR in a terminal of the client; CALLBACK gets the outcome.
-The terminal is shown in tool call ID while it runs, and released after."
+The terminal is shown in tool call ID of session SID on PROC while it
+runs, and released after."
   (let ((fail (lambda (err)
                 (familiar-acp--tool-update proc sid id '((status . "failed")))
                 (funcall callback (format "Error: %s" (alist-get 'message err))))))
@@ -326,6 +333,7 @@ The terminal is shown in tool call ID while it runs, and released after."
    blocks "\n\n"))
 
 (defun familiar-acp--prompt (proc id params)
+  "Handle session/prompt request ID from PROC: run a turn on PARAMS."
   (let* ((sid (alist-get 'sessionId params))
          (session (gethash sid familiar-acp--sessions)))
     (if (not session)
@@ -398,6 +406,7 @@ The terminal is shown in tool call ID while it runs, and released after."
 ;;;; Sessions kept, and loaded again
 
 (defun familiar-acp--session-file (sid)
+  "Return the file session SID is kept in."
   (expand-file-name (concat (replace-regexp-in-string "[^[:alnum:]_-]" "_" sid) ".eld")
                     familiar-acp-sessions-directory))
 
@@ -412,7 +421,8 @@ The terminal is shown in tool call ID while it runs, and released after."
                  (current-buffer)))))))
 
 (defun familiar-acp--load (proc id params)
-  "session/load: replay the kept conversation, then take the session over."
+  "Handle session/load request ID from PROC with PARAMS.
+Replay the kept conversation, then take the session over."
   (let* ((sid (alist-get 'sessionId params))
          (file (familiar-acp--session-file (or sid ""))))
     (if (not (and sid (file-readable-p file)))

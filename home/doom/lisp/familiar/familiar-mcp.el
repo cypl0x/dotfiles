@@ -1,7 +1,7 @@
 ;;; familiar-mcp.el --- Emacs's code knowledge as MCP tools for agents -*- lexical-binding: t; -*-
 ;;
 ;; Author: Wolfhard Prell <mail@wolfhard.dev>
-;; Package-Requires: ((emacs "29.1") (mcp-server-lib "0.5.0"))
+;; Needs mcp-server-lib (0.5.0 or newer), an optional dependency of familiar.
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 ;;
 ;; This file is part of familiar (see familiar.el), not of GNU Emacs.
@@ -19,7 +19,7 @@
 ;; checked in the 2.1.226 bundle), so extra IDE tools would never be seen.
 ;;
 ;; Register once (user scope):
-;;   claude mcp add --scope user emacs -- \
+;;   claude mcp add --scope user "emacs" -- \
 ;;     <mcp-server-lib>/emacs-mcp-stdio.sh --server-id=familiar \
 ;;     --init-function=familiar-mcp-start --stop-function=familiar-mcp-stop
 ;;
@@ -42,6 +42,7 @@
 (defvar familiar-mcp-max-results 50 "Cap on locations returned per call.")
 
 (defun familiar-mcp--throw (fmt &rest args)
+  "Fail the tool call with a message from FMT and ARGS, as `format' does."
   (mcp-server-lib-tool-throw (apply #'format fmt args)))
 
 (defun familiar-mcp--buffer (file)
@@ -109,6 +110,7 @@ refused, as its lines may not match."
 
 (defun familiar-mcp-definitions (file line &optional symbol)
   "Find where the symbol at FILE:LINE is defined, using Emacs's xref backend.
+SYMBOL names it; without SYMBOL, the one at the line start.
 
 MCP Parameters:
   file - Absolute path of the file containing the use
@@ -118,6 +120,7 @@ MCP Parameters:
 
 (defun familiar-mcp-references (file line &optional symbol)
   "Find references to the symbol at FILE:LINE, using Emacs's xref backend.
+SYMBOL names it; without SYMBOL, the one at the line start.
 
 MCP Parameters:
   file - Absolute path of the file containing the symbol

@@ -96,6 +96,7 @@ from the list, and say only what those prompts show.")
 (defvar-local familiar-rate--asked nil "Prompt text last sent for rating.")
 
 (defun familiar-rate--stars (score)
+  "SCORE (0 to 5) as five stars, filled and empty."
   (let ((n (max 0 (min 5 (if (numberp score) (round score) 0)))))
     (concat (make-string n ?★) (make-string (- 5 n) ?☆))))
 
@@ -143,6 +144,7 @@ from the list, and say only what those prompts show.")
                                          (or (plist-get answer :tip) ""))))))))))))))
 
 (defun familiar-rate--cleanup-h ()
+  "Stop rating when the minibuffer closes."
   (when (timerp familiar-rate--timer) (cancel-timer familiar-rate--timer)))
 
 (defun familiar-rate-setup-h ()
@@ -222,9 +224,10 @@ A pattern needs two or more prompt numbers that exist, a rating one."
 
 ;;;###autoload
 (defun familiar-rate-prompts ()
-  "Review the prompts you wrote to M-ß: patterns you repeat, the weakest ones,
-better ways to say them.  Shown in an Org buffer; what it quotes are your
-prompts as written (see the Commentary of familiar-rate.el)."
+  "Review the prompts you wrote to M-ß.
+Patterns you repeat, the weakest ones, better ways to say them.
+Shown in an Org buffer; what it quotes are your prompts as written
+\(see the Commentary of familiar-rate.el)."
   (interactive)
   (let ((prompts (familiar-rate--collect)))
     (when (< (length prompts) 3) (user-error "Too few prompts to review yet (%d)" (length prompts)))

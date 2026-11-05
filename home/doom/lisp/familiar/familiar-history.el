@@ -102,8 +102,8 @@ the conversation, CALLS a list of strings (tool calls made), TIME when."
          nil file 'append 'silent)))))
 
 (defun familiar-history-prompt-text (prompt)
-  "PROMPT as a `gptel-request' takes it (string or list of turns) → the
-last thing the user said."
+  "The last thing the user said in PROMPT.
+PROMPT is as `gptel-request' takes it: a string or a list of turns."
   (cond ((stringp prompt) prompt)
         ((consp prompt)
          ;; Turns alternate from the user: the last user turn.
@@ -114,8 +114,9 @@ last thing the user said."
 
 (defcustom familiar-history-transcript-roots
   '("~/.claude/transcripts" "~/.agent-shell/transcripts" "~/dotfiles" "~/dev" "~/todo")
-  "Where agent transcripts are: directories, or roots searched (depth 4) for
-per-project .agent-shell/transcripts.  The same places agent-recall indexes."
+  "Where agent transcripts are.
+Directories, or roots searched (depth 4) for per-project
+.agent-shell/transcripts.  The same places agent-recall indexes."
   :type '(repeat directory))
 
 (defvar familiar-history--transcripts nil "Transcript directories, found once.")
@@ -178,6 +179,7 @@ With ONLY-HISTORY (prefix arg), just familiar's history."
 ;; A minor mode, not `local-set-key': Org buffers share one keymap, and
 ;; C-c C-r is `org-reveal' everywhere else.
 (defun familiar-history--mode-h ()
+  "Turn on `familiar-history-mode' in files of `familiar-history-directory'."
   (when (and buffer-file-name
              (file-in-directory-p buffer-file-name familiar-history-directory))
     (familiar-history-mode 1)))
