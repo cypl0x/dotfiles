@@ -186,8 +186,11 @@ jobs:
         # installer's extra-conf; the runner user is trusted, so these apply.
         # Without them CI compiled codex (prebuilt on cache.numtide.com) and
         # the runner was shut down mid-build.
+        # --fallback: when a cached path needs one that no cache has (atuin-emacs,
+        # a runCommand; run 42077766270) or a download breaks off (HTTP 416),
+        # build what is missing instead of giving up.
         run: >-
-          nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L
+          nix build .#nixosConfigurations.thinkpad.config.system.build.toplevel -L --fallback
           --option extra-substituters 'https://cache.numtide.com https://nix-community.cachix.org'
           --option extra-trusted-public-keys 'niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs='
 
@@ -284,7 +287,7 @@ jobs:
       - name: Build inari configuration
         if: steps.plan.outputs.skip != 'true'
         # --max-jobs 2 caps peak memory; substitution speed is unaffected.
-        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L --max-jobs 2
+        run: nix build .#nixosConfigurations.inari.config.system.build.toplevel -L --max-jobs 2 --fallback
 
       - name: Show build info
         if: steps.plan.outputs.skip != 'true'
