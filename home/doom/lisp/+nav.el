@@ -5,6 +5,8 @@
 ;;
 ;;; Code:
 
+(require 'cl-lib)
+
 ;;;; pulsar — Visual navigation feedback ─────────────────────────────────────
 
 (use-package! pulsar
@@ -100,6 +102,49 @@
      ("o" "Outline"             consult-outline)
      ("i" "Imenu"               consult-imenu)
      ("m" "Bookmark"            consult-bookmark)])
+
+;;;; M-ö / M-ä — every buffer, in a ring ────────────────────────────────────
+;;
+;; `previous-buffer' walks only the window's own history, and Doom's frame
+;; `buffer-predicate' skips "unreal" buffers: *Info*, popups, *scratch*,
+;; anything without a file.  These walk all of them (Emacs's hidden ones,
+;; named with a leading space, aside), most recent first.  The order is
+;; taken at the first press, so a run of presses doesn't reshuffle it; the
+;; buffer you stop on counts as visited once you do something else.
+
+(defvar +buffer-ring--commands '(+buffer/previous +buffer/next))
+(defvar +buffer-ring--list nil "The buffers of the run of presses going on.")
+
+(defun +buffer-ring--buffers ()
+  (cl-remove-if (lambda (b) (string-prefix-p " " (buffer-name b))) (buffer-list)))
+
+(defun +buffer-ring--done-h ()
+  "A run of presses ended: the buffer it stopped on was visited."
+  (unless (memq this-command +buffer-ring--commands)
+    (remove-hook 'pre-command-hook #'+buffer-ring--done-h)
+    (setq +buffer-ring--list nil)
+    (select-window (selected-window))))  ; puts it first in `buffer-list'
+
+(defun +buffer-ring--step (n)
+  (unless (and +buffer-ring--list (memq last-command +buffer-ring--commands))
+    (setq +buffer-ring--list (+buffer-ring--buffers))
+    (add-hook 'pre-command-hook #'+buffer-ring--done-h))
+  (setq +buffer-ring--list (cl-remove-if-not #'buffer-live-p +buffer-ring--list))
+  (let* ((ring +buffer-ring--list)
+         (i (or (cl-position (current-buffer) ring) 0))
+         (buf (nth (mod (+ i n) (length ring)) ring)))
+    (when buf
+      (switch-to-buffer buf t t))))   ; norecord: the order stays put
+
+(defun +buffer/previous (&optional n)
+  "The buffer visited before this one, of all buffers (Info, popups, scratch…)."
+  (interactive "p")
+  (+buffer-ring--step (or n 1)))
+
+(defun +buffer/next (&optional n)
+  "The other way round from `+buffer/previous': the least recent first."
+  (interactive "p")
+  (+buffer-ring--step (- (or n 1))))
 
 ;;;; Window management enhancements ──────────────────────────────────────────
 

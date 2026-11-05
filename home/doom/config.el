@@ -115,8 +115,9 @@
                   word-wrap t)))
 
 ;; Buffer cycling on German keyboard layout (ö/ä instead of [/]).
-(map! "M-ö" #'previous-buffer
-      "M-ä" #'next-buffer)
+;; All buffers, Info, popups and scratch included (lisp/+nav.el).
+(map! "M-ö" #'+buffer/previous
+      "M-ä" #'+buffer/next)
 
 ;; Font resize on German keyboard layout — C-M-=/C-M--/C-+ are an awkward
 ;; multi-modifier reach on QWERTZ (no unshifted "=" key at all). ö/ä/ü sit

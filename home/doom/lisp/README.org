@@ -1221,8 +1221,8 @@ Existing custom bindings using German keys:
 
 | Key   | Command                   | Rationale                            |
 |-------+---------------------------+--------------------------------------|
-| =M-ö= | =previous-buffer=         | Buffer cycling on DE layout          |
-| =M-ä= | =next-buffer=             | =ö/ä= replace =[/]= which need shift |
+| =M-ö= | =+buffer/previous=        | Every buffer (Info, popups, scratch) |
+| =M-ä= | =+buffer/next=            | the other way; ö/ä: [ ] need shift   |
 | =C-ö= | =doom/decrease-font-size= | Font resize on DE layout             |
 | =C-ä= | =doom/increase-font-size= | =C-M-== is unreachable on QWERTZ     |
 | =C-ü= | =doom/reset-font-size=    | =ü= sits next to =ö/ä=               |

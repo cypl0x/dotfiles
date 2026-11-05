@@ -3121,3 +3121,33 @@ moving, connecting and deleting write there; the board draws them."
       (dolist (b (list "*canvas: plan*" "plan.org"))
         (when (get-buffer b) (with-current-buffer b (set-buffer-modified-p nil)) (kill-buffer b)))
       (delete-directory dir t))))
+
+
+;;; +nav: M-ö / M-ä
+
+(require 'transient)
+(load (expand-file-name "+nav" test-lisp-dir) nil t)
+
+(ert-deftest nav/buffer-ring-walks-every-buffer ()
+  "Info, popups, scratch, non-file buffers all come round; a run of presses
+keeps its order, and the buffer stopped on is then the most recent."
+  (let* ((bufs (mapcar #'get-buffer-create '("*Info*" "*scratch-t*" "notes" "*Popup-t*")))
+         (hidden (get-buffer-create " *hidden-t*"))
+         seen)
+    (unwind-protect
+        (save-window-excursion
+          (dolist (b (reverse bufs)) (switch-to-buffer b))
+          (let ((last-command nil))
+            (dotimes (_ 3)
+              (call-interactively #'+buffer/previous)
+              (push (buffer-name) seen)
+              (setq last-command '+buffer/previous))
+            (should (equal (nreverse seen) '("*scratch-t*" "notes" "*Popup-t*")))
+            (call-interactively #'+buffer/next)
+            (should (equal (buffer-name) "notes")))
+          (should-not (eq (car (buffer-list)) (get-buffer "notes")))
+          (let ((this-command 'ignore)) (run-hooks 'pre-command-hook))
+          (should (eq (car (buffer-list)) (get-buffer "notes")))
+          (should-not (memq '+buffer-ring--done-h pre-command-hook))
+          (should-not (memq hidden (+buffer-ring--buffers))))
+      (mapc #'kill-buffer (cons hidden bufs)))))
