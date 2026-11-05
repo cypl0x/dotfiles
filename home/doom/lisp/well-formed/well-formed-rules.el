@@ -21,6 +21,7 @@
 (require 'cl-lib)
 (require 'subr-x)
 (require 'well-formed)
+(require 'time-date)
 
 (declare-function well-formed-phrases "well-formed" (table message &optional case-sensitive))
 (declare-function well-formed-regexps "well-formed" (table))
@@ -388,6 +389,65 @@ doesn't, they don't."
       1 t)
      ("\\<\\(?:[Hh]e\\|[Ss]he\\|[Ii]t\\) \\(don't\\)\\>" "%s → %s" "doesn't" 1 t)
      ("\\<\\(?:[Tt]hey\\|[Ww]e\\|[Yy]ou\\|I\\) \\(doesn't\\)\\>" "%s → %s" "don't" 1 t)))))
+
+(defconst well-formed--subordinators
+  '("if" "when" "whenever" "because" "although" "though" "while" "since" "after" "before"
+    "as" "unless" "once" "until" "whether" "even" "where" "wherever" "so" "yes" "no"
+    "however" "therefore" "also" "then" "now" "here" "well" "ok" "okay" "sure" "oh")
+  "First words of an opening clause that may end in a comma before a new one.")
+
+(defconst well-formed--finite-verb
+  "\\<\\(?:is\\|are\\|was\\|were\\|has\\|have\\|had\\|will\\|would\\|can\\|could\\|should\\|must\\|does\\|do\\|did\\|[[:alpha:]]+ed\\|[[:alpha:]]\\{3,\\}s\\)\\>"
+  "Roughly, a word that makes a clause of its own.")
+
+(well-formed-define-rule comma-splice
+  :category 'correctness :level 'warning :langs '("en")
+  :doc "Two sentences joined by a comma alone: a period, a semicolon or a
+conjunction (and, but, so) belongs there.  Not after an opening clause
+(If it rains, it pours) and not before \"that is\"."
+  :examples '(("The build passed, it is ready." . "The build passed; it is ready."))
+  :function
+  (lambda (para)
+    (let ((text (well-formed-para-text para)) out (case-fold-search nil))
+      (with-syntax-table well-formed--syntax-table
+        (pcase-dolist (`(,sb . ,se) (well-formed-para-sentences para))
+          (let ((pos sb))
+            (while (and (string-match "\\(, \\)\\(\\(?:it\\|this\\|there\\|he\\|she\\|we\\|they\\|I\\|you\\) \\(?:is\\|are\\|was\\|were\\|has\\|have\\|had\\|will\\|would\\|can\\|could\\|should\\|must\\|does\\|did\\|seems\\|looks\\)\\>\\)"
+                                      text pos)
+                        (< (match-beginning 1) se))
+              (let* ((cb (match-beginning 1)) (ce (match-end 1)) (rest (match-string 2 text))
+                     (left (substring text sb cb))
+                     (first (progn (setq pos (match-end 0))
+                                   (downcase (or (car (split-string left "[^[:alpha:]']+" t)) "")))))
+                (when (and (>= (length (split-string left "[[:space:]\0]+" t)) 3)
+                           (not (member first well-formed--subordinators))
+                           (not (string-match-p ",\\|\\<\\(?:and\\|but\\|or\\|so\\|which\\|who\\)\\>" left))
+                           (let ((case-fold-search t)) (string-match-p well-formed--finite-verb left)))
+                  (push (list cb ce
+                              "Comma splice: two sentences joined by a comma"
+                              (list "; " (concat ". " (if (string-prefix-p "I " rest) "I"
+                                                        (upcase (substring rest 0 1))))))
+                        out)))))))
+      (setq out (nreverse out))
+      ;; The period fix also capitalizes the next word: replace through it.
+      (mapcar (lambda (f)
+                (pcase-let ((`(,b ,e ,msg (,semi ,period)) f))
+                  (list b (1+ e) msg (list (concat semi (substring text e (1+ e))) period))))
+              out))))
+
+(well-formed-define-rule apostrophe-plural
+  :category 'correctness :level 'warning :langs '("en")
+  :doc "Plurals take no apostrophe: the 1990s, two CDs, many APIs (the
+apostrophe makes a possessive: NASA's mission)."
+  :examples '(("in the 1990's" . "in the 1990s") ("two CD's" . "two CDs"))
+  :function
+  (well-formed-regexps
+   '(("\\<\\([0-9]\\{2\\}[0-9]0\\|[0-9]0\\)\\('s\\)\\>" "Decades take no apostrophe: %s → %s"
+      (lambda (_) "s") 2 t)
+     ("\\<\\(?:many\\|several\\|some\\|few\\|all\\|these\\|those\\|multiple\\|two\\|three\\|four\\|five\\|six\\|seven\\|eight\\|nine\\|ten\\|[0-9]+\\) [[:upper:]]\\{2,\\}\\('s\\)\\>"
+      "Plurals take no apostrophe: %s → %s" (lambda (_) "s") 1 t)
+     ("\\<[[:upper:]]\\{2,\\}\\('s\\) \\(?:are\\|were\\|have\\)\\>"
+      "Plurals take no apostrophe: %s → %s" (lambda (_) "s") 1 t))))
 
 (well-formed-define-rule introductory-comma
   :category 'correctness :level 'warning :langs '("en")
@@ -1355,6 +1415,233 @@ more wins."
   :function #'ignore)
 
 (add-hook 'well-formed-document-functions #'well-formed--consistency)
+
+;;;; Consistency: numbers, terms, dates, headings
+
+(defconst well-formed--number-words
+  '(("2" . "two") ("3" . "three") ("4" . "four") ("5" . "five") ("6" . "six")
+    ("7" . "seven") ("8" . "eight") ("9" . "nine"))
+  "Small numbers, as digits and words (\"one\" is left out: it is a pronoun too).")
+
+(defconst well-formed--units
+  '("am" "pm" "px" "pt" "em" "ms" "min" "mins" "sec" "secs" "s" "h" "hrs" "kb" "mb" "gb" "tb"
+    "kib" "mib" "gib" "x" "times" "percent" "cores" "bit" "bits" "fps" "hz" "ghz" "dpi" "ppi" "k")
+  "Words after a number that make digits right whatever the style.")
+
+(defconst well-formed--months
+  '("January" "February" "March" "April" "May" "June" "July" "August" "September"
+    "October" "November" "December"))
+
+(defun well-formed--matches (paras regexp fn &optional case-fold)
+  "Call FN with each match of REGEXP in PARAS (match data on the paragraph's
+text) and the paragraph's buffer position; collect its non-nil values."
+  (let (out (case-fold-search case-fold))
+    (dolist (p paras)
+      (let ((text (well-formed-para-text p)) (pos 0) (base (well-formed-para-beg p)))
+        (with-syntax-table well-formed--syntax-table
+          (while (string-match regexp text pos)
+            (setq pos (max (1+ (match-beginning 0)) (match-end 0)))
+            (when-let* ((v (save-match-data (funcall fn text base))))
+              (push v out))))))
+    (nreverse out)))
+
+(defun well-formed--number-style (paras)
+  "Small numbers as digits here, as words there: the document's majority wins.
+Occurrences: (FORM BEG END KEY)."
+  (let* ((digits (well-formed--matches
+                  paras "\\(?:\\`\\|[^-.,:/[:alnum:]]\\)\\([2-9]\\) \\([[:lower:]]+\\)\\>"
+                  (lambda (text base)
+                    (unless (or (member (match-string 2 text) well-formed--units)
+                                ;; Beside other numbers (6 of 8, 39-85 s): digits.
+                                (string-match-p "[0-9]" (concat (substring text (max 0 (- (match-beginning 1) 30)) (match-beginning 1))
+                                                                (substring text (match-end 1) (min (length text) (+ (match-end 1) 30))))))
+                      (list (match-string 1 text) (+ base (match-beginning 1)) (+ base (match-end 1)) "digits")))))
+         (words (well-formed--matches
+                 paras (concat "\\<\\(" (regexp-opt (mapcar #'cdr well-formed--number-words)) "\\) [[:lower:]]+\\>")
+                 (lambda (text base)
+                   (list (match-string 1 text) (+ base (match-beginning 1)) (+ base (match-end 1)) "words"))
+                 t)))
+    (when (and digits words)
+      (let ((major (if (>= (length digits) (length words)) "digits" "words")))
+        (cl-loop for o in (if (equal major "digits") words digits)
+                 for form = (car o)
+                 for other = (if (equal major "digits")
+                                 (car (rassoc (downcase form) well-formed--number-words))
+                               (well-formed--match-case form (cdr (assoc form well-formed--number-words))))
+                 collect (list (nth 1 o) (nth 2 o) 'number-style
+                               (format "%s here; %d small numbers elsewhere are %s"
+                                       (well-formed-quote form) (length (if (equal major "digits") digits words)) major)
+                               (list other)))))))
+
+(defun well-formed--term-case (paras)
+  "A term with inner capitals (GitHub, JavaScript, macOS) written otherwise
+elsewhere: the most frequent inner-capital form wins.  Paths, handles and
+names (/github/x, @github, nixos-mcp) aren't the term; all lower case is only
+flagged while rarer than the term (else it is likely a name: a host, a package)."
+  (let ((forms (make-hash-table :test #'equal)) (case-fold-search nil))
+    ;; Terms: words with an upper case letter after a lower case one.
+    (dolist (o (well-formed--matches paras "\\<[[:alpha:]]*[[:lower:]][[:upper:]][[:alpha:]]*\\>"
+                                     (lambda (text _) (match-string 0 text))))
+      (puthash (downcase o) t forms))
+    (let (out)
+      (maphash
+       (lambda (key _)
+         (let* ((occ (well-formed--matches
+                      paras (concat "\\<" (regexp-quote key) "\\>\\(?:\\'\\|[^.[:alnum:]]\\|\\.\\(?:[^[:alnum:]]\\|\\'\\)\\)")
+                      (lambda (text base)
+                        (let* ((b (match-beginning 0)) (e (+ b (length key))))
+                          ;; The buffer's own characters: markup is masked in TEXT (/x/ is italic).
+                          (unless (or (memq (char-before (+ base b)) '(?/ ?@ ?= ?~ ?- ?_))
+                                      (memq (char-after (+ base e)) '(?/ ?- ?_ ?=)))
+                            (list (substring text b e) (+ base b) (+ base e)))))
+                      t))
+                (counts (make-hash-table :test #'equal)) best (n 0))
+           (dolist (o occ) (cl-incf (gethash (car o) counts 0)))
+           (maphash (lambda (form c)
+                      (when (and (> c n) (string-match-p "[[:lower:]][[:upper:]]" form))
+                        (setq best form n c)))
+                    counts)
+           (when (and best (> (hash-table-count counts) 1))
+             (dolist (o occ)
+               (unless (or (equal (car o) best)
+                           (and (equal (car o) key) (>= (gethash key counts 0) n)))
+                 (push (list (nth 1 o) (nth 2 o) 'term-case
+                             (format "%s: written %s %d× in this document" (well-formed-quote (car o))
+                                     (well-formed-quote best) n)
+                             (list best))
+                       out))))))
+       forms)
+      out)))
+
+(defun well-formed--parse-date (kind text)
+  "(YEAR MONTH DAY) from the match data of a KIND date in TEXT, or nil."
+  (let* ((g (lambda (n) (match-string n text)))
+         (month-num (lambda (s) (1+ (or (cl-position s well-formed--months :test #'string=) -1))))
+         (ymd (pcase kind
+                ("ISO" (list (funcall g 1) (funcall g 2) (funcall g 3)))
+                ("D.M.Y" (list (funcall g 3) (funcall g 2) (funcall g 1)))
+                ("M/D/Y" (list (funcall g 3) (funcall g 1) (funcall g 2)))
+                ("D Month Y" (list (funcall g 3) (funcall month-num (funcall g 2)) (funcall g 1)))
+                ("Month D, Y" (list (funcall g 3) (funcall month-num (funcall g 1)) (funcall g 2)))))
+         (n (mapcar (lambda (x) (if (stringp x) (string-to-number x) x)) ymd)))
+    (pcase-let ((`(,y ,m ,d) n))
+      (and (<= 1 m 12) (<= 1 d (date-days-in-month y m)) n))))
+
+(defun well-formed--format-date (kind ymd)
+  (pcase-let ((`(,y ,m ,d) ymd))
+    (pcase kind
+      ("ISO" (format "%04d-%02d-%02d" y m d))
+      ("D.M.Y" (format "%02d.%02d.%04d" d m y))
+      ("M/D/Y" (format "%d/%d/%04d" m d y))
+      ("D Month Y" (format "%d %s %04d" d (nth (1- m) well-formed--months) y))
+      ("Month D, Y" (format "%s %d, %04d" (nth (1- m) well-formed--months) d y)))))
+
+(defun well-formed--date-format (paras)
+  "Dates written two ways (2026-11-05, 05.11.2026, 11/5/2026, 5 November
+2026, November 5, 2026): the document's majority wins."
+  (let* ((month (regexp-opt well-formed--months))
+         (kinds `(("ISO" . "\\<\\([12][0-9]\\{3\\}\\)-\\([01][0-9]\\)-\\([0-3][0-9]\\)\\>")
+                  ("D.M.Y" . "\\<\\([0-3]?[0-9]\\)\\.\\([01]?[0-9]\\)\\.\\([12][0-9]\\{3\\}\\)\\>")
+                  ("M/D/Y" . "\\<\\([01]?[0-9]\\)/\\([0-3]?[0-9]\\)/\\([12][0-9]\\{3\\}\\)\\>")
+                  ("D Month Y" . ,(concat "\\<\\([0-3]?[0-9]\\)\\.? \\(" month "\\) \\([12][0-9]\\{3\\}\\)\\>"))
+                  ("Month D, Y" . ,(concat "\\<\\(" month "\\) \\([0-3]?[0-9]\\), \\([12][0-9]\\{3\\}\\)\\>"))))
+         (occ (cl-loop for (kind . re) in kinds
+                       nconc (well-formed--matches
+                              paras re
+                              (lambda (text base)
+                                (when-let* ((ymd (well-formed--parse-date kind text)))
+                                  (list kind (+ base (match-beginning 0)) (+ base (match-end 0)) ymd)))))))
+    (well-formed--minority-with
+     occ 'date-format
+     (lambda (k major n) (format "%s date here; %d elsewhere are %s" k n major))
+     (lambda (o major) (well-formed--format-date major (nth 3 o))))))
+
+(defun well-formed--minority-with (occurrences rule describe fix)
+  "Like `well-formed--minority' for OCCURRENCES (KEY BEG END . _), keyed by
+their car; FIX makes the replacement from an occurrence and the majority key."
+  (let ((counts (make-hash-table :test #'equal)))
+    (dolist (o occurrences) (cl-incf (gethash (car o) counts 0)))
+    (when (> (hash-table-count counts) 1)
+      (let (major (best 0))
+        (maphash (lambda (k n) (when (> n best) (setq major k best n))) counts)
+        (cl-loop for o in occurrences
+                 unless (equal (car o) major)
+                 collect (list (nth 1 o) (nth 2 o) rule (funcall describe (car o) major best)
+                               (delq nil (list (funcall fix o major)))))))))
+
+(defconst well-formed--minor-words
+  '("a" "an" "the" "and" "but" "or" "nor" "for" "on" "at" "to" "by" "of" "in" "with"
+    "from" "as" "vs" "via" "into" "onto" "per" "than" "up" "off" "out" "over" "so" "yet")
+  "Words Title Case leaves in lower case.")
+
+(defun well-formed--heading-case (paras)
+  "Headings in Title Case and in Sentence case: the document's majority wins.
+Only headings of three words or more, with no masked markup inside, count."
+  (let (occ (case-fold-search nil))
+    (dolist (p paras)
+      (when (and (eq (well-formed-para-kind p) 'heading) (equal (well-formed-para-lang p) "en"))
+        (let* ((text (well-formed-para-text p)) (base (well-formed-para-beg p))
+               (wb (string-match "[[:alpha:]]" text))
+               (we (and wb (let ((i (length text)))
+                             (while (and (> i wb) (not (string-match-p "[[:alnum:]?!.)]" (substring text (1- i) i))))
+                               (setq i (1- i)))
+                             i)))
+               (span (and wb (substring text wb we)))
+               (words (and span (split-string span "[^[:alpha:]']+" t)))
+               (content (mapcar (lambda (w) (cons w (and (string-match-p "\\`[[:upper:]]" w) t)))
+                                (seq-remove (lambda (w) (member (downcase w) well-formed--minor-words))
+                                            (cdr words))))
+               (plain (seq-remove (lambda (c) (string-match-p "\\`.\\(?:.*[[:upper:]]\\)" (car c))) content))
+               (upper (cl-count-if #'cdr plain)) (lower (- (length plain) upper)))
+          (when (and span (>= (length words) 3) (>= (length plain) 2) (not (string-search "\0" span)))
+            (cond ((zerop lower) (push (list "Title Case" (+ base wb) (+ base we) span) occ))
+                  ((>= lower (* 2 upper)) (push (list "Sentence case" (+ base wb) (+ base we) span) occ)))))))
+    (well-formed--minority-with
+     (nreverse occ) 'heading-case
+     (lambda (k major n) (format "%s heading; %d others are %s" k n major))
+     (lambda (o major)
+       (let ((first t) (case-fold-search nil))
+         (replace-regexp-in-string
+          "[[:alpha:]']+"
+          (lambda (w)
+            (prog1 (cond (first w)
+                         ((member (downcase w) well-formed--minor-words) (downcase w))
+                         ((string-match-p "\\`.\\(?:.*[[:upper:]]\\)" w) w) ; GitHub, API: as is
+                         ((equal major "Title Case") (capitalize w))
+                         (t (downcase w)))
+              (setq first nil)))
+          (nth 3 o) t t))))))
+
+(defun well-formed--consistency-more (paras)
+  (let ((en (cl-remove-if-not (lambda (p) (equal (well-formed-para-lang p) "en")) paras)))
+    (unless (memq 'consistency (bound-and-true-p well-formed-disabled-categories))
+      (append (and en (well-formed--number-style en))
+              (and en (well-formed--term-case en))
+              (well-formed--date-format paras)
+              (well-formed--heading-case paras)))))
+
+(well-formed-define-rule number-style
+  :category 'consistency :level 'info :langs '("en")
+  :doc "Small numbers (2-9) as digits in some places, as words in others;
+the one used more wins.  Digits before units (3 GB, 5 min) don't count."
+  :function #'ignore)
+(well-formed-define-rule term-case
+  :category 'consistency :level 'warning :langs '("en")
+  :doc "A term with inner capitals written two ways (GitHub, Github): the
+inner-capital form used most wins."
+  :function #'ignore)
+(well-formed-define-rule date-format
+  :category 'consistency :level 'info
+  :doc "Dates in two formats (2026-11-05 and 05.11.2026); the one used more
+wins, and the fix rewrites the date in it."
+  :function #'ignore)
+(well-formed-define-rule heading-case
+  :category 'consistency :level 'info :langs '("en")
+  :doc "Some headings in Title Case, some in Sentence case; the one used
+more wins."
+  :function #'ignore)
+
+(add-hook 'well-formed-document-functions #'well-formed--consistency-more)
 
 (provide 'well-formed-rules)
 ;;; well-formed-rules.el ends here

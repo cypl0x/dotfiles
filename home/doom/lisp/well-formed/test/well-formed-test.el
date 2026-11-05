@@ -345,3 +345,67 @@ never `interrupted', which would make flycheck clear every highlight."
         (well-formed--flycheck-start 'well-formed (lambda (status &optional data) (setq reported (list status data)))))
       (should (eq (car reported) 'finished))
       (should (equal (plist-get (car (cadr reported)) :column) 8)))))
+
+;;;; New rules: comma splices, plurals, numbers, terms, dates, headings
+
+(defun well-formed-test--ids (mode text)
+  (well-formed-test--with mode text (mapcar (lambda (f) (nth 2 f)) (well-formed-check))))
+
+(ert-deftest well-formed-test-comma-splice ()
+  (should (equal (well-formed-test--apply-first #'text-mode "The build passed, it is ready." 'comma-splice)
+                 "The build passed; it is ready."))
+  (well-formed-test--with #'text-mode "The build passed, it is ready."
+    (let ((f (cl-find 'comma-splice (well-formed-check) :key (lambda (f) (nth 2 f)))))
+      (well-formed--apply f (cadr (nth 5 f)))
+      (should (equal (buffer-string) "The build passed. It is ready."))))
+  ;; An opening clause, a list, and "that is" are no splices.
+  (dolist (ok '("If the build passed, it is ready."
+                "When we left the house, it was raining."
+                "Red, green, it is all fine."
+                "We tested it, that is all."))
+    (should-not (memq 'comma-splice (well-formed-test--ids #'text-mode ok)))))
+
+(ert-deftest well-formed-test-apostrophe-plural ()
+  (should (equal (well-formed-test--apply-first #'text-mode "Music of the 1990's was loud." 'apostrophe-plural)
+                 "Music of the 1990s was loud."))
+  (should (equal (well-formed-test--apply-first #'text-mode "We bought two CD's today." 'apostrophe-plural)
+                 "We bought two CDs today."))
+  (should (equal (well-formed-test--apply-first #'text-mode "The API's are slow today." 'apostrophe-plural)
+                 "The APIs are slow today."))
+  (dolist (ok '("NASA's mission went well." "Page 12's footer is odd."))
+    (should-not (memq 'apostrophe-plural (well-formed-test--ids #'text-mode ok)))))
+
+(ert-deftest well-formed-test-number-style ()
+  (let ((text "We have three cats.\n\nThey ate four mice.\n\nThen 5 birds came.\n\nIt took 3 min.\n"))
+    (should (equal (well-formed-test--apply-first #'text-mode text 'number-style)
+                   "We have three cats.\n\nThey ate four mice.\n\nThen five birds came.\n\nIt took 3 min.\n"))
+    ;; Units don't count, and only one minority finding.
+    (should (= (cl-count 'number-style (well-formed-test--ids #'text-mode text)) 1))))
+
+(ert-deftest well-formed-test-term-case ()
+  (let ((text "We host on GitHub.\n\nGitHub is fine.\n\nAsk Github or github.com for help.\n"))
+    (should (equal (well-formed-test--apply-first #'text-mode text 'term-case)
+                   "We host on GitHub.\n\nGitHub is fine.\n\nAsk GitHub or github.com for help.\n"))
+    ;; A domain is not the term.
+    (should (= (cl-count 'term-case (well-formed-test--ids #'text-mode text)) 1))))
+
+(ert-deftest well-formed-test-date-format ()
+  (let ((text "It began on 2026-11-05.\n\nIt ended on 2026-12-01.\n\nWe met on 24.12.2026 again.\n"))
+    (should (equal (well-formed-test--apply-first #'text-mode text 'date-format)
+                   "It began on 2026-11-05.\n\nIt ended on 2026-12-01.\n\nWe met on 2026-12-24 again.\n")))
+  ;; Not a date: 31.02.2026.
+  (should-not (memq 'date-format (well-formed-test--ids #'text-mode "On 2026-01-01 and 2026-01-02.\n\nOr 31.02.2026.\n"))))
+
+(ert-deftest well-formed-test-heading-case ()
+  (let ((text "* Setting up the new machine\n\nText here.\n\n* Moving all the files over\n\nMore text.\n\n* Cleaning Up The Old Disk\n\nDone.\n"))
+    (should (equal (well-formed-test--apply-first #'org-mode text 'heading-case)
+                   "* Setting up the new machine\n\nText here.\n\n* Moving all the files over\n\nMore text.\n\n* Cleaning up the old disk\n\nDone.\n"))))
+
+(ert-deftest well-formed-test-consistency-spares-names-and-counts ()
+  "Paths, handles, package names and a lower-case majority (a hostname)
+aren't the term; digits beside other numbers stay digits."
+  (let ((ids (well-formed-test--ids
+              #'text-mode
+              "We use GitHub daily.\n\nOpen /github/owner and ask @github.\n\nThe thinkpad and the thinkpad again, on a ThinkPad.\n\nWe have three cats.\n\nThey ate four mice.\n\nWe did 6 of 8 steps.\n")))
+    (should-not (memq 'term-case ids))
+    (should-not (memq 'number-style ids))))
