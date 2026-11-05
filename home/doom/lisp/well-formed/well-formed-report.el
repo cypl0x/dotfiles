@@ -396,5 +396,92 @@ two minutes (longer pauses aren't writing)."
                 (pcase-let ((`(,buf ,beg ,end) well-formed--report-source))
                   (with-current-buffer buf (well-formed-report beg end))))))
 
+;;;; In the mode line: the score, and words written today
+
+(defcustom well-formed-mode-line t
+  "Show the buffer's score (and words written today) in the mode line."
+  :type 'boolean :group 'well-formed)
+
+(defcustom well-formed-daily-goal nil
+  "Words to write per file and day; the mode line shows the way there."
+  :type '(choice (const :tag "None" nil) natnum) :group 'well-formed)
+
+(defcustom well-formed-words-file
+  (expand-file-name "well-formed-words.eld" (file-name-directory well-formed-ignore-file))
+  "Where each file's word count at its first check of the day is kept."
+  :type 'file :group 'well-formed)
+
+(defvar well-formed--day-start nil "Hash: file → (DATE . WORDS at the day's first check).")
+(defvar-local well-formed--mode-line nil "This buffer's mode line text, made after each check.")
+(put 'well-formed--mode-line 'risky-local-variable t)
+
+(defun well-formed--day-start ()
+  (or well-formed--day-start
+      (setq well-formed--day-start
+            (let ((h (make-hash-table :test #'equal)))
+              (when (file-readable-p well-formed-words-file)
+                (ignore-errors
+                  (with-temp-buffer
+                    (insert-file-contents well-formed-words-file)
+                    (pcase-dolist (`(,f . ,v) (read (current-buffer))) (puthash f v h)))))
+              h))))
+
+(defun well-formed--save-day-start ()
+  (when well-formed--day-start
+    (make-directory (file-name-directory well-formed-words-file) t)
+    (let ((today (format-time-string "%F")) alist)
+      ;; Only today's: older ones would never be read again.
+      (maphash (lambda (k v) (when (equal (car v) today) (push (cons k v) alist))) well-formed--day-start)
+      (with-temp-file well-formed-words-file (prin1 alist (current-buffer))))))
+
+(add-hook 'kill-emacs-hook #'well-formed--save-day-start)
+
+(defun well-formed--words-today (words)
+  "Words written in this buffer today: WORDS less its count at the day's
+first check (never below 0)."
+  (let* ((key (or buffer-file-name (buffer-name)))
+         (today (format-time-string "%F"))
+         (start (gethash key (well-formed--day-start))))
+    (unless (equal (car start) today)
+      (puthash key (setq start (cons today words)) (well-formed--day-start)))
+    (max 0 (- words (cdr start)))))
+
+(defun well-formed--update-mode-line (findings)
+  "After a check: the score from FINDINGS, and today's words, for the mode line."
+  (when well-formed-mode-line
+    (let* ((prose (cl-remove-if (lambda (p) (eq (well-formed-para-kind p) 'heading))
+                                (plist-get well-formed--doc :paras)))
+           (words (cl-loop for p in prose sum (well-formed--word-count (well-formed-para-text p))))
+           (scores (well-formed--scores findings words))
+           (score (cdr (assq 'overall scores)))
+           (today (well-formed--words-today words))
+           (goal well-formed-daily-goal))
+      (setq well-formed--mode-line
+            (concat
+             (propertize (format "✎%d" score)
+                         'face (well-formed--score-face score)
+                         'help-echo (format "Writing score %d (%s)\n%d words, %d today%s\nmouse-1: the report"
+                                            score
+                                            (mapconcat (lambda (c) (format "%s %d" (car c) (cdr c)))
+                                                       (cdr scores) ", ")
+                                            words today
+                                            (if goal (format " of %d" goal) ""))
+                         'mouse-face 'mode-line-highlight
+                         'local-map (make-mode-line-mouse-map 'mouse-1 #'well-formed-report))
+             (cond ((and goal (>= today goal)) (propertize (format " +%d ✓" today) 'face 'success))
+                   (goal (format " +%d/%d" today goal))
+                   ((> today 0) (format " +%d" today))
+                   (t "")))))
+    (force-mode-line-update)))
+
+(add-hook 'well-formed-after-check-functions #'well-formed--update-mode-line)
+
+(defvar well-formed--mode-line-entry
+  '(well-formed-mode (well-formed--mode-line ("" well-formed--mode-line " ")))
+  "The mode line's entry (in `mode-line-misc-info', which doom-modeline shows).")
+
+(unless (member well-formed--mode-line-entry mode-line-misc-info)
+  (push well-formed--mode-line-entry mode-line-misc-info))
+
 (provide 'well-formed-report)
 ;;; well-formed-report.el ends here

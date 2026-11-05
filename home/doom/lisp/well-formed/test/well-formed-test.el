@@ -409,3 +409,24 @@ aren't the term; digits beside other numbers stay digits."
               "We use GitHub daily.\n\nOpen /github/owner and ask @github.\n\nThe thinkpad and the thinkpad again, on a ThinkPad.\n\nWe have three cats.\n\nThey ate four mice.\n\nWe did 6 of 8 steps.\n")))
     (should-not (memq 'term-case ids))
     (should-not (memq 'number-style ids))))
+
+(ert-deftest well-formed-test-mode-line-score-and-words-today ()
+  "After a check the mode line has the score; words count from the day's
+first check; a goal shows the way there."
+  (let ((well-formed--day-start (make-hash-table :test #'equal))
+        (well-formed-daily-goal nil))
+    (well-formed-test--with #'text-mode "The cat sat on the mat. It was warm.\n"
+      (well-formed-mode 1)
+      (well-formed-check)
+      (should (string-match "\\`✎\\([0-9]+\\)\\'" well-formed--mode-line))
+      (should (<= 0 (string-to-number (match-string 1 well-formed--mode-line)) 100))
+      (goto-char (point-max))
+      (insert "Then the dog came in and lay down too.\n")
+      (well-formed-check)
+      (should (string-suffix-p " +9" well-formed--mode-line))
+      (let ((well-formed-daily-goal 5))
+        (well-formed-check)
+        (should (string-suffix-p " +9 ✓" well-formed--mode-line)))
+      (should (string-match-p "Writing score" (get-text-property 0 'help-echo well-formed--mode-line)))
+      ;; (format-mode-line is "" without a frame: the entry is checked live.)
+      (should (member well-formed--mode-line-entry mode-line-misc-info)))))

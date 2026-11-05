@@ -574,6 +574,9 @@ and headings (each its own)."
         (error (message "well-formed: rule %s failed: %S" (well-formed-rule-id rule) err))))
     (nreverse out)))
 
+(defvar well-formed-after-check-functions nil
+  "Functions of (FINDINGS) run after each complete check of the buffer.")
+
 (defvar well-formed-document-functions nil
   "Functions of (PARAS) run after paragraphs are checked, for findings
 that need the whole document (consistency).  Each returns findings
@@ -629,7 +632,9 @@ Findings are (BEG END RULE LEVEL MESSAGE FIXES ORIGINAL)."
                     collect (list b e id
                                   (well-formed--rule-level rule (well-formed-para-style (car paras)))
                                   msg fixes original))
-           (lambda (a b) (< (car a) (car b)))))))
+           (lambda (a b) (< (car a) (car b)))))
+    (run-hook-with-args 'well-formed-after-check-functions well-formed--findings)
+    well-formed--findings))
 
 (defun well-formed--check-quietly ()
   "`well-formed-check', abandoned when a key is pressed: :interrupted then."
