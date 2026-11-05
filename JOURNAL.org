@@ -39,6 +39,29 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 13:02] — familiar grows up: a package, a module, sampling, analytics
+- ✔ *MCP sampling*: when an MCP server asks for a completion, familiar
+  answers. It asks you first, stays within the budget, and records it in
+  the ledger. The blocker was mcp.el answering from inside its process
+  filter; replies are now deferred instead, so Emacs never freezes. Tested
+  against a fake server and once with real Claude.
+- ✔ *Analytics* (=SPC o $=): new figures
+  - change against the previous period, and what the cache saved
+  - where the money goes (one strip), the model mix per week, spend per
+    project
+  - speed and failures per model and task
+  - new recommendations
+  Each request now records its time, project and failures.
+- ✔ *Standalone*: familiar is MELPA-ready (package-lint, checkdoc and
+  compile all clean; =make melpa=; its own CI job). It's installed by a
+  Doom module, =:tools familiar=, which replaces lisp/+familiar.el; the
+  module takes effect at your next restart. Its own repository: not yet,
+  as you chose.
+- ✔ *Grammarly item DONE*: audience and intent goals, transitions between
+  paragraphs, and the AI layer now gets the goals too.
+- 🔎 *neomacs*: the last profile put 84 % in the git gutter's live diff,
+  so that's off there. You dropped neomacs; it stays installed and unused.
+
 ** [2026-11-05 Do 12:14] — well-formed: 15 new checks, synonyms, a score in the mode line
 - ✔ *New checks*, each tested on mess.org, this journal and the README, so
   only real findings remain:
