@@ -39,6 +39,18 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 23:10] — C-ß: one place to start looking; M-ö/M-ä through every buffer
+- ✔ *C-ß* from anywhere (prompts too; =SPC ?= as well): one menu for what
+  is here (modes' commands and keys, keys under a prefix, this mode's
+  manual, what is at point), a key or a command, words, learning, usage.
+- ✔ *C-ß C-ß*: 17,000 things by words: your words (copy → =evil-yank=),
+  commands by their docs, renamed ones by the old name, the Emacs
+  glossary, manuals, options; keys as they are where you were.
+- ✔ Synonyms in M-x too ("image" finds =org-link-preview=).
+- ✔ =SPC h D= =consult-info=, =SPC h SPC= =consult-mode-command=.
+- ✔ *M-ö / M-ä*: all buffers, Info, popups and scratch included.
+- ✔ 351 batch tests, 9 live; deployed with =nrs= (0 bytes downloaded).
+
 ** [2026-11-05 Do 19:16] — Six ideas from your usage data
 - ✔ *Keys wiped at every start*: a second =(:prefix ("K" . "desc"))= binds
   a fresh empty map. =SPC n r= kept 2 of 23 keys, =SPC P= lost text stats,
