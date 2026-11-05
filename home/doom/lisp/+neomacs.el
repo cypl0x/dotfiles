@@ -10,6 +10,13 @@
 ;;        re-applies `doom-font' by name.  Here zoom scales the default face's
 ;;        :height instead, which neomacs renders (same steps, same reset).
 ;;
+;; Scroll (a mouse wheel) jumped by lines, where GNU Emacs here scrolls
+;;        smoothly: GTK gives GNU pixel deltas even for wheels; neomacs
+;;        sends wheels as line steps (touchpads as pixels).  ultra-scroll can
+;;        only jump lines without pixel data, so under neomacs it gives way
+;;        to `pixel-scroll-precision-mode' interpolating each wheel step into
+;;        a smooth pixel scroll (neomacs supports those calls, issue #396).
+;;
 ;;; Code:
 
 (defvar +neomacs-p (and (getenv "NEOMACS_DOOM") t)
@@ -30,8 +37,32 @@ INCREMENT is in points as there (nil resets); FIXED-SIZE-P makes it the size."
       (unless increment (setq +neomacs--initial-height nil))
       t)))
 
+(defvar pixel-scroll-precision-interpolate-mice)
+(defvar pixel-scroll-precision-interpolate-page)
+(defvar pixel-scroll-precision-interpolation-total-time)
+(declare-function pixel-scroll-precision-mode "pixel-scroll" (&optional arg))
+(declare-function ultra-scroll-mode "ext:ultra-scroll" (&optional arg))
+
+(defun +neomacs-smooth-wheel-h (&rest _)
+  "Mouse wheels scroll smoothly: interpolated pixel scrolling, not ultra-scroll."
+  (when (bound-and-true-p ultra-scroll-mode) (ultra-scroll-mode -1))
+  (setq pixel-scroll-precision-interpolate-mice t
+        pixel-scroll-precision-interpolate-page t
+        pixel-scroll-precision-interpolation-total-time 0.12)
+  (pixel-scroll-precision-mode 1))
+
 (when +neomacs-p
   (advice-add 'doom-adjust-font-size :around #'+neomacs-adjust-font-size-a))
+
+(defun +neomacs-ultra-scroll-h ()
+  "Doom just turned ultra-scroll on: hand over to interpolated scrolling."
+  (when (bound-and-true-p ultra-scroll-mode)
+    (run-at-time 0 nil #'+neomacs-smooth-wheel-h)))
+
+(when +neomacs-p
+  ;; After Doom turns ultra-scroll on (first input or first file).
+  (add-hook 'ultra-scroll-mode-hook #'+neomacs-ultra-scroll-h)
+  (with-eval-after-load 'pixel-scroll (+neomacs-smooth-wheel-h)))
 
 (provide '+neomacs)
 ;;; +neomacs.el ends here

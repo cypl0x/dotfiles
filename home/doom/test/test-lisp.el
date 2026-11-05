@@ -2358,3 +2358,14 @@ in the background; nothing synchronous."
           (+neomacs-adjust-font-size-a #'ignore 12 t)
           (should (= (face-attribute 'default :height) 120)))
       (set-face-attribute 'default nil :height orig))))
+
+(ert-deftest neomacs/wheels-scroll-smoothly-without-ultra-scroll ()
+  (require 'pixel-scroll)
+  (load (expand-file-name "+neomacs" test-lisp-dir) nil t)
+  (let ((pixel-scroll-precision-interpolate-mice nil))
+    (unwind-protect
+        (progn
+          (+neomacs-smooth-wheel-h)
+          (should pixel-scroll-precision-mode)
+          (should pixel-scroll-precision-interpolate-mice))
+      (pixel-scroll-precision-mode -1))))
