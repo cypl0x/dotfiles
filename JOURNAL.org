@@ -39,6 +39,20 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 07:13] — Two screenshots, two root causes
+- ✔ *magit + delta*: your gitconfig's =line-numbers = true= survives
+  =--color-only=; delta prefixed "542┊ 543┊" to every line, magit lost the
+  +/- markers and dumped the hunk under "Recent commits". Reproduced that
+  exactly in a scratch repo, then fixed: magit-delta reads
+  =~/.config/delta/magit.gitconfig= (same doom-vibrant theme, numbers
+  off). Delta stays, shell unchanged. Hunks are file children again.
+- ✔ *Inline AI*: "(1/1)- ☐ If" — no space — gave it away: ghost text drawn
+  over column 0 of a line with text, and the model thinking aloud. Now:
+  talking/marker-echo suggestions dropped, stale replies dropped, and auto
+  ghost text only where nothing follows on the line (M-n still anywhere).
+  One real request after the fix: three clean continuations at end of line.
+- Commits 4124c2d, 81e265b; 271/271 tests; both live.
+
 ** [2026-11-05 Do 07:02] — "Changed on disk; overwrite?" is gone: Emacs merges
 - ✔ Your question from mess.org, answered with code instead of steps.
   Emacs now remembers each file as it last read/saved it — the common
