@@ -103,16 +103,39 @@
           (call-interactively #'ghostel))
       (async-shell-command (format "ssh %s" host)))))
 
+(defun +tailscale--ping-summary (host out)
+  "One line from `tailscale ping' OUT for HOST: how it goes and how fast."
+  (let ((ms nil) (via nil))
+    (dolist (line (split-string out "\n" t))
+      (when (string-match "pong from .* via \\(.+\\) in \\([0-9.]+\\)ms" line)
+        (push (string-to-number (match-string 2 line)) ms)
+        (setq via (match-string 1 line))))
+    (if (null ms)
+        (format "%s: no pong (%s)" host (car (last (split-string out "\n" t))))
+      (format "%s: %s, %d pong%s, %.0f / %.0f / %.0f ms (min/avg/max)"
+              host (if (string-prefix-p "DERP" via) (format "relayed (%s)" via) (format "direct (%s)" via))
+              (length ms) (if (cdr ms) "s" "") (apply #'min ms) (/ (apply #'+ ms) (float (length ms))) (apply #'max ms)))))
+
 (defun +tailscale-ping ()
-  "`tailscale ping' the peer, in a buffer: direct or relayed, and how fast."
+  "`tailscale ping' the peer: progress and the result in the echo area
+\(direct or relayed, how fast); the raw output in *tailscale ping HOST*."
   (interactive)
   (let* ((peer (+tailscale--peer))
-         (buf (get-buffer-create (format "*tailscale ping %s*" (plist-get peer :HostName)))))
+         (host (plist-get peer :HostName))
+         (buf (get-buffer-create (format "*tailscale ping %s*" host))))
     (with-current-buffer buf (let ((inhibit-read-only t)) (erase-buffer)))
+    (message "Pinging %s…" host)
     (make-process :name "tailscale-ping" :buffer buf :noquery t
-                  :command (list +tailscale-program "ping" "--c" "5"
-                                 (+tailscale--address peer)))
-    (display-buffer buf)))
+                  :command (list +tailscale-program "ping" "--c" "5" (+tailscale--address peer))
+                  :filter (lambda (proc out)
+                            (when (buffer-live-p (process-buffer proc))
+                              (with-current-buffer (process-buffer proc) (goto-char (point-max)) (insert out)))
+                            (when-let* ((line (car (last (split-string out "\n" t)))))
+                              (message "%s: %s" host line)))
+                  :sentinel (lambda (proc _)
+                              (unless (process-live-p proc)
+                                (message "%s" (+tailscale--ping-summary
+                                               host (with-current-buffer (process-buffer proc) (buffer-string)))))))))
 
 (defun +tailscale-copy ()
   "Copy the peer's Tailscale address."

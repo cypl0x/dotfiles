@@ -964,6 +964,23 @@ document), `rule' (the rule in this document) or `everywhere'."
     (setq well-formed--tick nil)
     (when (and (featurep 'flycheck) (bound-and-true-p flycheck-mode)) (funcall 'flycheck-buffer))))
 
+(defcustom well-formed-explain-where 'echo
+  "Where `well-formed-explain' explains a rule: `echo' (the echo area, the
+gist and one example; with a prefix argument the full help) or `help' (a
+help window, always)."
+  :type '(choice (const echo) (const help)) :group 'well-formed)
+
+(defun well-formed--rule-gist (rule)
+  "RULE in a few lines: what it is, why, one example."
+  (let ((ex (car (well-formed-rule-examples rule))))
+    (concat (propertize (symbol-name (well-formed-rule-id rule)) 'face 'bold)
+            (propertize (format "  %s · %s" (well-formed-rule-category rule) (well-formed-rule-level rule)) 'face 'shadow)
+            "\n" (or (well-formed-rule-doc rule) "No description.")
+            (if ex (format "\n  %s %s\n  %s %s"
+                           (propertize "✗" 'face 'error) (car ex) (propertize "✓" 'face 'success) (cdr ex))
+              "")
+            (propertize "\nC-u: all examples · M-x well-formed-ignore: ignore it" 'face 'shadow))))
+
 (defun well-formed--describe-rule (id)
   (let ((rule (well-formed--rule id)))
     (with-help-window (help-buffer)
@@ -978,10 +995,13 @@ document), `rule' (the rule in this document) or `everywhere'."
       (princ "\nIgnore it here or everywhere: M-x well-formed-ignore."))))
 
 ;;;###autoload
-(defun well-formed-explain (&optional id)
-  "Explain the rule of the finding at point (or rule ID)."
-  (interactive)
-  (well-formed--describe-rule
+(defun well-formed-explain (&optional id full)
+  "Explain the rule of the finding at point (or rule ID): in the echo area
+(`well-formed-explain-where'), or all of it in a help window with FULL
+(the prefix argument)."
+  (interactive (list nil current-prefix-arg))
+  (funcall (if (or full (eq well-formed-explain-where 'help)) #'well-formed--describe-rule
+             (lambda (id) (message "%s" (well-formed--rule-gist (well-formed--rule id)))))
    (or id (if-let* ((here (well-formed--at (point))))
               (nth 2 (if (cdr here) (well-formed--current "Explain which: ") (car here)))
             (intern (completing-read "Rule: " (mapcar (lambda (r) (symbol-name (well-formed-rule-id r)))

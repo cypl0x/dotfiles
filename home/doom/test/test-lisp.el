@@ -2284,3 +2284,15 @@ in the background; nothing synchronous."
       (insert-file-contents (cadr handed))
       (should (search-forward "Live processes" nil t))
       (should (search-forward "CPU profile during the freeze" nil t)))))
+
+(ert-deftest echo/ping-and-rule-explanations-fit-the-echo-area ()
+  (load (expand-file-name "+tailscale" test-lisp-dir) nil t)
+  (should (equal (+tailscale--ping-summary
+                  "inari" "pong from inari (100.64.0.2) via DERP(fra) in 31ms\npong from inari (100.64.0.2) via 65.1.2.3:41641 in 9ms\npong from inari (100.64.0.2) via 65.1.2.3:41641 in 11ms\n")
+                 "inari: direct (65.1.2.3:41641), 3 pongs, 9 / 17 / 31 ms (min/avg/max)"))
+  (should (string-prefix-p "inari: no pong" (+tailscale--ping-summary "inari" "timeout\n")))
+  (require 'well-formed)
+  (let* ((rule (car well-formed--rules))
+         (gist (substring-no-properties (well-formed--rule-gist rule))))
+    (should (string-prefix-p (symbol-name (well-formed-rule-id rule)) gist))
+    (should (<= (length (split-string gist "\n")) 5))))
