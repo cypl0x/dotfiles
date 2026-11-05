@@ -34,8 +34,8 @@
 
 ;;;; Eglot guard — prevent LSP on remote ─────────────────────────────────────
 
-;; eglot-ltex hooks into text-mode-hook → tries to spawn ltex-ls on remote
-;; machine → blocks Emacs UI for 30 seconds.
+;; A language server started for a remote buffer runs over TRAMP and blocks
+;; the UI while it starts (eglot-ltex did, for every text file).
 (after! eglot
   (defadvice! +tramp/eglot-ensure-no-remote (fn)
     "Skip `eglot-ensure' for remote TRAMP buffers."

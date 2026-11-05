@@ -276,8 +276,9 @@ Three issues compound:
 
 1. *Wrong method*: Default =scp= opens a new SSH connection per file operation
 2. *No multiplexing*: Each TRAMP operation = full SSH handshake
-3. *eglot-ltex*: Hooks into =text-mode-hook= → tries to spawn =ltex-ls= on
-   remote machine → blocks Emacs for 30 seconds
+3. *eglot on remote buffers*: a language server started over TRAMP blocks
+   Emacs while it starts (eglot-ltex did, for every text file, until it
+   was replaced by well-formed)
 
 *** The Fix
 
@@ -1100,7 +1101,6 @@ the learning path, =+docs/info= builds it as an Info manual (cache dir,
 | =enchant2=   | jinx spell-checker backend           |
 | =pkg-config= | jinx-mod.so compilation              |
 | =graphviz=   | org-roam-graph (=dot= command)       |
-| =ltex-ls=    | eglot-ltex grammar checker           |
 | =cmake=      | vterm native module compilation      |
 | =gcc=        | vterm + jinx compilation             |
 | =gnuplot=    | org-mode plotting                    |
@@ -1158,11 +1158,9 @@ Prevention: =+prose/jinx-mode-safe= wraps jinx in =condition-case=.
 [eglot] Timed out after 30 seconds
 #+end_example
 
-Cause: =eglot-ltex= trying to start =ltex-ls= for org/text buffers.
-
-Fix: Already mitigated by =+tramp/eglot-ensure-no-remote= for remote.
-For local: ltex-ls startup is slow (~5s) but should succeed if binary
-is on PATH.
+Cause (until 2026-11-05): =eglot-ltex= starting =ltex-ls= for Org and text
+buffers.  LanguageTool is gone; prose is checked by well-formed, in Emacs.
+If a language server times out now, =M-x eglot-events-buffer= shows why.
 
 ** SPC w / SPC s bindings wiped
 

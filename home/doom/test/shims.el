@@ -37,6 +37,7 @@
 
 ;; familiar-ask requires familiar from its own directory.
 (add-to-list 'load-path (expand-file-name "../lisp/familiar" (file-name-directory (or load-file-name buffer-file-name))))
+(add-to-list (quote load-path) (expand-file-name "../lisp/well-formed" (file-name-directory (or load-file-name buffer-file-name))))
 
 (provide 'shims)
 ;;; shims.el ends here

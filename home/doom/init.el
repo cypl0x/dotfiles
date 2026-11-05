@@ -89,7 +89,7 @@
        syntax              ; tasing you for every semicolon you forget
        ;;spell            ; jinx instead (lisp/+prose.el): en+de, prose and code comments;
                           ; flyspell ran on top of it in text buffers
-       grammar           ; tasing grammar mistake every you make
+       ;;grammar         ; well-formed instead (lisp/well-formed/): langtool, writegood
 
        :tools
        ;;ansible

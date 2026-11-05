@@ -419,39 +419,9 @@
 ;; Language Server (LSP)
 ;; ---------------------------------------------------------------------------
 
-;; LanguageTool grammar/style checker over eglot: ltex-ls-plus (the maintained
-;; fork, 18.x), on PATH from home/emacs-deps.nix.  Not ltex-ls 16: it prints
-;; LanguageTool's "WARN: no common words file ..." lines on stdout before
-;; its first reply, jsonrpc looks for a header only within 100 characters
-;; (jsonrpc--process-filter), so eglot never saw the reply and killed the
-;; server after 30 s, in every project: it never worked.  eglot-ltex takes a
-;; file path as well as a prefix.  stdio: a plain child process.
-(use-package! eglot-ltex
-  ;; A lambda on :hook can't be autoloaded, so without :defer use-package
-  ;; requires eglot-ltex (and with it eglot and eldoc) at startup.
-  :defer t
-  :hook (text-mode . (lambda ()
-                       ;; eglot only manages file buffers; don't load it for
-                       ;; *new*/capture buffers.
-                       (when buffer-file-name
-                         (require 'eglot-ltex)
-                         (eglot-ensure))))
-  :init
-  (setq eglot-ltex-communication-channel 'stdio
-        eglot-ltex-server-path (or (executable-find "ltex-ls-plus") ""))
-  :config
-  ;; LTeX reads its settings from eglot's workspace configuration (an
-  ;; `eglot-ltex-language' set here before did nothing: no such option, so
-  ;; everything was checked as en-US, German too).  auto: LanguageTool
-  ;; detects each document's language (checked live: German and English
-  ;; files each get their own rules); a file can still say
-  ;; "# ltex: language=de-DE".  motherTongue: false friends for a German
-  ;; writer of English.
-  (after! eglot
-    (setq-default eglot-workspace-configuration
-                  (plist-put (copy-sequence (default-value 'eglot-workspace-configuration))
-                             :ltex '(:language "auto"
-                                     :additionalRules (:motherTongue "de-DE"))))))
+;; Prose is checked by well-formed (lisp/+well-formed.el), not LanguageTool:
+;; eglot-ltex with ltex-ls-plus held 2.8 GB of Java per project, took 30 s to
+;; start and made capture buffers wait on it (removed 2026-11-05).
 ;; ---------------------------------------------------------------------------
 ;; Translation
 ;;   SPC l t  → go-translate, quick popup (Google/Bing, no key needed)
@@ -543,6 +513,7 @@
 (load! "lisp/+nix")         ;; NixOS integration, nixd, flake ops
 (load! "lisp/+org-power")   ;; org-roam, super-agenda, org-ql, org-modern
 (load! "lisp/+prose")       ;; Writing mode, jinx, text stats, readability
+(load! "lisp/+well-formed") ;; well-formed: the writing assistant (rules, not LanguageTool)
 (load! "lisp/+dtt")         ;; Dependently typed language enhancements
 (load! "lisp/+familiar")    ;; familiar: AI woven into magit, flycheck, smerge, embark
 (load! "lisp/+agent")       ;; AI agent integration, gptel, transient

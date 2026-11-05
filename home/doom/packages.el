@@ -146,7 +146,6 @@
 ;; Language Server (LSP)
 ;; ---------------------------------------------------------------------------
 
-(package! eglot-ltex :recipe (:host github :repo "emacs-languagetool/eglot-ltex"))
 
 ;; ---------------------------------------------------------------------------
 ;; Org — knowledge management, agenda, visual polish

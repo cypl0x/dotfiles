@@ -82,8 +82,6 @@ shim pkg-config script returning direct -I/-L/-l flags."
 ;; are jinx's own predicates (faces, regexps, properties) at the word.  A
 ;; correction becomes automatic after 3 corrections of the same typo over
 ;; time (2 in one session); M-x autocorrect-list shows and edits them.
-(declare-function writegood-passive-voice-turn-off "ext:writegood-mode" ())
-(defvar writegood-mode)
 (declare-function jinx--face-excluded-p "ext:jinx" (pos))
 (declare-function jinx--regexp-excluded-p "ext:jinx" (pos))
 (declare-function jinx--property-excluded-p "ext:jinx" (pos))
@@ -121,15 +119,6 @@ Case-sensitive like jinx: its \"[A-Z]+\\\\>\" (all-caps words) matched \"teh\"."
   (defun +prose-abbrev-mode-h ()
     (unless (derived-mode-p 'coq-mode) (abbrev-mode 1))))
 
-
-;; writegood (Doom's :checkers grammar) without its passive-voice check: the
-;; bluish "Switch to active voice" marks.  Weasel words and duplicated words
-;; stay.
-(add-hook 'writegood-mode-hook
-          (defun +prose-writegood-no-passive-h ()
-            (when writegood-mode
-              (writegood-passive-voice-turn-off)
-              (font-lock-flush))))
 
 ;;;; mixed-pitch — Variable-pitch prose, fixed-pitch code ────────────────────
 
@@ -401,151 +390,15 @@ off turns jinx back on."
   (define-key flyspell-mouse-map [mouse-1] #'+prose/mouse-correct)
   (define-key flyspell-mouse-map (kbd "RET") #'+prose/correct-at-point))
 
-;;;; Review — one report on a text, the way a writing assistant gives it ──────
+;;;; Review — the text as a writing assistant sees it ─────────────────────────
 
-;; SPC P v: the buffer (or region) reviewed: correctness (LanguageTool's
-;; findings by rule, jinx's misspellings), clarity (the longest sentences),
-;; readability (Flesch for English, Amstad's German adaptation for German,
-;; picked by the text's own common words).  Every finding is a button that
-;; goes there.  LanguageTool runs through eglot (it may still be checking
-;; a file just opened: review again in a moment).
+;; SPC P v is well-formed's report (lisp/well-formed/): scores per category,
+;; readability, tone, sentence plots, findings by rule, and jinx's
+;; misspellings.  It replaced a review built on LanguageTool (ltex-ls-plus
+;; through eglot: 2.8 GB of Java per project, 30 s to start, and capture
+;; buffers waiting on it).
 
-(declare-function jinx--force-overlays "ext:jinx" (start end &optional visible))
-(declare-function flymake-diagnostics "flymake" (&optional beg end))
-(declare-function flymake-diagnostic-beg "flymake" (diag))
-(declare-function flymake-diagnostic-text "flymake" (diag))
-
-(defun +prose--language (text)
-  "\"de\" or \"en\", by which language's commonest words TEXT uses more."
-  (let ((count (lambda (words)
-                 (cl-loop for w in words
-                          sum (+prose--count (concat "\\b" w "\\b") text)))))
-    (if (> (funcall count '("der" "die" "das" "und" "ist" "nicht" "ein" "eine" "zu" "mit"))
-           (funcall count '("the" "and" "is" "of" "to" "in" "that" "it" "not" "with")))
-        "de" "en")))
-
-(defun +prose--count (regexp text)
-  "How many times REGEXP matches in TEXT, case-insensitively."
-  (let ((case-fold-search t) (n 0) (start 0))
-    (while (string-match regexp text start)
-      (setq n (1+ n) start (match-end 0)))
-    n))
-
-(defun +prose--syllables (word)
-  "Vowel groups in WORD, umlauts included (at least 1)."
-  (max 1 (+prose--count "[aeiouyäöü]+" (downcase word))))
-
-(defun +prose--sentences (beg end)
-  "Sentences between BEG and END: list of (START END WORDS)."
-  (save-excursion
-    (goto-char beg)
-    (let (out)
-      (while (< (point) end)
-        (let ((s (progn (skip-chars-forward " \t\n" end) (point))))
-          (forward-sentence)
-          (let ((e (min (point) end)))
-            (when (> e s)
-              (push (list s e (length (split-string (buffer-substring-no-properties s e)
-                                                    "[^[:alpha:]]+" t)))
-                    out))
-            (when (= e s) (goto-char end)))))
-      (nreverse out))))
-
-(defun +prose--readability (text lang)
-  "(SCORE . BAND): Flesch (en) or Amstad (de) reading ease of TEXT."
-  (let* ((words (split-string text "[^[:alpha:]]+" t))
-         (n (max 1 (length words)))
-         (sentences (max 1 (+prose--count "[.!?]+\\([[:space:]]\\|\\'\\)" text)))
-         (asl (/ (float n) sentences))
-         (asw (/ (float (apply #'+ (mapcar #'+prose--syllables words))) n))
-         (score (if (equal lang "de")
-                    (- 180 asl (* 58.5 asw))
-                  (- 206.835 (* 1.015 asl) (* 84.6 asw)))))
-    (cons score
-          (cond ((>= score 80) "easy")
-                ((>= score 60) "plain")
-                ((>= score 40) "fairly hard")
-                ((>= score 20) "hard")
-                (t "very hard")))))
-
-(defun +prose--button (buf pos label)
-  (insert-text-button label 'action (lambda (_) (pop-to-buffer buf) (goto-char pos))
-                      'follow-link t 'help-echo "Go there"))
-
-;;;###autoload
-(defun +prose/review (&optional beg end)
-  "Review the buffer (or region, BEG to END): correctness, clarity,
-readability, each finding a button to go there."
-  (interactive (when (use-region-p) (list (region-beginning) (region-end))))
-  (let* ((beg (or beg (point-min))) (end (or end (point-max)))
-         (buf (current-buffer))
-         (managed (bound-and-true-p eglot--managed-mode))
-         (text (buffer-substring-no-properties beg end))
-         (lang (+prose--language text))
-         (lt (and (fboundp 'flymake-diagnostics)   ; eglot fills them, flymake-mode on or not
-                  (seq-filter (lambda (d) (string-prefix-p "LTeX" (flymake-diagnostic-text d)))
-                              (flymake-diagnostics beg end))))
-         (rules (seq-group-by (lambda (d) (if (string-match "\\`LTeX \\[\\([^]]+\\)\\]" (flymake-diagnostic-text d))
-                                              (match-string 1 (flymake-diagnostic-text d)) "other"))
-                              lt))
-         (typos (and (bound-and-true-p jinx-mode) (fboundp 'jinx--force-overlays)
-                     (jinx--force-overlays beg end)))
-         (sentences (+prose--sentences beg end))
-         (long (seq-take (sort (seq-filter (lambda (s) (> (nth 2 s) 25)) sentences)
-                               (lambda (a b) (> (nth 2 a) (nth 2 b))))
-                         10))
-         (read (+prose--readability text lang)))
-    (with-current-buffer (get-buffer-create "*prose review*")
-      (let ((inhibit-read-only t))
-        (erase-buffer)
-        (insert (propertize (format "Review of %s" (buffer-name buf)) 'face 'bold)
-                (format "  (%s, %d words, %d sentences)\n\n"
-                        (if (equal lang "de") "German" "English")
-                        (length (split-string text "[^[:alpha:]]+" t)) (length sentences)))
-        (insert (propertize "Correctness\n" 'face 'font-lock-keyword-face))
-        (if (not lt)
-            (insert (if managed
-                        "  LanguageTool: nothing found (or still checking)\n"
-                      "  LanguageTool: not running here (a file buffer in a text mode starts it)\n"))
-          (pcase-dolist (`(,rule . ,diags) (sort rules (lambda (a b) (> (length (cdr a)) (length (cdr b))))))
-            (insert (format "  %-28s %d  " rule (length diags)))
-            (dolist (d (seq-take diags 6))
-              (+prose--button buf (flymake-diagnostic-beg d)
-                              (format "l%d" (with-current-buffer buf
-                                              (line-number-at-pos (flymake-diagnostic-beg d)))))
-              (insert " "))
-            (insert "\n      " (truncate-string-to-width
-                               (replace-regexp-in-string "\\`LTeX \\[[^]]+\\]: " ""
-                                                         (flymake-diagnostic-text (car diags)))
-                               90 nil nil "…")
-                    "\n")))
-        (insert (format "  Spelling: %d\n" (length typos)))
-        (dolist (o (seq-take typos 12))
-          (insert "    ")
-          (+prose--button buf (overlay-start o)
-                          (with-current-buffer buf
-                            (buffer-substring-no-properties (overlay-start o) (overlay-end o))))
-          (insert "\n"))
-        (insert (propertize "\nClarity\n" 'face 'font-lock-keyword-face))
-        (if (not long)
-            (insert "  No sentence over 25 words.\n")
-          (insert (format "  %d sentence%s over 25 words:\n" (length long) (if (cdr long) "s" "")))
-          (dolist (s long)
-            (insert (format "  %3d words  " (nth 2 s)))
-            (+prose--button buf (car s)
-                            (truncate-string-to-width
-                             (replace-regexp-in-string "[\n ]+" " " (with-current-buffer buf
-                                                                      (buffer-substring-no-properties (car s) (cadr s))))
-                             70 nil nil "…"))
-            (insert "\n")))
-        (insert (propertize "\nReadability\n" 'face 'font-lock-keyword-face)
-                (format "  %s %.0f: %s\n"
-                        (if (equal lang "de") "Amstad (German Flesch)" "Flesch reading ease")
-                        (car read) (cdr read))
-                "  0-100, higher is easier; plain prose is around 60.\n")
-        (goto-char (point-min))
-        (special-mode))
-      (pop-to-buffer (current-buffer)))))
+(defalias '+prose/review #'well-formed-report)
 
 ;;;; Improve — a sentence rewritten, the change shown word by word ────────────
 
