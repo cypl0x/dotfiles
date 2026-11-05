@@ -57,6 +57,7 @@
 (declare-function +gh-fs--ref "+gh-fs" (p))
 (declare-function +gh-fs--api "+gh-fs" (path &optional raw-file))
 (declare-function +gh-fs--me "+gh-fs" ())
+(declare-function +gh-fs--entry "+gh-fs" (file))
 (declare-function +gh-fs-path-owner "+gh-fs" (p))
 (declare-function +gh-fs-path-repo "+gh-fs" (p))
 (declare-function +gh-fs-path-ref "+gh-fs" (p))
@@ -129,6 +130,7 @@ isn't one.  With URL-ONLY, only a github.com URL counts (links in files)."
                           :ref (+gh-fs-path-ref p) :path (+gh-fs-path-path p)))))))
 
 (defvar-local +gh-browse--list-place nil "The repository a list or page belongs to.")
+(defvar +gh-render-readmes)
 
 (defun +gh-browse--here (&optional prompt)
   "The place of this buffer, or one read with PROMPT."
@@ -179,7 +181,10 @@ isn't one.  With URL-ONLY, only a github.com URL counts (links in files)."
     (+gh-browse--note-place place)
     (if (file-directory-p file)
         (let ((readme (and +gh-browse-readme-first (+gh-browse--readme-in file))))
-          (if readme (find-file (expand-file-name readme file)) (dired file)))
+          (cond ((and readme +gh-render-readmes (string-match-p "\\.\\(md\\|markdown\\)\\'" (downcase readme)))
+                 (+gh/render (expand-file-name readme file)))
+                (readme (find-file (expand-file-name readme file)))
+                (t (dired file))))
       (find-file file)
       (when line (goto-char (point-min)) (forward-line (1- line))))))
 
@@ -257,6 +262,7 @@ isn't one.  With URL-ONLY, only a github.com URL counts (links in files)."
 (defvar-keymap +gh-browse-mode-map
   "RET" '(menu-item "" +gh-browse-follow :filter +gh-browse--link-filter)
   "C-c C-o" #'+gh-browse-follow
+  "C-c C-v" #'+gh/render
   "C-c ?" #'+gh-menu)
 
 (define-minor-mode +gh-browse-mode
@@ -1136,6 +1142,126 @@ OPEN, a function of NAME, makes the names buttons."
                    (+gh--top "Searches" (+gh--count (lambda (v) (plist-get v :query)) visits)
                              (lambda (q) (+gh--search-repos q))))))))
 
+
+;;;; Rendered, as github.com shows it
+
+;; READMEs mix Markdown and HTML; markdown-mode shows the HTML as tags.
+;; Rendered, they come from GitHub's own renderer (POST /markdown, gfm, in
+;; the repository's context: tables, emoji, #123, HTML) and are drawn by
+;; shr; links resolve against the file's github.com URL and come back here.
+;; Images stay off (metered link) until you ask: I, or `+gh-render-images'.
+
+(defcustom +gh-render-readmes t
+  "Non-nil: READMEs open rendered (v shows the source)."
+  :type 'boolean :group '+gh-browse)
+
+(defcustom +gh-render-images nil
+  "Non-nil: rendered pages load their images (each is a download)."
+  :type 'boolean :group '+gh-browse)
+
+(declare-function shr-insert-document "shr" (dom))
+(declare-function libxml-parse-html-region "xml.c" (start end &optional base-url discard-comments))
+(defvar shr-inhibit-images)
+(defvar shr-base)
+(defvar browse-url-handlers)
+(declare-function shr-next-link "shr" ())
+(declare-function shr-previous-link "shr" ())
+(defvar-local +gh-render--source nil "The /github file this page renders.")
+
+(defun +gh-render--html (file)
+  "FILE (under /github) as HTML, from GitHub's renderer (cached by content)."
+  (let* ((p (+gh-browse--place-at file))
+         (sha (nth 2 (+gh-fs--entry file)))
+         (cached (expand-file-name (format "rendered/%s.html" sha) +gh-fs-cache-directory)))
+    (if (file-exists-p cached)
+        (with-temp-buffer (insert-file-contents cached) (buffer-string))
+      (let* ((text (with-temp-buffer (insert-file-contents file) (buffer-string)))
+             (input (make-temp-file "gh-md" nil ".json"
+                                    (json-serialize (list :text text :mode "gfm" :context (+gh--repo-arg p)))))
+             (html (unwind-protect (+gh--gh "api" "markdown" "--input" input) (delete-file input))))
+        (make-directory (file-name-directory cached) t)
+        (let ((coding-system-for-write 'utf-8)) (write-region html nil cached nil 'silent))
+        html))))
+
+(defun +gh-render--browse (url &rest _)
+  "Follow URL from a rendered page: GitHub places here, the rest outside."
+  (let ((place (+gh-browse--parse url t))
+        (anchor (and (string-match "#\\(.+\\)\\'" url) (match-string 1 url))))
+    (cond
+     ((and place anchor (equal (+gh-browse--file place) (and +gh-render--source (+gh-browse--file (+gh-browse--place-at +gh-render--source)))))
+      (+gh-render--goto-anchor anchor))
+     (place (+gh-browse-open place))
+     (t (let ((browse-url-handlers nil)) (browse-url url))))))
+
+(defun +gh-render--goto-anchor (anchor)
+  "The heading for ANCHOR (GitHub's slug) in this rendered page."
+  (let ((pos (or (text-property-any (point-min) (point-max) 'shr-target-id (concat "user-content-" anchor))
+                 (text-property-any (point-min) (point-max) 'shr-target-id anchor)
+                 (save-excursion
+                   (goto-char (point-min))
+                   (let ((case-fold-search t)
+                         (words (split-string anchor "-" t)))
+                     (and (re-search-forward (concat "^" (mapconcat #'regexp-quote words "[^[:alnum:]\n]+")) nil t)
+                          (line-beginning-position)))))))
+    (if pos (progn (push-mark) (goto-char pos) (recenter 0)) (message "No heading for #%s" anchor))))
+
+(defun +gh/render (&optional file)
+  "Show FILE (this /github file) rendered as github.com shows it."
+  (interactive)
+  (let* ((file (or file buffer-file-name (user-error "Not a file")))
+         (p (or (+gh-browse--place-at file) (user-error "Not a GitHub file")))
+         (html (+gh-render--html file))
+         (base (+gh-browse--web-url p))
+         (buf (get-buffer-create (format "*GitHub: %s/%s*" (+gh--repo-arg p) (+gh-place-path p)))))
+    (require 'shr)
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (+gh-render-mode)
+        (setq +gh-render--source file
+              +gh-browse--list-place p)
+        (let ((dom (with-temp-buffer (insert html) (libxml-parse-html-region (point-min) (point-max) base)))
+              (shr-inhibit-images (not +gh-render-images))
+              (shr-base nil))
+          (shr-insert-document dom))
+        (goto-char (point-min))
+        (setq-local header-line-format
+                    (list " " (propertize (+gh--repo-arg p) 'face 'bold)
+                          (propertize (format "  /%s" (+gh-place-path p)) 'face 'font-lock-string-face)
+                          (propertize "    rendered · v source · I images · RET/click links · SPC o G menu" 'face 'shadow)))))
+    (+gh-browse-note 'file :repo (+gh--repo-arg p) :path (+gh-place-path p) :rendered t)
+    (pop-to-buffer-same-window buf)))
+
+(defun +gh-render-source ()
+  "Toggle between the rendered page and its source."
+  (interactive)
+  (if +gh-render--source
+      (let ((+gh-render-readmes nil)) (find-file +gh-render--source))
+    (+gh/render)))
+
+(defun +gh-render-images ()
+  "Show this page's images (downloads them)."
+  (interactive)
+  (let ((+gh-render-images t) (pos (point)))
+    (+gh/render +gh-render--source)
+    (goto-char (min pos (point-max)))))
+
+(defvar-keymap +gh-render-mode-map
+  :parent special-mode-map
+  "v" #'+gh-render-source  "I" #'+gh-render-images  "?" #'+gh-menu
+  "TAB" #'shr-next-link  "<backtab>" #'shr-previous-link)
+
+(define-derived-mode +gh-render-mode special-mode "GitHub"
+  "A GitHub file, rendered: links come back to GitHub in Emacs."
+  (setq-local browse-url-handlers '(("\\`https?://\\(?:www\\.\\)?github\\.com/" . +gh-render--browse)))
+  (setq-local bookmark-make-record-function
+              (lambda () `(,(buffer-name) (filename . ,+gh-render--source) (handler . +gh-render--bookmark-jump)))))
+
+(defun +gh-render--bookmark-jump (bookmark)
+  (+gh/render (bookmark-prop-get bookmark 'filename)))
+
+(with-eval-after-load 'evil
+  (evil-make-overriding-map +gh-render-mode-map 'normal))
 ;;;; The menu
 
 (defun +gh--in-repo-p () (and (or (+gh-browse--place-at) +gh-browse--list-place) t))
@@ -1172,6 +1298,7 @@ OPEN, a function of NAME, makes the names buttons."
     ("a" "Report: what you look at" +gh/report)]
    ["This repository" :if +gh--in-repo-p
     ("r" "README" +gh/browse-readme)
+    ("V" "Rendered, as on github.com" +gh/render :if (lambda () buffer-file-name))
     ("^" "Top directory" +gh/browse-root)
     ("f" "Find file (all files)" project-find-file)
     ("B" "Branch, tag, commit" +gh/ref)
