@@ -3203,3 +3203,58 @@ words offer the first defined command; embark sees the command behind."
 (ert-deftest discover/manual-of-a-mode ()
   (should (equal (+discover--manual-of 'org-mode) "org"))
   (should (equal (+discover--manual-of 'emacs-lisp-mode) "elisp")))
+
+
+;;; +atuin-ai: Atuin AI from Emacs
+
+(load (expand-file-name "+atuin" test-lisp-dir) nil t)
+(load (expand-file-name "+atuin-ai" test-lisp-dir) nil t)
+
+(ert-deftest atuin-ai/reads-the-hook-protocol ()
+  "What `atuin ai inline --hook' writes to stderr (atuin ai init zsh)."
+  (should (equal (+atuin-ai-parse "__atuin_ai_execute__:ls -la\n") '(execute . "ls -la")))
+  (should (equal (+atuin-ai-parse "__atuin_ai_insert__:git log") '(insert . "git log")))
+  (should (equal (+atuin-ai-parse "__atuin_ai_print__:It is 3.\nTwo lines") '(print . "It is 3.\nTwo lines")))
+  (should (equal (+atuin-ai-parse "__atuin_ai_cancel__\n") '(cancel)))
+  (should (equal (+atuin-ai-parse "") '(cancel)))
+  ;; Something else (an error): shown, never run.
+  (should (equal (+atuin-ai-parse "Error: not logged in") '(print . "Error: not logged in")))
+  (should (equal (+atuin-ai--one-line "find . -printf '%p\n' |\n  wc -l") "find . -printf '%p ' | wc -l")))
+
+(ert-deftest atuin-ai/a-closed-box-runs-its-command-in-the-background ()
+  "The box's exit: its choice read and its file removed; Enter → the
+command runs out of sight and the echo area says how it ended."
+  (let* ((file (make-temp-file "atuin-ai-test-"))
+         (box (get-buffer-create " *atuin-ai-test-box*"))
+         (+atuin-record nil)
+         (+atuin-ai--running nil)
+         (default-directory temporary-file-directory)
+         said)
+    (with-temp-file file (insert "__atuin_ai_execute__:echo first; echo last-line\n"))
+    (push (list box file (list :buffer (current-buffer) :window (selected-window)
+                               :dir temporary-file-directory :minibuffer nil)
+                'background)
+          +atuin-ai--running)
+    (cl-letf (((symbol-function 'run-at-time) (lambda (_ _ fn &rest args) (apply fn args)))
+              ((symbol-function 'frame-focus-state) #'always)   ; no desktop notification
+              ((symbol-function 'message) (lambda (fmt &rest args) (setq said (apply #'format fmt args)))))
+      (+atuin-ai--exit-h box "finished\n")
+      (should-not (file-exists-p file))
+      (should-not +atuin-ai--running)
+      (let ((proc (get-buffer-process +atuin-ai--last)))
+        (while (and proc (process-live-p proc)) (accept-process-output proc 0.1)))
+      (accept-process-output nil 0.2)
+      (should (string-match-p "✔ echo first; echo last-line  →  last-line" said)))
+    (kill-buffer +atuin-ai--last)
+    (kill-buffer box)))
+
+(ert-deftest atuin-ai/question-mark-only-at-an-empty-prompt ()
+  (with-temp-buffer
+    (setq last-command-event ??)
+    (cl-letf (((symbol-function '+atuin-ai/ask) (lambda (&rest _) (insert "<box>"))))
+      (cl-letf (((symbol-function 'minibufferp) #'always)
+                ((symbol-function 'minibuffer-contents) (lambda () (buffer-string))))
+        (+atuin-ai/question-mark 1)
+        (should (equal (buffer-string) "<box>"))
+        (+atuin-ai/question-mark 1)
+        (should (equal (buffer-string) "<box>?"))))))

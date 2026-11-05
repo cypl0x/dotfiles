@@ -226,9 +226,10 @@
   (run-with-idle-timer 3 nil #'familiar-mode-line-mode 1))
 (add-hook 'doom-after-init-hook #'+familiar-mode-line-h)
 
-;; `?' and `ß' at an empty shell prompt ask, as they do in zsh (Atuin's `?',
-;; home/shell/zsh/familiar-ai.zsh's `ß'; ghostel runs zsh itself, so those
-;; work there).  Elsewhere they are just typed.
+;; `ß' at an empty shell prompt asks familiar, as in zsh
+;; (home/shell/zsh/familiar-ai.zsh; ghostel runs zsh itself, so it works
+;; there).  `?' is Atuin's AI, as in zsh too (lisp/+atuin-ai.el).  Elsewhere
+;; they are just typed.
 (defun +familiar/shell-question-mark ()
   "At an empty eshell or shell prompt, `familiar-ask'; else type the key."
   (interactive)
@@ -241,10 +242,8 @@
       (call-interactively #'familiar-ask)
     (self-insert-command 1)))
 
-(map! :after eshell :map eshell-mode-map :i "?" #'+familiar/shell-question-mark
-                                         :i "ß" #'+familiar/shell-question-mark)
-(map! :after shell :map shell-mode-map :i "?" #'+familiar/shell-question-mark
-                                       :i "ß" #'+familiar/shell-question-mark)
+(map! :after eshell :map eshell-mode-map :i "ß" #'+familiar/shell-question-mark)
+(map! :after shell :map shell-mode-map :i "ß" #'+familiar/shell-question-mark)
 
 (after! git-commit
   (map! :map git-commit-mode-map

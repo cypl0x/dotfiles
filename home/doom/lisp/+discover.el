@@ -211,6 +211,7 @@ styles still match the word itself."
     ("inline images, image preview" (org-link-preview))
     ("save as root, sudo" (doom/sudo-save-buffer))
     ("ask AI, chat, assistant" (familiar-ask))
+    ("shell command for…, ask the shell, Atuin AI" (+atuin-ai/ask) "zsh: ? at an empty prompt")
     ("insert screenshot" (+screenshot/insert-latest))
     ("process list, task manager" (proced))
     ("calculator" (quick-calc calc))
@@ -616,6 +617,7 @@ A complete key instead: what it does."
     ("a" "By name"                    apropos)
     ("?" "Ask: which command does…"   +discover/ask-which)
     ("A" "Ask anything (M-ß)"         familiar-ask)
+    ("!" "Ask the shell (Atuin AI)"   +atuin-ai/ask)
     ("w" "On the web"                 +lookup/online)]
    ["What is here"
     ("c" "Commands of these modes"    consult-mode-command)

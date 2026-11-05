@@ -62,10 +62,14 @@ reviewable smerge proposal (=F=), commit message (=C=), review the diff
 (=v=), hand the context to an agent shell (=H=, which starts one if none
 runs), spend (=$=).  [[#familiar][Reference]]
 
-** 3. Shell commands in plain words: =?=
+** 3. Shell commands in plain words: =SPC != and =?=
 
-At an empty eshell or shell prompt, =?= asks; the command lands on your
-prompt, unrun, like Atuin's =?= (which works in ghostel, where zsh runs).
+=SPC != opens Atuin AI's box (zsh's =?=) from anywhere; the region is the
+question.  Enter runs what it suggests: in a shell buffer there, from M-!
+as that command, elsewhere in a fresh terminal (=SPC u SPC !=: in the
+background, and the echo area tells you how it ended).  Tab puts it on the
+prompt.  =?= at an empty prompt of M-!, compile, eshell or shell does the
+same; =ß= there asks the Emacs assistant, as in zsh.  [[#atuin-ai][Reference]]
 
 ** 4. Your own commands: =SPC h /=
 
@@ -906,6 +910,32 @@ And it is an Atuin AI server (=familiar-atuin.el=, =/api/cli/chat=).  In zsh
 box like Atuin's own =?=, labelled "Emacs AI" and answered by Emacs; =Alt+ß= asks
 what's already on the prompt.  Enter runs the suggested command, Tab puts
 it on the prompt.  Atuin's =?= (Hub) is unchanged.
+
+*** Atuin AI from Emacs (=+atuin-ai.el=)
+:PROPERTIES:
+:CUSTOM_ID: atuin-ai
+:END:
+
+The other way round: Atuin's own box (=atuin ai inline --hook=, your Atuin
+Hub login and model, its tools and sessions) in a terminal below, and what
+you chose in it comes back to Emacs.
+
+| Key           | What                                                                         |
+|---------------+------------------------------------------------------------------------------|
+| =SPC !=       | Ask (the region, if active, is the question)                                 |
+| =SPC u SPC != | Ask; a command runs the other way (terminal ↔ background)                    |
+| =SPC o !=     | Menu: ask, ask with a terminal or in the background, type first, last output |
+| =?=           | At an empty prompt of M-!, M-&, compile, eshell, shell: the same             |
+
+| In the box | From a shell buffer                         | From a shell-command prompt | Elsewhere                                             |
+|------------+---------------------------------------------+-----------------------------+-------------------------------------------------------|
+| Enter      | runs it there                               | runs as that command        | a fresh terminal, or the background (=+atuin-ai-run=) |
+| Tab        | onto its prompt                             | into the prompt             | M-!-style, to edit first                              |
+| an answer  | echo area, or =*Atuin AI answer*= when long |                             |                                                       |
+
+In the background it runs as =compile= (so it is in Atuin's history); when
+it ends the echo area says ✔ or ✘, the command and its last line, and a
+desktop notification does when Emacs isn't focused.
 
 Every turn, wherever it came from (M-ß, =ß= in the shell, OpenAI clients,
 familiar's tasks), lands in one Org history (=familiar-history.el=,
