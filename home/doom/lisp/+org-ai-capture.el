@@ -299,10 +299,11 @@ headings and files rarely.  Judge by meaning."
               (save-excursion
                 (let* ((parent (and parent (list (nth 2 parent) (nth 3 parent) (nth 4 parent))))
                        (parent (if new-title (+org-ai-capture--insert (concat "* " new-title) parent) parent)))
-                  (+org-ai-capture--insert e parent)
-                  (push (concat (file-relative-name file org-directory)
-                                (if parent (concat " › " (nth 2 parent)) ""))
-                        places)))
+                  (let ((entry (+org-ai-capture--insert e parent)))
+                    (push (list (concat (file-relative-name file org-directory)
+                                        (if parent (concat " › " (nth 2 parent)) ""))
+                                (car entry) (nth 2 entry))
+                          places))))
               (cl-pushnew (current-buffer) touched)))))
     (dolist (b touched)
       (unless (memq b dirty) (with-current-buffer b (save-buffer))))
@@ -321,7 +322,9 @@ headings and files rarely.  Judge by meaning."
          " Entries for the vault; AI files each where it belongs   \\<+org-ai-capture-mode-map>\\[+org-ai-capture-finish] file · \\[+org-ai-capture-cancel] cancel"))
   (when (fboundp 'evil-insert-state) (evil-insert-state)))
 
-(defun +vault-capture--finish (entries)
+(defun +vault-capture--finish (entries &optional then)
+  "File ENTRIES (Org subtrees as text) into the vault; THEN, if given, gets
+the filed places (as in the report) once they are in."
   ;; The vault as it is now: the answer comes later.
   (let ((outline (+vault-capture--outline)) (vault org-directory))
     (quit-window t)
@@ -337,14 +340,120 @@ headings and files rarely.  Judge by meaning."
                            (replace-regexp-in-string "\\`[^{]*\\|[^}]*\\'" "" response)
                            :object-type 'plist :array-type 'list)))
                 (result (let ((org-directory vault)) (+vault-capture--file answer outline entries))))
+           (when then (funcall then (car result)))
+           (+vault-capture-report (car result))
            (message "Filed: %s%s"
-                    (mapconcat (lambda (p) (format "→ %s" p)) (car result) ", ")
+                    (mapconcat (lambda (p) (format "→ %s" (car p))) (car result) ", ")
                     (if (cdr result)
                         (format "  (not saved, you have edits there: %s)"
                                 (mapconcat #'buffer-name (cdr result) ", "))
                       ""))))))))
 
-(map! :leader :desc "Capture into the vault (AI files it)" "n x" #'+vault/ai-capture)
+
+;;;; Where it all went: the report
+
+;; After filing, *Filed into the vault* lists each entry and its place as a
+;; link (RET or a click goes there); x takes an entry back out where it
+;; landed, r refiles it (the AI chooses again).
+(declare-function org-cut-subtree "org" (&optional n))
+(declare-function org-copy-subtree "org" (&optional n cut force-store-markers nosubtrees))
+(declare-function org-back-to-heading "org" (&optional invisible-ok))
+(declare-function org-at-heading-p "org" (&optional invisible-not-ok))
+(defvar org-subtree-clip)
+(declare-function org-reveal "org")
+(declare-function evil-make-overriding-map "ext:evil" (keymap &optional state copy))
+
+(defun +vault-capture--report-line-entry ()
+  (or (get-text-property (line-beginning-position) '+vault-entry) (user-error "No filed entry on this line")))
+
+(defun +vault-capture-report-visit ()
+  "Go to the filed entry on this line."
+  (interactive)
+  (let ((m (cadr (+vault-capture--report-line-entry))))
+    (unless (buffer-live-p (marker-buffer m)) (user-error "Its buffer is gone"))
+    (pop-to-buffer (marker-buffer m)) (goto-char m) (org-reveal) (recenter 3)))
+
+(defun +vault-capture-report-remove ()
+  "Take the filed entry on this line back out of where it landed."
+  (interactive)
+  (pcase-let ((`(,place ,m ,title) (+vault-capture--report-line-entry)))
+    (when (y-or-n-p (format "Remove \"%s\" from %s? " title place))
+      (with-current-buffer (marker-buffer m)
+        (save-excursion (goto-char m) (org-cut-subtree)))
+      (let ((inhibit-read-only t))
+        (put-text-property (line-beginning-position) (line-end-position) 'face 'shadow)
+        (put-text-property (line-beginning-position) (line-end-position) '+vault-entry nil))
+      (message "Removed (it's on the kill ring: p puts it back)"))))
+
+(defun +vault-capture-report-refile ()
+  "Let the AI place the entry on this line again."
+  (interactive)
+  (let ((m (cadr (+vault-capture--report-line-entry))))
+    (with-current-buffer (marker-buffer m)
+      (save-excursion (goto-char m) (+vault/ai-refile)))))
+
+(defvar-keymap +vault-capture-report-mode-map
+  :parent special-mode-map
+  "RET" #'+vault-capture-report-visit  "<mouse-1>" #'+vault-capture-report-visit
+  "x" #'+vault-capture-report-remove  "r" #'+vault-capture-report-refile)
+
+(define-derived-mode +vault-capture-report-mode special-mode "Filed"
+  "Where the AI filed your entries: RET goes there, x takes one out, r refiles.")
+
+(defun +vault-capture-report (places)
+  "Show PLACES ((PLACE MARKER TITLE) …) of entries just filed."
+  (with-current-buffer (get-buffer-create "*Filed into the vault*")
+    (let ((inhibit-read-only t))
+      (unless (derived-mode-p '+vault-capture-report-mode) (+vault-capture-report-mode))
+      (goto-char (point-min))
+      (insert (propertize (format-time-string "%H:%M  ") 'face 'shadow)
+              (propertize (format "%d filed" (length places)) 'face 'bold)
+              (propertize "   RET go there · x take it out · r refile\n" 'face 'shadow))
+      (dolist (p places)
+        (insert (propertize (format "  %s  →  %s\n" (nth 2 p) (car p))
+                            '+vault-entry p 'mouse-face 'highlight 'help-echo "RET or click: go there")))
+      (insert "\n"))
+    (with-eval-after-load 'evil (evil-make-overriding-map +vault-capture-report-mode-map 'normal))
+    (display-buffer (current-buffer))))
+
+;;;; AI refile: the item at point to where it belongs
+
+;;;###autoload
+(defun +vault/ai-refile ()
+  "Move the Org item at point (with its subtree) to where it belongs in the
+vault, chosen by the AI like a capture.  It is put in at the new place
+first and only then removed from here, so a failed request loses nothing."
+  (interactive)
+  (unless (derived-mode-p 'org-mode) (user-error "Not in Org"))
+  (save-excursion
+    (org-back-to-heading t)
+    (let* ((origin (copy-marker (point)))
+           (text (progn (org-copy-subtree) org-subtree-clip)))
+      (+vault-capture--finish
+       (list text)
+       (lambda (places)
+         (when (and places (buffer-live-p (marker-buffer origin)))
+           (with-current-buffer (marker-buffer origin)
+             (save-excursion (goto-char origin) (org-cut-subtree)))
+           (message "Moved to %s" (car (car places)))))))))
+
+;;;###autoload
+(defun +vault/ai-capture-region (beg end)
+  "Capture the region BEG..END into the vault (each Org heading in it is an
+entry; plain text becomes one), in the capture buffer to look over first."
+  (interactive "r")
+  (let ((text (buffer-substring-no-properties beg end)))
+    (+vault/ai-capture)
+    (insert (if (string-match-p "\\`[ \t\n]*\\*+ " text) text (concat "* " (string-trim text) "\n")))
+    (goto-char (point-min))))
+
+(map! :leader :desc "Refile: AI moves this item in the vault" "n X" #'+vault/ai-refile)
+(map! :after org :map org-mode-map :localleader :desc "Refile (AI places it)" "R" #'+vault/ai-refile)
+(defun +vault/ai-capture-dwim (&optional beg end)
+  "Capture into the vault; with an active region, its text (BEG..END)."
+  (interactive (and (use-region-p) (list (region-beginning) (region-end))))
+  (if beg (+vault/ai-capture-region beg end) (+vault/ai-capture)))
+(map! :leader :desc "Capture into the vault (AI files it)" "n x" #'+vault/ai-capture-dwim)
 (map! :after org :map org-mode-map :localleader :desc "Capture (AI files it)" "C" #'+org/ai-capture)
 
 (provide '+org-ai-capture)
