@@ -4,6 +4,8 @@
 ;; ~/Pictures/Screenshots (grimblast copysave).  M-y lists text only, so
 ;; images get their own keys:
 ;;
+;;   SPC i S    link the newest screenshot right away, no prompt (C-u N:
+;;              the Nth newest); also SPC m l p in Org and Markdown
 ;;   M-Y        insert a screenshot: the clipboard image (as a pasted
 ;;              attachment, Org's yank-media) or a saved one, newest first,
 ;;              previewed while you move; Org gets a link, Markdown an image
@@ -80,6 +82,16 @@
       (+screenshot-insert-file (expand-file-name pick)))))
 
 ;;;###autoload
+(defun +screenshot/insert-latest (&optional n)
+  "Link the newest screenshot at point, or the Nth newest with a prefix arg."
+  (interactive "p")
+  (let ((file (nth (1- (max 1 (or n 1))) (+screenshot-files))))
+    (unless file
+      (user-error "No screenshot number %d in %s" (or n 1) +screenshot-dir))
+    (+screenshot-insert-file file)
+    (message "Linked %s (%s)" (file-name-nondirectory file) (+screenshot--age file))))
+
+;;;###autoload
 (defun +screenshot/browse ()
   "Screenshots in dired (dirvish), newest first."
   (interactive)
@@ -93,8 +105,14 @@
 
 (map! "M-Y" #'+screenshot/insert
       :leader
+      :desc "Latest screenshot"      "i S"   #'+screenshot/insert-latest
       :desc "Screenshots"            "o S"   #'+screenshot/browse
       :desc "Screenshot thumbnails"  "o C-s" #'+screenshot/thumbnails)
+
+(map! :after org :map org-mode-map :localleader
+      :desc "Latest screenshot" "l p" #'+screenshot/insert-latest)
+(map! :after markdown-mode :map markdown-mode-map :localleader
+      :desc "Latest screenshot" "l p" #'+screenshot/insert-latest)
 
 (provide '+screenshot)
 ;;; +screenshot.el ends here

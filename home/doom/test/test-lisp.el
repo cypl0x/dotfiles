@@ -799,6 +799,26 @@ and a temp exec-path where bin/tar links to store/tar."
       (+screenshot-insert-file file)
       (should (equal (buffer-string) "[[file:~/Pictures/Screenshots/x.png]]")))))
 
+(ert-deftest screenshot/insert-latest-no-prompt ()
+  (let* ((+screenshot-dir (file-name-as-directory (make-temp-file "shots" t)))
+         (old (expand-file-name "old.png" +screenshot-dir))
+         (new (expand-file-name "new.png" +screenshot-dir)))
+    (unwind-protect
+        (progn
+          (write-region "" nil old) (write-region "" nil new)
+          (set-file-times old (time-subtract nil 3600))
+          (with-temp-buffer
+            (org-mode)
+            (+screenshot/insert-latest)
+            (should (equal (buffer-string) (format "[[file:%s]]" (abbreviate-file-name new)))))
+          ;; A prefix arg counts back: 2 is the one before.
+          (with-temp-buffer
+            (org-mode)
+            (+screenshot/insert-latest 2)
+            (should (equal (buffer-string) (format "[[file:%s]]" (abbreviate-file-name old)))))
+          (should-error (with-temp-buffer (+screenshot/insert-latest 3)) :type 'user-error))
+      (delete-directory +screenshot-dir t))))
+
 ;;; +format
 
 (load (expand-file-name "../lisp/+format" (file-name-directory (or load-file-name buffer-file-name))) nil t)
