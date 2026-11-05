@@ -39,6 +39,20 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 08:46] — /github: like /ssh:, completing without waiting; hunks
+- ✔ *Your three asks, in order*: SPC f f =/github:cypl0x/vellumory/README.org=
+  (default branch; =@ref= for any other) — same buffer as =/github/…=;
+  =/gi= completes to =/github:= next to =/ssh:=; owners and repos complete
+  *without freezing*: known owners from a disk cache (you, orgs, people you
+  follow, visited), other names searched in the background as you type,
+  repos and trees stream in (0.35 ms / 1.4 ms measured, the rest arrives).
+- ✔ *Hunks* (SPC g H): click a fringe mark → the change in a popup with
+  buttons; right-click a changed line → actions; unstage /just this hunk/,
+  commit /just this hunk/, history of these lines, compare against any
+  revision.
+- Found on the way: completion used to make one API call per candidate
+  (marginalia-style attribute checks) — now none.
+
 ** [2026-11-05 Do 08:30] — All of gh, from Emacs; and why CI was red
 - 🚀 *SPC o G x*: every one of gh's 218 commands, described, flags completing
   from its own help; output in Emacs (Atuin records it); anything wanting
