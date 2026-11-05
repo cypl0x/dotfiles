@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 11:25] — Emacs writes to Claude Code sessions, natively
+- ✔ *Messaging a session from Emacs* (your option 3): Claude Code sessions
+  take messages on a local Unix socket; Emacs now speaks that protocol, so
+  there's no kitty, no tmux and no keystrokes. =SPC A W= lists the sessions,
+  =SPC A w= writes to one, =SPC A y= sends the region, =SPC A o= the Org item.
+  Tested from your running Emacs: five test messages arrived here as from
+  "Emacs". The answer is in buffer =*claude: reply from dotfiles-ae*= and in
+  the echo area.
+- 🔎 Earlier "nothing arrived" was only delay. A busy session reads peer
+  messages at its next step, so a quiet minute is normal.
+
 ** [2026-11-05 Do 10:17] — Measured, then fixed: wiggle, neomacs, org-lint, agents
 - ✔ *The zoom wiggle*: measured at 4x in a hidden frame — org-appear
   revealed markers under the cursor while you merely moved; a link shifted
