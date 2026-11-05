@@ -75,7 +75,9 @@
     (let ((source (generate-new-buffer " *merge*")))
       (unwind-protect
           (progn (with-current-buffer source (insert text))
-                 (replace-region-contents (point-min) (point-max) source 1.0))
+                 (if (< emacs-major-version 31)   ; SOURCE was a function returning it then
+                     (replace-region-contents (point-min) (point-max) (lambda () source) 1.0)
+                   (replace-region-contents (point-min) (point-max) source 1.0)))
         (kill-buffer source)))))
 
 (defun +merge--adopt-disk (theirs)

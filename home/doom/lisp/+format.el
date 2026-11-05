@@ -175,7 +175,9 @@ text after the heading's planning and drawers."
                   (when (y-or-n-p "Replace with the canonical form (undoable)? ")
                     ;; Minimal edits: markers, point and undo stay sensible.
                     (if (>= emacs-major-version 31)
-                        (replace-region-contents (point-min) (point-max) scratch)
+                        (if (< emacs-major-version 31)
+                            (replace-region-contents (point-min) (point-max) (lambda () scratch))
+                          (replace-region-contents (point-min) (point-max) scratch))
                       (with-no-warnings (replace-buffer-contents scratch)))))
               (when (buffer-live-p diff) (kill-buffer diff)))))
       (kill-buffer scratch))))

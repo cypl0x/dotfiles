@@ -179,7 +179,9 @@
         (if (zerop (buffer-size out))
             (user-error "stylua: the code doesn't parse")
           (with-current-buffer buf
-            (replace-region-contents (point-min) (point-max) out 1.0)))))))
+            (if (< emacs-major-version 31)
+                (replace-region-contents (point-min) (point-max) (lambda () out) 1.0)
+              (replace-region-contents (point-min) (point-max) out 1.0))))))))
 
 (provide '+lua)
 ;;; +lua.el ends here
