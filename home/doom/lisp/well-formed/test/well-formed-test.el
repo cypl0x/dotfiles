@@ -290,5 +290,42 @@
           (well-formed--apply f (car fixes)))
         (should (string-match-p "Third sentence" (nth 2 called)))
         (should (< (nth 0 called) (nth 1 called)))))))
+
+(ert-deftest well-formed-test-ai-layer ()
+  (require 'well-formed-ai)
+  (clrhash well-formed-ai--cache)
+  (setq well-formed-ai--sent nil)
+  (let ((requests nil) (callback nil))
+    (cl-letf (((symbol-function 'familiar-request)
+               (lambda (prompt &rest args) (push prompt requests) (setq callback (plist-get args :callback)))))
+      (well-formed-test--with #'org-mode "#+well_formed_goal: a friendly note for Emacs users\n\nAn old paragraph that was here before, with enough words in it.\n\nShort.\n"
+        (well-formed-mode 1)
+        (well-formed-ai-mode 1)
+        (unwind-protect
+            (progn
+              ;; What was there when the buffer was first checked isn't sent.
+              (well-formed-check)
+              (should (null requests))
+              (goto-char (point-max))
+              (insert "\nThe configuration of the system was done in a way that it is working now fine for me.\n")
+              (well-formed-check)
+              ;; One request: the long paragraph, with the goal; not the short one.
+              (should (= (length requests) 1))
+              (should (string-match-p "friendly note for Emacs users" (car requests)))
+              ;; Asked once: a second check while pending sends nothing new.
+              (well-formed-check)
+              (should (= (length requests) 1))
+              ;; The answer: a finding with its rewrite, located by its quote.
+              (funcall callback "{\"issues\": [{\"quote\": \"was done in a way that it is working now fine\", \"issue\": \"Wordy and the word order is off\", \"category\": \"clarity\", \"severity\": \"warning\", \"fix\": \"now works fine\"}]}" nil)
+              (let* ((found (well-formed-check))
+                     (f (cl-find 'ai found :key (lambda (f) (nth 2 f)))))
+                (should f)
+                (should (equal (nth 6 f) "was done in a way that it is working now fine"))
+                (should (equal (nth 5 f) '("now works fine")))
+                (should (memq f well-formed--findings))
+                ;; Fixing it rewrites the quote.
+                (well-formed--apply f (car (nth 5 f)))
+                (should (string-match-p "system now works fine for me" (buffer-string)))))
+          (well-formed-ai-mode -1))))))
 (provide 'well-formed-test)
 ;;; well-formed-test.el ends here

@@ -27,6 +27,8 @@
   (autoload cmd "well-formed" nil t))
 (autoload 'well-formed-report "well-formed-report" nil t)
 (autoload 'well-formed-menu "well-formed-menu" nil t)
+(autoload 'well-formed-ai-report "well-formed-ai" nil t)
+(autoload 'well-formed-ai-mode "well-formed-ai" nil t)
 
 ;; On after startup: the rules load (about 20 ms) a second after the first
 ;; buffer, not while Emacs starts (an idle timer never fired in a daemon
@@ -37,7 +39,10 @@
                                  (lambda ()
                                    (require 'well-formed)
                                    (require 'well-formed-report)
-                                   (global-well-formed-mode 1)))))
+                                   (global-well-formed-mode 1)
+                                   ;; The model's reading too (you asked for it on by default).
+                                   (when (require 'well-formed-ai nil t)
+                                     (well-formed-ai-mode 1))))))
 
 
 ;; Every finding can be fixed: rule-based fixes first (a split for a long
@@ -65,7 +70,8 @@
        :desc "Ignore finding"         "g" #'well-formed-ignore
        :desc "Explain finding"        "e" #'well-formed-explain
        :desc "List findings"          "L" #'well-formed-list
-       :desc "Writing style"          "S" #'well-formed-set-style))
+       :desc "Writing style"          "S" #'well-formed-set-style
+       :desc "AI assessment"          "a" #'well-formed-ai-report))
 
 (provide '+well-formed)
 ;;; +well-formed.el ends here

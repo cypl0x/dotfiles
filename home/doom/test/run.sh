@@ -8,9 +8,15 @@ here=$(cd "$(dirname "$0")" && pwd)
 lisp=$here/../lisp
 emacs=${EMACS:-emacs}
 # Modules that stand on their own under the shims; the rest need Doom loaded.
-standalone=(+org-subtree-edit.el +org-roam.el +messages.el +lua.el +org-links.el +transient.el +diagnostics.el +daemon.el +vellumory.el +workflow.el +tldr.el +proced.el +perf.el +usage.el +lsp-fallback.el +monet.el +persist.el +screenshot.el +format.el +vocab.el +docs.el +completion.el +org-lint.el +org-slash.el +org-cheatsheet.el +org-ai-capture.el +zoxide.el +tailscale.el +pide.el familiar/familiar.el familiar/familiar-mcp.el familiar/familiar-ask.el familiar/familiar-mcp-client.el familiar/familiar-mcp-http.el familiar/familiar-openai.el familiar/familiar-atuin.el familiar/familiar-history.el familiar/familiar-acp.el familiar/familiar-a2a.el familiar/familiar-rate.el familiar/familiar-prompts.el familiar/familiar-complete.el familiar/familiar-footprint.el well-formed/well-formed.el well-formed/well-formed-rules.el well-formed/well-formed-report.el well-formed/well-formed-menu.el)
+standalone=(+org-subtree-edit.el +org-roam.el +messages.el +lua.el +org-links.el +transient.el +diagnostics.el +daemon.el +vellumory.el +workflow.el +tldr.el +proced.el +perf.el +usage.el +lsp-fallback.el +monet.el +persist.el +screenshot.el +format.el +vocab.el +docs.el +completion.el +org-lint.el +org-slash.el +org-cheatsheet.el +org-ai-capture.el +zoxide.el +tailscale.el +pide.el familiar/familiar.el familiar/familiar-mcp.el familiar/familiar-ask.el familiar/familiar-mcp-client.el familiar/familiar-mcp-http.el familiar/familiar-openai.el familiar/familiar-atuin.el familiar/familiar-history.el familiar/familiar-acp.el familiar/familiar-a2a.el familiar/familiar-rate.el familiar/familiar-prompts.el familiar/familiar-complete.el familiar/familiar-footprint.el well-formed/well-formed.el well-formed/well-formed-rules.el well-formed/well-formed-report.el well-formed/well-formed-menu.el well-formed/well-formed-ai.el)
 
 lint() {
+  # Every file reads (balanced parens), the Doom-dependent ones too, which
+  # the byte-compile below can't load.
+  local f
+  for f in "$lisp"/*.el "$lisp"/*/*.el "$here"/../config.el "$here"/../init.el "$here"/../packages.el; do
+    "$emacs" -Q --batch --eval "(with-temp-buffer (insert-file-contents \"$f\") (goto-char (point-min)) (condition-case e (while t (read (current-buffer))) (end-of-file nil) (error (message \"UNREADABLE %s: %S\" \"$f\" e) (kill-emacs 1))))" || return 1
+  done
   "$emacs" -Q --batch -l "$here/shims.el" -l "$here/lint.el" \
     "${standalone[@]/#/$lisp/}" || return 1
   echo "lint: OK (${#standalone[@]} files)"
