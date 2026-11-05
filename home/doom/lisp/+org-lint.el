@@ -23,6 +23,15 @@
 ;;   same text =x= here, ~x~ there
 ;;   *bold* paragraph as heading   MD036
 ;;   link text "here", "link"      MD059
+;;   tab characters                MD010
+;;   table not aligned
+;;   ordered list 1. and 1) mixed  MD029
+;;   bare URL                      MD034
+;;   empty link or link text       MD042
+;;   image without caption or alt  MD045
+;;   = x= or ~ x~ (not marked up)  MD037 MD038
+;;   no final newline              MD047
+;;   a second #+title              MD025
 ;;
 ;;; Code:
 
@@ -38,6 +47,8 @@
 (declare-function org-element-property "org-element-ast" (property node &optional dflt force-undefer))
 (declare-function org-element-contents "org-element-ast" (node))
 (declare-function org-element-at-point "org-element" (&optional epom cached-only))
+(declare-function org-element-parent "org-element-ast" (node))
+(declare-function org-element-lineage "org-element-ast" (datum &optional types with-self))
 (declare-function +format-org--blank-positions "+format" ())
 (defvar org-lint--checkers)
 (defvar +format-org-verbatim)
@@ -223,6 +234,97 @@
           (list (org-element-property :begin l)
                 (format "Link text \"%s\" (MD059): say where it leads" (string-trim (car desc)))))))))
 
+
+(defun +org-lint-hard-tabs (_ast)
+  "Tabs in the text (MD010): they align differently everywhere."
+  (let (reports)
+    (while (re-search-forward "\t" nil t)
+      (unless (save-match-data (+org-lint--in-verbatim-p))
+        (push (list (match-beginning 0) "Tab character (MD010): use spaces") reports)
+        (forward-line 1)))
+    (nreverse reports)))
+
+(defun +org-lint--table-columns (line)
+  "Positions of the column separators (| and +) in table LINE."
+  (let (cols (i 0))
+    (while (string-match "[|+]" line i)
+      (push (match-beginning 0) cols) (setq i (match-end 0)))
+    (nreverse cols)))
+
+(defun +org-lint-table-alignment (ast)
+  "A table whose columns don't line up (TAB in it aligns it)."
+  (org-element-map ast 'table
+    (lambda (tbl)
+      (when (eq (org-element-property :type tbl) 'org)
+        (let* ((text (buffer-substring-no-properties (org-element-property :contents-begin tbl)
+                                                     (org-element-property :contents-end tbl)))
+               (rows (seq-filter (lambda (l) (string-match-p "\\`[ \t]*|" l)) (split-string text "\n" t)))
+               (shapes (delete-dups (mapcar #'+org-lint--table-columns rows))))
+          (when (cdr shapes)
+            (list (org-element-property :begin tbl) "Table not aligned (TAB in it aligns it)")))))))
+
+(defun +org-lint-ordered-delimiters (ast)
+  "An ordered list mixing 1. and 1) (MD029)."
+  (org-element-map ast 'plain-list
+    (lambda (l)
+      (when (eq (org-element-property :type l) 'ordered)
+        (let ((delims (delete-dups (org-element-map l 'item
+                                     (lambda (i) (when (eq (org-element-parent i) l)
+                                                   (substring (string-trim (org-element-property :bullet i)) -1)))
+                                     nil nil 'item))))
+          (when (cdr delims)
+            (list (org-element-property :begin l) "Ordered list mixes \"1.\" and \"1)\" (MD029)")))))))
+
+(defun +org-lint-bare-url (ast)
+  "A bare URL (MD034): [[URL][what it is]] reads better."
+  (org-element-map ast 'link
+    (lambda (l)
+      (when (and (eq (org-element-property :format l) 'plain)
+                 (member (org-element-property :type l) '("http" "https")))
+        (list (org-element-property :begin l) "Bare URL (MD034): [[URL][what it is]]")))))
+
+(defun +org-lint-empty-link (_ast)
+  "A link with nothing to go to, or empty link text (MD042)."
+  (let (reports)
+    (while (re-search-forward "\\[\\[[ \t]*\\]\\(?:\\[[^]]*\\]\\)?\\]\\|\\[\\[[^]\n]+\\]\\[[ \t]*\\]\\]" nil t)
+      (unless (save-match-data (+org-lint--in-verbatim-p))
+        (push (list (match-beginning 0) "Empty link or empty link text (MD042)") reports)))
+    (nreverse reports)))
+
+(defconst +org-lint--image-re "\\.\\(?:png\\|jpe?g\\|gif\\|svg\\|webp\\|avif\\)\\'")
+
+(defun +org-lint-image-alt (ast)
+  "An image without a caption or alt text (MD045)."
+  (org-element-map ast 'link
+    (lambda (l)
+      (when (and (member (org-element-property :type l) '("file" "attachment"))
+                 (string-match-p +org-lint--image-re (org-element-property :path l))
+                 (null (org-element-contents l)))
+        (let ((par (org-element-lineage l '(paragraph))))
+          (unless (or (and par (org-element-property :caption par))
+                      (and par (seq-some (lambda (a) (string-match-p ":alt" a))
+                                         (org-element-property :attr_html par))))
+            (list (org-element-property :begin l)
+                  "Image without #+caption or #+attr_html: :alt (MD045)")))))))
+
+(defun +org-lint-emphasis-spaces (_ast)
+  "=x = or ~ x~: spaces inside the markers, shown literally (MD037/MD038)."
+  (let (reports)
+    (while (re-search-forward "\\(?:^\\|[[:space:](\"']\\)\\([=~]\\)\\(?: [^\n=~]*[^ \n=~]\\|[^ \n=~][^\n=~]* \\)\\1\\(?:[[:space:][:punct:]]\\|$\\)" nil t)
+      (unless (save-match-data (+org-lint--in-verbatim-p))
+        (push (list (match-beginning 1) "Space inside =…= or ~…~: Org won't mark it up (MD037/MD038)") reports)))
+    (nreverse reports)))
+
+(defun +org-lint-final-newline (_ast)
+  "The file doesn't end with a newline (MD047)."
+  (when (and (> (point-max) (point-min)) (/= (char-before (point-max)) ?\n))
+    (list (list (1- (point-max)) "No newline at the end of the file (MD047)"))))
+
+(defun +org-lint-several-titles (ast)
+  "More than one #+title (MD025): one document, one title."
+  (cdr (org-element-map ast 'keyword
+         (lambda (k) (when (equal (org-element-property :key k) "TITLE")
+                       (list (org-element-property :begin k) "A second #+title (MD025)"))))))
 (defconst +org-lint-rules
   '((+org-lint-verbatim-code      "=code= that should be ~code~" low)
     (+org-lint-empty-heading      "Heading without a title" high)
@@ -236,7 +338,16 @@
     (+org-lint-list-bullets       "Bullets mixed in one list (MD004)" high)
     (+org-lint-mixed-markup       "Same text as =verbatim= and ~code~" high)
     (+org-lint-emphasis-heading   "Emphasis used as a heading (MD036)" low)
-    (+org-lint-link-text          "Link text that says nothing (MD059)" high))
+    (+org-lint-link-text          "Link text that says nothing (MD059)" high)
+    (+org-lint-hard-tabs          "Tab characters (MD010)" high)
+    (+org-lint-table-alignment    "Table not aligned" high)
+    (+org-lint-ordered-delimiters "Ordered list mixes 1. and 1) (MD029)" high)
+    (+org-lint-bare-url           "Bare URL (MD034)" low)
+    (+org-lint-empty-link         "Empty link or link text (MD042)" high)
+    (+org-lint-image-alt          "Image without caption or alt text (MD045)" low)
+    (+org-lint-emphasis-spaces    "Spaces inside =…= or ~…~ (MD037/MD038)" high)
+    (+org-lint-final-newline      "No final newline (MD047)" high)
+    (+org-lint-several-titles     "More than one #+title (MD025)" high))
   "The style rules: (FUNCTION SUMMARY TRUST).")
 
 (with-eval-after-load 'org-lint
