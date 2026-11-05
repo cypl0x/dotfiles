@@ -881,6 +881,24 @@ and a temp exec-path where bin/tar links to store/tar."
     (should (equal (+org-links--local-file "/tmp/a.org::*Heading") "/tmp/a.org"))
     (delete-directory dir t)))
 
+(ert-deftest messages/times-and-colors-without-recursion ()
+  (load (expand-file-name "+messages" test-lisp-dir) nil t)
+  (with-current-buffer (messages-buffer) (+messages-setup-h))
+  ;; *Messages* is read-only and stamping runs inside `message': this once
+  ;; recursed forever (an error, reported by `message', stamped again).
+  (message "[eglot] (warning) Use ‘find-file’ or C-x C-f")
+  (message "plain")
+  (message "plain")
+  (with-current-buffer "*Messages*"
+    (font-lock-ensure)
+    (goto-char (point-max))
+    (forward-line -2)
+    (should (string-match-p "\\`[0-9:]+ \\'" (get-text-property (point) 'line-prefix)))
+    (should (memq '+messages-tag (ensure-list (get-text-property (point) 'face))))
+    (forward-line 1)
+    (should (equal (buffer-substring-no-properties (line-beginning-position) (line-end-position)) "plain [2 times]"))
+    (should (get-text-property (point) 'line-prefix))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)

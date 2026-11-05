@@ -533,6 +533,7 @@
 (load! "lisp/+transient")   ;; SPC ' reopens the last minibuffer or transient menu
 (load! "lisp/+org-links")   ;; Org links show what they point to (icons, broken ones struck)
 (load! "lisp/+lua")         ;; Lua for hyprland.lua: Hyprland API in LuaLS, selene, stylua, eval in Hyprland
+(load! "lisp/+messages")    ;; *Messages* with times, colors, rendered markup, buttons
 (load! "lisp/+org-slash")    ;; /table5x2, /code, /todo ... in Org (Notion-like)
 (load! "lisp/+org-cheatsheet") ;; SPC m ?: Org by example, from the manual
 (load! "lisp/+org-ai-capture") ;; SPC m C: write headings, AI files them where they belong
