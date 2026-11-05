@@ -52,14 +52,14 @@ Can be an integer to determine the exact padding."
 
   ;; name        default   256       16
   ((bg         '("#ffffff" "white"   "white"        ))
-   (fg         (list (modus-vibrant-aaa "#383a42" modus-vibrant-light-bg) "#424242" "black"        ))
+   (fg         (list (modus-vibrant-aaa-vivid "#383a42" modus-vibrant-light-bg) "#424242" "black"        ))
 
    ;; These are off-color variants of bg/fg, used primarily for `solaire-mode',
    ;; but can also be useful as a basis for subtle highlights (e.g. for hl-line
    ;; or region), especially when paired with the `doom-darken', `doom-lighten',
    ;; and `doom-blend' helper functions.
    (bg-alt     '("#f0f0f0" "white"   "white"        ))
-   (fg-alt     (list (modus-vibrant-aaa "#c6c7c7" modus-vibrant-light-bg) "#c7c7c7" "brightblack"  ))
+   (fg-alt     (list (modus-vibrant-aaa-vivid "#c6c7c7" modus-vibrant-light-bg) "#c7c7c7" "brightblack"  ))
 
    ;; These should represent a spectrum from bg to fg, where base0 is a starker
    ;; bg and base8 is a starker fg. For example, if bg is light grey and fg is
@@ -75,17 +75,17 @@ Can be an integer to determine the exact padding."
    (base8      '("#1b2229" "black"   "black"        ))
 
    (grey       base4)
-   (red        (list (modus-vibrant-aaa "#ff665c" modus-vibrant-light-bg) "#e45649" "red"          ))
-   (orange     (list (modus-vibrant-aaa "#e69055" modus-vibrant-light-bg) "#dd8844" "brightred"    ))
-   (green      (list (modus-vibrant-aaa "#7bc275" modus-vibrant-light-bg) "#50a14f" "green"        ))
-   (teal       (list (modus-vibrant-aaa "#4db5bd" modus-vibrant-light-bg) "#44b9b1" "brightgreen"  ))
-   (yellow     (list (modus-vibrant-aaa "#FCCE7B" modus-vibrant-light-bg) "#986801" "yellow"       ))
-   (blue       (list (modus-vibrant-aaa "#51afef" modus-vibrant-light-bg) "#4078f2" "brightblue"   ))
+   (red        (list (modus-vibrant-aaa-vivid "#ff665c" modus-vibrant-light-bg) "#e45649" "red"          ))
+   (orange     (list (modus-vibrant-aaa-vivid "#e69055" modus-vibrant-light-bg) "#dd8844" "brightred"    ))
+   (green      (list (modus-vibrant-aaa-vivid "#7bc275" modus-vibrant-light-bg) "#50a14f" "green"        ))
+   (teal       (list (modus-vibrant-aaa-vivid "#4db5bd" modus-vibrant-light-bg) "#44b9b1" "brightgreen"  ))
+   (yellow     (list (modus-vibrant-aaa-vivid "#FCCE7B" modus-vibrant-light-bg) "#986801" "yellow"       ))
+   (blue       (list (modus-vibrant-aaa-vivid "#51afef" modus-vibrant-light-bg) "#4078f2" "brightblue"   ))
    (dark-blue  '("#a0bcf8" "#a0bcf8" "blue"         ))
-   (magenta    (list (modus-vibrant-aaa "#C57BDB" modus-vibrant-light-bg) "#a626a4" "magenta"      ))
-   (violet     (list (modus-vibrant-aaa "#a991f1" modus-vibrant-light-bg) "#b751b6" "brightmagenta"))
-   (cyan       (list (modus-vibrant-aaa "#5cEfFF" modus-vibrant-light-bg) "#0184bc" "brightcyan"   ))
-   (dark-cyan  (list (modus-vibrant-aaa "#6A8FBF" modus-vibrant-light-bg) "#005478" "cyan"         ))
+   (magenta    (list (modus-vibrant-aaa-vivid "#C57BDB" modus-vibrant-light-bg) "#a626a4" "magenta"      ))
+   (violet     (list (modus-vibrant-aaa-vivid "#a991f1" modus-vibrant-light-bg) "#b751b6" "brightmagenta"))
+   (cyan       (list (modus-vibrant-aaa-vivid "#5cEfFF" modus-vibrant-light-bg) "#0184bc" "brightcyan"   ))
+   (dark-cyan  (list (modus-vibrant-aaa-vivid "#6A8FBF" modus-vibrant-light-bg) "#005478" "cyan"         ))
 
    ;; These are the "universal syntax classes" that doom-themes establishes.
    ;; These *must* be included in every doom themes, or your theme will throw an
@@ -93,19 +93,24 @@ Can be an integer to determine the exact padding."
    (highlight      blue)
    (vertical-bar   (doom-darken base2 0.1))
    (selection      dark-blue)
-   (builtin        magenta)
+   (builtin        violet)
    (comments       (if doom-modus-vibrant-light-brighter-comments cyan
-                     (list (modus-vibrant-aaa "#9ca0a4" modus-vibrant-light-bg) "#9ca0a4" "brightblack")))
+                     (list (modus-vibrant-aaa-vivid "#9ca0a4" modus-vibrant-light-bg) "#9ca0a4" "brightblack")))
    (doc-comments   (doom-darken comments 0.15))
-   (constants      violet)
+   ;; At 7:1 on white the ten colors are six families (teal = cyan, blue ~
+   ;; dark-cyan, orange ~ yellow, magenta ~ violet; OKLab distances 0.00-0.06):
+   ;; one role per family, so roles don't share a color (they did: functions,
+   ;; constants, variables, builtins were all magenta; types and numbers one
+   ;; brown).  Operators plain, as in Modus.
+   (constants      blue)
    (functions      magenta)
    (keywords       red)
-   (methods        cyan)
-   (operators      blue)
+   (methods        magenta)
+   (operators      fg)
    (type           yellow)
    (strings        green)
-   (variables      (doom-darken magenta 0.36))
-   (numbers        orange)
+   (variables      cyan)
+   (numbers        blue)
    (region         `(,(doom-darken (car bg-alt) 0.1) ,@(doom-darken (cdr base0) 0.3)))
    (error          red)
    (warning        yellow)
@@ -117,9 +122,9 @@ Can be an integer to determine the exact padding."
    ;; These are extra color variables used only in this theme; i.e. they aren't
    ;; mandatory for derived themes.
    (modeline-fg              fg)
-   (modeline-fg-alt          (doom-blend
-                              violet base4
-                              (if doom-modus-vibrant-light-brighter-modeline 0.5 0.2)))
+   ;; Inactive windows' mode line at 6:1 against its background (Modus's
+   ;; level; it was 2.6:1, the path in it hard to read).
+   (modeline-fg-alt          (list (modus-vibrant-aaa-vivid "#8f89b0" "#e5e5e5" 6.0) "#585858" "brightblack"))
    (modeline-bg              (if doom-modus-vibrant-light-brighter-modeline
                                  (doom-darken base2 0.05)
                                base1))
@@ -186,6 +191,10 @@ Can be an integer to determine the exact padding."
    ((org-block-begin-line &override) :foreground fg :slant 'italic)
    (org-ellipsis :underline nil :background bg     :foreground red)
    ((org-quote &override) :background base1)
+   ;; TODO red, DONE green, both bold (Modus's prose-todo / prose-done): they
+   ;; were green and near-black, alike at a glance.
+   (org-todo :foreground red :weight 'bold)
+   (org-done :foreground green :weight 'bold)
    ;;;; posframe
    (ivy-posframe               :background base0)
    ;;;; selectrum
