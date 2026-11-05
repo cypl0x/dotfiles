@@ -39,6 +39,24 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 04:20] — ✦ well-formed: a writing assistant with no Java
+- LanguageTool is gone: 2.8 GB of Java, 30 s to start, and the reason
+  =SPC X= capture crawled (eglot retried it in every buffer of the vault).
+- In its place, =well-formed=: Grammarly's five kinds of findings
+  (correctness, clarity, engagement, delivery, consistency) as rules and
+  statistics in Emacs Lisp, English and German.  About 60 rules: a/an by
+  sound, then/than, das/dass, a missing comma before "dass", wordy and
+  redundant phrases, passive voice, clichés, hedges, US and UK spelling
+  mixed in one document, and more.
+- It reads only prose: Org and Markdown markup, code, links and tables are
+  left out, and in code only comments are checked.  It checks again only
+  the paragraph you changed and stops as soon as you press a key.
+- =SPC P m= opens the menu.  =SPC P x= fixes the finding at point and
+  =SPC P g= ignores it.  =SPC P v= shows the report: scores, eight
+  readability indices, the tone mix in percent, and sentence-length plots.
+  Set a style per document with =#+well_formed: academic=.
+- It takes effect when you next restart the daemon.
+
 ** [2026-11-05 Do 00:32] — Lean proofs, Isabelle-style
 - With =SPC t P= open on a Lean file, the right panel shows the tactic
   state where your cursor is: hypotheses and the goal, as Isabelle's
