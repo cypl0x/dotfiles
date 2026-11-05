@@ -3,8 +3,8 @@
 ;; flycheck's message at point showed through flycheck-popup-tip (popup.el,
 ;; drawn with overlays in the buffer's own lines): a long message, such as
 ;; an org-lint finding, wrapped in odd places and the popup jumped above the
-;; cursor with a gap.  Now a child frame (posframe, already installed) shows
-;; it right under the line, starting at the error's column:
+;; cursor with a gap.  Now it shows in the echo area (`+diagnostics-where',
+;; default), or in a child frame right under the line at the error's column:
 ;;   - one block per diagnostic: a colored mark for its level, the message
 ;;     wrapped at word boundaries to fit the window, the checker and rule
 ;;     dimmed after it
@@ -64,27 +64,37 @@ at most 90."
             (fill-region beg (point))))))
     (buffer-string)))
 
+(defcustom +diagnostics-where 'echo
+  "Where diagnostics at point show: `echo' (the echo area, as you asked for
+2026-11-05: text where the eye already goes for messages) or `popup' (a
+child frame under the line)."
+  :type '(choice (const echo) (const popup)) :group 'flycheck)
+
 (defun +diagnostics-show (errors)
-  "Show ERRORS (flycheck's at point) in a popup under the line."
-  (when (and errors (display-graphic-p) (require 'posframe nil t)
+  "Show ERRORS (flycheck's at point) where `+diagnostics-where' says."
+  (when (and errors
              ;; Doom's rule: not while typing, selecting or completing.
              (if (and (bound-and-true-p evil-local-mode) (not (evil-emacs-state-p)))
                  (evil-normal-state-p)
                (and (not (region-active-p))
                     (not (ignore-errors (>= corfu--index 0))))))
-    (let ((text (+diagnostics--format errors (+diagnostics--width))))
-      (posframe-show +diagnostics-buffer
-                     :string text
-                     :position (point)
-                     :poshandler #'posframe-poshandler-point-bottom-left-corner
-                     :background-color (face-attribute 'corfu-default :background nil 'default)
-                     :foreground-color (face-attribute 'default :foreground)
-                     :border-width 1
-                     :border-color (face-attribute 'corfu-border :background nil 'default)
-                     :left-fringe 6 :right-fringe 6
-                     :lines-truncate t
-                     :accept-focus nil)
-      (add-hook 'pre-command-hook #'+diagnostics-hide))))
+    (if (or (eq +diagnostics-where 'echo) (not (display-graphic-p)) (not (require 'posframe nil t)))
+        ;; The echo area: as wide as the frame, wrapped there; eldoc waits.
+        (let ((message-log-max nil))
+          (message "%s" (+diagnostics--format errors (max 40 (- (frame-width) 4)))))
+      (let ((text (+diagnostics--format errors (+diagnostics--width))))
+        (posframe-show +diagnostics-buffer
+                       :string text
+                       :position (point)
+                       :poshandler #'posframe-poshandler-point-bottom-left-corner
+                       :background-color (face-attribute 'corfu-default :background nil 'default)
+                       :foreground-color (face-attribute 'default :foreground)
+                       :border-width 1
+                       :border-color (face-attribute 'corfu-border :background nil 'default)
+                       :left-fringe 6 :right-fringe 6
+                       :lines-truncate t
+                       :accept-focus nil)
+        (add-hook 'pre-command-hook #'+diagnostics-hide)))))
 
 (defun +diagnostics-hide ()
   "Hide the diagnostics popup."
