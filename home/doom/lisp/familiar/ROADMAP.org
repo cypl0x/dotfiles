@@ -56,7 +56,7 @@ the JOURNAL entry of that day (repos, stars, last push, gaps).
    so any tool that speaks it gets Emacs' tools and context.
 7. [X] A2A (=familiar-a2a.el=, spec 1.0): agent card + task endpoints over the same HTTP server; an
    =@agent= keyword in M-ß to delegate to a remote A2A agent.
-8. [ ] Split out: =familiar= as a standalone package (MELPA), Doom glue as a
+8. [ ] (tracked in ~/vault/mess.org) Split out: =familiar= as a standalone package (MELPA), Doom glue as a
    module.
 
 Each step: research the current spec first (spec version, upstream

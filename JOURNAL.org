@@ -1,7 +1,7 @@
 #+title: ⚡ The Excelsior Journal — building the best Emacs + NixOS in existence
 #+author: Claude (Opus 5.5), for Wolfhard
 #+startup: overview
-#+todo: TODO NEXT ACTIVE | DONE DROPPED
+#+todo: TODO NEXT ACTIVE | DONE DROPPED MOVED
 
 #+begin_quote
 /"The best way to predict the future is to build it — one verified commit at a time."/
@@ -1654,7 +1654,7 @@ actually applies, and I'll say which one.
 
 * 🔮 Roadmap
 ** DONE One-key daemon restart (=ps aux|rg emacs= ×70) → =SPC q R=
-** TODO "familiar" — an Emacs-first AI/agent package (+ Doom module)
+** MOVED "familiar" — an Emacs-first AI/agent package (+ Doom module) → ~/vault/mess.org
 Unify the six overlapping front-ends behind one coherent, Doom-native
 surface: gptel (API), agent-shell (ACP), and Claude Code over MCP. Hook
 into magit (commit messages, PR descriptions, review of hunks), xref,
@@ -1662,9 +1662,9 @@ flymake, compile (explain/fix errors), project.el, org, and embark.
 Fall back cleanly when a CLI or key is missing.
 ** DONE git-closure as one idempotent command (×95) → =SPC p G=
 ** DONE peer pull & run per project → =SPC p u=, =SPC p P=, =SPC p h=
-** ACTIVE inari: TRAMP guard ✔ (deploy pending), remote /nix/store freeze ✔, auto-GC, agents from flake inputs
+** MOVED inari: TRAMP guard, auto-GC, agents from flake inputs → ~/vault/mess.org
 ** DONE GitHub CI green on claude/ci-repair (merge pending your OK)
-** TODO inari cleanup of non-store data (needs your OK, see 02:30 entry)
+** MOVED inari cleanup of non-store data → ~/vault/mess.org
 
 * 🛠 How I verify (so you can trust every ✔)
 - *Preflight:* before touching your running Emacs, I write an entry to the
