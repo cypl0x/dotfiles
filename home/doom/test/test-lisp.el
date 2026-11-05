@@ -2123,3 +2123,14 @@ and a temp exec-path where bin/tar links to store/tar."
       (should (equal (car (+gh--count (lambda (x) (plist-get x :repo)) v)) '("o/r" . 2)))
       (should (equal (+gh--count (lambda (x) (file-name-extension (or (plist-get x :path) "")))  v) '(("el" . 2)))))
     (delete-file +gh-browse-visits-file)))
+
+(ert-deftest org-babel/results-ending-in-a-blank-line-convert ()
+  "Org's table conversion of output ending in a blank line (gh --help)."
+  (require 'org)
+  (load (expand-file-name "+org-babel" test-lisp-dir) nil t)
+  (require 'org-table)
+  (dolist (text '("A B\n\n" "A B\nC D\n\n" "Usage:  gh <command>\n\nCORE  auth\n\n\n" "A B\n" ""))
+    (with-temp-buffer
+      (insert text)
+      (should-not (condition-case e (progn (org-table-convert-region (point-min) (point-max) 'babel-auto) nil)
+                    (error e))))))

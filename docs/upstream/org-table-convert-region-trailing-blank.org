@@ -1,0 +1,45 @@
+#+title: org-table-convert-region errors when the region ends with a blank line
+#+date: 2026-11-05
+#+property: status draft (not filed; needs the user's OK)
+
+* Where to file
+emacs-orgmode@gnu.org (M-x org-submit-bug-report), subject:
+"[BUG] org-table-convert-region: wrong side of point when region ends in a blank line"
+
+* Report
+
+Org main (emacs-straight/org-mode, commit 08830e013 of 2026-10-30) and
+Org 9.8.9; also Org 9.8.7 as bundled with Emacs 32.0.50.
+
+=org-table-convert-region= signals =(error "Invalid search bound (wrong
+side of point)")= when the region ends with an empty line.  Babel hits it
+for any shell block whose output ends in a blank line (=gh --help=, most
+CLI help texts), as =Error reading results: ...= from
+=org-babel-import-elisp-from-file=.
+
+Recipe, =emacs -Q=:
+
+#+begin_src emacs-lisp
+(require 'org)
+(with-temp-buffer
+  (insert "A B\n\n")
+  (org-table-convert-region (point-min) (point-max) 'babel-auto))
+;; => (error "Invalid search bound (wrong side of point)")
+#+end_src
+
+Also ="A B\nC D\n\n"=.  ="A B\n"= and ="\nA B\n"= work.
+
+Cause: END is at the start of the empty last line; =(if (bolp)
+(backward-char 1) ...)= leaves it at that line's beginning, so it stays
+a line start.  The separator regexp (=^ *\|…=) then matches the empty
+string right at END; =replace-match= inserts ="| "= there, after END's
+marker (insertion type nil), and point ends up past END.  The next
+=(re-search-forward re end t)= has its bound behind point.
+
+The 2026-10-30 commit "Do not error on empty regions" doesn't cover
+this case (verified against that file).
+
+Possible fix: stop at END, e.g. =(while (and (< (point) end)
+(re-search-forward re end t)) ...)=, or move END back over trailing
+blank lines before converting (what the local workaround does:
+=~/dotfiles/home/doom/lisp/+org-babel.el=).
