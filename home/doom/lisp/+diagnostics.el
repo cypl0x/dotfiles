@@ -15,6 +15,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'color)
 
 (declare-function posframe-show "ext:posframe" (buffer-or-name &rest args))
 (declare-function posframe-hide "ext:posframe" (buffer-or-name))
@@ -114,5 +115,157 @@ child frame under the line)."
       (kill-local-variable 'flycheck-display-errors-function)
       (kill-local-variable 'flycheck-clear-displayed-errors-function))))
 
+
+;;;; The look: a tint, not a squiggle
+
+;; Squiggles (wave underlines) are loud, and they sit under the text, so
+;; dozens of prose findings make a page look broken.  Each diagnosed piece
+;; of text gets a faint tint of its severity's color instead: errors red,
+;; warnings amber, suggestions blue (green reads as "fine"), spelling as an
+;; error.  The same colors everywhere: flycheck, flymake (eglot), jinx,
+;; the fringe.  Hover or move onto it: the message is in the echo area.
+
+(defcustom +diagnostics-style 'tint
+  "How diagnosed text looks: `tint' (a faint background in the severity's
+color), `line' (a straight underline), or `wave' (the classic squiggle)."
+  :type '(choice (const tint) (const line) (const wave)) :group 'flycheck)
+
+(defcustom +diagnostics-tint 0.16
+  "How strong the tint is: the share of the severity color in the background."
+  :type 'number :group 'flycheck)
+
+(defun +diagnostics--color (face attr fallback)
+  (let ((c (face-attribute face attr nil t)))
+    (if (and (stringp c) (not (string-prefix-p "unspecified" c))) c fallback)))
+
+(defun +diagnostics--blend (color background alpha)
+  "COLOR over BACKGROUND at ALPHA, as #rrggbb."
+  (let ((a (color-name-to-rgb color)) (b (color-name-to-rgb background)))
+    (if (not (and a b)) color
+      (apply #'color-rgb-to-hex
+             (append (cl-mapcar (lambda (x y) (+ (* alpha x) (* (- 1 alpha) y))) a b) '(2))))))
+
+(defun +diagnostics-colors ()
+  "The severity colors: (ERROR WARNING INFO), from the theme."
+  (list (+diagnostics--color 'error :foreground "#ff665c")
+        (+diagnostics--color 'warning :foreground "#FCCE7B")
+        (+diagnostics--color 'font-lock-function-name-face :foreground "#51afef")))
+
+(defun +diagnostics--spec (color)
+  (pcase +diagnostics-style
+    ('tint (list :background (+diagnostics--blend color (+diagnostics--color 'default :background "#242730")
+                                                  +diagnostics-tint)
+                 :underline nil))
+    ('line (list :underline (list :color color :style 'line :position t) :background 'unspecified))
+    (_ (list :underline (list :color color :style 'wave) :background 'unspecified))))
+
+(defun +diagnostics-apply-look-h (&rest _)
+  "Give every diagnostics face the look of `+diagnostics-style'."
+  (pcase-let ((`(,err ,warn ,info) (+diagnostics-colors)))
+    (dolist (pair `((flycheck-error . ,err) (flycheck-warning . ,warn) (flycheck-info . ,info)
+                    (flymake-error . ,err) (flymake-warning . ,warn) (flymake-note . ,info)
+                    (jinx-misspelled . ,err)))
+      (when (facep (car pair))
+        (apply #'set-face-attribute (car pair) nil (+diagnostics--spec (cdr pair)))))
+    ;; The fringe marks in the same three colors.
+    (dolist (pair `((flycheck-fringe-error . ,err) (flycheck-fringe-warning . ,warn) (flycheck-fringe-info . ,info)))
+      (when (facep (car pair)) (set-face-attribute (car pair) nil :foreground (cdr pair))))))
+
+(add-hook 'doom-load-theme-hook #'+diagnostics-apply-look-h 90)
+(with-eval-after-load 'flycheck (+diagnostics-apply-look-h))
+(with-eval-after-load 'flymake (+diagnostics-apply-look-h))
+(with-eval-after-load 'jinx (+diagnostics-apply-look-h))
+
+;;;; Calm: suggestions only where you are
+
+;; In prose a page can hold a hundred suggestions (info level).  With
+;; `+diagnostics-calm-mode' (on in text buffers) they are tinted only in the
+;; paragraph at point; elsewhere only the fringe shows them.  Errors and
+;; warnings stay visible everywhere.
+
+(defface +diagnostics-calm '((t))
+  "Suggestions away from point: nothing (the fringe still marks them)."
+  :group (quote flycheck))
+
+(defvar-local +diagnostics--calm-region nil "(BEG . END) where suggestions show now.")
+(defvar +diagnostics-calm-mode)
+
+(defun +diagnostics--paragraph ()
+  (save-excursion
+    (cons (progn (backward-paragraph) (point)) (progn (forward-paragraph 1) (point)))))
+
+(defun +diagnostics--calm-overlay-p (ov)
+  (and (overlay-get ov 'flycheck-overlay)
+       (memq (overlay-get ov 'category) '(flycheck-info-overlay))))
+
+(defun +diagnostics-calm-update (&rest _)
+  "Show suggestions in the paragraph at point, calm them elsewhere."
+  (when +diagnostics-calm-mode
+    (let ((here (+diagnostics--paragraph)))
+      (unless (equal here +diagnostics--calm-region)
+        (setq +diagnostics--calm-region here)
+        (dolist (ov (overlays-in (point-min) (point-max)))
+          (when (+diagnostics--calm-overlay-p ov)
+            (overlay-put ov 'face (unless (and (< (overlay-start ov) (cdr here))
+                                               (> (overlay-end ov) (car here)))
+                                    '+diagnostics-calm))))))))
+
+(defun +diagnostics-calm-recheck-h ()
+  "New overlays after a check: calm them too."
+  (setq +diagnostics--calm-region nil)
+  (+diagnostics-calm-update))
+
+(define-minor-mode +diagnostics-calm-mode
+  "Prose suggestions tinted only in the paragraph at point."
+  :lighter nil
+  (if +diagnostics-calm-mode
+      (progn (add-hook 'post-command-hook #'+diagnostics-calm-update nil t)
+             (add-hook 'flycheck-after-syntax-check-hook #'+diagnostics-calm-recheck-h nil t)
+             (+diagnostics-calm-recheck-h))
+    (remove-hook 'post-command-hook #'+diagnostics-calm-update t)
+    (remove-hook 'flycheck-after-syntax-check-hook #'+diagnostics-calm-recheck-h t)
+    (dolist (ov (overlays-in (point-min) (point-max)))
+      (when (+diagnostics--calm-overlay-p ov) (overlay-put ov 'face nil)))
+    (setq +diagnostics--calm-region nil)))
+
+(add-hook 'text-mode-hook #'+diagnostics-calm-mode)
+
+;;;; Read-only buffers: no diagnostics
+
+;; The lock in the mode line means the buffer is read-only (a file you may
+;; not write, a manual, a buffer put in read-only or view mode): there is
+;; nothing to fix, so the checkers, the spelling and the AI review pause
+;; there, and come back when it becomes writable (C-x C-q).
+
+(defvar-local +diagnostics--paused nil "Modes paused here because the buffer is read-only.")
+
+(defconst +diagnostics-pausable '(flycheck-mode flymake-mode jinx-mode)
+  "Diagnostics modes that pause in read-only buffers.")
+
+(defun +diagnostics-read-only-h (&rest _)
+  "Pause diagnostics while this buffer is read-only; resume when writable."
+  (cond
+   ((and buffer-read-only (not +diagnostics--paused))
+    (dolist (mode +diagnostics-pausable)
+      (when (and (boundp mode) (symbol-value mode))
+        (push mode +diagnostics--paused)
+        (funcall mode -1))))
+   ((and (not buffer-read-only) +diagnostics--paused)
+    (let ((modes +diagnostics--paused))
+      (setq +diagnostics--paused nil)
+      (dolist (mode modes) (funcall mode 1))))))
+
+(add-hook 'read-only-mode-hook #'+diagnostics-read-only-h)
+(add-hook 'view-mode-hook #'+diagnostics-read-only-h)
+(add-hook 'find-file-hook #'+diagnostics-read-only-h 90)
+;; Global modes turn themselves on after a major mode starts; pause again.
+(defun +diagnostics-read-only-later-h ()
+  "A diagnostics mode came on in a read-only buffer: pause it, after this hook."
+  (when (and buffer-read-only (not +diagnostics--paused))
+    (let ((buf (current-buffer)))
+      (run-at-time 0 nil (lambda () (when (buffer-live-p buf)
+                                      (with-current-buffer buf (+diagnostics-read-only-h))))))))
+(dolist (hook '(flycheck-mode-hook jinx-mode-hook flymake-mode-hook))
+  (add-hook hook #'+diagnostics-read-only-later-h))
 (provide '+diagnostics)
 ;;; +diagnostics.el ends here

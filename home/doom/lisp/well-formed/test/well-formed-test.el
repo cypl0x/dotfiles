@@ -329,3 +329,19 @@
           (well-formed-ai-mode -1))))))
 (provide 'well-formed-test)
 ;;; well-formed-test.el ends here
+
+(ert-deftest well-formed/interrupted-check-keeps-the-last-highlights ()
+  "An abandoned check answers with the last result (moved with the text),
+never `interrupted', which would make flycheck clear every highlight."
+  (with-temp-buffer
+    (insert "One very long sentence here.")
+    (well-formed--remember (list (list 5 9 'weasel 'warning "very")))
+    (goto-char (point-min)) (insert "XX ")
+    (should (equal (well-formed--remembered) (list (list 8 12 'weasel 'warning "very"))))
+    (let (reported)
+      (cl-letf (((symbol-function 'well-formed--check-quietly) (lambda () :interrupted))
+                ((symbol-function 'well-formed--recheck-later) #'ignore)
+                ((symbol-function 'flycheck-error-new) (lambda (&rest args) args)))
+        (well-formed--flycheck-start 'well-formed (lambda (status &optional data) (setq reported (list status data)))))
+      (should (eq (car reported) 'finished))
+      (should (equal (plist-get (car (cadr reported)) :column) 8)))))

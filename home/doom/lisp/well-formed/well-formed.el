@@ -710,27 +710,53 @@ consistency.  Findings show through flycheck or flymake."
 (declare-function flycheck-mode "ext:flycheck" (&optional arg))
 (declare-function flycheck-may-enable-mode "ext:flycheck" ())
 
+;; While you type, a check is often abandoned (a key arrived).  Telling
+;; flycheck "interrupted" makes it clear every overlay at once, so all the
+;; underlines vanish and come back a second later.  Instead an abandoned
+;; check answers with the last complete result, its positions kept current
+;; by markers; flycheck redraws the same highlights and nothing flashes.
+(defvar-local well-formed--last nil
+  "The last complete findings, as (BEG-MARKER END-MARKER . REST).")
+
+(defun well-formed--remember (found)
+  "Keep FOUND (findings) with markers; return FOUND."
+  (dolist (f well-formed--last) (set-marker (car f) nil) (set-marker (cadr f) nil))
+  (setq well-formed--last
+        (mapcar (lambda (f) (pcase-let ((`(,b ,e . ,rest) f))
+                              (let ((em (copy-marker e t))) (cons (copy-marker b) (cons em rest)))))
+                found))
+  found)
+
+(defun well-formed--remembered ()
+  "The last complete findings at their current positions (empty ones dropped)."
+  (cl-loop for (bm em . rest) in well-formed--last
+           when (< bm em) collect (cons (marker-position bm) (cons (marker-position em) rest))))
+
+(defun well-formed--flycheck-errors (checker found)
+  "FOUND (findings) as flycheck errors of CHECKER."
+  (mapcar (lambda (f)
+            (pcase-let ((`(,b ,e ,id ,level ,msg . ,_) f))
+              (save-excursion
+                (goto-char b)
+                (flycheck-error-new
+                 :buffer (current-buffer) :checker checker
+                 :filename buffer-file-name
+                 :line (line-number-at-pos b) :column (1+ (current-column))
+                 :end-line (line-number-at-pos e)
+                 :end-column (progn (goto-char e) (1+ (current-column)))
+                 :message msg :level level :id (symbol-name id)))))
+          found))
+
 (defun well-formed--flycheck-start (checker callback)
   (let ((found (condition-case err (well-formed--check-quietly)
                  (error (funcall callback 'errored (error-message-string err)) :failed))))
     (cond
      ((eq found :failed))
      ((eq found :interrupted)
-      (funcall callback 'interrupted)
+      (funcall callback 'finished (well-formed--flycheck-errors checker (well-formed--remembered)))
       (well-formed--recheck-later))
      (t (funcall callback 'finished
-                 (mapcar (lambda (f)
-                           (pcase-let ((`(,b ,e ,id ,level ,msg . ,_) f))
-                             (save-excursion
-                               (goto-char b)
-                               (flycheck-error-new
-                                :buffer (current-buffer) :checker checker
-                                :filename buffer-file-name
-                                :line (line-number-at-pos b) :column (1+ (current-column))
-                                :end-line (line-number-at-pos e)
-                                :end-column (progn (goto-char e) (1+ (current-column)))
-                                :message msg :level level :id (symbol-name id)))))
-                         found))))))
+                 (well-formed--flycheck-errors checker (well-formed--remember found)))))))
 
 (with-eval-after-load 'flycheck
   (flycheck-define-generic-checker 'well-formed
