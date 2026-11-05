@@ -144,6 +144,39 @@
      "<*>" "<+>" "<$>" "?:" "??" "!!" ";;")))
 
 
+;; Inside Org's inline markup, characters show as typed: in ~a->b~ the ->
+;; had become an arrow, in =x==y= the == one long bar, as if the text said
+;; something else.  Ligatures stay in prose, headings and src blocks.  No
+;; face can switch ligatures off, and `auto-composition-function' isn't
+;; asked again once a sequence is cached; but automatic composition never
+;; joins characters that have a static composition of their own.  So each
+;; symbol in a run inside that markup gets one (itself), from font-lock,
+;; which also removes them when the text changes.
+(defconst +fonts-org-literal-faces
+  '(org-code org-verbatim bold italic +org-bold underline)
+  "Faces of Org inline markup in which ligatures don't compose.")
+
+(defun +fonts--org-literal-p (pos)
+  (let ((face (get-text-property pos 'face)))
+    (seq-some (lambda (f) (memq f +fonts-org-literal-faces))
+              (if (listp face) face (list face)))))
+
+(defun +fonts--org-break-ligatures (limit)
+  "Font-lock matcher: compose each symbol of a symbol run in Org inline
+markup by itself, so no ligature forms there.  Matches nothing."
+  (while (re-search-forward "[-!#$%&*+./:;<=>?@\\^_|~]\\{2,\\}" limit t)
+    (let ((b (match-beginning 0)) (e (match-end 0)))
+      (when (+fonts--org-literal-p b)
+        (with-silent-modifications
+          (dotimes (i (- e b))
+            (compose-region (+ b i) (+ b i 1) (char-after (+ b i))))))))
+  nil)
+
+(add-hook 'org-mode-hook
+          (defun +fonts-org-literal-markup-h ()
+            (add-to-list (make-local-variable 'font-lock-extra-managed-props) 'composition)
+            (font-lock-add-keywords nil '((+fonts--org-break-ligatures)) 'append)))
+
 ;; Mathematical letters (𝑓, 𝐱, ℝ's neighbours; U+1D400–U+1D7FF) showed as
 ;; boxes: no font in the fallback chain draws them (Casual's menus use them,
 ;; so do Lean and Agda).  DejaVu Math TeX Gyre, installed, does.
