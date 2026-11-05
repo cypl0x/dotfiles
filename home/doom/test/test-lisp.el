@@ -1982,6 +1982,23 @@ findings stand, following the text; once saved it runs again."
     (should (equal (buffer-string) "agent\na\nb\nuser\nagent2\n"))
     (should (equal (+merge--disk-text file) "agent\na\nb\n"))))
 
+(ert-deftest merge/shown-buffer-follows-the-disk ()
+  "Unedited and shown: the disk's text comes in, point stays.  Edited: untouched."
+  (load (expand-file-name "+merge" test-lisp-dir) nil t)
+  (test-merge--with-file "a\nb\nc\n"
+    (set-window-buffer (selected-window) (current-buffer))
+    (goto-char (point-min)) (forward-line 2)
+    (test-merge--disk-write file "a\nNEW\nb\nc\n")
+    (+merge-watch-h)
+    (should (equal (buffer-string) "a\nNEW\nb\nc\n"))
+    (should (looking-at "c"))
+    (should-not (buffer-modified-p))
+    (should-not (+merge--stale-p))
+    (insert "MINE ")
+    (test-merge--disk-write file "a\nb\n")
+    (+merge-watch-h)
+    (should (equal (buffer-string) "a\nNEW\nb\nMINE c\n"))))
+
 (ert-deftest suggest/drops-talking-and-stale-suggestions ()
   "Thinking aloud and marker echoes never show; nor replies to changed text."
   (load (expand-file-name "+suggest" test-lisp-dir) nil t)

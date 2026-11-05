@@ -15,7 +15,8 @@
 ;; overlap you get ediff with the ancestor (`ediff-merge-buffers-with-ancestor').
 ;;
 ;; It happens on its own when you start editing a stale buffer, when you
-;; save one, and when you come back to one.  By hand: SPC f M.
+;; save one, and when you come back to one.  By hand: SPC f M.  A shown
+;; buffer you haven't edited simply follows its file (every 2 s, folds kept).
 ;;
 ;; For agents: `+merge-edit-file' edits a file through its buffer, so a
 ;; file you're editing is never written behind your back:
@@ -160,6 +161,40 @@ before `before-save-hook'.)"
   (with-current-buffer (window-buffer (frame-selected-window frame))
     (when (and (buffer-modified-p) +merge--ancestor (+merge--stale-p))
       (+merge/disk-into-buffer t))))
+
+;;;; Shown buffers follow the disk
+
+(defvar +merge-watch-interval 2
+  "Seconds between checks of the buffers shown in windows.")
+
+(defun +merge--follow-disk ()
+  "Bring a shown, unedited, stale buffer up to the disk's text.
+Minimal edits instead of `revert-buffer', so point and folds stay."
+  (let ((theirs (+merge--disk-text buffer-file-name)))
+    (if (> (length theirs) +merge-max-size)
+        (revert-buffer t t t)
+      (+merge--replace theirs)
+      (set-buffer-modified-p nil)
+      (+merge--adopt-disk theirs))
+    (message "%s changed on disk; shown as it is now" (buffer-name))))
+
+(defun +merge-watch-h ()
+  "Every shown file buffer you haven't edited follows its file.
+Doom only reverts on switching buffers; a file changed by an agent, git or
+sync stayed stale on screen until `revert-buffer'.  Edited buffers keep
+the merge on edit, save and return."
+  (dolist (buf (delete-dups (mapcar #'window-buffer (window-list-1 nil 'nomini t))))
+    (with-current-buffer buf
+      (when (and buffer-file-name (not (buffer-modified-p))
+                 (not (file-remote-p buffer-file-name))
+                 (+merge--stale-p))
+        (condition-case err (+merge--follow-disk)
+          (error (message "+merge: %s: %s" (buffer-name) (error-message-string err))))))))
+
+(defvar +merge--watch-timer nil)
+(when (timerp +merge--watch-timer) (cancel-timer +merge--watch-timer))
+(setq +merge--watch-timer
+      (run-with-timer +merge-watch-interval +merge-watch-interval #'+merge-watch-h))
 
 ;;;; For agents
 
