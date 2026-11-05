@@ -870,6 +870,17 @@ and a temp exec-path where bin/tar links to store/tar."
       (should-not (+completion-path-capf)))
     (delete-directory dir t)))
 
+(ert-deftest org-links/state-and-description ()
+  (load (expand-file-name "+org-links" test-lisp-dir) nil t)
+  (let ((dir (make-temp-file "links" t)))
+    (clrhash +org-links--exists)
+    (should (eq (+org-links--exists-p dir) 'dir))
+    (should (eq (+org-links--exists-p (expand-file-name "x.org" dir)) nil))
+    (should (string-match-p "doesn't exist" (+org-links--describe "file" "~/nope.pdf" 'missing)))
+    (should (null (+org-links--local-file "/ssh:host:/etc/hosts")))
+    (should (equal (+org-links--local-file "/tmp/a.org::*Heading") "/tmp/a.org"))
+    (delete-directory dir t)))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)
