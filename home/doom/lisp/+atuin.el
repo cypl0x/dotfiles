@@ -12,7 +12,8 @@
 ;;                       eat)  → onto its prompt, unrun
 ;;                       in a shell-command prompt (M-!, M-&, compile) → there
 ;;                       anywhere else → edit, then run it where it ran
-;;          M-r        in M-! / M-& / compile prompts, and in eshell: the same,
+;;          M-r, C-r   in M-! / M-& / compile prompts (M-r) and in eshell and
+;;                     shell (both): the same,
 ;;                     inserting at the prompt
 ;;          Embark     copy, insert, run here, run where it ran, its
 ;;                     directory in dired, delete it from the history
@@ -315,6 +316,11 @@ Refuses when Atuin's match would take other commands too."
       :desc "Shell stats (Atuin)"   "s H" #'+atuin/stats)
 (define-key minibuffer-local-shell-command-map (kbd "M-r") #'+atuin/history)
 (map! :after eshell :map eshell-mode-map :i "M-r" #'+atuin/history :n "M-r" #'+atuin/history)
+;; C-r in shells is history search (bash, zsh and Atuin all bind it); in
+;; shell buffers that wins over Evil's insert-state paste-from-register.
+(map! :after eshell :map eshell-mode-map :i "C-r" #'+atuin/history :n "C-r" #'+atuin/history)
+(map! :after shell :map shell-mode-map :i "C-r" #'+atuin/history :n "C-r" #'+atuin/history
+      :i "M-r" #'+atuin/history)
 
 (provide '+atuin)
 ;;; +atuin.el ends here
