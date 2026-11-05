@@ -57,6 +57,24 @@
     `(pulse-highlight-start-face :background ,(doom-blend 'blue 'bg 0.25))
     `(pulse-highlight-face :background ,(doom-blend 'blue 'bg 0.25))))
 
+;; *bold* in an Org headline looked like the rest of it: headlines are bold
+;; (org-level-N), and so was Org's face for *…*.  Maple Mono NF has SemiBold
+;; and ExtraBold: headlines take the first, *bold* markup the second, which
+;; tells them apart in headlines and in body text alike.
+(defface +org-bold '((t :inherit bold :weight extra-bold))
+  "Org's *bold* markup: a step heavier than headlines."
+  :group 'org-faces)
+
+(custom-set-faces!
+  '((org-level-1 org-level-2 org-level-3 org-level-4
+     org-level-5 org-level-6 org-level-7 org-level-8)
+    :weight semi-bold))
+
+(after! org
+  (setf (alist-get "*" org-emphasis-alist nil nil #'equal) '(+org-bold))
+  ;; org-emphasis-alist is compiled into the font-lock regexps.
+  (when (fboundp 'org-set-emph-re) (org-set-emph-re 'org-emphasis-alist org-emphasis-alist)))
+
 ;;;; Maple Mono NF Ligatures ─────────────────────────────────────────────────
 
 ;; Maple Mono NF supports these ligature sequences via its `calt' feature.
