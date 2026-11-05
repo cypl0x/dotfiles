@@ -12,7 +12,8 @@
 ;; ---------------------------------------------------------------------------
 
 ;; Font configuration moved to lisp/+fonts.el (Maple Mono NF, all 5 slots).
-(setq doom-theme 'doom-vibrant)
+;; (setq doom-theme 'doom-vibrant)
+(setq doom-theme 'doom-modus-vibrant-light)
 (setq display-line-numbers-type t)
 
 ;; Date/time in modeline

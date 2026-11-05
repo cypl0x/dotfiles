@@ -545,3 +545,56 @@ saving and the change against the period before."
               ;; Against the 7 days before: 1 request then, 12 now.
               (should (string-match-p "▲" text)))))
       (delete-file familiar-ledger-file))))
+
+(defconst test-familiar--dir (file-name-directory (or load-file-name buffer-file-name))
+  "This test directory (its fixtures/).")
+
+(defun test-familiar--sampling-run (policy)
+  "Start the fake server (it asks for a completion) under POLICY; its record."
+  (let* ((out (make-temp-file "mcp-sampling" nil ".json"))
+         (familiar-mcp-sampling policy)
+         (familiar-models '((fast . claude-haiku-5-5) (smart . claude-sonnet-5-5)))
+         (seen nil))
+    (delete-file out)
+    (unwind-protect
+        (cl-letf (((symbol-function 'familiar-request)
+                   (lambda (prompt &rest args)
+                     (setq seen (list prompt (plist-get args :model) (plist-get args :system) (plist-get args :task)))
+                     (funcall (plist-get args :callback) "hi there" (list :stop-reason "end_turn"))
+                     (plist-get args :model))))
+          (familiar-mcp-sampling-mode 1)
+          (mcp-connect-server "fake-sampler" :command "node"
+                              :args (list (expand-file-name "fixtures/mcp-sampling-server.js"
+                                                            test-familiar--dir)
+                                          out)
+                              :syncp t)
+          (with-timeout (10 nil)
+            (while (not (file-exists-p out)) (accept-process-output nil 0.05)))
+          (list :seen seen
+                :record (and (file-exists-p out)
+                             (json-parse-string (with-temp-buffer (insert-file-contents out) (buffer-string))
+                                                :object-type 'plist))))
+      (familiar-mcp-sampling-mode -1)
+      (ignore-errors (mcp-stop-server "fake-sampler"))
+      (when (file-exists-p out) (delete-file out)))))
+
+(ert-deftest familiar-mcp-sampling/server-asks-familiar-answers ()
+  "A server asks for a completion: the client offered sampling, familiar
+answers on the hinted model (budgeted task mcp-sampling), one reply; and
+a refusal is an MCP error, not a hang."
+  (skip-unless (and test-familiar-available (executable-find "node") (require 'mcp nil t)))
+  (require 'familiar-mcp-sampling)
+  (let* ((run (test-familiar--sampling-run 'always))
+         (record (plist-get run :record))
+         (result (plist-get (plist-get record :reply) :result)))
+    (should (plist-member (plist-get record :clientCaps) :sampling))
+    (should (equal (plist-get run :seen) '("Say hi" claude-haiku-5-5 "Be brief." mcp-sampling)))
+    (should (equal (plist-get (plist-get result :content) :text) "hi there"))
+    (should (equal (plist-get result :stopReason) "endTurn"))
+    (should-not familiar-mcp-sampling--deferred))
+  (let* ((run (test-familiar--sampling-run 'never))
+         (reply (plist-get (plist-get run :record) :reply)))
+    (should-not (plist-get run :seen))
+    (should (equal (plist-get (plist-get reply :error) :message) "User rejected sampling request"))
+    ;; Never: not even offered.
+    (should-not (plist-member (plist-get (plist-get run :record) :clientCaps) :sampling))))

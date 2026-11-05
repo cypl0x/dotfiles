@@ -82,6 +82,10 @@
     (evil-define-key* 'insert familiar-ask-mode-map (kbd "RET") #'familiar-ask-ret))
   ;; @github, @nixos-mcp…: the MCP servers Claude Code knows for the project.
   (require 'familiar-mcp-client)
+  ;; ...and when one of them asks for a completion (MCP sampling), familiar
+  ;; answers: asking you first, budgeted, in the ledger.
+  (require 'familiar-mcp-sampling)
+  (familiar-mcp-sampling-mode 1)
   (add-to-list 'familiar-ask-prompt-capfs #'+completion-prose-capf t)
   (add-hook 'familiar-ask-prompt-setup-hook
             (defun +familiar-ask-corfu-h ()
