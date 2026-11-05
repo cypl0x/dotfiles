@@ -170,6 +170,8 @@ heading as (MARKER LEVEL TITLE)."
   (let* ((target +org-ai-capture--target)
          (entries (+org-ai-capture--entries (buffer-string))))
     (unless entries (user-error "Nothing written"))
+    (when (eq target 'vault) (+vault-capture--finish entries))
+    (unless (eq target 'vault)
     (unless (buffer-live-p target) (user-error "The Org buffer is gone"))
     (let ((outline (with-current-buffer target (+org-ai-capture--outline))))
       (quit-window t)
@@ -188,8 +190,161 @@ heading as (MARKER LEVEL TITLE)."
                (let ((places (+org-ai-capture--apply
                               (+org-ai-capture--plan answer outline entries))))
                  (message "Filed: %s  (undo takes it back)"
-                          (mapconcat (lambda (p) (format "→ %s" p)) places ", ")))))))))))
+                          (mapconcat (lambda (p) (format "→ %s" p)) places ", "))))))))))))
 
+
+;;;; Into the whole vault
+
+;; SPC n x, from anywhere: the same capture buffer, but filed across the
+;; vault (`org-directory'): the model sees every Org file there and its
+;; headings (three levels deep), numbered, and puts each entry under a
+;; heading, at the top level of a file, under a new heading, or into a new
+;; file it names.  Files are only made inside the vault.  A buffer you have
+;; unsaved edits in gets the entry but isn't saved (your edits stay yours to
+;; save); the others are saved.  Undo, per file, takes an entry back.
+
+(defvar org-directory)
+(declare-function org-get-heading "org" (&optional no-tags no-todo no-priority no-comment))
+
+(defcustom +vault-capture-max-depth 3
+  "Heading levels of vault files the capture shows the model."
+  :type 'natnum :group 'org)
+
+(defcustom +vault-capture-exclude "\\(?:/\\.\\|/roam/daily/\\|~\\'\\|#\\|\\.org_archive\\'\\)"
+  "Vault files the capture leaves out (regexp on the file name)."
+  :type 'regexp :group 'org)
+
+(defconst +vault-capture-system
+  "You file new Org entries into a vault of Org files.  The outline lists \
+the files, [N] file: title, and under each its headings, [N] with \
+indentation by level.  For each new entry, numbered {K}, choose where it \
+belongs.  Reply with JSON only: {\"placements\": [...]} with one object per \
+entry, either {\"entry\": K, \"under\": N} (N a heading, or a file: then it \
+goes at that file's top level), or {\"entry\": K, \"new\": \"title of a new \
+heading\", \"new_under\": N} (N a heading or a file), or {\"entry\": K, \
+\"new_file\": \"short-name.org\", \"title\": \"File title\"} when nothing in \
+the vault fits at all.  Prefer the most specific fitting heading; make new \
+headings and files rarely.  Judge by meaning."
+  "System prompt of the vault capture's placement.")
+
+(defun +vault-capture--files ()
+  (seq-remove (lambda (f) (string-match-p +vault-capture-exclude f))
+              (directory-files-recursively (expand-file-name org-directory) "\\.org\\'" nil
+                                           (lambda (d) (not (string-match-p "/\\." d))))))
+
+(defun +vault-capture--outline ()
+  "The vault: list of (KIND FILE MARKER-OR-NIL LEVEL TITLE), KIND file or heading."
+  (let (out)
+    (dolist (file (+vault-capture--files))
+      (let ((buf (find-file-noselect file t)))
+        (with-current-buffer buf
+          (push (list 'file file nil 0
+                      (or (save-excursion (goto-char (point-min))
+                                          (and (re-search-forward "^#\\+title:[ \t]*\\(.+\\)$" 4000 t)
+                                               (match-string-no-properties 1)))
+                          (file-name-base file)))
+                out)
+          (save-restriction
+            (widen)
+            (org-map-entries
+             (lambda ()
+               (when (<= (org-current-level) +vault-capture-max-depth)
+                 (push (list 'heading file (copy-marker (point) t) (org-current-level)
+                             (org-get-heading t t t t))
+                       out))))))))
+    (nreverse out)))
+
+(defun +vault-capture--request (outline entries)
+  (concat
+   "Vault:\n"
+   (cl-loop for (kind file _ level title) in outline for n from 1
+            concat (if (eq kind 'file)
+                       (format "[%d] %s: %s\n" n (file-relative-name file org-directory) title)
+                     (format "%s[%d] %s\n" (make-string (* 2 level) ?\s) n title)))
+   "\nNew entries:\n"
+   (cl-loop for e in entries for k from 1
+            concat (format "{%d} %s\n" k (replace-regexp-in-string "\n" "\n    " e)))))
+
+(defun +vault-capture--new-file (name title)
+  "A new vault file NAME (made safe, inside the vault) with TITLE."
+  (let* ((base (replace-regexp-in-string "[^[:alnum:]._-]+" "-" (file-name-nondirectory name)))
+         (base (if (string-suffix-p ".org" base) base (concat base ".org")))
+         (file (expand-file-name base org-directory)))
+    (unless (file-exists-p file)
+      (with-temp-file file (insert "#+title: " (or title (file-name-base base)) "\n\n")))
+    file))
+
+(defun +vault-capture--file (answer outline entries)
+  "Put ENTRIES where ANSWER says.  Returns the places for the message."
+  (let ((item (lambda (n) (and (integerp n) (<= 1 n (length outline)) (nth (1- n) outline))))
+        (dirty (cl-loop for b in (buffer-list)
+                        when (and (buffer-file-name b) (buffer-modified-p b)) collect b))
+        touched places)
+    (cl-loop
+     for e in entries for k from 1
+     do (let* ((p (seq-find (lambda (p) (eql (plist-get p :entry) k)) (plist-get answer :placements)))
+               (under (and p (funcall item (plist-get p :under))))
+               (new (and p (stringp (plist-get p :new)) (string-trim (plist-get p :new))))
+               (new-under (and p (funcall item (plist-get p :new_under))))
+               (new-file (and p (stringp (plist-get p :new_file)) (plist-get p :new_file)))
+               ;; Where: a file and a parent heading (or nil: its top level).
+               (where
+                (cond (under (list (nth 1 under) (and (eq (car under) 'heading) under)))
+                      ((and new new-under) (list (nth 1 new-under) (and (eq (car new-under) 'heading) new-under) new))
+                      (new-file (list (+vault-capture--new-file new-file (plist-get p :title)) nil))
+                      ;; Not placed: the inbox, at its top level.
+                      (t (list (expand-file-name "inbox.org" org-directory) nil)))))
+          (pcase-let ((`(,file ,parent ,new-title) where))
+            (with-current-buffer (find-file-noselect file)
+              (save-excursion
+                (let* ((parent (and parent (list (nth 2 parent) (nth 3 parent) (nth 4 parent))))
+                       (parent (if new-title (+org-ai-capture--insert (concat "* " new-title) parent) parent)))
+                  (+org-ai-capture--insert e parent)
+                  (push (concat (file-relative-name file org-directory)
+                                (if parent (concat " › " (nth 2 parent)) ""))
+                        places)))
+              (cl-pushnew (current-buffer) touched)))))
+    (dolist (b touched)
+      (unless (memq b dirty) (with-current-buffer b (save-buffer))))
+    (cons (nreverse places) (seq-filter (lambda (b) (memq b dirty)) touched))))
+
+;;;###autoload
+(defun +vault/ai-capture ()
+  "Write entries; AI files each into the vault where it belongs (see above)."
+  (interactive)
+  (pop-to-buffer (get-buffer-create "*capture → vault*"))
+  (unless (derived-mode-p 'org-mode) (org-mode))
+  (+org-ai-capture-mode 1)
+  (setq +org-ai-capture--target 'vault
+        header-line-format
+        (substitute-command-keys
+         " Entries for the vault; AI files each where it belongs   \\<+org-ai-capture-mode-map>\\[+org-ai-capture-finish] file · \\[+org-ai-capture-cancel] cancel"))
+  (when (fboundp 'evil-insert-state) (evil-insert-state)))
+
+(defun +vault-capture--finish (entries)
+  ;; The vault as it is now: the answer comes later.
+  (let ((outline (+vault-capture--outline)) (vault org-directory))
+    (quit-window t)
+    (message "Filing %d entr%s into the vault…" (length entries) (if (cdr entries) "ies" "y"))
+    (familiar-request
+     (+vault-capture--request outline entries)
+     :task 'capture :system +vault-capture-system
+     :callback
+     (lambda (response _info)
+       (when (stringp response)
+         (let* ((answer (ignore-errors
+                          (json-parse-string
+                           (replace-regexp-in-string "\\`[^{]*\\|[^}]*\\'" "" response)
+                           :object-type 'plist :array-type 'list)))
+                (result (let ((org-directory vault)) (+vault-capture--file answer outline entries))))
+           (message "Filed: %s%s"
+                    (mapconcat (lambda (p) (format "→ %s" p)) (car result) ", ")
+                    (if (cdr result)
+                        (format "  (not saved, you have edits there: %s)"
+                                (mapconcat #'buffer-name (cdr result) ", "))
+                      ""))))))))
+
+(map! :leader :desc "Capture into the vault (AI files it)" "n x" #'+vault/ai-capture)
 (map! :after org :map org-mode-map :localleader :desc "Capture (AI files it)" "C" #'+org/ai-capture)
 
 (provide '+org-ai-capture)

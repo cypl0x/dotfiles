@@ -928,6 +928,38 @@ and a temp exec-path where bin/tar links to store/tar."
           (set-buffer edit)
           (should-error (+org-subtree-edit-finish) :type 'user-error))))))
 
+(ert-deftest org-ai-capture/vault-files-everywhere-it-is-told ()
+  (load (expand-file-name "+org-ai-capture" test-lisp-dir) nil t)
+  (require 'org)
+  (let* ((org-directory (file-name-as-directory (make-temp-file "vault" t)))
+         (a (expand-file-name "a.org" org-directory))
+         (b (expand-file-name "b.org" org-directory)))
+    (with-temp-file a (insert "#+title: Alpha\n\n* Tasks\n** Emacs\n"))
+    (with-temp-file b (insert "* Ideas\n"))
+    (unwind-protect
+        (let* ((outline (+vault-capture--outline))
+               (num (lambda (title) (1+ (cl-position title outline :key (lambda (x) (nth 4 x)) :test #'equal))))
+               (entries '("* Fix the popup" "* Top of b" "* Under a new heading" "* In a new file" "* Unplaced"))
+               (answer (list :placements
+                             (vector (list :entry 1 :under (funcall num "Emacs"))
+                                     (list :entry 2 :under (funcall num "b"))
+                                     (list :entry 3 :new "Later" :new_under (funcall num "Alpha"))
+                                     (list :entry 4 :new_file "../escape/Reading List" :title "Reading")))))
+          (setq answer (plist-put answer :placements (append (plist-get answer :placements) nil)))
+          (should (equal (mapcar (lambda (x) (nth 4 x)) outline) '("Alpha" "Tasks" "Emacs" "b" "Ideas")))
+          (let ((places (car (+vault-capture--file answer outline entries))))
+            (should (equal places '("a.org › Emacs" "b.org" "a.org › Later" "Reading-List.org" "inbox.org"))))
+          (should (string-match-p "\\*\\* Emacs\n\\*\\*\\* Fix the popup" (with-temp-buffer (insert-file-contents a) (buffer-string))))
+          (should (string-match-p "^\\* Later\n\\*\\* Under a new heading" (with-temp-buffer (insert-file-contents a) (buffer-string))))
+          (should (string-match-p "^\\* Top of b" (with-temp-buffer (insert-file-contents b) (buffer-string))))
+          ;; A file name can't leave the vault.
+          (should (file-exists-p (expand-file-name "Reading-List.org" org-directory)))
+          (should (file-exists-p (expand-file-name "inbox.org" org-directory))))
+      (dolist (buf (buffer-list))
+        (when (and (buffer-file-name buf) (string-prefix-p org-directory (buffer-file-name buf)))
+          (with-current-buffer buf (set-buffer-modified-p nil)) (kill-buffer buf)))
+      (delete-directory org-directory t))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)
