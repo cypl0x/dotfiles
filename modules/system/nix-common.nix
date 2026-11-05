@@ -8,12 +8,15 @@ _: {
       "https://nix-community.cachix.org"
       # numtide llm-agents.nix / other numtide builds (prebuilt agent CLIs)
       "https://cache.numtide.com"
+      # eval-exec's NEO Emacs (neomacs, home/neomacs.nix): releases prebuilt
+      "https://eval-exec.cachix.org"
     ];
     trusted-public-keys = [
       "cypl0x.cachix.org-1:WMLmCcn2gTAZyWZDD6N2rghvpPn0rU9Gr5Cc2OTEdow="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       # Key name is niks3.numtide.com; URL is cache.numtide.com (numtide docs).
       "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+      "eval-exec.cachix.org-1:xvopUI7X7+Vt1gaSsWJ0PQFPP66vs8v5iIaz6boxf64="
     ];
     download-buffer-size = 524288000; # B instead of  32 MB
     # Hardlink byte-identical files in /nix/store after each build. Reclaims GB

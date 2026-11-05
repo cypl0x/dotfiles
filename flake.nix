@@ -48,6 +48,10 @@
     # binary cache hits (cache.numtide.com; see modules/system/nix-common.nix).
     # Consumed in modules/system/packages.nix via specialArgs.
     llm-agents.url = "github:numtide/llm-agents.nix";
+    # NEO Emacs (Rust core), a second Emacs for testing beside the main one
+    # (home/neomacs.nix).  No follows: its own nixpkgs keeps upstream's
+    # Cachix (eval-exec.cachix.org) hits; the v0.0.20 release is cached there.
+    neomacs.url = "github:eval-exec/neomacs/47fa15cc69ae8f8da1ca3fac25e0beb700e8c118";
   };
 
   outputs = inputs @ {
@@ -140,9 +144,10 @@
               # Move pre-existing unmanaged dotfiles aside instead of aborting
               # activation when a home.file target already exists on disk.
               backupFileExtension = "bak";
-              extraSpecialArgs = {inherit (inputs) vellumory;};
+              extraSpecialArgs = {inherit (inputs) vellumory neomacs;};
               sharedModules = [
                 ./home/vellumory.nix
+                ./home/neomacs.nix
                 ./home/kitty-thinkpad.nix
                 ./home/terminals.nix
                 ./home/yazi.nix

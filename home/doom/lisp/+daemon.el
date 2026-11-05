@@ -20,6 +20,10 @@
 
 (defvar server-name)
 
+;; NEO Emacs (the `neomacs' command, home/neomacs.nix) runs this config
+;; beside the main Emacs: a server it starts must not take the main one's socket.
+(when (getenv "NEOMACS_DOOM") (setq server-name "neomacs"))
+
 (defvar +daemon-session-name "restart"
   "Session file name (under `doom-session-file's directory) used across restarts.")
 

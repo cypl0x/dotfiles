@@ -1,0 +1,167 @@
+#+title: well-formed
+#+subtitle: A writing assistant made of rules, with a model on top
+#+texinfo_filename: well-formed.info
+#+texinfo_dir_category: This configuration
+#+texinfo_dir_title: well-formed: (well-formed)
+#+texinfo_dir_desc: The writing assistant
+
+well-formed reads what you write as you write it, the way Grammarly does,
+in English and German: mistakes, unclear sentences, worn phrases, tone, and
+whether a document stays consistent with itself.  Its ground floor is
+rules and statistics in Emacs Lisp, with no server and no network; above it,
+optionally, a language model reads the paragraphs you change.
+
+It checks Org, Markdown, plain text, commit and mail messages, in files and
+in buffers that aren't files (a capture, a scratch buffer).  In code it
+reads only comments, and only if you turn it on there.
+
+* Reading the marks
+
+Findings are underlined like any other diagnostic and listed by flycheck.
+Under the cursor, the echo area says what's wrong, the rule and the source:
+
+: ● Use “an” before “apple”  well-formed · article · SPC P x fixes
+
+Red is a mistake (correctness), yellow something to reconsider, the quiet
+ones are suggestions.  =]e= and =[e= go to the next and previous one.
+
+* The keys
+
+| Key       | Does                                                            |
+|-----------+-----------------------------------------------------------------|
+| =SPC P x= | fix the finding at point (a choice when there are several)      |
+| =SPC P X= | fix one rule throughout the buffer, asking for each             |
+| =SPC P g= | ignore it: here, this rule in this document, or everywhere      |
+| =SPC P e= | what the rule is about, with examples                           |
+| =SPC P L= | every finding, grouped, previewed as you move                   |
+| =SPC P v= | the report: scores, readability, tone, plots                    |
+| =SPC P a= | the model's candid assessment of the whole text                 |
+| =SPC P S= | the style for this buffer                                       |
+| =SPC P m= | all of it in one menu                                           |
+| =SPC t m= | reading mode: every mark hidden, back as it was afterwards      |
+
+* Fixes
+
+Every finding can be fixed:
+
+- the word or phrase to use instead (=in order to= → =to=);
+- for a long or hard sentence, where it splits best, at a clause boundary
+  (=…, and the team= → =…. The team=), the most balanced split first;
+- for a passive with its actor, the active form (=The file was deleted by
+  the script= → =The script deleted the file=);
+- and always, "Rewrite the sentence with AI…": the model rewrites the
+  sentence toward what the finding says, and a popup shows the change word
+  by word; =C-c C-c= applies it, =g= asks again, =q= keeps yours.
+
+* Styles
+
+A style changes what is reported and how strictly: sentence length limits,
+whether contractions, informal words, the first person or passive voice
+count.
+
+| Style       | Long sentence | Notes                                          |
+|-------------+---------------+------------------------------------------------|
+| general     | 30 words      | the default                                    |
+| academic    | 40 words      | contractions and informal words reported       |
+| technical   | 30 words      | hedges and unsourced claims reported           |
+| business    | 25 words      | jargon and negative framing reported           |
+| casual      | 45 words      | little more than mistakes                      |
+| creative    | no limit      | clichés and adverbs reported                   |
+
+A document keeps its style in its first lines:
+
+: #+well_formed: academic
+
+For the model you can say anything it will understand:
+
+: #+well_formed_goal: a friendly README for Emacs users who know Lisp
+
+* What it checks
+
+** Correctness
+Repeated words; =a=/=an= by sound (/an hour/, /a university/, /an SQL query/);
+spacing and doubled punctuation (two spaces after a sentence are fine);
+capitals at sentence starts, /I/, days and months; words confused for one
+that sounds alike (then/than, its/it's, your/you're, could of); subject and
+verb agreement; a comma after /However/; English as German speakers write
+it (/since three years/, /informations/, /explain me/); names as their
+owners spell them (GitHub, macOS, NixOS); typography (a hyphen used as a
+dash, three dots).
+
+German: /das/ and /dass/, /seit/ and /seid/, the comma before /dass/,
+/weil/, /obwohl/, common misspellings a spell checker lets through
+(/Standart/, /wiederspiegeln/), /Sinn machen/, the genitive after /wegen/.
+
+Spelling itself is jinx's (=z==), shown in the report too.
+
+** Clarity
+Wordy phrases and their short form, in English and German (Nominalstil:
+/eine Entscheidung treffen/ → /entscheiden/); redundant pairs (/end
+result/, /bereits schon/); plainer words (/utilize/ → /use/); long and hard
+sentences; passive voice; double negatives; a bare /This shows/; sentences
+held together by too many commas or /and/s.
+
+** Engagement
+Clichés and German Floskeln; /very/ with a plain word (/very important/ →
+/crucial/); a word used three times in a paragraph; three sentences in a row
+starting alike; clusters of adverbs.
+
+** Delivery
+Hedges and Füllwörter; informal words and contractions in formal styles;
+jargon; inclusive language; claims without a source (/studies show/);
+shouting; negative framing (business); the first person (academic).
+
+** Consistency
+Per document, the more frequent form wins: American or British spelling,
+/email/ or /e-mail/, the serial comma, straight or curly quotes.
+
+* The model's reading
+
+On by default.  When you pause, each paragraph you changed (only those,
+once per text, at most six a minute) goes to the fast model with the
+document's style or goal.  It reports only what rules can't: a sentence that
+doesn't say what you mean, wording that misses the style or audience,
+inconsistent terms, Org used wrongly.  It quotes your text exactly, so the
+finding sits where it belongs, and offers its rewrite as the fix.  Its
+findings carry the rule =ai= and can be ignored like any other.
+
+=SPC P a= asks the stronger model for an assessment of the whole text: how
+it leans (percentages of styles it names), tone, audience, how it fits your
+declared goal, ratings with reasons, strengths, the issues that matter most,
+and the consistency of names and Org markup.  It is told to be candid: no
+praise that isn't earned.
+
+* The report
+
+=SPC P v= shows, for the buffer or the region: a score per category; words,
+sentences, reading, speaking and writing time (the time you spent editing
+the file); readability (Flesch, Flesch–Kincaid grade, Gunning fog, SMOG,
+Coleman–Liau, ARI, LIX, and the Wiener Sachtextformel for German); the tone
+mix from word statistics; sentence lengths through the text and their
+histogram; reading ease per paragraph; findings by rule; the words you use
+most.  Every bar and line goes to its place in the text.
+
+* How it stays fast
+
+It masks what isn't prose first (Org and Markdown markup, code, links,
+tables, drawers, blocks; quote blocks too, since what you quote isn't your
+writing), cuts the text into paragraphs and checks each once: an edit
+re-checks only the paragraph it touched.  Checking runs when you pause and
+stops as soon as you press a key; the buffer is checked again a moment
+later.
+
+* Configuring
+
+| Variable                           | Meaning                                         |
+|------------------------------------+-------------------------------------------------|
+| =well-formed-style=                | the default style                               |
+| =well-formed-language=             | force "en" or "de" (default: per paragraph)    |
+| =well-formed-disabled-rules=       | rules never reported                            |
+| =well-formed-disabled-categories=  | categories never reported                       |
+| =well-formed-check-quotes=         | check quote blocks too                          |
+| =well-formed-modes=                | major modes it turns on in                      |
+| =well-formed-ai-max-per-minute=    | the model's request budget                      |
+
+Rules are data: their word lists are variables (=well-formed-wordy-en=,
+=well-formed-redundant-de=, …), and =well-formed-define-rule= adds one.
+The code is in =home/doom/lisp/well-formed/=.

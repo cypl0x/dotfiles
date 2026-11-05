@@ -993,6 +993,32 @@ and a temp exec-path where bin/tar links to store/tar."
       (should (string-match-p "100\\.0%  caller" text))
       (should (string-match-p " 75\\.0%  leaf-a" text)))))
 
+(ert-deftest info/highlights-resumes-and-counts ()
+  (load (expand-file-name "+info" test-lisp-dir) nil t)
+  (require 'info)
+  (let* ((+info--progress nil)
+         (+info-progress-file (make-temp-file "info-progress" nil ".eld")))
+    (info "(elisp) Function Cells" "*info-test*")
+    (unwind-protect
+        (with-current-buffer "*info-test*"
+          ;; Lisp examples get emacs-lisp-mode's colors.
+          (goto-char (point-min))
+          (re-search-forward "^ +(defun bar")
+          (should (eq (get-text-property (+ (line-beginning-position) 11) 'font-lock-face) 'font-lock-keyword-face))
+          ;; The header says how far, with a real percent sign.
+          (should (string-match-p "· [0-9]+%% read (1 of [0-9]+ nodes)" header-line-format))
+          ;; Opening the manual at Top again goes back where you were.
+          (Info-goto-node "Symbol Components")
+          (forward-line 6)
+          (+info-moved-h)
+          (let ((line (line-number-at-pos)))
+            (setq +info--resumed nil)
+            (Info-goto-node "Top")
+            (sit-for 0.05)
+            (should (equal Info-current-node "Symbol Components"))
+            (should (= (line-number-at-pos) line))))
+      (kill-buffer "*info-test*"))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)

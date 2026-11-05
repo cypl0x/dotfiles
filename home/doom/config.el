@@ -538,6 +538,7 @@
 (load! "lisp/+org-subtree-edit") ;; C-c ' on a heading: the subtree in its own buffer
 (load! "lisp/+systemd")     ;; systemd units, timers and the journal, proced-style (SPC o s, SPC o j)
 (load! "lisp/+attention")   ;; SPC h !: measure lag or slowness, a dedicated agent fixes it
+(load! "lisp/+info")        ;; Info: readable, highlighted, remembers where you were; own manuals in C-h i
 (load! "lisp/+org-slash")    ;; /table5x2, /code, /todo ... in Org (Notion-like)
 (load! "lisp/+org-cheatsheet") ;; SPC m ?: Org by example, from the manual
 (load! "lisp/+org-ai-capture") ;; SPC m C: write headings, AI files them where they belong
