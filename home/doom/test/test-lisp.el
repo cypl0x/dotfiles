@@ -1863,3 +1863,74 @@ and a temp exec-path where bin/tar links to store/tar."
     (should (equal (+gh-place-repo (+gh-browse--resolve here "https://github.com/a/b")) "b"))
     (should (equal (+gh-browse--resolve here "https://github.com/a/b/issues/3") "https://github.com/a/b/issues/3"))
     (should-not (+gh-browse--resolve here "#top"))))
+
+(defmacro test-merge--with-file (text &rest body)
+  "Visit a temp file holding TEXT; BODY in its buffer, then clean up."
+  (declare (indent 1))
+  `(let* ((file (make-temp-file "merge-test" nil ".txt" ,text))
+          (buf (find-file-noselect file)))
+     (unwind-protect (with-current-buffer buf ,@body)
+       (with-current-buffer buf (set-buffer-modified-p nil))
+       (kill-buffer buf) (delete-file file))))
+
+(defun test-merge--disk-write (file text)
+  "Another program writes FILE (later modtime, so Emacs notices)."
+  (let ((coding-system-for-write 'utf-8-unix)) (write-region text nil file nil 'silent))
+  (set-file-times file (time-add nil 5)))
+
+(ert-deftest merge/clean-three-way-keeps-both-sides ()
+  "Your unsaved edit and the disk's change in other places both survive."
+  (load (expand-file-name "+merge" test-lisp-dir) nil t)
+  (test-merge--with-file "one\ntwo\nthree\nfour\nfive\n"
+    (goto-char (point-min)) (insert "MINE ")
+    (test-merge--disk-write file "one\ntwo\nthree\nfour\nfive THEIRS\n")
+    (should (+merge--stale-p))
+    (should (+merge/disk-into-buffer t))
+    (should (equal (buffer-string) "MINE one\ntwo\nthree\nfour\nfive THEIRS\n"))
+    (should (buffer-modified-p))
+    (should-not (+merge--stale-p))
+    ;; Saving no longer asks; the ancestor is now what got saved.
+    (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) (error "asked"))))
+      (save-buffer))
+    (should (equal (+merge--disk-text file) (buffer-string)))
+    (should (equal +merge--ancestor (buffer-string)))))
+
+(ert-deftest merge/save-of-stale-buffer-merges-first ()
+  (load (expand-file-name "+merge" test-lisp-dir) nil t)
+  (test-merge--with-file "a\nb\nc\nd\n"
+    (goto-char (point-max)) (insert "e\n")
+    (test-merge--disk-write file "A\nb\nc\nd\n")
+    (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) (error "asked"))))
+      (save-buffer))
+    (should (equal (+merge--disk-text file) "A\nb\nc\nd\ne\n"))))
+
+(ert-deftest merge/first-edit-of-stale-buffer-doesnt-ask ()
+  (load (expand-file-name "+merge" test-lisp-dir) nil t)
+  (test-merge--with-file "a\nb\nc\nd\n"
+    (test-merge--disk-write file "a\nb\nc\nD\n")
+    (cl-letf (((symbol-function 'read-char-choice) (lambda (&rest _) (error "asked")))
+              ((symbol-function 'run-at-time) (lambda (_ _ fn) (funcall fn))))
+      (+merge-supersession-a #'ignore file)
+      (goto-char (point-min)) (insert "X")
+      (+merge/disk-into-buffer t))
+    (should (equal (buffer-string) "Xa\nb\nc\nD\n"))))
+
+(ert-deftest merge/overlap-goes-to-ediff ()
+  (load (expand-file-name "+merge" test-lisp-dir) nil t)
+  (test-merge--with-file "a\nb\n"
+    (goto-char (point-min)) (delete-char 1) (insert "MINE")
+    (test-merge--disk-write file "THEIRS\nb\n")
+    (let (called)
+      (cl-letf (((symbol-function '+merge--ediff) (lambda (m th anc) (setq called (list m th anc)))))
+        (should-not (+merge/disk-into-buffer t)))
+      (should (equal called '("MINE\nb\n" "THEIRS\nb\n" "a\nb\n"))))))
+
+(ert-deftest merge/edit-file-goes-through-the-buffer ()
+  (load (expand-file-name "+merge" test-lisp-dir) nil t)
+  (test-merge--with-file "a\nb\n"
+    (should (eq (+merge-edit-file file (lambda () (insert "agent\n"))) 'saved))
+    (should (equal (+merge--disk-text file) "agent\na\nb\n"))
+    (goto-char (point-max)) (insert "user\n")
+    (should (eq (+merge-edit-file file (lambda () (goto-char (point-max)) (insert "agent2\n"))) 'in-buffer))
+    (should (equal (buffer-string) "agent\na\nb\nuser\nagent2\n"))
+    (should (equal (+merge--disk-text file) "agent\na\nb\n"))))
