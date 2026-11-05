@@ -2707,3 +2707,30 @@ stars, tags later in a heading, the /commands (without /) in prose."
     ;; Something typed: not this capf's turn.
     (insert "wor")
     (should-not (+org-slash-empty-capf))))
+
+(ert-deftest completion/file-preview-shows-follows-and-cleans-up ()
+  "C-SPC in a file prompt shows the selected file in a side window and
+follows the selection; closing it removes the window and the buffers it
+opened (not ones already open)."
+  (load (expand-file-name "+completion" test-lisp-dir) nil t)
+  (let* ((dir (file-name-as-directory (make-temp-file "preview" t)))
+         (a (expand-file-name "a.txt" dir)) (b (expand-file-name "b.txt" dir))
+         (cand a))
+    (write-region "first" nil a) (write-region "second" nil b)
+    (unwind-protect
+        (with-temp-buffer
+          (cl-letf (((symbol-function 'vertico--candidate) (lambda (&optional _) cand)))
+            (let ((minibuffer-completing-file-name t))
+              (+completion/preview-dwim)
+              (should +completion--preview)
+              (should (window-live-p +completion--preview-window))
+              (should (equal (with-current-buffer (window-buffer +completion--preview-window) (buffer-string)) "first"))
+              ;; Following the selection.
+              (setq cand b) (+completion--preview-follow-h)
+              (should (equal (with-current-buffer (window-buffer +completion--preview-window) (buffer-string)) "second"))
+              (let ((win +completion--preview-window))
+                (+completion/preview-dwim)    ; off: cleaned up
+                (should-not (window-live-p win)))
+              (should-not (find-buffer-visiting a))
+              (should-not (find-buffer-visiting b)))))
+      (delete-directory dir t))))

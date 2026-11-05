@@ -543,9 +543,67 @@ a reopened one keeps its edits."
         (cons '(vertico-sort-function . +completion-sort-files-newest)
               (assq-delete-all 'vertico-sort-function
                                (copy-sequence (alist-get 'file vertico-multiform-categories))))))
+;; C-SPC in a file prompt (C-c C-l's file: too): the selected file in a side
+;; window, images as images, without leaving the prompt; it follows the
+;; selection until C-SPC again.  Doom's C-SPC (embark's default action)
+;; opened the file in the window you came from.  Other prompts keep Doom's.
+(defvar-local +completion--preview nil "Whether this file prompt previews.")
+(defvar-local +completion--previewed nil "Buffers opened only for the preview.")
+(defvar-local +completion--preview-last nil "The file last previewed.")
+(defvar-local +completion--preview-window nil "The side window the preview shows in.")
+(declare-function vertico--candidate "ext:vertico" (&optional hl))
+(declare-function +vertico/embark-preview "ext:vertico" ())
+
+(defun +completion--preview-show ()
+  "Show the selected file of this prompt in the side window."
+  (let ((file (ignore-errors (expand-file-name (substitute-in-file-name (vertico--candidate))))))
+    (when (and file (not (equal file +completion--preview-last)) (file-exists-p file)
+               (not (file-remote-p file))
+               ;; Not huge files (a 2 GB log would hang the prompt).
+               (< (or (file-attribute-size (file-attributes file)) 0) (* 20 1024 1024)))
+      (setq +completion--preview-last file)
+      (let* ((existing (find-buffer-visiting file))
+             (buf (or existing
+                      (if (file-directory-p file)
+                          (let ((default-directory file)) (dired-noselect file))
+                        (let ((inhibit-message t) (large-file-warning-threshold nil))
+                          (find-file-noselect file t))))))
+        (unless existing (push buf +completion--previewed))
+        (setq +completion--preview-window
+              (display-buffer buf '((display-buffer-in-side-window)
+                              (side . right) (window-width . 0.45)
+                                    (window-parameters (no-delete-other-windows . t)))))))))
+
+(defun +completion/preview-dwim ()
+  "In a file prompt: preview the selected file, and follow the selection
+until called again.  Elsewhere: Doom's preview."
+  (interactive)
+  (if (not minibuffer-completing-file-name)
+      (+vertico/embark-preview)
+    (setq +completion--preview (not +completion--preview))
+    (if +completion--preview
+        (progn (add-hook 'post-command-hook #'+completion--preview-follow-h nil t)
+               (add-hook 'minibuffer-exit-hook #'+completion--preview-cleanup-h nil t)
+               (+completion--preview-show))
+      (remove-hook 'post-command-hook #'+completion--preview-follow-h t)
+      (+completion--preview-cleanup-h))))
+
+(defun +completion--preview-follow-h ()
+  (when +completion--preview (+completion--preview-show)))
+
+(defun +completion--preview-cleanup-h ()
+  "Close the preview: its window, and buffers opened only for it."
+  (let ((buffers +completion--previewed) (win +completion--preview-window))
+    (setq +completion--previewed nil +completion--preview-last nil +completion--preview-window nil)
+    (when (and (window-live-p win) (window-parameter win 'window-side)) (delete-window win))
+    (dolist (b buffers)
+      (when (and (buffer-live-p b) (not (buffer-modified-p b)) (not (get-buffer-window b t)))
+        (kill-buffer b)))))
+
 (with-eval-after-load 'vertico
   (defvar vertico-map)
-  (define-key vertico-map (kbd "C-c C-r") #'+completion/refresh-files))
+  (define-key vertico-map (kbd "C-c C-r") #'+completion/refresh-files)
+  (define-key vertico-map (kbd "C-SPC") #'+completion/preview-dwim))
 
 
 ;;;; Unicode
