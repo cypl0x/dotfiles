@@ -43,10 +43,19 @@
     (unless (file-remote-p default-directory)
       (funcall fn))))
 
-;;;; Recentf guard ───────────────────────────────────────────────────────────
+;;;; Recent files: remote ones too ──────────────────────────────────────────
 
+;; SPC f r lists remote files and directories again (/ssh:…, /sshfs:…), for
+;; going back to a project on inari in one step.  They were excluded here
+;; (`recentf-exclude' had TRAMP's regexp) for fear of slow cleanups, but
+;; recentf's own check doesn't connect: an unconnected remote file is kept
+;; as it is (`recentf-keep-default-predicate').  The remote paths still in
+;; the minibuffer history come back, at the end of the list.
 (after! recentf
-  (add-to-list 'recentf-exclude tramp-file-name-regexp))
+  (setq recentf-exclude (delete tramp-file-name-regexp recentf-exclude))
+  (dolist (file (reverse file-name-history))
+    (when (and (stringp file) (file-remote-p file))
+      (add-to-list 'recentf-list file t))))
 
 ;;;; Connection diagnostics ──────────────────────────────────────────────────
 
