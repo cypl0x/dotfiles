@@ -133,7 +133,9 @@ Emacs writes there with modification hooks off, so this runs after each
 (defun +messages-setup-h ()
   "Times, colors, buttons and keys in *Messages*."
   (font-lock-add-keywords nil +messages-keywords 'append)
-  (setq-local font-lock-keywords-case-fold-search nil)
+  (setq-local font-lock-keywords-case-fold-search nil
+              ;; A message with an odd " made everything after it a "string".
+              font-lock-keywords-only t)
   (font-lock-mode 1)
   (goto-address-mode 1)
   (local-set-key "f" #'+messages-errors)

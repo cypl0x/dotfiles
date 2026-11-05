@@ -1056,6 +1056,8 @@ and a temp exec-path where bin/tar links to store/tar."
 
 (defvar cape-dabbrev-buffer-function)
 (ert-deftest completion/prose-words-only ()
+  ;; cape isn't in CI (Doom's packages aren't installed there).
+  (skip-unless (require 'cape nil t))
   (cl-letf (((symbol-function 'cape--dabbrev-list)
              (lambda (_) (cons nil '("Work*" "WordMap" "Word" "API"))))
             ((symbol-function 'cape--dict-list)
@@ -1224,6 +1226,8 @@ and a temp exec-path where bin/tar links to store/tar."
 
 
 (ert-deftest completion/inline-code-completes-elisp-names-commands-first ()
+  ;; cape isn't in CI (Doom's packages aren't installed there).
+  (skip-unless (require 'cape nil t))
   (cl-flet ((start-in (text)
               (with-temp-buffer
                 (org-mode)
@@ -1348,6 +1352,8 @@ and a temp exec-path where bin/tar links to store/tar."
 
 
 (ert-deftest completion/tex-names-complete-to-unicode-shown-in-the-popup ()
+  ;; cape isn't in CI (Doom's packages aren't installed there).
+  (skip-unless (require 'cape nil t))
   (cl-flet ((capf-in (mode text)
               (with-temp-buffer
                 (funcall mode)
