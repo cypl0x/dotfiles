@@ -529,6 +529,7 @@
 (load! "lisp/+screenshot")   ;; M-Y insert a screenshot, SPC o S browse them
 (load! "lisp/+format")       ;; SPC c f: Org tidy (C-u canonical), eglot, indent
 (load! "lisp/+org-lint")     ;; Org style rules (markdownlint-like) in org-lint and flycheck
+(load! "lisp/+diagnostics")  ;; flycheck messages at point in a child frame that fits
 (load! "lisp/+org-slash")    ;; /table5x2, /code, /todo ... in Org (Notion-like)
 (load! "lisp/+org-cheatsheet") ;; SPC m ?: Org by example, from the manual
 (load! "lisp/+org-ai-capture") ;; SPC m C: write headings, AI files them where they belong

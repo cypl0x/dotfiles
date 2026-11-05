@@ -803,6 +803,25 @@ and a temp exec-path where bin/tar links to store/tar."
 
 (load (expand-file-name "../lisp/+format" (file-name-directory (or load-file-name buffer-file-name))) nil t)
 
+(ert-deftest diagnostics/format-wraps-and-labels ()
+  (load (expand-file-name "+diagnostics" test-lisp-dir) nil t)
+  (cl-letf (((symbol-function 'flycheck-error-message) (lambda (e) (car e)))
+            ((symbol-function 'flycheck-error-level) (lambda (e) (cadr e)))
+            ((symbol-function 'flycheck-error-checker) (lambda (_) '+org-lint))
+            ((symbol-function 'flycheck-error-id) (lambda (_) "blank-lines")))
+    (let ((text (+diagnostics--format
+                 (list (list (concat "No blank line before this heading, and the text goes on for "
+                                     "quite a while so that it has to wrap somewhere sensible")
+                             'warning)
+                       (list "Second" 'error))
+                 40)))
+      (should (string-prefix-p "● No blank line" text))
+      ;; Wrapped under the text, not under the mark.
+      (should (string-match-p "\n  [a-z]" text))
+      (should (cl-every (lambda (l) (<= (length l) 42)) (split-string text "\n")))
+      (should (string-match-p "\\+org-lint · blank-lines" text))
+      (should (string-match-p "\n● Second" text)))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)
