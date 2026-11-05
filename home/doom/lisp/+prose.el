@@ -103,12 +103,71 @@ Case-sensitive like jinx: its \"[A-Z]+\\\\>\" (all-caps words) matched \"teh\"."
              (jinx--regexp-excluded-p (save-excursion (goto-char pos) (backward-word) (point)))
              (jinx--property-excluded-p pos)))))
 
+;; It learned only from jinx corrections (z=), but the log had DEL 3,634
+;; and M-DEL 1,698 times, in short runs (1.6 on average): typos fixed by
+;; deleting and retyping.  Those teach it too: a word jinx rejects, deleted
+;; into and retyped in the same place as a word it accepts, at most 2 edits
+;; away (teh → the), counts as one correction.  Autocorrect's thresholds
+;; above still decide when it fixes by itself.
+(defconst +prose-retype-deletes
+  '(evil-delete-backward-char-and-join delete-backward-char backward-delete-char-untabify
+    backward-kill-word evil-delete-backward-word)
+  "Commands that delete back into a word.")
+
+(defvar-local +prose--retype nil
+  "(START-MARKER . WORD): a rejected word you started deleting into.")
+
+(defun +prose--word-before (pos)
+  "(START . WORD) of the word ending at POS or one space before it, or nil."
+  (save-excursion
+    (goto-char pos)
+    (when (memq (char-before) '(?\s ?\t)) (backward-char))
+    (let ((end (point)))
+      (skip-syntax-backward "w")
+      (when (< (point) end)
+        (cons (point) (buffer-substring-no-properties (point) end))))))
+
+(defun +prose-retype-pre-h ()
+  "The first delete of a run into a rejected word: remember the word."
+  (when (and (memq this-command +prose-retype-deletes)
+             (not (memq last-command +prose-retype-deletes)))
+    (setq +prose--retype nil)
+    (when-let* ((w (+prose--word-before (point)))
+                ((>= (length (cdr w)) 3))
+                ((+prose-autocorrect-here-p (+ (car w) (length (cdr w)))))
+                ((not (jinx--word-valid-p (cdr w)))))
+      (setq +prose--retype (cons (copy-marker (car w)) (cdr w))))))
+
+(defun +prose-retype-word-done-h ()
+  "A word just ended: if it replaced a remembered typo nearby, record it."
+  (when (and +prose--retype (not (memq (char-syntax (char-before)) '(?w))))
+    (let ((typo (cdr +prose--retype)) (start (marker-position (car +prose--retype))))
+      (set-marker (car +prose--retype) nil)
+      (setq +prose--retype nil)
+      (when-let* ((w (+prose--word-before (1- (point))))
+                  ((eql (car w) start))
+                  (word (cdr w))
+                  ((not (equal word typo)))
+                  ((<= (string-distance word typo) 2))
+                  ((jinx--word-valid-p word)))
+        (autocorrect-record-correction typo word)))))
+
+(defun +prose-retype-setup-h ()
+  (if (bound-and-true-p jinx-mode)
+      (progn (add-hook 'pre-command-hook #'+prose-retype-pre-h nil t)
+             (add-hook 'post-self-insert-hook #'+prose-retype-word-done-h nil t))
+    (remove-hook 'pre-command-hook #'+prose-retype-pre-h t)
+    (remove-hook 'post-self-insert-hook #'+prose-retype-word-done-h t)))
+
 (use-package! autocorrect
   :after jinx
   :config
   (setq autocorrect-check-spelling-function #'jinx--word-valid-p)
   (add-to-list 'autocorrect-predicates #'+prose-autocorrect-here-p)
   (advice-add 'jinx--correct-replace :before #'+prose-autocorrect-record-a)
+  (add-hook 'jinx-mode-hook #'+prose-retype-setup-h)
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf (when (bound-and-true-p jinx-mode) (+prose-retype-setup-h))))
   (run-with-idle-timer 0.5 nil #'autocorrect-setup))
 
 ;; Corrections are abbrevs.  Not in Coq: Proof General defines 328 that
