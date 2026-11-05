@@ -202,6 +202,24 @@ is for the link at point (Doom's RET passes that link's region)."
       (cons 1 (cdr args))
     args))
 
+;; RET inside a link (not at its end) acts on it in insert state too, as in
+;; normal state: shows an image inline or visits the target.  Insert
+;; state's RET only broke the line there.  At a link's end, a new line.
+(declare-function +org/dwim-at-point "ext:org" (&optional arg))
+
+(defun +org-links-return-a (fn &rest args)
+  "Around `+org/return' (FN, ARGS): on a link, do what RET does in normal state."
+  (let ((ctx (and (derived-mode-p 'org-mode) (save-match-data (org-element-context)))))
+    (if (and (eq (org-element-type ctx) 'link)
+             (< (org-element-property :begin ctx) (point)
+                (- (org-element-property :end ctx) (or (org-element-property :post-blank ctx) 0))))
+        (+org/dwim-at-point)
+      (apply fn args))))
+
+(with-eval-after-load 'org
+  (when (fboundp '+org/return)
+    (advice-add '+org/return :around #'+org-links-return-a)))
+
 ;; All of a buffer's images at once: Org 9.8 renamed org-toggle-inline-images
 ;; to org-link-preview (C-c C-x C-v), where the whole buffer takes C-u C-u
 ;; and described links C-u 11.  SPC m l v: one key, every image link.

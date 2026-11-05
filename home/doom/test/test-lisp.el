@@ -2842,3 +2842,23 @@ them, also after typing there refontifies the line."
       (should-not (invisible-p (save-excursion (search-backward "example"))))
       ;; The verbatim, left, is hidden again.
       (should (invisible-p marker)))))
+
+(ert-deftest org-links/insert-ret-inside-a-link-acts-on-it ()
+  "In insert state RET inside a link does what normal state's does; at the
+link's end it breaks the line as before."
+  (require 'org)
+  (load (expand-file-name "+org-links" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (org-mode)
+    (insert "B [[file:x.png][a shot]] end")
+    (let (acted)
+      (cl-letf (((symbol-function '+org/dwim-at-point) (lambda (&rest _) (setq acted t))))
+        (goto-char (point-min)) (search-forward "a sh")
+        (+org-links-return-a (lambda () (insert "\n")))
+        (should acted)
+        (should-not (string-search "\n" (buffer-string)))
+        (setq acted nil)
+        (goto-char (point-max))
+        (+org-links-return-a (lambda () (insert "\n")))
+        (should-not acted)
+        (should (string-suffix-p "end\n" (buffer-string)))))))
