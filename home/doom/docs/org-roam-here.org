@@ -18,12 +18,14 @@ describes, so the two change together; your notes live in =~/vault/roam=.
 
 | What                  | Where                                                |
 |-----------------------+------------------------------------------------------|
-| Notes                 | =~/vault/roam/= (=org-roam-directory=)                 |
-| Concepts, references  | =concepts/=, =refs/= below it                          |
-| Turm notes            | =turm/= below it                                       |
-| Daily notes           | =daily/= below it, one file per day                    |
+| The graph             | all of =~/vault= (=org-roam-directory=)                |
+| New notes             | =~/vault/roam/=                                         |
+| Concepts, references  | =roam/concepts/=, =roam/refs/=                          |
+| Turm notes            | =roam/turm/=                                            |
+| Daily notes           | =roam/daily/=, one file per day                         |
 | The database          | =~/vault/roam/org-roam.db=, kept current on save       |
 
+A file is a note once it has an =:ID:= (=SPC n r I= gives your existing files one).
 The database follows your files by itself (=org-roam-db-autosync-mode=):
 edit, rename or delete notes like any file.
 
@@ -45,6 +47,9 @@ All under =SPC n r= (notes, roam):
 | =SPC n r s= | search the text of all notes (consult)                        |
 | =SPC n r ?= | this manual                                                   |
 | =SPC n r M= | Org-roam's manual                                             |
+| =SPC n r m= | the menu: this note (backlinks, aliases, tags) and everything |
+| =SPC n r I= | make notes of files: this one, marked in dired, or a directory |
+| =SPC n r e= | Org-roam by example: a tour in a throwaway directory          |
 
 In any Org buffer, typing in link brackets =[[= completes note titles
 (=org-roam-completion-everywhere= is on), so linking while writing needs no
@@ -124,3 +129,27 @@ Manual: [[info:org-roam#Citations][Citations]].
   =home/doom/lisp/+org-power.el=; the database is rebuilt on the next sync.
 
 Manual: [[info:org-roam#Performance Optimization][Performance Optimization]].
+
+* By example: from the vault you have
+
+Your Org files become a graph in three steps; nothing about them moves.
+
+1. =SPC n r I= in dired on =~/vault= (or anywhere, then pick the directory):
+   it counts the Org files and asks; each gets an =:ID:= drawer at the top
+   and a =#+title:= if it had none.  They are notes now.
+2. Open =mess.org=.  Where a line talks about another note, type =[[=, a
+   few letters of its title (=vocab=), RET: a link.  Save.
+3. Open =vocabulary.org=, =SPC n r b=: =mess.org= shows as a backlink, with
+   the line the link sits in.
+
+From then on: =SPC n r m= in any note shows its backlinks, aliases and
+tags and offers what to do; =x= there turns a heading into a note of its
+own file (the heading's text moves, a link stays), =m= moves a heading
+into another note.  A heading can be a note without moving: =n=.
+
+To try it all without touching the vault first: =SPC n r e= makes three
+linked notes in a throwaway directory (with its own graph) and lists what
+to press.
+
+Manual: [[info:org-roam#Getting Started][Getting Started]],
+[[info:org-roam#Refiling][Refiling]], [[info:org-roam#Extracting subtrees][Extracting subtrees]].

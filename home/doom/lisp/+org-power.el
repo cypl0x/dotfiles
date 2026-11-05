@@ -10,9 +10,13 @@
 (use-package! org-roam
   :after org
   :init
-  (setq org-roam-directory (expand-file-name "roam" org-directory)
-        org-roam-db-location (expand-file-name "org-roam.db" org-roam-directory)
-        org-roam-dailies-directory "daily/"
+  ;; The whole vault is the graph (a note anywhere in it can be linked and
+  ;; show backlinks; +org-roam/init makes existing files nodes); new notes
+  ;; still go under roam/, the database stays there.
+  (setq org-roam-directory org-directory
+        org-roam-db-location (expand-file-name "roam/org-roam.db" org-directory)
+        org-roam-dailies-directory "roam/daily/"
+        org-roam-file-exclude-regexp "\\(?:\\.git/\\|~\\'\\|\\.#\\|#[^/]*#\\'\\)"
         org-roam-completion-everywhere t)
   :config
   (org-roam-db-autosync-mode)
@@ -20,22 +24,22 @@
   ;; Capture templates — research, concept, reference, daily
   (setq org-roam-capture-templates
         '(("d" "default" plain "%?"
-           :target (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+           :target (file+head "roam/%<%Y%m%d%H%M%S>-${slug}.org"
                               "#+title: ${title}\n#+filetags:\n\n")
            :unnarrowed t)
           ("c" "concept" plain
            "* Definition\n%?\n\n* Properties\n\n* Examples\n\n* Related\n"
-           :target (file+head "concepts/%<%Y%m%d%H%M%S>-${slug}.org"
+           :target (file+head "roam/concepts/%<%Y%m%d%H%M%S>-${slug}.org"
                               "#+title: ${title}\n#+filetags: :concept:\n\n")
            :unnarrowed t)
           ("r" "reference" plain
            "* Source\n- Author: %?\n- URL: \n- Year: \n\n* Summary\n\n* Key Points\n\n* Quotes\n"
-           :target (file+head "refs/%<%Y%m%d%H%M%S>-${slug}.org"
+           :target (file+head "roam/refs/%<%Y%m%d%H%M%S>-${slug}.org"
                               "#+title: ${title}\n#+filetags: :reference:\n\n")
            :unnarrowed t)
           ("t" "turm" plain
            "* Context\n%?\n\n* Type Theory\n\n* Implementation Notes\n\n* Proof Sketch\n"
-           :target (file+head "turm/%<%Y%m%d%H%M%S>-${slug}.org"
+           :target (file+head "roam/turm/%<%Y%m%d%H%M%S>-${slug}.org"
                               "#+title: ${title}\n#+filetags: :turm:dtt:\n\n")
            :unnarrowed t)))
 
