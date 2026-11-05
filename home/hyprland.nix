@@ -52,6 +52,9 @@
         "$out"
     '';
 in {
+  # notify-send --wait that ends: home/hyprland/scripts/notify-wait.sh
+  home.packages = [(pkgs.writeShellScriptBin "notify-wait" (builtins.readFile ./hyprland/scripts/notify-wait.sh))];
+
   # Hyprland home-manager configuration — thinkpad only (added via sharedModules).
   # Mirrors the Doom Emacs aesthetic from tmux/wezterm: Doom Vibrant palette,
   # SUPER as leader key, vim hjkl navigation, leader-chord-style submaps.
@@ -133,6 +136,10 @@ in {
       ".config/eww/eww.scss".source = ./hyprland/eww/eww.scss;
       ".config/eww/scripts/net.sh" = {
         source = ./hyprland/eww/scripts/net.sh;
+        executable = true;
+      };
+      ".config/hypr/scripts/dnd-toggle.sh" = {
+        source = ./hyprland/scripts/dnd-toggle.sh;
         executable = true;
       };
       ".config/hypr/scripts/run-or-raise.sh" = {

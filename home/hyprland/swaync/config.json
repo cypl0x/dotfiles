@@ -10,6 +10,7 @@
   "control-center-margin-bottom": 10,
   "control-center-margin-right": 10,
   "control-center-margin-left": 10,
+  "notification-grouping": true,
   "notification-2fa-action": true,
   "notification-inline-replies": true,
   "notification-icon-size": 48,
