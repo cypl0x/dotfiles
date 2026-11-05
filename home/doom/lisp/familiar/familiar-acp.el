@@ -395,7 +395,8 @@ runs, and released after."
     (gptel-abort buf)))
 
 (defun familiar-acp--sentinel (proc _event)
-  "When an editor's connection PROC closes: drop its sessions, stop their turns."
+  "Drop the sessions of an editor's connection PROC once it closes.
+Their turns under way are stopped."
   (unless (process-live-p proc)
     (maphash (lambda (sid session)
                (when (eq (plist-get session :process) proc)
@@ -411,7 +412,8 @@ runs, and released after."
                     familiar-acp-sessions-directory))
 
 (defun familiar-acp--save (sid)
-  "Keep session SID's directory and turns, so it can be loaded again."
+  "Keep session SID on disk, so it can be loaded again.
+What is kept: its directory and turns."
   (when-let* ((session (gethash sid familiar-acp--sessions)))
     (make-directory familiar-acp-sessions-directory t)
     (with-file-modes #o600

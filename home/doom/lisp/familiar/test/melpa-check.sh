@@ -29,6 +29,9 @@ cat >"$work/.checkdoc-all.el" <<'EOF'
 ;;; -*- lexical-binding: t; -*-
 (require 'checkdoc)
 (setq checkdoc-diagnostic-buffer "*checkdoc*")
+;; On explicitly: whether it is on otherwise differs between Emacs builds,
+;; and CI's checkdoc runs it.
+(setq checkdoc-verb-check-experimental-flag t)
 (dolist (f (directory-files "." nil "\\.el\\'"))
   (with-current-buffer (find-file-noselect f)
     (ignore-errors (checkdoc-current-buffer t))))

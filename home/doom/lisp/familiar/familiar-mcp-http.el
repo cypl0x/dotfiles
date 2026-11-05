@@ -164,7 +164,7 @@ METHOD, PATH, HEADERS and BODY are the request's, as parsed."
          (403 "Forbidden") (404 "Not Found") (405 "Method Not Allowed") (_ "Error")))
 
 (defun familiar-mcp-http--bytes (s)
-  "S as UTF-8 bytes (`json-serialize' already returns those)."
+  "S as UTF-8 bytes (`json-serialize' already gives those)."
   (if (multibyte-string-p s) (encode-coding-string s 'utf-8) s))
 
 (defun familiar-mcp-http--send (proc status extra body)

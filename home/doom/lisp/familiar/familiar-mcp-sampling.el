@@ -176,7 +176,7 @@ FN handles METHOD with PARAMS from server NAME otherwise."
 ;;;; Saying we can
 
 (defun familiar-mcp-sampling--initialize-a (args)
-  "Filter for jsonrpc's request ARGS: mcp.el's initialize also offers sampling."
+  "Filter jsonrpc's request ARGS: mcp.el's initialize also announces sampling."
   (pcase args
     (`(,conn :initialize ,params . ,rest)
      (let ((caps (plist-get params :capabilities)))

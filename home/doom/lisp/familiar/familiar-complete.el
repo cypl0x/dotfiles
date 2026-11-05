@@ -101,7 +101,7 @@ Each has its explanation as the text property `familiar-why'."
   (cons string point))
 
 (defun familiar-complete--all (_string table pred _point)
-  "Every completion in TABLE that PRED allows, as given."
+  "Every completion in TABLE that PRED accepts, as given."
   (when-let* ((all (all-completions "" table pred)))
     (nconc all 0)))
 

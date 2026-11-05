@@ -39,7 +39,7 @@
 (defvar-local familiar-footprint--before nil "(BEG . OLD-TEXT) of a change under way.")
 
 (defun familiar-footprint--before-h (beg end)
-  "While familiar acts, keep the text between BEG and END before it changes."
+  "While familiar acts, keep the text between BEG and END before it is changed."
   (when familiar-footprint--actor
     (setq familiar-footprint--before (cons beg (buffer-substring-no-properties beg end)))))
 
@@ -75,7 +75,7 @@ A streamed answer's next chunk joins the entry before it."
 (defvar familiar-footprint--wrapped nil "Tools already wrapped (names).")
 
 (defun familiar-footprint-wrap-tools (tools)
-  "Make each of TOOLS (gptel tools) record its changes under its name."
+  "Make each of TOOLS (gptel tools) record its edits under its name."
   (dolist (tool tools)
     (let ((name (gptel-tool-name tool))
           (fn (gptel-tool-function tool)))

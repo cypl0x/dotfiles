@@ -64,7 +64,7 @@
 (defvar familiar-mcp-client--cache nil "(MTIME . PARSED-JSON) of the config.")
 
 (defun familiar-mcp-client--json ()
-  "Claude Code's configuration as nested alists, read again when it changes."
+  "Claude Code's configuration as nested alists, reread when modified."
   (when (file-readable-p familiar-mcp-client-config)
     (let ((mtime (file-attribute-modification-time
                   (file-attributes familiar-mcp-client-config))))
@@ -123,7 +123,7 @@ PROJECT defaults to this buffer's; its servers come after the user's."
     conn))
 
 (defun familiar-mcp-client--read-only-p (name spec)
-  "Whether server NAME's tool SPEC (as the server lists it) only reads.
+  "Whether server NAME's tool SPEC (as the server lists it) is read-only.
 Its own readOnlyHint when it gives one, else the server, else the name."
   (let ((hint (plist-member (plist-get spec :annotations) :readOnlyHint)))
     (cond (hint (eq (cadr hint) t))

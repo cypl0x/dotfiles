@@ -495,7 +495,7 @@ win over this mode's map;
   "The model that answered last (an @preset may differ from `gptel-model').")
 
 (defun familiar-ask--header-line ()
-  "Model of the last answer, prompts, cost and start of this conversation."
+  "Model of the last answer, prompt count, cost and start of this conversation."
   (format " ✦ familiar-ask  ·  %s  ·  %s  ·  $%.4f%s"
           (or familiar-ask--last-model gptel-model)
           (let ((n (how-many "^\\*\\* ." (point-min) (point-max))))
@@ -616,7 +616,7 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
                           (abbreviate-file-name buffer-file-name) heading))))))
 
 (defun familiar-ask--echo-answer ()
-  "Show the latest answer in the echo area, as Org shows it."
+  "Show the latest answer in the echo area, as Org displays it."
   (when-let* ((bounds (familiar-ask--last-answer-bounds)))
     (font-lock-ensure (car bounds) (cdr bounds))
     (let ((text (familiar-ask--answer-text bounds))
@@ -852,7 +852,7 @@ Half as many after it."
   :type 'natnum :group 'familiar)
 
 (defun familiar-ask--inline-place (origin replace)
-  "Where an answer to ORIGIN goes: (BEG END NEWLINE).
+  "Where an answer to ORIGIN belongs: (BEG END NEWLINE).
 REPLACE: in place of the region, BEG to END.  Else at one place: after the
 region; at point in insert state (or without evil); in normal state at the
 end of point's line, NEWLINE meaning on a new line after it (point's line
@@ -872,7 +872,7 @@ holds text)."
                    (list (line-end-position) (line-end-position) (not blank)))))))))
 
 (defun familiar-ask--inline-excerpt (origin place replace)
-  "Text around PLACE in ORIGIN's buffer, marked where the answer goes."
+  "Text around PLACE in ORIGIN's buffer, marked where the answer belongs."
   (pcase-let ((`(,beg ,end ,newline) place)
               (region (plist-get origin :region)))
     (with-current-buffer (plist-get origin :buffer)
@@ -1301,7 +1301,7 @@ in the minibuffer."
     (message "Prompt discarded (it is in the history: M-p)")))
 
 (defun familiar-ask-edit-send ()
-  "Send the prompt in this buffer; its major mode goes along."
+  "Send the prompt in this buffer, along with its major mode."
   (interactive)
   (let ((text (string-trim (buffer-string)))
         (mode major-mode))
@@ -1312,7 +1312,7 @@ in the minibuffer."
     (familiar-ask (format "%s\n\n(Prompt written in %s.)" text mode) nil familiar-ask--origin)))
 
 (defun familiar-ask-edit-keep ()
-  "Close the prompt buffer; the next `familiar-ask' starts with its text."
+  "Close the prompt buffer, keeping its text for the next `familiar-ask'."
   (interactive)
   (setq familiar-ask--draft (string-trim (buffer-string)))
   (quit-window t)

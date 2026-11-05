@@ -518,7 +518,7 @@ most severe first, with file and line. If it is fine, say so in one line.")
 
 ;;;###autoload
 (defun familiar-review (&optional escalate)
-  "Review the staged changes (or, with nothing staged, the unstaged ones).
+  "Review the staged diff (or, with nothing staged, the unstaged one).
 With prefix arg ESCALATE, use the next model tier."
   (interactive "P")
   (let* ((staged (familiar--git "diff" "--cached" "--no-color" "--no-ext-diff"))
@@ -756,7 +756,7 @@ message.")
 
 ;;;###autoload
 (defun familiar-commit-message (&optional escalate)
-  "Write the commit message for the staged changes into this buffer.
+  "Write the commit message for what is staged into this buffer.
 Meant for git-commit buffers (magit's COMMIT_EDITMSG).  With prefix arg
 ESCALATE, use the next model tier."
   (interactive "P")

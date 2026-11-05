@@ -74,9 +74,9 @@
         (t "")))
 
 (defun familiar-openai-conversation (messages)
-  "OpenAI MESSAGES as (SYSTEM . TURNS).
-TURNS alternate from the user, as `gptel-request' takes a list prompt;
-consecutive turns of one role merge."
+  "Split OpenAI MESSAGES into a system prompt and a list prompt.
+The result is (SYSTEM . TURNS).  TURNS alternate from the user, as
+`gptel-request' takes a list prompt; consecutive turns of one role merge."
   (let (system turns last)
     (dolist (m messages)
       (let ((role (alist-get 'role m))

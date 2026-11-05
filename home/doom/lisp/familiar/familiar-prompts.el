@@ -147,7 +147,7 @@ TEXT is quoted as Org quotes code (a line starting with * stays text)."
           heading (org-escape-code-in-string (string-trim text))))
 
 (defun familiar-prompts--run-chain (names input origin finish)
-  "Run prompts NAMES on INPUT, each on the one before's output.
+  "Run NAMES (prompt names) on INPUT, each on the one before's output.
 Call FINISH with the last output.  ORIGIN is where it was asked from."
   (if (null names)
       (funcall finish input)
@@ -162,7 +162,7 @@ Call FINISH with the last output.  ORIGIN is where it was asked from."
            (familiar-prompts--run-chain (cdr names) response origin finish)))))))
 
 (defun familiar-prompts--ask-a (fn prompt &rest args)
-  "Around `familiar-ask' (FN): @p:NAMEs in PROMPT apply those prompts.
+  "Around `familiar-ask' (FN): apply the prompt of each @p:NAME in PROMPT.
 ARGS are the rest of FN's.  One: its instructions with what you typed
 and the context.  Several: all but the last run first, each on the one
 before's output (input: what you typed and the context); the last

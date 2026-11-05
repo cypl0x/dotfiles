@@ -73,7 +73,7 @@ pretend to have run anything."
     (_ "")))
 
 (defun familiar-atuin-conversation (messages)
-  "Atuin's Claude-style MESSAGES as turns alternating from the user."
+  "Atuin's Claude-style MESSAGES as a conversation alternating from the user."
   (let (turns last)
     (dolist (m messages)
       (let* ((side (if (equal (alist-get 'role m) "assistant") 'llm 'user))

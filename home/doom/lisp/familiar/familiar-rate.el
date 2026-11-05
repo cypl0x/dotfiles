@@ -158,7 +158,7 @@ from the list, and say only what those prompts show.")
 ;;;; Review
 
 (defun familiar-rate--collect ()
-  "Your latest distinct prompts, directives out: list of (TEXT . COUNT)."
+  "Your latest distinct prompt texts, directives out: list of (TEXT . COUNT)."
   (let ((counts (make-hash-table :test #'equal)) order)
     (dolist (p (bound-and-true-p familiar-ask-history))
       (let ((text (string-trim (familiar-rate--prompt-text p))))
@@ -169,8 +169,9 @@ from the list, and say only what those prompts show.")
             (seq-take (nreverse order) familiar-rate-review-count))))
 
 (defun familiar-rate--checked (answer prompts)
-  "ANSWER's findings that hold up against PROMPTS: (PATTERNS RATINGS DROPPED).
-A pattern needs two or more prompt numbers that exist, a rating one."
+  "ANSWER's findings that hold up: (PATTERNS RATINGS DROPPED).
+They are checked against PROMPTS: a pattern needs two or more prompt
+numbers that exist, a rating one."
   (let ((valid (lambda (n) (and (integerp n) (<= 1 n (length prompts)))))
         (dropped 0) patterns ratings)
     (dolist (p (plist-get answer :patterns))
@@ -186,7 +187,8 @@ A pattern needs two or more prompt numbers that exist, a rating one."
   (concat ": " (replace-regexp-in-string "\n" "\n: " text)))
 
 (defun familiar-rate--render (answer prompts)
-  "Org text of the review ANSWER of PROMPTS ((TEXT . COUNT) ...)."
+  "Org text of the review ANSWER.
+PROMPTS, a list of (TEXT . COUNT), are the ones it reviewed."
   (pcase-let ((`(,patterns ,ratings ,dropped) (familiar-rate--checked answer prompts))
               (cite (lambda (n)
                        (let ((p (nth (1- n) prompts)))
@@ -224,7 +226,7 @@ A pattern needs two or more prompt numbers that exist, a rating one."
 
 ;;;###autoload
 (defun familiar-rate-prompts ()
-  "Review the prompts you wrote to M-ß.
+  "Review your prompt history (what you wrote to M-ß).
 Patterns you repeat, the weakest ones, better ways to say them.
 Shown in an Org buffer; what it quotes are your prompts as written
 \(see the Commentary of familiar-rate.el)."
