@@ -160,6 +160,71 @@ nothing itself."
 (map! :after vellumory-evil :map vellumory-mode-map :n "zM" #'vellumory-set-theme)
 
 
+;;;; Reading: a screen at a time, or hands off
+
+;; The log: 3,948 small scrolls (j, <down>) against 192 page turns: pages
+;; read by holding j.  RET now turns a screen (12% kept for the eye, as
+;; DEL already turned back; RET was `evil-ret', which does nothing on a
+;; page).  A scrolls by itself, like a teleprompter: j / k faster or
+;; slower while it runs, A or ESC stops, the end of the document too.
+
+(declare-function vellumory-next-screen "ext:vellumory" ())
+(declare-function vellumory-scroll "ext:vellumory" (pixels))
+(declare-function vellumory--absolute-position "ext:vellumory" (&optional window))
+
+(defvar +vellumory-auto-scroll-speed 40
+  "Pixels a second for `+vellumory-auto-scroll-mode'; kept between uses.")
+(defvar-local +vellumory--auto-timer nil)
+
+(defun +vellumory--auto-step (buffer window)
+  (if (not (and (buffer-live-p buffer) (window-live-p window) (eq (window-buffer window) buffer)))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer (+vellumory-auto-scroll-mode -1)))
+    (with-selected-window window
+      (let ((before (vellumory--absolute-position)))
+        (vellumory-scroll (/ +vellumory-auto-scroll-speed 30.0))
+        (when (equal before (vellumory--absolute-position))     ; the end
+          (+vellumory-auto-scroll-mode -1))))))
+
+(defvar +vellumory-auto-scroll-mode-map (make-sparse-keymap))
+
+(define-minor-mode +vellumory-auto-scroll-mode
+  "Scroll the document by itself; j / k faster or slower, A or ESC stops."
+  :lighter " Auto"
+  (when (timerp +vellumory--auto-timer) (cancel-timer +vellumory--auto-timer))
+  (setq +vellumory--auto-timer
+        (and +vellumory-auto-scroll-mode
+             (run-with-timer 0 (/ 1.0 30) #'+vellumory--auto-step (current-buffer) (selected-window))))
+  ;; Evil reads which minor-mode maps apply only when told: j / k / ESC.
+  (when (fboundp 'evil-normalize-keymaps) (evil-normalize-keymaps))
+  (message (if +vellumory-auto-scroll-mode
+               "Scrolling at %d px/s: j faster, k slower, A or ESC stops"
+             "Scrolling stopped (%d px/s kept)")
+           +vellumory-auto-scroll-speed))
+
+(defun +vellumory/auto-scroll-faster ()
+  "Scroll faster (a quarter more)." (interactive)
+  (setq +vellumory-auto-scroll-speed (min 2000 (round (* 1.25 +vellumory-auto-scroll-speed))))
+  (message "%d px/s" +vellumory-auto-scroll-speed))
+
+(defun +vellumory/auto-scroll-slower ()
+  "Scroll slower (a fifth less)." (interactive)
+  (setq +vellumory-auto-scroll-speed (max 5 (round (* 0.8 +vellumory-auto-scroll-speed))))
+  (message "%d px/s" +vellumory-auto-scroll-speed))
+
+(defun +vellumory/auto-scroll-stop () "Stop scrolling." (interactive)
+  (+vellumory-auto-scroll-mode -1))
+
+(map! :after vellumory-evil :map vellumory-mode-map
+      :n "RET" #'vellumory-next-screen
+      :n "A"   #'+vellumory-auto-scroll-mode)
+(map! :map +vellumory-auto-scroll-mode-map
+      :n "j" #'+vellumory/auto-scroll-faster
+      :n "k" #'+vellumory/auto-scroll-slower
+      :n "A" #'+vellumory/auto-scroll-stop
+      :n [escape] #'+vellumory/auto-scroll-stop)
+
+
 ;;;; M-ß in a PDF: the selection and the page are the context
 
 ;; The buffer text of a Vellumory buffer is image layout, so familiar-ask's
