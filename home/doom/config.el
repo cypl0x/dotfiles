@@ -546,7 +546,8 @@
 (load! "lisp/+info")        ;; Info: readable, highlighted, remembers where you were; own manuals in C-h i
 (load! "lisp/+hyprland")    ;; Hyprland windows, binds, workspaces, monitors (SPC o h)
 (load! "lisp/+desktop")     ;; SPC o y: network, Bluetooth, audio, disks, NixOS generations, power
-(load! "lisp/+gh-browse")   ;; SPC o G: browse GitHub repositories without cloning
+(load! "lisp/+gh-fs")       ;; /github/OWNER/REPO[@REF]/…: GitHub as a read-only file system
+(load! "lisp/+gh-browse")   ;; SPC o G: GitHub menu: browse, dashboard, search, profiles, clone, report
 (load! "lisp/+merge")       ;; your unsaved edits + changes on disk: three-way merge, no "overwrite?" (SPC f M)
 (load! "lisp/+atuin")       ;; Atuin history: SPC s h (consult), M-r in M-!/compile/eshell; Emacs runs recorded
 (load! "lisp/+org-slash")    ;; /table5x2, /code, /todo ... in Org (Notion-like)

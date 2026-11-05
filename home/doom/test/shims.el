@@ -31,7 +31,7 @@
                    (expand-file-name (concat ".local/straight/build-" emacs-version)
                                      doom-emacs-dir)))))
   (when build
-    (dolist (pkg '("gptel" "transient" "compat" "cond-let" "llama" "org-fc" "cape"))
+    (dolist (pkg (quote ("gptel" "transient" "compat" "cond-let" "llama" "org-fc" "cape" "magit-section" "dash")))
       (let ((dir (expand-file-name pkg build)))
         (when (file-directory-p dir) (add-to-list 'load-path dir))))))
 
