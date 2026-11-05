@@ -29,6 +29,7 @@
     ../../modules/system/monitoring.nix
     ../../modules/system/assertions.nix
     ../../modules/system/nix-common.nix
+    ../../modules/system/mail.nix
 
     ../../modules/services/nginx.nix
     ../../modules/services/mosh.nix

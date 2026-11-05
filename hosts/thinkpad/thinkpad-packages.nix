@@ -108,14 +108,7 @@
 
     cmake
 
-    # mu # mue doesn't contain mu4e
-    # Fix it with:
-    # (pkgs.mu.override { emacs = pkgs.emacs; })
-    # TODO move to home manager (common.nix?) to enable on all hosts and user
-    mu
-    mu.mu4e
-    isync
-    offlineimap
+    # Mail (mu, mu4e, isync, offlineimap): modules/system/mail.nix
 
     wezterm
     ghostty
@@ -126,9 +119,7 @@
 
     nil # nix lsp server
 
-    # TODO move to own flutter.nix file
-    dart
-    flutter
+    # Flutter and Dart: ./flutter.nix
 
     # multi messenger meta messenger (WhatsApp, Telegram, Signal, Discord, etc.)
     beeper

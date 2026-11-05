@@ -13,6 +13,7 @@
     ../../modules/system/desktop.nix
     ../../modules/system/console.nix
     ../../modules/system/keyring.nix
+    ../../modules/system/mail.nix
     ../../modules/services/tailscale.nix
 
     # User configuration
@@ -24,6 +25,7 @@
     # Host-specific configuration
     ./hyprland.nix
     ./thinkpad-packages.nix
+    ./flutter.nix
     ./power.nix
     ./graphics.nix
     ./extra-consoles.nix
