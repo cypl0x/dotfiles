@@ -2862,3 +2862,21 @@ link's end it breaks the line as before."
         (+org-links-return-a (lambda () (insert "\n")))
         (should-not acted)
         (should (string-suffix-p "end\n" (buffer-string)))))))
+
+(ert-deftest completion/org-file-links-put-the-directory-first ()
+  "In Org's file-link prompt ./ comes first (RET links the directory); a
+directory taken that way loses its /./."
+  (load (expand-file-name "+completion" test-lisp-dir) nil t)
+  (let ((dir (file-name-as-directory (make-temp-file "dirfirst" t))))
+    (unwind-protect
+        (progn
+          (write-region "" nil (expand-file-name "newest.org" dir))
+          (with-temp-buffer
+            (cl-letf (((symbol-function 'minibuffer-contents-no-properties) (lambda () dir)))
+              (let ((minibuffer-completing-file-name t))
+                (should (equal (car (+completion-sort-files-newest '("newest.org" "./" "../"))) "newest.org"))
+                (let ((+completion-directory-first t))
+                  (should (equal (car (+completion-sort-files-newest '("newest.org" "./" "../"))) "./")))))))
+      (delete-directory dir t)))
+  (should (equal (+completion--directory-first-a (lambda () "file:~/Pictures/Screenshots/./")) "file:~/Pictures/Screenshots/"))
+  (should (equal (+completion--directory-first-a (lambda () "file:./")) "file:./")))

@@ -478,6 +478,20 @@ a reopened one keeps its edits."
            (file-directory-p dir)
            dir))))
 
+(defvar +completion-directory-first nil
+  "Non-nil: the directory itself (./) first, for prompts where a directory
+is a valid answer (Org's file links: RET on ~/vault/ took its newest file).")
+
+(defun +completion--directory-first-a (fn &rest args)
+  "Around `org-link-complete-file' (FN, ARGS): the directory first; a
+directory taken as ./ (~/Pictures/./) without its /./."
+  (let* ((+completion-directory-first t)
+         (link (apply fn args)))
+    (if (stringp link) (replace-regexp-in-string "\\([^:]\\)/\\./\\'" "\\1/" link) link)))
+
+(with-eval-after-load 'ol
+  (advice-add 'org-link-complete-file :around #'+completion--directory-first-a))
+
 (defun +completion-sort-files-newest (files)
   "FILES (a file prompt's candidates): directories first, newest first."
   (let ((dir (+completion--file-dir)))
@@ -494,7 +508,9 @@ a reopened one keeps its edits."
              (dot (lambda (f) (member f '("./" "../")))))
         (sort (copy-sequence files)
               (lambda (a b)
-                (cond ((funcall dot a) nil) ((funcall dot b) t)
+                (cond ((and +completion-directory-first (equal a "./")) t)
+                      ((and +completion-directory-first (equal b "./")) nil)
+                      ((funcall dot a) nil) ((funcall dot b) t)
                       ((and (string-suffix-p "/" a) (not (string-suffix-p "/" b))) t)
                       ((and (string-suffix-p "/" b) (not (string-suffix-p "/" a))) nil)
                       (t (> (funcall time a) (funcall time b))))))))))
