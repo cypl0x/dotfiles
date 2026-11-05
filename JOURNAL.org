@@ -39,6 +39,19 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 11:42] — neomacs: zoom back, faster scrolling, lag measured
+- ✔ *Zoom in neomacs* works again. Replacing the scroll fix had dropped the
+  line that switches the zoom fix on; a test now guards all three.
+- ✔ *Trackpad scrolling 2.5× faster* (=+neomacs-scroll-speed=). GNU Emacs
+  scales the scroll distance GTK reports; neomacs passed it through as is.
+  On a Mac the system accelerates it first, as you guessed.
+- ✔ *SPC m . in neomacs* works: my 11:11 change copied consult's data in a
+  way Emacs refuses whenever it names the buffer.
+- 🔎 *Input lag*, measured from your running profile. In neomacs (no native
+  compilation) one Org lint of mess.org took 0.66 s at every pause. Lints
+  over 0.1 s now wait for save, and a key press abandons them. The machine
+  itself: 17 GiB in swap, about 7 GiB of it Firefox.
+
 ** [2026-11-05 Do 11:25] — Emacs writes to Claude Code sessions, natively
 - ✔ *Messaging a session from Emacs* (your option 3): Claude Code sessions
   take messages on a local Unix socket; Emacs now speaks that protocol, so
