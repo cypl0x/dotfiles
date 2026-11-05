@@ -39,6 +39,23 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 08:30] — All of gh, from Emacs; and why CI was red
+- 🚀 *SPC o G x*: every one of gh's 218 commands, described, flags completing
+  from its own help; output in Emacs (Atuin records it); anything wanting
+  an editor gets this Emacs. Researched first: gh 2.97 tree, the 84
+  extensions of awesome-gh-cli-extensions, your dash/notify/poi.
+- ✔ Writing: issues, comments, PRs, reviews, gists in Markdown, C-c C-c.
+  =.= on an issue/PR: comment, close, review, merge, ready, checkout,
+  work on it (branch + assign). Actions: runs, failed-step logs, watch,
+  rerun. Code grep across GitHub → the file in /github at the match.
+  Contribution calendar on profiles; PR metrics in the report.
+- 🔎 First real use, the Actions view: your CI has been red since 06:34
+  — my =hypr-dispatch.sh= wasn't shfmt-formatted (=nix fmt --fail-on-change=).
+  Fixed (525961d), verified the script still translates; lesson saved.
+  *Not pushed*: main is 19 commits ahead of origin — say when.
+- 👀 You were in the lab frame (SPC f f /github/…) while I tested; I
+  stopped sending anything there. Close it whenever you like.
+
 ** [2026-11-05 Do 08:22] — GitHub is a directory now; diagnostics calm; Babel fixed
 - 🚀 *=/github/OWNER/REPO[@REF]/PATH= is a file system* (+gh-fs.el). SPC f f,
   dired/dirvish, SPC p f (whole repo from one call), consult, imenu,
