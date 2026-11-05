@@ -1465,7 +1465,12 @@ findings stand, following the text; once saved it runs again."
           (should (= (marker-position (car (car +org-lint--last))) (+ pos 11))))
         (set-buffer-modified-p nil)         ; as if saved
         (+org-lint-current)
-        (should (= runs 2))))))
+        (should (= runs 2))
+        ;; A key pressed meanwhile: abandoned, the findings stay.
+        (let ((before +org-lint--last))
+          ;; while-no-input's value when interrupted
+          (cl-letf (((symbol-function '+org-lint-findings) (lambda () t)))
+            (should (eq (+org-lint-current) before))))))))
 
 (ert-deftest org-lint/markup-headings-languages-links ()
   (require 'org-lint)

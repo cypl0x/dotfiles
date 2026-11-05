@@ -389,13 +389,14 @@ buffer and the Emacs (natively compiled or not), not a fixed size."
 
 (defun +org-lint-current ()
   "Findings for flycheck: fresh when `+org-lint-due-p', else the last ones
-(their markers moved with your edits)."
-  (if (+org-lint-due-p)
-      (progn
-        (dolist (f +org-lint--last) (set-marker (car f) nil))
-        (setq +org-lint--last
-              (mapcar (pcase-lambda (`(,pos ,level ,msg)) (list (copy-marker pos) level msg))
-                      (+org-lint-findings))))
+(their markers moved with your edits).  A key pressed meanwhile abandons
+the lint (the last findings stand) rather than waiting for it."
+  (let ((fresh (if (+org-lint-due-p) (while-no-input (+org-lint-findings)) t)))
+    (unless (eq fresh t)                ; t: not due, or interrupted
+      (dolist (f +org-lint--last) (set-marker (car f) nil))
+      (setq +org-lint--last
+            (mapcar (pcase-lambda (`(,pos ,level ,msg)) (list (copy-marker pos) level msg))
+                    fresh)))
     +org-lint--last))
 
 (defun +org-lint-findings ()
