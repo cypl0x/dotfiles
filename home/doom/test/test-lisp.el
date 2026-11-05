@@ -1303,6 +1303,20 @@ and a temp exec-path where bin/tar links to store/tar."
   (should (seq-find (lambda (c) (eq (org-lint-checker-name c) '+org-lint-list-bullets))
                     org-lint--checkers)))
 
+(ert-deftest org-lint/markup-headings-languages-links ()
+  (require 'org-lint)
+  (cl-flet ((lint (rule text)
+              (with-temp-buffer
+                (org-mode)
+                (insert text)
+                (mapcar #'cadr (funcall rule (org-element-parse-buffer))))))
+    (should (equal (lint #'+org-lint-mixed-markup "Run ~make~ and ~make~, then =make=; =other= stays.\n")
+                   '("make is =make= here but ~make~ 2× elsewhere: pick one (~code~ for code, =verbatim= for literal text)")))
+    (should (equal (lint #'+org-lint-emphasis-heading "*Setup*\n\nText with *bold* in it.\n\n- *item*\n")
+                   '("Emphasis as a heading (MD036): make it a heading")))
+    (should (equal (lint #'+org-lint-link-text "See [[https://a.b][here]] and [[https://c.d][the manual]].\n")
+                   '("Link text \"here\" (MD059): say where it leads")))))
+
 (ert-deftest org-lint/many-of-a-kind-shown-once-as-you-write ()
   (with-temp-buffer
     (org-mode)

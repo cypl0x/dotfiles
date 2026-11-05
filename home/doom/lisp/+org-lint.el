@@ -20,10 +20,15 @@
 ;;   blank line missing            MD022 MD031 MD032 (what SPC c f adds)
 ;;   #+KEYWORD in upper case       (Org writes them lower case since 9)
 ;;   bullets mixed in one list     MD004
+;;   same text =x= here, ~x~ there
+;;   *bold* paragraph as heading   MD036
+;;   link text "here", "link"      MD059
 ;;
 ;;; Code:
 
 (require 'map)
+(require 'cl-lib)
+(require 'seq)
 (declare-function org-lint-add-checker "org-lint" (name summary fun &rest props))
 (declare-function org-lint-checker-function "org-lint" (cl-x))
 (declare-function org-lint-checker-name "org-lint" (cl-x))
@@ -166,6 +171,58 @@
                               (format "Bullet %s in a list of %s" (funcall bullet i) first))))
                     (cdr items)))))))
 
+(defun +org-lint-mixed-markup (ast)
+  "The same text as =verbatim= in one place and ~code~ in another."
+  (let ((seen (make-hash-table :test #'equal)))
+    (org-element-map ast '(verbatim code)
+      (lambda (v) (push (cons (org-element-type v) (org-element-property :begin v))
+                        (gethash (org-element-property :value v) seen))))
+    (let (out)
+      (maphash
+       (lambda (text uses)
+         (let ((code (cl-count 'code uses :key #'car))
+               (verb (cl-count 'verbatim uses :key #'car)))
+           (when (and (> code 0) (> verb 0))
+             ;; The fewer kind is reported; ~code~ wins a tie.
+             (let ((minority (if (> verb code) 'code 'verbatim)))
+               (dolist (u uses)
+                 (when (eq (car u) minority)
+                   (push (list (cdr u)
+                               (format "%s is %s here but %s %d× elsewhere: pick one (~code~ for code, =verbatim= for literal text)"
+                                       text
+                                       (if (eq minority 'code) (format "~%s~" text) (format "=%s=" text))
+                                       (if (eq minority 'code) (format "=%s=" text) (format "~%s~" text))
+                                       (if (eq minority 'code) verb code)))
+                         out)))))))
+       seen)
+      out)))
+
+(defun +org-lint-emphasis-heading (ast)
+  "A paragraph that is only *bold* or /italic/ text: a heading in disguise (MD036)."
+  (org-element-map ast 'paragraph
+    (lambda (p)
+      (let ((contents (seq-remove (lambda (c) (and (stringp c) (string-blank-p c)))
+                                  (org-element-contents p))))
+        (when (and (= (length contents) 1)
+                   (memq (org-element-type (car contents)) '(bold italic))
+                   (not (eq (org-element-type (org-element-property :parent p)) 'item)))
+          (list (org-element-property :begin p)
+                "Emphasis as a heading (MD036): make it a heading"))))))
+
+(defconst +org-lint-vague-link-texts
+  '("here" "click here" "link" "this link" "this" "more" "read more" "hier" "mehr" "dieser link")
+  "Link descriptions that don't say where they lead.")
+
+(defun +org-lint-link-text (ast)
+  "A link whose text says nothing about where it goes (MD059)."
+  (org-element-map ast 'link
+    (lambda (l)
+      (let ((desc (org-element-contents l)))
+        (when (and desc (stringp (car desc)) (null (cdr desc))
+                   (member (downcase (string-trim (car desc))) +org-lint-vague-link-texts))
+          (list (org-element-property :begin l)
+                (format "Link text \"%s\" (MD059): say where it leads" (string-trim (car desc)))))))))
+
 (defconst +org-lint-rules
   '((+org-lint-verbatim-code      "=code= that should be ~code~" low)
     (+org-lint-empty-heading      "Heading without a title" high)
@@ -176,7 +233,10 @@
     (+org-lint-trailing-whitespace "Trailing whitespace (MD009)" high)
     (+org-lint-missing-blank-line "Blank line missing (MD022/MD031/MD032)" high)
     (+org-lint-keyword-case       "Upper-case #+KEYWORD" high)
-    (+org-lint-list-bullets       "Bullets mixed in one list (MD004)" high))
+    (+org-lint-list-bullets       "Bullets mixed in one list (MD004)" high)
+    (+org-lint-mixed-markup       "Same text as =verbatim= and ~code~" high)
+    (+org-lint-emphasis-heading   "Emphasis used as a heading (MD036)" low)
+    (+org-lint-link-text          "Link text that says nothing (MD059)" high))
   "The style rules: (FUNCTION SUMMARY TRUST).")
 
 (with-eval-after-load 'org-lint
