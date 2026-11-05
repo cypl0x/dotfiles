@@ -27,6 +27,11 @@ lib.mkIf (config.home.username == "wap") (let
     # The main Emacs's package checkouts, shared (builds stay separate).
     [ -e "$local/straight/repos" ] || ln -s "$HOME/.config/emacs/.local/straight/repos" "$local/straight/repos"
     export DOOMLOCALDIR="$local" NEOMACS_DOOM=1
+    # Upstream defaults to RUST_LOG=info: some 125 KB/s into the terminal while
+    # you work (205 MB in half an hour), each line written as it happens, so
+    # a busy terminal makes neomacs wait.  Warnings and errors only; set
+    # RUST_LOG yourself for more.
+    export RUST_LOG="''${RUST_LOG:-warn}"
   '';
 in {
   home.packages = [
