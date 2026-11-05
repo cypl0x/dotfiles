@@ -1805,6 +1805,54 @@ Only headings of three words or more, with no masked markup inside, count."
              (replace-regexp-in-string "\\([0-9]\\)\\([^0-9., ]\\)" "\\1 \\2" s nil nil nil)
            (replace-regexp-in-string "\\([0-9]\\) " "\\1" s)))))))
 
+(defconst well-formed--transitions
+  '(("en" "however" "therefore" "thus" "moreover" "furthermore" "also" "additionally" "first" "second"
+     "third" "next" "then" "finally" "meanwhile" "instead" "similarly" "likewise" "consequently"
+     "hence" "still" "yet" "nevertheless" "nonetheless" "overall" "this" "that" "these" "those"
+     "such" "so" "but" "and" "in contrast" "in addition" "for example" "for instance" "as a result"
+     "on the other hand" "in short" "in summary" "to conclude" "by contrast" "after" "before" "later")
+    ("de" "jedoch" "daher" "deshalb" "außerdem" "zudem" "zunächst" "dann" "schließlich" "dennoch"
+     "trotzdem" "ebenso" "folglich" "somit" "dies" "das" "diese" "dieser" "allerdings" "aber"
+     "und" "auch" "danach" "vorher" "zum beispiel" "im gegensatz" "insgesamt"))
+  "Words and phrases that open a paragraph by linking it to the one before.")
+
+(defun well-formed--stems (text)
+  "TEXT's content words (five letters or more) as their first five letters."
+  (delete-dups (mapcar (lambda (w) (substring (downcase w) 0 5))
+                       (seq-filter (lambda (w) (>= (length w) 5))
+                                   (split-string text "[^[:alpha:]]+" t)))))
+
+(defun well-formed--transitions (paras)
+  "Paragraphs in a row with nothing tying the second to the first: no
+transition opening it and no word in common with how the first ended.
+Only in essay-like styles (academic, business, technical)."
+  (let (out prev)
+    (dolist (p paras)
+      (cond
+       ((not (eq (well-formed-para-kind p) 'prose)) (setq prev nil))
+       ((not (memq (plist-get (well-formed-para-style p) :name) '(academic business technical))))
+       (t
+        (let* ((text (well-formed-para-text p)) (sentences (well-formed-para-sentences p))
+               (long (and (>= (length sentences) 2) (>= (well-formed--word-count text) 20))))
+          (when (and prev long)
+            (let* ((first (substring text (car (car sentences)) (cdr (car sentences))))
+                   (ptext (well-formed-para-text prev))
+                   (pend (let ((ss (last (well-formed-para-sentences prev) 2)))
+                           (substring ptext (car (car ss)) (cdr (car (last ss))))))
+                   (opener (string-trim-left (downcase first)))
+                   (linked (or (cl-some (lambda (tr) (string-match-p (concat "\\`" (regexp-quote tr) "\\>") opener))
+                                        (cdr (assoc (well-formed-para-lang p) well-formed--transitions)))
+                               (cl-intersection (well-formed--stems first) (well-formed--stems pend) :test #'equal))))
+              (unless linked
+                (push (list (+ (well-formed-para-beg p) (car (car sentences)))
+                            (+ (well-formed-para-beg p) (cdr (car sentences)))
+                            'transition
+                            "No link to the paragraph before: a transition (However, As a result …) or a word that picks it up"
+                            nil)
+                      out))))
+          (setq prev (and long p))))))
+    (nreverse out)))
+
 (defun well-formed--consistency-more (paras)
   (let ((en (cl-remove-if-not (lambda (p) (equal (well-formed-para-lang p) "en")) paras)))
     (unless (memq 'consistency (bound-and-true-p well-formed-disabled-categories))
@@ -1842,6 +1890,14 @@ more wins."
   :function #'ignore)
 
 (add-hook 'well-formed-document-functions #'well-formed--consistency-more)
+(add-hook 'well-formed-document-functions #'well-formed--transitions)
+
+(well-formed-define-rule transition
+  :category 'clarity :level 'info
+  :doc "In an essay, report or documentation (academic, business, technical
+style): a paragraph that neither opens with a transition nor picks up a
+word from how the one before ended leaves the reader to find the link."
+  :function #'ignore)
 
 (provide 'well-formed-rules)
 ;;; well-formed-rules.el ends here

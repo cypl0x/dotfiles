@@ -21,8 +21,10 @@
 
 (defun well-formed-menu--counts ()
   (let ((found (and (bound-and-true-p well-formed-mode) (ignore-errors (well-formed--ensure-findings)))))
-    (format "%s style · %d findings%s"
-            (car (well-formed--document-settings)) (length found)
+    (format "%s style, %s · %d findings%s"
+            (car (well-formed--document-settings))
+            (let ((g (well-formed--document-goals))) (format "for %s readers, to %s" (car g) (cdr g)))
+            (length found)
             (if found
                 (concat " ("
                         (mapconcat (lambda (c)
@@ -64,7 +66,8 @@
     ("u" "stop ignoring…" well-formed-unignore)
     ("m" "checking on/off here" well-formed-mode)]
    ["Style"
-    ("s" "style for this buffer…" well-formed-set-style)]
+    ("s" "style for this buffer…" well-formed-set-style)
+    ("g" "goals: audience, intent…" well-formed-set-goals)]
    ["Categories"
     ("1" well-formed-menu--toggle-correctness :description (lambda () (well-formed-menu--category 'correctness)))
     ("2" well-formed-menu--toggle-clarity :description (lambda () (well-formed-menu--category 'clarity)))

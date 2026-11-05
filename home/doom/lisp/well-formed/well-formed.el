@@ -106,6 +106,58 @@ writing (and pasted logs or mail land there)."
   "Styles: per style, the sentence length limit (0: none), rules :off, and
 rule levels overridden (error, warning, info).")
 
+(defcustom well-formed-audience 'knowledgeable
+  "Who reads it (Grammarly's audience goal); a document says
+\"#+well_formed: STYLE audience=expert\"."
+  :type '(choice (const general) (const knowledgeable) (const expert)))
+
+(defcustom well-formed-intent 'inform
+  "What the text is for (Grammarly's intent goal); a document says
+\"#+well_formed: STYLE intent=convince\"."
+  :type '(choice (const inform) (const describe) (const convince) (const tell)))
+
+(defvar well-formed-goals
+  '((general       :sentence-factor 0.8
+                   :level ((complex-word . warning) (jargon . warning) (hard-sentence . warning)))
+    (knowledgeable)
+    (expert        :sentence-factor 1.25 :off (complex-word jargon))
+    (inform        :level ((hedge . warning) (vague-this . warning) (unclear-antecedent . warning)))
+    (describe      :off (adverb) :level ((bland . warning) (overused . warning)))
+    (convince      :level ((hedge . warning) (weasel . warning) (passive . warning) (negative . warning)))
+    (tell          :off (first-person conjunction-start)
+                   :level ((rhythm . warning) (monotonous-start . warning) (passive . info))))
+  "What each audience and intent changes in the style: the sentence limit
+scaled, rules :off, rule levels (these win over the style's).")
+
+(defun well-formed--with-goals (style audience intent)
+  "STYLE (a plist from `well-formed-styles' with :name) for AUDIENCE and INTENT."
+  (let* ((a (alist-get audience well-formed-goals)) (i (alist-get intent well-formed-goals))
+         (limit (plist-get style :sentence))
+         (factor (* (or (plist-get a :sentence-factor) 1) (or (plist-get i :sentence-factor) 1))))
+    (append (list :audience audience :intent intent
+                  :sentence (and limit (if (zerop limit) 0 (round (* limit factor))))
+                  :off (append (plist-get a :off) (plist-get i :off) (plist-get style :off))
+                  ;; `alist-get' finds the first: the goals' levels first.
+                  :level (append (plist-get i :level) (plist-get a :level) (plist-get style :level)))
+            style)))
+
+(defun well-formed--document-goals ()
+  "(AUDIENCE . INTENT) the document asks for (on its well_formed: line), or
+the buffer's defaults."
+  (save-excursion
+    (save-restriction
+      (widen)
+      (goto-char (point-min))
+      (let ((case-fold-search t) audience intent)
+        (when (re-search-forward "^\\(?:#\\+\\)?well_formed:.*$" (min (point-max) 4000) t)
+          (let ((line (match-string 0)))
+            (when (string-match "audience=\\([a-z]+\\)" line)
+              (setq audience (intern (downcase (match-string 1 line)))))
+            (when (string-match "intent=\\([a-z]+\\)" line)
+              (setq intent (intern (downcase (match-string 1 line)))))))
+        (cons (if (assq audience well-formed-goals) audience well-formed-audience)
+              (if (assq intent well-formed-goals) intent well-formed-intent))))))
+
 ;;;; Rules
 
 (cl-defstruct (well-formed-rule (:constructor well-formed--make-rule))
@@ -584,7 +636,10 @@ that need the whole document (consistency).  Each returns findings
 
 (defun well-formed--build-paras (beg end)
   (let* ((settings (well-formed--document-settings))
-         (style (cons :name (cons (car settings) (alist-get (car settings) well-formed-styles))))
+         (goals (well-formed--document-goals))
+         (style (well-formed--with-goals
+                 (cons :name (cons (car settings) (alist-get (car settings) well-formed-styles)))
+                 (car goals) (cdr goals)))
          (text (well-formed--masked-text beg end))
          (raw (well-formed--paragraphs text beg))
          (fallback (or (cdr settings) (well-formed--detect-language text) "en")))
@@ -610,6 +665,7 @@ Findings are (BEG END RULE LEVEL MESSAGE FIXES ORIGINAL)."
     (dolist (p paras)
       (let* ((key (list (well-formed-para-text p) (well-formed-para-lang p)
                         (well-formed-para-kind p) (plist-get (well-formed-para-style p) :name)
+                        (plist-get (well-formed-para-style p) :audience) (plist-get (well-formed-para-style p) :intent)
                         well-formed-disabled-rules well-formed-disabled-categories))
              (hit (gethash key cache :miss))
              (found (if (eq hit :miss) (well-formed--check-para p) hit)))
@@ -1083,6 +1139,19 @@ help window, always)."
   (setq well-formed--tick nil)
   (when (and (featurep 'flycheck) (bound-and-true-p flycheck-mode)) (funcall 'flycheck-buffer))
   (message "well-formed: %s style here (a document keeps it with \"#+well_formed: %s\")" style style))
+
+;;;###autoload
+(defun well-formed-set-goals (audience intent)
+  "Write for AUDIENCE with INTENT in this buffer (Grammarly's goals)."
+  (interactive
+   (let ((goals (mapcar #'car well-formed-goals)))
+     (list (intern (completing-read "Audience: " (mapcar #'symbol-name (seq-take goals 3)) nil t))
+           (intern (completing-read "Intent: " (mapcar #'symbol-name (nthcdr 3 goals)) nil t)))))
+  (setq-local well-formed-audience audience well-formed-intent intent)
+  (setq well-formed--tick nil)
+  (when (and (featurep 'flycheck) (bound-and-true-p flycheck-mode)) (funcall 'flycheck-buffer))
+  (message "well-formed: for %s readers, to %s (a document keeps it: \"#+well_formed: %s audience=%s intent=%s\")"
+           audience intent (car (well-formed--document-settings)) audience intent))
 
 (defun well-formed-toggle-category (category)
   "Report CATEGORY or not, everywhere."

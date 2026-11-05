@@ -504,3 +504,30 @@ first check; a goal shows the way there."
       (goto-char (point-max)) (backward-char 2)
       (well-formed-synonyms))
     (should (equal (buffer-string) "The Subject"))))
+
+(ert-deftest well-formed-test-goals-audience-intent ()
+  (let ((text "We must utilize the methodology to facilitate the implementation.\n"))
+    (let ((well-formed-audience 'expert))
+      (should-not (memq 'complex-word (well-formed-test--ids #'text-mode text))))
+    (let ((well-formed-audience 'general))
+      (well-formed-test--with #'text-mode text
+        (let ((f (cl-find 'complex-word (well-formed-check) :key (lambda (f) (nth 2 f)))))
+          (should f)
+          (should (eq (nth 3 f) 'warning)))
+        (should (= (plist-get (well-formed-para-style (car (well-formed--build-paras (point-min) (point-max)))) :sentence)
+                   24))))
+    ;; The document's line wins over the defaults.
+    (well-formed-test--with #'text-mode (concat "#+well_formed: general audience=expert intent=convince\n\n" text)
+      (should (equal (well-formed--document-goals) '(expert . convince)))
+      (should-not (memq 'complex-word (mapcar (lambda (f) (nth 2 f)) (well-formed-check)))))))
+
+(ert-deftest well-formed-test-transitions-between-paragraphs ()
+  (let ((p1 "#+well_formed: academic\n\nThe cache keeps recent results in memory. Lookups that hit it return within a microsecond, which matters for the hot loop of the parser.\n\n")
+        (unlinked "Penguins live mostly in the southern hemisphere. Several colonies breed on islands far away from any continent and its predators.\n")
+        (linked "However, penguins live mostly in the southern hemisphere. Several colonies breed on islands far away from any continent and its predators.\n")
+        (echo "The parser's memory grows with every cached result, which several colonies of benchmarks showed us during long runs of it.\n"))
+    (should (memq 'transition (well-formed-test--ids #'text-mode (concat p1 unlinked))))
+    (should-not (memq 'transition (well-formed-test--ids #'text-mode (concat p1 linked))))
+    (should-not (memq 'transition (well-formed-test--ids #'text-mode (concat p1 echo))))
+    ;; Notes (the general style) aren't essays.
+    (should-not (memq 'transition (well-formed-test--ids #'text-mode (concat (substring p1 25) unlinked))))))

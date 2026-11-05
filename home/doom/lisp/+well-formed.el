@@ -24,7 +24,8 @@
 
 (dolist (cmd '(well-formed-mode global-well-formed-mode well-formed-fix well-formed-fix-all
                well-formed-ignore well-formed-unignore well-formed-explain well-formed-list
-               well-formed-next well-formed-previous well-formed-set-style well-formed-toggle-category))
+               well-formed-next well-formed-previous well-formed-set-style well-formed-set-goals
+               well-formed-toggle-category))
   (autoload cmd "well-formed" nil t))
 (autoload 'well-formed-report "well-formed-report" nil t)
 (autoload 'well-formed-menu "well-formed-menu" nil t)
