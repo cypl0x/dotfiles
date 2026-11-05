@@ -99,10 +99,13 @@ you change afterwards is; the report reads the whole text on demand).")
       (let ((case-fold-search t) goal)
         (when (re-search-forward "^\\(?:#\\+\\)?well_formed_goal:[ \t]*\\(.+\\)$" 4000 t)
           (setq goal (string-trim (match-string-no-properties 1))))
-        (format "Declared style: %s.%s Mode: %s."
-                (car (well-formed--document-settings))
-                (if goal (format " Goal: %s." goal) "")
-                major-mode)))))
+        (let ((goals (well-formed--document-goals)))
+          (format "Declared style: %s. Audience: %s readers. Intent: %s.%s Mode: %s."
+                  (car (well-formed--document-settings))
+                  (car goals)
+                  (pcase (cdr goals) ('tell "tell a story") (i i))
+                  (if goal (format " Goal: %s." goal) "")
+                  major-mode))))))
 
 (defun well-formed-ai--budget-p ()
   (let ((now (float-time)))
