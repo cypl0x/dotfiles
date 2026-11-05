@@ -172,12 +172,17 @@
   :hook (magit-mode . magit-delta-mode)
   :config
   ;; --color-only: let magit own the diff layout; delta only adds ANSI colours.
-  ;; Omitting --line-numbers avoids hunk-staging breakage caused by delta
-  ;; reformatting the diff offsets that magit relies on.
+  ;; But --color-only keeps gitconfig's `line-numbers = true', and delta then
+  ;; prefixes "542┊ 543┊" to each line: magit can't find the +/- markers and
+  ;; dumps hunks outside their file's section.  delta/magit.gitconfig (Nix,
+  ;; home/common.nix) is the same theme with line numbers off.
   (setq magit-delta-delta-args
-        '("--max-line-distance" "0.6"
-          "--true-color" "always"
-          "--color-only")))
+        (append '("--max-line-distance" "0.6"
+                  "--true-color" "always"
+                  "--color-only")
+                (let ((config (expand-file-name "delta/magit.gitconfig"
+                                                (or (getenv "XDG_CONFIG_HOME") "~/.config"))))
+                  (and (file-exists-p config) (list "--config" config))))))
 
 ;; ── difftastic — structural, syntax-aware diffs ────────────────────────────
 ;; Understands language syntax: moved/renamed code shows as moves, not add+del.

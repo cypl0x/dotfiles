@@ -375,4 +375,19 @@
       ];
     };
   };
+
+  # Delta for magit (magit-delta passes --config): the same theme, but no
+  # line numbers. With them delta prefixes "542┊ 543┊" to every line, even
+  # with --color-only, magit no longer sees the +/-/space markers and
+  # dumps hunks outside their file's section. Later keys win in gitconfig.
+  xdg.configFile."delta/magit.gitconfig".text = ''
+    [include]
+    	path = ${./shell/doom-vibrant-delta.gitconfig}
+    [delta]
+    	features = doom-vibrant
+    	syntax-theme = Doom Vibrant
+    	line-numbers = false
+    [delta "doom-vibrant"]
+    	line-numbers = false
+  '';
 }
