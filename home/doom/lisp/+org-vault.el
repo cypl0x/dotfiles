@@ -347,16 +347,19 @@ copied.  Local only; nothing is uploaded."
   (interactive)
   (let ((default-directory (+org-graph--root)))
     (unless (file-directory-p ".git") (user-error "The vault isn't a git repository"))
-    (if (string-empty-p (string-trim (shell-command-to-string "git status --porcelain")))
-        (message "Nothing to commit in the vault")
-      (call-process "git" nil nil nil "add" "-A")
-      (call-process "git" nil nil nil "commit" "-q" "-m" (format-time-string "vault: %F %H:%M")))
-    (if (string-empty-p (string-trim (shell-command-to-string "git remote")))
-        (message "Committed; the vault has no remote to sync with (git remote add …)")
-      (if (and (zerop (call-process "git" nil nil nil "pull" "-q" "--rebase"))
-               (zerop (call-process "git" nil nil nil "push" "-q")))
-          (message "Vault synced")
-        (message "Sync stopped: see git status in %s" (abbreviate-file-name default-directory))))))
+    (let ((changed (not (string-empty-p
+                         (string-trim (shell-command-to-string "git status --porcelain"))))))
+      (when changed
+        (call-process "git" nil nil nil "add" "-A")
+        (call-process "git" nil nil nil "commit" "-q" "-m" (format-time-string "vault: %F %H:%M")))
+      (cond ((string-empty-p (string-trim (shell-command-to-string "git remote")))
+             (message "%s; the vault has no remote to sync with (git remote add …)"
+                      (if changed "Committed" "Nothing to commit")))
+            ((and (zerop (call-process "git" nil nil nil "pull" "-q" "--rebase"))
+                  (zerop (call-process "git" nil nil nil "push" "-q")))
+             (message "Vault synced"))
+            (t (message "Sync stopped: see git status in %s"
+                        (abbreviate-file-name default-directory)))))))
 
 ;;;; A note named by the time
 
