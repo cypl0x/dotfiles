@@ -172,6 +172,26 @@ is for the link at point (Doom's RET passes that link's region)."
       (cons 1 (cdr args))
     args))
 
+;; All of a buffer's images at once: Org 9.8 renamed org-toggle-inline-images
+;; to org-link-preview (C-c C-x C-v), where the whole buffer takes C-u C-u
+;; and described links C-u 11.  SPC m l v: one key, every image link.
+(defvar org-link-preview-overlays)
+(declare-function org-link-preview "ol" (&optional arg beg end))
+
+(defun +org/toggle-images ()
+  "Show every image link in this buffer inline, with or without a
+description; if some show already, hide them all."
+  (interactive)
+  (if (seq-some (lambda (o) (overlay-get o 'org-image-overlay))
+                (overlays-in (point-min) (point-max)))
+      (progn (org-link-preview '(64)) (message "Images hidden"))
+    (org-link-preview 11)
+    (let ((n (cl-count-if (lambda (o) (overlay-get o 'org-image-overlay))
+                          (overlays-in (point-min) (point-max)))))
+      (message "%d image%s shown" n (if (= n 1) "" "s")))))
+
+(map! :after org :map org-mode-map :localleader "l v" #'+org/toggle-images)
+
 (with-eval-after-load 'ol
   (when (fboundp 'org-link-preview)
     (advice-add 'org-link-preview :filter-args #'+org-links-preview-described-a)))

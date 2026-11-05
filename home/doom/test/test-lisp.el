@@ -2800,3 +2800,21 @@ helpers stop at 4.5:1."
         ;; Changed by the switch: not a leftover.
         (puthash 'claude-audit-face (cons "#111111" "#ffffff") +themes--before)
         (should-not (cl-find "claude-audit-face :foreground" (+themes-audit-findings) :key #'cadr :test #'equal))))))
+
+(ert-deftest themes/audit-finds-colors-that-lost-their-meaning ()
+  "A mark drawn in the text's color, or two marks of one group in the same
+color, are reported (black diff-hl bars passed the contrast check)."
+  (load (expand-file-name "+themes" test-lisp-dir) nil t)
+  (defface claude-mark-a '((t)) "A face for this test.")
+  (defface claude-mark-b '((t)) "A face for this test.")
+  (defface claude-mark-c '((t)) "A face for this test.")
+  (set-face-attribute 'default (selected-frame) :foreground "#000000" :background "#ffffff")
+  (set-face-attribute 'claude-mark-a (selected-frame) :foreground "#000000")
+  (set-face-attribute 'claude-mark-b (selected-frame) :foreground "#00aa00")
+  (set-face-attribute 'claude-mark-c (selected-frame) :foreground "#00aa00")
+  (let ((+themes-audit-meaning '((claude-mark-a claude-mark-b claude-mark-c)))
+        (+themes-audit-faces nil) (+themes--before nil) (custom-enabled-themes nil))
+    (let ((found (mapcar #'cadr (+themes-audit-findings))))
+      (should (member "claude-mark-a" found))   ; the text's color
+      (should (member "claude-mark-c" found))   ; same as b
+      (should-not (member "claude-mark-b" found)))))

@@ -82,6 +82,35 @@ specs again, before Doom reads it for evil (`doom-enable-theme-h', depth
 
 (defvar +themes-audit-on-load t "Audit quietly after each theme load.")
 
+;; Doom's vc-gutter (+pretty) clears the diff-hl faces' backgrounds after
+;; every theme load: doom themes color the marks by their foreground.
+;; Modus colors them by their background, so there the marks fell back to
+;; the fringe's foreground: black bars, changed and added and deleted alike.
+;; A mark left without a color of its own gets the one the theme meant.
+(defun +themes-diff-hl-colors-h ()
+  "Give diff-hl's marks the theme's color when only a background had it."
+  (dolist (face '(diff-hl-insert diff-hl-delete diff-hl-change))
+    (when (facep face)
+      (dolist (frame (frame-list))
+        (unless (+themes--color-p (face-attribute face :foreground frame))
+          (when-let* ((meant (or (+themes--theme-attr face :foreground frame)
+                                 (+themes--theme-attr face :background frame)
+                                 (+themes--spec-attr face :foreground frame))))
+            (set-face-attribute face frame :foreground meant)))))))
+
+(with-eval-after-load 'diff-hl
+  ;; After Doom's (depth 0) clears the backgrounds.
+  (add-hook 'doom-load-theme-hook #'+themes-diff-hl-colors-h 50)
+  (add-hook 'diff-hl-mode-hook #'+themes-diff-hl-colors-h 50))
+
+(defconst +themes-audit-meaning
+  '((diff-hl-insert diff-hl-change diff-hl-delete)
+    (flycheck-fringe-error flycheck-fringe-warning flycheck-fringe-info)
+    (error warning success)
+    (org-todo org-done))
+  "Groups of faces whose color carries meaning: each needs one of its
+own, unlike the text's and unlike the others' in its group.")
+
 (defconst +themes-audit-faces
   '(default mode-line mode-line-inactive minibuffer-prompt header-line
     region hl-line vertico-current corfu-default corfu-current
@@ -134,6 +163,15 @@ as dim as is still readable, whichever way the theme is (light or dark)."
                  when (>= (or (+themes-contrast fg c) 0) ratio) return c)
         bg)))
 
+(defun +themes--theme-attr (face attr frame)
+  "ATTR of FACE as the enabled themes give it on FRAME (the first that sets
+it), or nil."
+  (cl-some (lambda (entry)
+             (when (memq (car entry) custom-enabled-themes)
+               (let ((v (plist-get (face-spec-choose (cadr entry) frame) attr)))
+                 (and v (not (eq v 'unspecified)) v))))
+           (get face 'theme-face)))
+
 (defun +themes--spec-attr (face attr frame)
   "ATTR of FACE as its specs give it on FRAME: the first enabled theme's
 spec that sets it, else the face's own default spec; nil when none does."
@@ -182,6 +220,24 @@ spec that sets it, else the face's own default spec; nil when none does."
                   (push (list 'warning (format "%s %s" face attr)
                               (format "fixed to %s by your config, whatever the theme" c))
                         out))))))))
+    ;; Meaning: colors that say something (added, changed, deleted; error,
+    ;; warning) must differ from the text and from each other.
+    (let ((text (face-foreground 'default frame t)))
+      (dolist (group +themes-audit-meaning)
+        (let ((seen nil))
+          (dolist (face group)
+            (when (facep face)
+              (let ((fg (face-foreground face frame t)))
+                (cond ((or (not (+themes--color-p fg)) (equal (+themes--rgb fg) (+themes--rgb text)))
+                       (push (list 'error (symbol-name face)
+                                   (format "drawn in the text's own color (%s): what it means is lost" fg))
+                             out))
+                      ((rassoc (+themes--rgb fg) seen)
+                       (push (list 'error (symbol-name face)
+                                   (format "the same color as %s (%s): they can't be told apart"
+                                           (car (rassoc (+themes--rgb fg) seen)) fg))
+                             out))
+                      (t (push (cons face (+themes--rgb fg)) seen)))))))))
     ;; Readability.
     (let ((default-bg (face-background 'default frame t)))
       (dolist (face +themes-audit-faces)
