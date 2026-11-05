@@ -2381,12 +2381,32 @@ in the background; nothing synchronous."
          (ev (lambda (dir dy) (list dir pos 1 1 (cons 0.0 dy))))
          (unread-command-events (list (funcall ev 'wheel-down 12.0) (funcall ev 'wheel-down 8.0)
                                       ?x (funcall ev 'wheel-down 5.0))))
-    (let ((merged (car (+neomacs-coalesce-wheel-a (list (funcall ev 'wheel-down 10.0))))))
+    (let ((merged (let ((+neomacs-scroll-speed 1))
+                    (car (+neomacs-coalesce-wheel-a (list (funcall ev 'wheel-down 10.0)))))))
       (should (equal (nth 4 merged) '(0.0 . 30.0)))
       (should (= (nth 3 merged) 3))
       ;; The key press and what follows it are left for later.
       (should (equal (car unread-command-events) ?x))
       (should (= (length unread-command-events) 2)))))
+
+;; 71b3caa lost the zoom advice while replacing the scroll one: both stay.
+(ert-deftest neomacs/advice-installed-and-scroll-speed ()
+  "Under neomacs zoom and both scroll commands are advised; pixels scale."
+  (dlet ((+neomacs-p t))
+    (load (expand-file-name "+neomacs" test-lisp-dir) nil t))
+  (unwind-protect
+      (progn
+        (should (advice-member-p #'+neomacs-adjust-font-size-a 'doom-adjust-font-size))
+        (should (advice-member-p #'+neomacs-coalesce-wheel-a 'ultra-scroll))
+        (should (advice-member-p #'+neomacs-coalesce-wheel-a 'mwheel-scroll))
+        (let ((+neomacs-scroll-speed 2.5))
+          (should (equal (nth 4 (+neomacs--speed-up '(wheel-down nil 1 1 (0.0 . -40.0))))
+                         '(0.0 . -100.0)))
+          ;; Line-only events (mouse wheels) are left alone.
+          (should (equal (+neomacs--speed-up '(wheel-down nil 1 3)) '(wheel-down nil 1 3)))))
+    (advice-remove 'doom-adjust-font-size #'+neomacs-adjust-font-size-a)
+    (advice-remove 'ultra-scroll #'+neomacs-coalesce-wheel-a)
+    (advice-remove 'mwheel-scroll #'+neomacs-coalesce-wheel-a)))
 
 (ert-deftest familiar-peers/wire-format-and-discovery ()
   "The two lines Claude Code expects, and live sessions from its registry."

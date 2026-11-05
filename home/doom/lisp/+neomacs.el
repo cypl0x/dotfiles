@@ -51,9 +51,26 @@ INCREMENT is in points as there (nil resets); FIXED-SIZE-P makes it the size."
           (+ (or (nth 3 event) 1) (or (nth 3 next) 1))
           pixels)))
 
+(defvar +neomacs-scroll-speed 2.5
+  "Trackpad scroll distance, relative to what neomacs reports.
+GNU Emacs (pgtk) scrolls GTK's smooth delta x 100 pixels, and GTK divides
+Wayland's axis values by 10 (pgtkterm.c, gdkdevice-wayland.c); neomacs
+scrolls winit's pixel delta as is, so the same gesture goes a shorter way.")
+
+(defun +neomacs--speed-up (event)
+  "EVENT with its pixel delta scaled by `+neomacs-scroll-speed'."
+  (let ((pixels (nth 4 event)))
+    (if (and (consp pixels) (numberp (car pixels)) (numberp (cdr pixels)))
+        (append (take 4 event)
+                (list (cons (* (car pixels) +neomacs-scroll-speed)
+                            (* (cdr pixels) +neomacs-scroll-speed)))
+                (nthcdr 5 event))
+      event)))
+
 (defun +neomacs-coalesce-wheel-a (args)
   "Filter for the scroll command's ARGS: fold in every scroll event already
-waiting in the same direction, so one gesture is one scroll, not hundreds."
+waiting in the same direction, so one gesture is one scroll, not hundreds;
+then scale it by `+neomacs-scroll-speed'."
   (let ((event (car args)))
     (when (and (consp event) (+neomacs--wheel-p event))
       (catch 'done
@@ -62,10 +79,12 @@ waiting in the same direction, so one gesture is one scroll, not hundreds."
             (cond ((null next) (throw 'done nil))
                   ((and (consp next) (eq (car next) (car event)))
                    (setq event (+neomacs--merge-wheel event next)))
-                  (t (push next unread-command-events) (throw 'done nil)))))))
+                  (t (push next unread-command-events) (throw 'done nil))))))
+      (setq event (+neomacs--speed-up event)))
     (cons event (cdr args))))
 
 (when +neomacs-p
+  (advice-add 'doom-adjust-font-size :around #'+neomacs-adjust-font-size-a)
   (advice-add 'ultra-scroll :filter-args #'+neomacs-coalesce-wheel-a)
   (advice-add 'mwheel-scroll :filter-args #'+neomacs-coalesce-wheel-a))
 
