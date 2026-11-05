@@ -172,10 +172,20 @@ has none.  TARGET: a file or directory."
     ("y" "yesterday" org-roam-dailies-goto-yesterday)
     ("D" "a date…" org-roam-dailies-goto-date)
     ("j" "jot into today" org-roam-dailies-capture-today)]
-   ["Graph"
-    ("g" "draw the graph" org-roam-graph)
+   ["The vault (like Obsidian)"
+    ("g" "graph, in Emacs" +org/graph)
+    ("l" "this note's links, all of them" +org-vault/links)
+    ("p" "peek the linked note" +org-vault/peek)
+    ("#" "tags of the vault" +org-vault/tags)
+    ("P" "properties of the vault" +org-vault/properties)
+    ("B" "a base: notes by properties" +org-vault/base)
+    ("u" "a note named by the time" +org-vault/unique-note)
+    ("o" "record audio here" +org-vault/record)]
+   ["Graph (org-roam's)"
+    ("G" "Graphviz image" org-roam-graph)
     ("S" "resync the database" org-roam-db-sync)]
    ["Learn"
+    ("w" "the workflow, step by step" +org-roam/guide)
     ("e" "Org-roam by example (a tour)" +org-roam/tour)
     ("?" "this setup's manual" +docs/org-roam)
     ("M" "Org-roam's manual" +docs/org-roam-manual)]])
@@ -217,14 +227,75 @@ what to try next.  Your vault isn't touched."
                 "4. SPC n r m   the menu: this note's backlinks and tags, and what to do.\n"
                 "5. In the menu, t adds a tag, a an alias (another name to find it by).\n"
                 "6. SPC n r f   find by title (or a new title: that makes a note).\n"
-                "7. SPC n r g   the graph of these three.\n\n"
+                "7. SPC n r g   the graph of these three; SPC n r l all links of this one.\n\n"
                 "In your vault: SPC n r I makes notes of your Org files (an :ID: each), and\n"
                 "then the same works there.  Links grow the graph; folders don't matter.\n")
         (special-mode))
       (display-buffer (current-buffer)))))
 
+;;;; The workflow, step by step
+
+(defconst +org-roam-guide
+  '(("Capture: get it out of your head"
+     "Everything lands in ~/vault/inbox.org first, stamped with when."
+     ("SPC X t" "a TODO for you" org-capture) ("SPC X n" "a note" org-capture)
+     ("SPC X a" "a TODO for an agent" org-capture))
+    ("Triage: give each item its place"
+     "Go through the inbox: a heading worth keeping becomes a note, or moves into one."
+     ("SPC n r n" "this heading becomes a note" +org-roam/heading-node)
+     ("SPC n r x" "this heading becomes a note of its own file" org-roam-extract-subtree)
+     ("SPC n r m m" "move this heading into another note" org-roam-refile))
+    ("Write and link"
+     "Links are what make notes worth having: link as you write."
+     ("[[" "then a title: a note completes (C-SPC with nothing typed: what fits)" nil)
+     ("SPC n r i" "link to a note" org-roam-node-insert)
+     ("SPC n r f" "find a note, or make one with a new title" org-roam-node-find))
+    ("Find again"
+     "By title, by text, by tag, by property."
+     ("SPC n r f" "by title" org-roam-node-find) ("SPC n r s" "by text" consult-org-roam-search)
+     ("SPC n r t" "by tag" +org-vault/tags) ("SPC n r B" "by properties, as a table" +org-vault/base))
+    ("See how it connects"
+     "Backlinks, the graph, and the links you haven't made yet (dashed)."
+     ("SPC n r l" "this note's links: back, out, unlinked mentions" +org-vault/links)
+     ("SPC n r g" "the graph around this note" +org/graph)
+     ("on a link" "its note's opening in the echo area; SPC n r p shows it" +org-vault/peek))
+    ("Every day"
+     "A note per day for what doesn't belong anywhere yet."
+     ("SPC n r d" "today's note" org-roam-dailies-goto-today)
+     ("SPC n r m j" "jot into today" org-roam-dailies-capture-today))
+    ("Keep it tidy"
+     "Turn unlinked mentions into links; tags and properties for what you look things up by."
+     ("SPC n r l" "the unlinked mentions of this note" +org-vault/links)
+     ("SPC n r P" "every property in use" +org-vault/properties)))
+  "The guide's steps: (TITLE WHY (KEY WHAT COMMAND)...).")
+
+;;;###autoload
+(defun +org-roam/guide ()
+  "The workflow from capture to a connected vault, step by step; every
+command in it runs from here (RET or click)."
+  (interactive)
+  (with-current-buffer (get-buffer-create "*org-roam workflow*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert (propertize "From a thought to a connected vault\n" 'face '(:weight bold :height 1.25))
+              (propertize "RET or click a command to run it; SPC n r m has them all.\n" 'face 'shadow))
+      (cl-loop for (title why . steps) in +org-roam-guide for i from 1
+               do (insert "\n" (propertize (format "%d. %s" i title) 'face 'bold) "\n"
+                          (propertize (concat "   " why) 'face 'shadow) "\n")
+               (pcase-dolist (`(,key ,what ,cmd) steps)
+                 (insert "   " (propertize (string-pad key 12) 'face 'help-key-binding) " ")
+                 (if cmd
+                     (insert-text-button what 'action (lambda (_) (call-interactively cmd)) 'follow-link t
+                                         'help-echo (format "Run %s" cmd))
+                   (insert what))
+                 (insert "\n"))))
+    (special-mode)
+    (goto-char (point-min))
+    (pop-to-buffer (current-buffer))))
+
 (map! :leader
       (:prefix ("n r" . "roam")
+       :desc "The workflow, step by step" "w" #'+org-roam/guide
        :desc "Org-roam menu"           "m" #'+org-roam-menu
        :desc "Make notes of files"     "I" #'+org-roam/init
        :desc "Org-roam by example"     "e" #'+org-roam/tour))
