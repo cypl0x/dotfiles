@@ -6,6 +6,10 @@
 (require 'well-formed-report)
 (require 'org)
 
+;; Nothing written outside temp files (the report saves times at exit).
+(setq well-formed-time-file (make-temp-file "wf-time" nil ".eld")
+      well-formed-ignore-file (make-temp-file "wf-ignore" nil ".eld"))
+
 (defmacro well-formed-test--with (mode text &rest body)
   (declare (indent 2))
   `(with-temp-buffer

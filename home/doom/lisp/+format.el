@@ -359,5 +359,41 @@ mark unchanged and in order, one blank line between paragraphs, nothing else \
        :desc "Join paragraphs"       "P" #'+format/join-paragraphs)
       :map text-mode-map "M-q" #'+format/fill-dwim)
 
+
+;;;; C-RET makes headings the way SPC c f leaves them ───────────────────────
+
+;; Doom's C-RET / C-S-RET (+org/insert-item-below/-above) write the new
+;; heading's stars themselves and so ignore `org-blank-before-new-entry';
+;; SPC c f then put a blank line before every heading.  The two disagreed.
+;; Now C-RET follows `org-blank-before-new-entry' (Org's own setting, also
+;; used by M-RET), set to blank lines as the formatter writes them.
+(defvar org-blank-before-new-entry)
+(declare-function org-at-heading-p "org" (&optional invisible-not-ok))
+(setq org-blank-before-new-entry '((heading . t) (plain-list-item . auto)))
+
+(defun +format-org-heading-blank-a (fn direction &rest args)
+  "After Doom inserts a heading (FN, DIRECTION): blank lines around it, when
+`org-blank-before-new-entry' asks for them before headings."
+  (progn
+    (apply fn direction args)
+    (when (and (org-at-heading-p)
+               (eq (alist-get 'heading org-blank-before-new-entry) t))
+      (let ((here (point-marker)))
+        (save-excursion
+          (beginning-of-line)
+          ;; Before the new heading.
+          (unless (or (bobp) (save-excursion (forward-line -1) (looking-at-p "[ \t]*$")))
+            (insert "\n"))
+          ;; After it, when the old heading follows (C-S-RET, above).
+          (forward-line 1)
+          (when (and (eq direction 'above) (looking-at-p "\\*+ "))
+            (insert "\n")))
+        (goto-char here)
+        (set-marker here nil)))))
+
+(with-eval-after-load 'org
+  (when (fboundp '+org--insert-item)
+    (advice-add '+org--insert-item :around #'+format-org-heading-blank-a)))
+
 (provide '+format)
 ;;; +format.el ends here

@@ -803,6 +803,28 @@ and a temp exec-path where bin/tar links to store/tar."
 
 (load (expand-file-name "../lisp/+format" (file-name-directory (or load-file-name buffer-file-name))) nil t)
 
+(ert-deftest format/c-ret-heading-gets-blank-lines ()
+  ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
+  (cl-letf (((symbol-function 'doom-insert-heading-stub)
+             (lambda (direction)
+               (let ((level (org-current-level)))
+                 (pcase direction
+                   ('below (goto-char (line-end-position)) (org-end-of-subtree)
+                           (insert "\n" (make-string level ?*) " "))
+                   ('above (org-back-to-heading) (insert (make-string level ?*) " ")
+                           (save-excursion (insert "\n"))))))))
+    (with-temp-buffer
+      (let ((org-mode-hook nil)) (org-mode))
+      (insert "* One\ntext\n\n* Two\n")
+      (goto-char (point-min))
+      (+format-org-heading-blank-a #'doom-insert-heading-stub 'below)
+      (insert "New")
+      (should (equal (buffer-string) "* One\ntext\n\n* New\n\n* Two\n"))
+      (goto-char (point-max)) (forward-line -1)
+      (+format-org-heading-blank-a #'doom-insert-heading-stub 'above)
+      (insert "Above")
+      (should (equal (buffer-string) "* One\ntext\n\n* New\n\n* Above\n\n* Two\n")))))
+
 (ert-deftest format/org-tidies-tables-lists-cookies-blanks ()
   (with-temp-buffer
     (org-mode)
