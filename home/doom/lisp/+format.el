@@ -181,13 +181,17 @@ text after the heading's planning and drawers."
       (kill-buffer scratch))))
 
 ;;;###autoload
+(declare-function +lua-stylua "+lua" (beg end))
 (defun +format/dwim (&optional canonical)
   "Format the region, else the buffer, by what the buffer is.
 In Org with prefix arg CANONICAL, rewrite it in Org's canonical form."
   (interactive "P")
   (let ((beg (and (use-region-p) (region-beginning)))
         (end (and (use-region-p) (region-end))))
-    (cond ((derived-mode-p 'org-mode)
+    (cond ((and (derived-mode-p 'lua-mode 'lua-ts-mode) (executable-find "stylua"))
+           (+lua-stylua beg end)
+           (message "stylua%s" (if beg " (region)" "")))
+          ((derived-mode-p 'org-mode)
            (if canonical (+format-org-canonical-buffer) (+format-org beg end))
            (message "Org tidied%s" (if beg " (region)" "")))
           ((and (fboundp 'eglot-managed-p) (eglot-managed-p)

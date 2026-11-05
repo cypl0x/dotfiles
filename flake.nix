@@ -279,7 +279,7 @@
       # GTK-invalid CSS or bad Pango markup). Runs on `nix flake check`.
       desktop-configs = mkRepoCheck {
         name = "desktop-configs-check";
-        nativeBuildInputs = [pkgs.hyprland pkgs.jq];
+        nativeBuildInputs = [pkgs.hyprland pkgs.jq pkgs.lua5_4];
         script = ''
           export XDG_RUNTIME_DIR="$TMPDIR" HOME="$TMPDIR"
 
@@ -288,6 +288,15 @@
           if grep -qiE "config error|invalid dispatcher|does not exist" hypr.log; then
             echo "✗ Hyprland config has errors"; exit 1
           fi
+
+          # The Lua config (hyprlang goes in Hyprland 0.57): Hyprland's own
+          # checker, then the same settings, binds and rules as the .conf, in
+          # the same order (the checker doesn't see dispatcher arguments).
+          echo "→ Hyprland --verify-config (Lua)"
+          Hyprland --verify-config -c home/hyprland/hyprland.lua 2>&1 | tee "$TMPDIR/hypr-lua.log" || true
+          grep -q "config ok" "$TMPDIR/hypr-lua.log" || { echo "✗ hyprland.lua has errors"; exit 1; }
+          echo "→ hyprland.lua says what hyprland.conf says"
+          lua home/hyprland/test/conf-lua-equiv.lua home/hyprland/hyprland.conf home/hyprland/hyprland.lua
 
           echo "→ waybar config.jsonc is valid JSON"
           # strip // line comments, then parse with jq

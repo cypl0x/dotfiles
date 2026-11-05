@@ -371,7 +371,7 @@
         # Tree-sitter grammars built by Nix, on Emacs's treesit path (lang/zig
         # +tree-sitter: the grammar zig-ts-mode and Doom use, maintained
         # continuation of the archived maxxnino one).
-        (epkgs.treesit-grammars.with-grammars (g: [g.tree-sitter-zig]))
+        (epkgs.treesit-grammars.with-grammars (g: [g.tree-sitter-zig g.tree-sitter-lua]))
       ];
     };
   };

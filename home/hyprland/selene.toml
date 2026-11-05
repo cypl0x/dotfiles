@@ -1,0 +1,2 @@
+# selene (Lua linter) for hyprland.lua: Lua 5.4 plus Hyprland's `hl` global.
+std = "hyprland"

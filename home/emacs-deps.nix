@@ -41,6 +41,10 @@ in {
     rust-analyzer # lang/rust +lsp
     zls # lang/zig +lsp (Zig language server, same version as zig)
     zig # lang/zig: compiler, zig fmt, zig build (flycheck, formatting)
+    lua-language-server # lang/lua +lsp (the Hyprland config: lisp/+lua.el adds its API stubs)
+    stylua # lang/lua: formatter (apheleia)
+    selene # lang/lua: linter (flycheck checker in lisp/+lua.el)
+    lua5_4 # lang/lua: luac -p syntax check (flycheck `lua`)
     typescript-language-server # lang/javascript +lsp
     bash-language-server # lang/sh +lsp
     copilot-language-server

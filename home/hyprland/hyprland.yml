@@ -1,0 +1,10 @@
+# selene standard library for Hyprland's Lua config.  The API's shape lives
+# in Hyprland's own stubs (share/hypr/stubs/hl.meta.lua, used by
+# lua-language-server); here selene only learns that `hl` exists.
+# lua53: the newest standard library selene 0.31 has (Hyprland embeds Lua 5.5;
+# lua54 and up fail to load).
+base: lua53
+name: hyprland
+globals:
+  hl:
+    any: true
