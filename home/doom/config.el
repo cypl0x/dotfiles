@@ -13,7 +13,9 @@
 
 ;; Font configuration moved to lisp/+fonts.el (Maple Mono NF, all 5 slots).
 ;; (setq doom-theme 'doom-vibrant)
-(setq doom-theme 'doom-modus-vibrant-light)
+;; modus-operandi until doom-modus-vibrant-light is polished end to end
+;; (mess.org); then back to it.
+(setq doom-theme 'modus-operandi)
 (setq display-line-numbers-type t)
 
 ;; Date/time in modeline
@@ -516,6 +518,7 @@
 (load! "lisp/+lsp-fallback") ;; missing LSP server → quiet fallback, not errors
 (load! "lisp/+monet")       ;; Claude Code in any terminal attaches to this Emacs (token-checked)
 (load! "lisp/+fonts")       ;; Font config, ligatures, face tuning
+(load! "lisp/+themes")      ;; one theme at a time: load-theme disables the others
 (load! "lisp/+tramp")       ;; TRAMP performance, eglot guard, remote tools
 (load! "lisp/+nix")         ;; NixOS integration, nixd, flake ops
 (load! "lisp/+org-power")   ;; org-roam, super-agenda, org-ql, org-modern

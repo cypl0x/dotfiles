@@ -2614,3 +2614,24 @@ handler leaves -t out (a time per entry would be a call)."
                   (should (equal names '("zdir" "new.txt" "old.txt"))))
               (kill-buffer))))
       (delete-directory dir t))))
+
+(ert-deftest themes/loading-one-disables-the-others ()
+  "After theme A, loading theme B leaves only B enabled (A's faces gone)."
+  (load (expand-file-name "+themes" test-lisp-dir) nil t)
+  (let* ((dir (make-temp-file "themes" t))
+         (custom-theme-load-path (list dir))
+         (custom-enabled-themes custom-enabled-themes))
+    (unwind-protect
+        (progn
+          (dolist (spec '(("claude-a" . "#000000") ("claude-b" . "#ffffff")))
+            (with-temp-file (expand-file-name (concat (car spec) "-theme.el") dir)
+              (insert (format "(deftheme %s)\n(custom-theme-set-faces '%s '(claude-test-face ((t :background %S))))\n(provide-theme '%s)\n"
+                              (car spec) (car spec) (cdr spec) (car spec)))))
+          (defface claude-test-face '((t)) "A face for this test.")
+          (load-theme 'claude-a t)
+          (load-theme 'claude-b t)
+          (should (memq 'claude-b custom-enabled-themes))
+          (should-not (memq 'claude-a custom-enabled-themes))
+          (should (equal (face-attribute 'claude-test-face :background nil t) "#ffffff")))
+      (mapc #'disable-theme (seq-filter (lambda (th) (memq th '(claude-a claude-b))) custom-enabled-themes))
+      (delete-directory dir t))))
