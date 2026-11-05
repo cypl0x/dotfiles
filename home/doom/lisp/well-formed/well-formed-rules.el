@@ -357,6 +357,119 @@ durchlässt (sie stehen in vielen Wörterbüchern), und \"Sinn machen\"."
    '(("\\<\\(wegen\\|trotz\\|während\\|statt\\|anstatt\\|aufgrund\\) \\(dem\\)\\>"
       "Schriftsprachlich mit Genitiv: \"%s\" (des …s)" nil))))
 
+(defun well-formed--unless-auxiliary-before (fn)
+  "FN's findings, minus those right after an auxiliary or \"to\": in
+\"does he go\", \"let it run\", \"make them have\" the verb is bare."
+  (lambda (para)
+    (let ((text (well-formed-para-text para)) (case-fold-search t))
+      (cl-remove-if
+       (lambda (f)
+         (let ((before (substring text (max 0 (- (car f) 24)) (car f))))
+           (string-match-p "\\<\\(?:does\\|did\\|do\\|can\\|could\\|will\\|would\\|shall\\|should\\|may\\|might\\|must\\|to\\|let\\|make\\|made\\|help\\|helps\\|watch\\|see\\|saw\\|hear\\|heard\\|have\\|had\\|if\\|that\\|lest\\)[[:space:]]+[[:alpha:]]+[[:space:]]+\\'" before)))
+       (funcall fn para)))))
+
+(well-formed-define-rule agreement
+  :category 'correctness :level 'error :langs '("en")
+  :doc "Subject and verb agree: he goes, they go; she has, we have; it
+doesn't, they don't."
+  :examples '(("he go home" . "he goes home") ("they has" . "they have") ("it don't" . "it doesn't"))
+  :function
+  (well-formed--unless-auxiliary-before
+   (well-formed-regexps
+   '(("\\<\\(?:[Hh]e\\|[Ss]he\\|[Ii]t\\) \\(go\\|do\\|have\\|want\\|need\\|like\\|make\\|take\\|know\\|think\\|work\\|seem\\|say\\|get\\|come\\|look\\|use\\|run\\)\\>\\(?: [[:alpha:]]\\)"
+      "Third person: %s → %s"
+      (lambda (v) (pcase v ("go" "goes") ("do" "does") ("have" "has") ("say" "says")
+                    (_ (concat v "s"))))
+      1 t)
+     ("\\<\\(?:[Tt]hey\\|[Ww]e\\|[Yy]ou\\|I\\) \\(has\\|does\\|was\\|is\\|goes\\|wants\\|needs\\|seems\\)\\>"
+      "%s → %s"
+      (lambda (v) (pcase v ("has" "have") ("does" "do") ("was" "were") ("is" "are") ("goes" "go")
+                    (_ (substring v 0 -1))))
+      1 t)
+     ("\\<\\(?:[Hh]e\\|[Ss]he\\|[Ii]t\\) \\(don't\\)\\>" "%s → %s" "doesn't" 1 t)
+     ("\\<\\(?:[Tt]hey\\|[Ww]e\\|[Yy]ou\\|I\\) \\(doesn't\\)\\>" "%s → %s" "don't" 1 t)))))
+
+(well-formed-define-rule introductory-comma
+  :category 'correctness :level 'warning :langs '("en")
+  :doc "A sentence opened by a linking adverb or phrase sets it off with a
+comma: However, …; For example, …"
+  :examples '(("However we left." . "However, we left."))
+  :function
+  (lambda (para)
+    (let ((text (well-formed-para-text para)) out (case-fold-search nil)
+          (re (concat "\\(" (regexp-opt '("However" "Therefore" "Moreover" "Furthermore" "Consequently"
+                                         "Nevertheless" "Nonetheless" "Meanwhile" "Additionally" "Instead"
+                                         "In addition" "For example" "For instance" "In fact" "As a result"
+                                         "On the other hand" "In other words" "In contrast" "Otherwise"))
+                      "\\)\\( \\)[[:alpha:]]")))
+      (pcase-dolist (`(,b . ,_e) (well-formed-para-sentences para))
+        (when (eql b (string-match re text b))
+          (push (list (match-beginning 1) (match-end 1)
+                      (format "Comma after %s" (well-formed-quote (match-string 1 text)))
+                      (list (concat (match-string 1 text) ",")))
+                out)))
+      (nreverse out))))
+
+(well-formed-define-rule comma-de
+  :category 'correctness :level 'error :langs '("de")
+  :doc "Vor Nebensätzen steht ein Komma: …, dass; …, weil; …, obwohl."
+  :examples '(("Ich weiß dass es stimmt." . "Ich weiß, dass es stimmt."))
+  :function
+  (lambda (para)
+    (let ((text (well-formed-para-text para)) (pos 0) out (case-fold-search nil))
+      (with-syntax-table well-formed--syntax-table
+        (while (string-match "\\([[:alpha:]]\\)\\( \\)\\(dass\\|weil\\|obwohl\\|sodass\\|damit\\|nachdem\\|bevor\\|während\\|falls\\|sofern\\|wobei\\)\\> [[:alpha:]]" text pos)
+          (let* ((conj (match-string 3 text))
+                 (before (save-match-data
+                           (let ((s (substring text (max 0 (- (match-beginning 2) 12)) (match-beginning 2))))
+                             (and (string-match "\\([[:alpha:]]+\\)\\'" s) (match-string 1 s))))))
+            ;; "so dass", "ohne dass", "als dass", "auch wenn": no comma inside;
+            ;; "damit"/"während"/"bevor" are also adverbs and prepositions.
+            (unless (or (member before '("so" "ohne" "als" "statt" "anstatt" "außer" "und" "oder" "aber" "nur" "gerade" "erst" "kurz" "auch" "noch"))
+                        (member conj '("damit" "während" "bevor" "nachdem")))
+              (push (list (match-beginning 2) (match-end 2)
+                          (format "Komma vor %s (Nebensatz)" (well-formed-quote conj))
+                          (list ", "))
+                    out)))
+          (setq pos (match-end 2))))
+      (nreverse out))))
+
+(well-formed-define-rule typography
+  :category 'correctness :level 'info
+  :doc "Typography: a hyphen used as a dash (word - word), three dots for an
+ellipsis, an x for a multiplication sign between numbers."
+  :examples '(("this - and that" . "this – and that") ("wait..." . "wait…") ("1920x1080" . "1920×1080"))
+  :function
+  (lambda (para)
+    (funcall (well-formed-regexps
+              `(("[[:alpha:]]\\( - \\)[[:alpha:]]" "A hyphen as a dash: an en dash (–) or em dash (—)?"
+                 ,(if (equal (well-formed-para-lang para) "de") " – " " – ") 1)
+                ("[[:alpha:]]\\(\\.\\.\\.\\)" "Three dots: the ellipsis character (…)?" "…" 1)
+                ("[0-9]\\(x\\)[0-9]" "Multiplication sign (×)?" "×" 1 t)))
+             para)))
+
+(well-formed-define-rule vague-this
+  :category 'clarity :level 'info
+  :doc "A sentence opening with a bare \"This\" or \"It\" + verb leaves the
+reader to guess what it points at: \"This shows\" what?  Name it: \"This
+result shows\"."
+  :examples '(("This means we wait." . "This delay means we wait."))
+  :function
+  (lambda (para)
+    (let ((text (well-formed-para-text para)) out (case-fold-search nil) (i 0))
+      (pcase-dolist (`(,b . ,_e) (well-formed-para-sentences para))
+        (when (and (> i 0)
+                   (eql b (string-match (if (equal (well-formed-para-lang para) "de")
+                                            "\\(Dies\\|Das\\) \\(zeigt\\|bedeutet\\|führt\\|macht\\|ist\\|heißt\\)\\>"
+                                          "\\(This\\|That\\) \\(shows\\|means\\|leads\\|makes\\|is\\|was\\|causes\\|allows\\|gives\\|helps\\)\\>")
+                                        text b)))
+          (push (list (match-beginning 1) (match-end 2)
+                      (format "%s what? Name what it refers to" (well-formed-quote (match-string 1 text)))
+                      nil)
+                out))
+        (cl-incf i))
+      (nreverse out))))
+
 ;;;; Clarity
 
 (defvar well-formed-wordy-en
@@ -978,6 +1091,26 @@ shouting."
                       (format "%d exclamation marks in one paragraph" n) nil)
                 out)))
       (nreverse out))))
+
+(well-formed-define-rule negative
+  :category 'delivery :level 'info :langs '("en")
+  :doc "Negative framing where a positive one says the same (business):
+\"don't forget\" is \"remember\", \"not possible\" is \"impossible\"
+or better what is possible."
+  :examples '(("Don't forget to save." . "Remember to save."))
+  :function
+  (let (fn)
+    (lambda (para)
+      (when (eq (plist-get (well-formed-para-style para) :name) 'business)
+        (funcall (or fn (setq fn (well-formed-phrases
+                                  '(("don't forget" . "remember") ("do not forget" . "remember")
+                                    ("not possible" . "impossible") ("not able to" . "unable to")
+                                    ("not many" . "few") ("not the same" . "different") ("did not remember" . "forgot")
+                                    ("not unless" . "only if") ("unfortunately" . "") ("we regret" . "")
+                                    ("failed to" . "did not") ("you must" . "please") ("you failed" . "")
+                                    ("problem" . "issue") ("no problem" . "glad to help"))
+                                  "Positive framing: %s → %s")))
+                 para)))))
 
 ;;;; Consistency (whole document)
 

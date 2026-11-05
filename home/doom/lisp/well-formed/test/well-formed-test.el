@@ -219,5 +219,24 @@
     (should (> (alist-get 'ease r) 100))
     (should (< (alist-get 'fk-grade r) 1))))
 
+
+(ert-deftest well-formed-test-agreement ()
+  (should (equal (well-formed-test--find #'text-mode "Then he go home." 'agreement) '("go" ("goes"))))
+  (should (equal (well-formed-test--find #'text-mode "They has a car." 'agreement) '("has" ("have"))))
+  (should (equal (well-formed-test--find #'text-mode "It don't work." 'agreement) '("don't" ("doesn't"))))
+  (should-not (memq 'agreement (well-formed-test--rules #'text-mode "Does he go home? Let it run fast. I hope that she have fun."))))
+
+(ert-deftest well-formed-test-commas ()
+  (should (equal (well-formed-test--find #'text-mode "However we left early." 'introductory-comma)
+                 '("However" ("However,"))))
+  (should-not (memq 'introductory-comma (well-formed-test--rules #'text-mode "However, we left early.")))
+  (should (equal (well-formed-test--find #'text-mode "Ich weiß dass es nicht stimmt und das ist gut." 'comma-de)
+                 '(" " (", "))))
+  (should-not (memq 'comma-de (well-formed-test--rules #'text-mode "Ich gehe, sodass es nicht stimmt. Er kam, ohne dass es auffiel und das ist gut."))))
+
+(ert-deftest well-formed-test-typography-vague-negative ()
+  (should (equal (well-formed-test--find #'text-mode "This - and that." 'typography) '(" - " (" – "))))
+  (should (equal (well-formed-test--find #'text-mode "We waited. This means we lost." 'vague-this) '("This means" nil)))
+  (should (memq 'negative (well-formed-test--rules #'text-mode "#+well_formed: business\n\nDon't forget the report."))))
 (provide 'well-formed-test)
 ;;; well-formed-test.el ends here
