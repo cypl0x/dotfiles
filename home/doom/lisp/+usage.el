@@ -414,6 +414,7 @@ keys KIND (a string) and (WHAT . NAME), what being minibuffer or prefix.")
 
 (defvar +usage--time (make-hash-table :test #'equal) "Unsaved KIND → seconds.")
 (defvar +usage--cancelled (make-hash-table :test #'equal) "Unsaved (WHAT . NAME) → count.")
+(defvar +usage--mx-commands '(execute-extended-command execute-extended-command-for-buffer))
 (defvar +usage--last-time nil "When the last command ended.")
 (defvar +usage--last-kind nil "The buffer kind after the last command.")
 
@@ -443,11 +444,14 @@ keys KIND (a string) and (WHAT . NAME), what being minibuffer or prefix.")
             +usage--last-kind (if (minibufferp) "minibuffer" (+usage--kind))))))
 
 (defun +usage--minibuffer-exit-h ()
-  "A minibuffer left by quitting: its command cancelled."
+  "A minibuffer left by quitting: its command cancelled.
+For M-x, what was typed is kept too (see \"M-x that gave up\" below)."
   (when (and (memq this-command +usage--quit-commands)
              (symbolp current-minibuffer-command) current-minibuffer-command)
     (cl-incf (gethash (cons 'minibuffer (symbol-name current-minibuffer-command))
-                      +usage--cancelled 0))))
+                      +usage--cancelled 0))
+    (when (memq current-minibuffer-command +usage--mx-commands)
+      (+usage--mx-gave-up (minibuffer-contents-no-properties)))))
 
 (defun +usage--events-read ()
   (and (file-exists-p +usage-events-file)
@@ -576,5 +580,161 @@ in vertico's own order."
         (setq-local vertico-sort-override-function (+usage--mx-sort scores))))))
 
 (add-hook 'minibuffer-setup-hook #'+usage-mx-setup-h)
+
+;;;; M-x that gave up
+;;
+;; 114 of 443 M-x were left with C-g (2026-11-05): you looked for a command
+;; and didn't find it by the words you typed.  What was typed is kept
+;; (locally, like the counts).  When you then run a command some other way
+;; within two minutes, that is taken as what you meant: next time the same
+;; words show "→ COMMAND (KEY)" after your input, and RET with nothing
+;; matching runs it.  With nothing learned, RET asks familiar which command
+;; does that.  M-x +usage/mx-gave-up lists both.
+
+(defvar +usage-mx-file (locate-user-emacs-file "usage-mx.eld")
+  "(:gave-up ((INPUT . N) …) :meant (((INPUT . COMMAND) . N) …)).")
+
+(defvar +usage-mx-meant-within 120
+  "Seconds after giving up in which the next command counts as the one meant.")
+
+(defconst +usage--mx-not-meant
+  (concat "\\`\\(?:evil-\\(?:next\\|previous\\|forward\\|backward\\|insert\\|append\\|normal\\|"
+          "delete\\|escape\\|open\\|scroll\\|goto\\|undo\\|redo\\|exit\\|force\\)\\|"
+          "next-line\\|previous-line\\|\\(?:org-\\)?self-insert\\|vertico-\\|corfu-\\|"
+          "abort-\\|keyboard-\\|minibuffer-\\|exit-minibuffer\\|undo\\|ultra-scroll\\|"
+          "mwheel\\|mouse-\\|handle-\\|doom/escape\\|execute-extended-command\\)")
+  "Commands that are moving or typing, never the command you were looking for.")
+
+(defvar +usage--mx-data nil "The file's data, read on first use.")
+(defvar +usage--mx-pending nil "(INPUT . TIME) of the last M-x given up.")
+
+(defun +usage--mx-norm (input)
+  (downcase (string-join (split-string input "[ \t-]+" t) " ")))
+
+(defun +usage--mx-data ()
+  (or +usage--mx-data
+      (setq +usage--mx-data
+            (or (and (file-exists-p +usage-mx-file)
+                     (ignore-errors (with-temp-buffer (insert-file-contents +usage-mx-file)
+                                                      (read (current-buffer)))))
+                (list :gave-up nil :meant nil)))))
+
+(defun +usage--mx-save ()
+  (let ((print-length nil) (print-level nil))
+    (make-directory (file-name-directory +usage-mx-file) t)
+    (with-temp-file +usage-mx-file (prin1 (+usage--mx-data) (current-buffer)))))
+
+(defun +usage--mx-bump (key alist-key)
+  (let* ((data (+usage--mx-data))
+         (alist (plist-get data alist-key))
+         (cell (assoc key alist)))
+    (if cell (cl-incf (cdr cell)) (push (cons key 1) alist))
+    (setq +usage--mx-data (plist-put data alist-key alist))
+    (+usage--mx-save)))
+
+(defun +usage--mx-gave-up (input)
+  "M-x left with INPUT typed: keep it, and wait for what you do next."
+  (let ((input (+usage--mx-norm input)))
+    (unless (or (string-empty-p input) executing-kbd-macro)
+      (+usage--mx-bump input :gave-up)
+      (setq +usage--mx-pending (cons input (float-time))))))
+
+(defun +usage--mx-meant-h ()
+  "The first real command after giving up on M-x: what was meant."
+  (when (and +usage--mx-pending (not executing-kbd-macro))
+    (let ((cmd (if (eq real-this-command 'execute-extended-command) this-command real-this-command)))
+      (cond ((> (- (float-time) (cdr +usage--mx-pending)) +usage-mx-meant-within)
+             (setq +usage--mx-pending nil))
+            ((and (symbolp cmd) cmd (commandp cmd)
+                  (not (memq cmd +usage--quit-commands))
+                  (not (string-match-p +usage--mx-not-meant (symbol-name cmd))))
+             (+usage--mx-bump (cons (car +usage--mx-pending) cmd) :meant)
+             (setq +usage--mx-pending nil))))))
+
+(defun +usage-mx-meant (input)
+  "The command most often meant by INPUT, or nil.
+INPUT matches a remembered attempt when it is that attempt or the start of
+it (3 characters at least)."
+  (let ((input (+usage--mx-norm input)) best (n 0))
+    (when (>= (length input) 3)
+      (pcase-dolist (`((,typed . ,cmd) . ,count) (plist-get (+usage--mx-data) :meant))
+        (when (and (string-prefix-p input typed) (> count n) (fboundp cmd))
+          (setq best cmd n count))))
+    best))
+
+(defvar-local +usage--mx-overlay nil)
+
+(defun +usage--mx-show-meant-h ()
+  "In M-x: after the input, the command these words meant before."
+  (when (memq current-minibuffer-command +usage--mx-commands)
+    (let* ((meant (+usage-mx-meant (minibuffer-contents-no-properties)))
+           (key (and meant (with-current-buffer (window-buffer (minibuffer-selected-window))
+                               (where-is-internal meant nil t))))
+           (text (and meant (concat "  → " (symbol-name meant)
+                                    (if key (format " (%s)" (key-description key)) "")))))
+      (unless +usage--mx-overlay
+        (setq +usage--mx-overlay (make-overlay (point-max) (point-max) nil t t)))
+      (move-overlay +usage--mx-overlay (point-max) (point-max))
+      (overlay-put +usage--mx-overlay 'after-string
+                   (and text (propertize text 'face 'shadow))))))
+
+(defun +usage--mx-setup-meant-h ()
+  (when (memq current-minibuffer-command +usage--mx-commands)
+    (add-hook 'post-command-hook #'+usage--mx-show-meant-h nil t)))
+
+(add-hook 'minibuffer-setup-hook #'+usage--mx-setup-meant-h)
+
+(defvar vertico--total)
+
+(defun +usage-mx-exit-a (fn &rest args)
+  "RET in M-x with nothing matching: the command meant, or ask familiar."
+  (let ((input (minibuffer-contents-no-properties)))
+    (if (not (and (memq current-minibuffer-command +usage--mx-commands)
+                  (boundp 'vertico--total) (eql vertico--total 0)
+                  (not (string-blank-p input))))
+        (apply fn args)
+      (let ((meant (+usage-mx-meant input)))
+        (run-at-time 0 nil
+                     (if meant
+                         (lambda () (call-interactively meant))
+                       (lambda ()
+                         (+usage--mx-gave-up input)
+                         (if (fboundp 'familiar-ask)
+                             (familiar-ask
+                              (format "@echo Which Emacs command (name, and its key here if bound) does this: %s" input)
+                              t)
+                           (message "No command matches %S" input)))))
+        (abort-minibuffers)))))
+
+(with-eval-after-load 'vertico
+  (advice-add 'vertico-exit :around #'+usage-mx-exit-a))
+
+(defun +usage--mx-setup-h ()
+  (if +usage-mode
+      (add-hook 'post-command-hook #'+usage--mx-meant-h)
+    (remove-hook 'post-command-hook #'+usage--mx-meant-h)))
+(add-hook '+usage-mode-hook #'+usage--mx-setup-h)
+(when (bound-and-true-p +usage-mode) (+usage--mx-setup-h))
+
+(defun +usage/mx-gave-up ()
+  "What M-x was left with, most often first, and what it turned out to mean."
+  (interactive)
+  (let* ((data (+usage--mx-data))
+         (gave (sort (copy-sequence (plist-get data :gave-up)) (lambda (a b) (> (cdr a) (cdr b)))))
+         (meant (plist-get data :meant)))
+    (with-current-buffer (get-buffer-create "*M-x given up*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert "* M-x left with C-g: what was typed, and what it meant\n\n")
+        (pcase-dolist (`(,input . ,n) gave)
+          (let ((cmds (seq-filter (lambda (e) (equal (caar e) input)) meant)))
+            (insert (format "%4d  %-30s %s\n" n input
+                            (if cmds (mapconcat (lambda (e) (format "→ %s (%d)" (cdar e) (cdr e))) cmds ", ")
+                              "")))))
+        (goto-char (point-min))
+        (org-mode)
+        (view-mode)
+        (pop-to-buffer (current-buffer))))))
+
 (provide '+usage)
 ;;; +usage.el ends here

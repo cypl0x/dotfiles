@@ -404,6 +404,31 @@ and a temp exec-path where bin/tar links to store/tar."
        (should-not shown))
        (use-global-map old)))))
 
+(ert-deftest usage/mx-gave-up-learns-what-was-meant ()
+  "C-g in M-x after typing; the next real command (not a motion) is what the
+words meant: their start finds it again.  Too late, nothing is learned."
+  (let ((+usage-mx-file (make-temp-file "usage-mx" nil ".eld"))
+        (+usage--mx-data nil) (+usage--mx-pending nil))
+    (delete-file +usage-mx-file)
+    (unwind-protect
+        (cl-flet ((run (cmd) (let ((this-command cmd) (real-this-command cmd)) (+usage--mx-meant-h))))
+          (+usage--mx-gave-up "Word  Count")
+          (run 'evil-next-line) (run 'vertico-next)
+          (should +usage--mx-pending)
+          (run 'count-words)
+          (should-not +usage--mx-pending)
+          (should (eq (+usage-mx-meant "word co") 'count-words))
+          (should-not (+usage-mx-meant "wo"))      ; under 3 characters
+          (should-not (+usage-mx-meant "count"))   ; not the start of what was typed
+          ;; Kept in the file, read back fresh.
+          (setq +usage--mx-data nil)
+          (should (equal (plist-get (+usage--mx-data) :gave-up) '(("word count" . 1))))
+          (+usage--mx-gave-up "zz top")
+          (setcdr +usage--mx-pending (- (float-time) 500))
+          (run 'magit-status)
+          (should-not (+usage-mx-meant "zz top")))
+      (when (file-exists-p +usage-mx-file) (delete-file +usage-mx-file)))))
+
 (ert-deftest usage/save-merges-across-sessions ()
   (test-lisp--with-usage
    (test-lisp--run-command 'find-file [?\C-x ?\C-f])
