@@ -36,6 +36,8 @@
 (autoload 'familiar-prompts-update "familiar-prompts" nil t)
 (autoload 'familiar-complete "familiar-complete" nil t)
 (autoload 'familiar-footprint "familiar-footprint" nil t)
+(autoload 'familiar-analytics "familiar-analytics" nil t)
+(map! :leader :desc "AI analytics (familiar)" "o $" #'familiar-analytics)
 ;; C-S-SPC: AI completions at point, ranked and explained (corfu-popupinfo).
 (map! "C-S-SPC" #'familiar-complete
       :i "C-S-SPC" #'familiar-complete)

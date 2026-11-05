@@ -432,3 +432,75 @@ Requests are captured in `requests' as (PROMPT MODEL SYSTEM)."
 
 (provide 'familiar-test)
 ;;; familiar-test.el ends here
+
+;;;; Analytics
+
+(defun test-familiar--ledger-lines (entries)
+  "A ledger file holding ENTRIES (lists as the ledger keeps them)."
+  (let ((file (make-temp-file "familiar-ledger")))
+    (with-temp-file file (dolist (e entries) (prin1 e (current-buffer)) (insert "\n")))
+    file))
+
+(ert-deftest familiar-analytics/figures-groups-and-quantiles ()
+  (skip-unless test-familiar-available)
+  (require 'familiar-analytics)
+  (let* ((now (format-time-string "%FT%T%z"))
+         (familiar-ledger-file
+          (test-familiar--ledger-lines
+           `((,now claude-haiku-5-5 commit 1000 100 0 0.001)
+             (,now claude-haiku-5-5 commit 1000 100 1000 0.002)
+             (,now claude-sonnet-5-5 fix 200 50 0 0.010))))
+         (familiar-budget 1.0))
+    (unwind-protect
+        (let* ((reqs (familiar-analytics--requests))
+               (figs (familiar-analytics--figures reqs reqs)))
+          (should (= (plist-get figs :requests) 3))
+          (should (< (abs (- (plist-get figs :spent) 0.013)) 1e-9))
+          (should (= (plist-get figs :cached) 1000))
+          (should (< (abs (- (plist-get figs :left) 0.987)) 1e-9))
+          (should (plist-get figs :runs-out))
+          (should (equal (mapcar #'car (familiar-analytics--group #'familiar-analytics--req-task reqs)) '(fix commit)))
+          (should (= (familiar-analytics--quantile '(5 1 3 2 4) 0.5) 3))
+          (should (= (familiar-analytics--quantile '(5 1 3 2 4) 0.95) 5))
+          (should (= (length (familiar-analytics--days reqs)) 1)))
+      (delete-file familiar-ledger-file))))
+
+(ert-deftest familiar-analytics/recommends-the-fast-tier-for-short-answers ()
+  "A task answering in a few tokens on the smart tier gets a recommendation with its saving."
+  (skip-unless test-familiar-available)
+  (require 'familiar-analytics)
+  (let* ((now (format-time-string "%FT%T%z"))
+         (familiar-ledger-file
+          (test-familiar--ledger-lines
+           (cl-loop repeat 6 collect `(,now claude-sonnet-5-5 rename 3000 20 0 0.0093))))
+         (familiar-budget 10.0)
+         (familiar-models '((fast . claude-haiku-5-5) (smart . claude-sonnet-5-5))))
+    (unwind-protect
+        (cl-letf (((symbol-function 'familiar-cost) (lambda (_m tokens) (* 1e-6 (plist-get tokens :input)))))
+          (let* ((reqs (familiar-analytics--requests))
+                 (insights (familiar-analytics-insights reqs reqs (familiar-analytics--figures reqs reqs)))
+                 (rec (cl-find-if (lambda (i) (string-match-p "rename could run on the fast tier" (nth 1 i))) insights)))
+            (should rec)
+            (should (string-match-p "would have cost \\$0\\.018 instead of \\$0\\.056" (nth 2 rec)))
+            (should (cl-find-if (lambda (i) (equal (nth 1 i) "Budget forecast")) insights))))
+      (delete-file familiar-ledger-file))))
+
+(ert-deftest familiar-analytics/renders-every-section-in-text ()
+  "Without SVG (batch), every section renders as text."
+  (skip-unless test-familiar-available)
+  (require 'familiar-analytics)
+  (let* ((familiar-ledger-file
+          (test-familiar--ledger-lines
+           `(("2026-11-01T10:00:00+0100" claude-haiku-5-5 commit 1000 100 0 0.001)
+             (,(format-time-string "%FT%T%z") claude-sonnet-5-5 fix 200 50 0 0.010))))
+         (familiar-budget 10.0))
+    (unwind-protect
+        (with-temp-buffer
+          (familiar-analytics-mode)
+          (familiar-analytics--render)
+          (dolist (s '("Figures" "Spend per day" "Tokens per day" "When you ask" "Where it goes: tasks"
+                       "Statistics per task" "Statistics per model" "Insights and recommendations"
+                       "most expensive requests" "Budget forecast"))
+            (should (save-excursion (goto-char (point-min)) (search-forward s nil t))))
+          (should (save-excursion (goto-char (point-min)) (re-search-forward "[▁▂▃▄▅▆▇█]" nil t))))
+      (delete-file familiar-ledger-file))))
