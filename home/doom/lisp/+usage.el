@@ -47,6 +47,10 @@ keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
 (defvar +usage-coach) (defvar +usage-coach-after) (defvar +usage--run)   ; the coach, below
 (declare-function familiar-ask "familiar-ask" (prompt &optional new))
 
+(defvar +usage-runners '((execute-extended-command . "M-x"))
+  "Commands that run another one (it sets `this-command'), and how that
+counts: the one run is recorded, not the runner.")
+
 (defun +usage--record-h ()
   "Count the command that ran and how it was invoked."
   ;; Keyboard macros replay keys nobody typed now (Claude's lab tests too):
@@ -54,13 +58,14 @@ keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
   ;; commands rewrite the latter (`kill-region' sets it so the next kill
   ;; appends), which once filed 1,226 M-DEL (backward-kill-word) as
   ;; kill-region.  After M-x it is `execute-extended-command' itself.
-  (let ((this-command (if (eq real-this-command 'execute-extended-command) this-command real-this-command)))
+  (let* ((runner (alist-get real-this-command +usage-runners))
+         (this-command (if runner this-command real-this-command)))
   (when (and (symbolp this-command) this-command
              (not executing-kbd-macro)
              (not (memq this-command +usage-ignore)))
     (let* ((keys (this-command-keys-vector))
-           (how (cond ((or (eq real-this-command 'execute-extended-command)
-                           (and (> (length keys) 0) (memq (aref keys 0) '(?\M-x))))
+           (how (cond (runner runner)
+                      ((and (> (length keys) 0) (memq (aref keys 0) '(?\M-x)))
                        "M-x")
                       ;; Timers, mouse-less remaps, programmatic calls.
                       ((zerop (length keys)) "(no keys)")
@@ -182,14 +187,17 @@ PRESSED is the key that ran it, when known."
   "After M-x COMMAND: name the key of its bound twin, if it has one."
   (when-let* ((twin (alist-get command +usage-equivalents))
               (key (where-is-internal twin nil t)))
-    (run-at-time 1.5 nil
-                 (lambda ()
-                   (let ((shown (current-message))
-                         (message-log-max nil))
-                     (message "%s%sNext time: %s (%s)"
-                              (or shown "") (if shown "   " "")
+    (+usage-say-later (format "Next time: %s (%s)"
                               (propertize (key-description key) 'face 'help-key-binding)
-                              twin))))))
+                              twin))))
+
+(defun +usage-say-later (text)
+  "Show TEXT in a moment, after what the command itself said (not logged)."
+  (run-at-time 1.5 nil
+               (lambda ()
+                 (let ((shown (current-message))
+                       (message-log-max nil))
+                   (message "%s%s%s" (or shown "") (if shown "   " "") text)))))
 
 (defun +usage--read ()
   (when (file-readable-p +usage-file)

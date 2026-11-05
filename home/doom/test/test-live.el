@@ -128,6 +128,18 @@ described prefix to a fresh empty keymap, wiping what was there."
   ;; The real backend knows the price, so spend is never silently zero.
   (should (> (familiar-cost (familiar--model 'commit) '(:input 1000)) 0)))
 
+(ert-deftest live/discover-wired ()
+  "C-ß everywhere; the Org nodes and plain words it points at exist."
+  (should (eq (key-binding (kbd "C-ß")) #'+discover))
+  (should (eq (lookup-key help-map (kbd "D")) #'consult-info))
+  (should (eq (lookup-key help-map (kbd "SPC")) #'consult-mode-command))
+  (require 'info)
+  (with-temp-buffer
+    (Info-mode)
+    (should-not (cl-loop for (_ . n) in +discover-org-nodes
+                         unless (ignore-errors (Info-find-node "org" n) t) collect n)))
+  (should-not (cl-remove-if (lambda (p) (assoc (car p) (+discover-glossary))) +discover-plain)))
+
 (defun test-live-run ()
   "Run live tests; return a summary string."
   (let ((stats (ert-run-tests "\\`live/" #'ignore)))

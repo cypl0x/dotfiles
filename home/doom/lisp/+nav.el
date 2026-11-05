@@ -59,29 +59,7 @@
   :config
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
-;;;; Discovery transient — Master help menu ──────────────────────────────────
-
-(transient-define-prefix +nav/help-transient ()
-    "Master help and discovery menu."
-    ["Describe"
-     ("k" "Key"                describe-key)
-     ("f" "Function"           helpful-callable)
-     ("v" "Variable"           helpful-variable)
-     ("F" "Face"               describe-face)
-     ("m" "Mode"               describe-mode)
-     ("p" "Package"            describe-package)]
-    ["Lookup"
-     ("a" "Apropos"            apropos-command)
-     ("d" "Doom modules"       doom/help-modules)
-     ("D" "Doom search"        doom/help)
-     ("i" "Info manual"        info)
-     ("l" "Library"            find-library)]
-    ["Navigation"
-     ("b" "Bindings"           describe-bindings)
-     ("B" "Personal bindings"  describe-personal-keybindings)
-     ("w" "Where is"           where-is)
-     ("K" "Which-key top"      which-key-show-top-level)
-     ("M" "Which-key keymap"   which-key-show-keymap)])
+;; The help menu that was here is C-ß / SPC ? now (lisp/+discover.el).
 
 (transient-define-prefix +nav/buffer-transient ()
     "Buffer operations."
@@ -208,7 +186,6 @@
 ;;;; Keybindings ─────────────────────────────────────────────────────────────
 
 (map! :leader
-      :desc "Help/discover menu"  "?" #'+nav/help-transient
       :desc "Buffer menu"         "," #'+nav/buffer-transient
 
       ;; Append to existing window prefix — do NOT re-create with ("w" . "window").

@@ -50,7 +50,7 @@
      ("/" "My commands (all)"    +docs/commands)
      ("L" "Learning path"        +docs/learn)
      ("i" "Manual (Info)"        +docs/info)
-     ("?" "Help & discovery"     +nav/help-transient)
+     ("?" "Find anything (C-ß)"  +discover)
      ("b" "Buffer menu"          +nav/buffer-transient)
      ("q" "Quit"                 transient-quit-one)]])
 

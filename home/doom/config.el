@@ -574,6 +574,7 @@
 (load! "lisp/+pide")         ;; SPC t P: Isabelle/PIDE-style panels (Output, Problems, Outline)
 (load! "lisp/+vocab")        ;; leo lookups → org-fc cards; SPC l r review, SPC l v file
 (load! "lisp/+docs")         ;; SPC h /: every own command; learning path, Info manual
+(load! "lisp/+discover")     ;; C-ß: one place to start looking (keys, commands, manuals, your words)
 (load! "lisp/+completion")   ;; C-SPC: completion sources by context (links, tags, words, code)
 
 ;; ---------------------------------------------------------------------------

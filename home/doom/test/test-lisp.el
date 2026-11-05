@@ -3151,3 +3151,55 @@ keeps its order, and the buffer stopped on is then the most recent."
           (should-not (memq '+buffer-ring--done-h pre-command-hook))
           (should-not (memq hidden (+buffer-ring--buffers))))
       (mapc #'kill-buffer (cons hidden bufs)))))
+
+
+;;; +discover: C-ß
+
+(load (expand-file-name "+discover" test-lisp-dir) nil t)
+
+(ert-deftest discover/your-words-match-emacs-words ()
+  "copy finds kill-ring-save, image org-link-preview; other words: nothing
+from this style (the others still match them literally)."
+  (should (string-match-p (+discover-orderless-synonyms "Copy") "kill-ring-save"))
+  (should (string-match-p (+discover-orderless-synonyms "image") "org-link-preview"))
+  (should-not (+discover-orderless-synonyms "kill-ring-save")))
+
+(ert-deftest discover/glossary-and-manuals-are-read ()
+  (let ((+discover--glossary nil) (+discover--manuals nil))
+    (should (string-prefix-p "The region is" (cdr (assoc "Region" (+discover-glossary)))))
+    (should (> (length (+discover-glossary)) 100))
+    (should (assoc "emacs" (+discover-manuals)))))
+
+(ert-deftest discover/candidates-renamed-yours-and-embark ()
+  "A renamed command is found by its old name and runs the new one; your
+words offer the first defined command; embark sees the command behind."
+  (defun test-discover--new () "New one." (interactive))
+  (define-obsolete-function-alias 'test-discover-old #'test-discover--new "9.9")
+  (defun test-discover-cmd () "Do the thing." (interactive))
+  (let* ((+discover--table (make-hash-table :test #'equal))
+         (+discover--used (make-hash-table :test #'eq))
+         (+discover-yours '(("frobnicate" (no-such-command test-discover-cmd) "a note")
+                            ("never" (no-such-command))))
+         (cands (+discover--candidates))
+         (old (seq-find (lambda (c) (string-prefix-p "test-discover-old " c)) cands))
+         (yours (seq-find (lambda (c) (string-prefix-p "frobnicate " c)) cands)))
+    (should (string-match-p "renamed: now test-discover--new (in 9.9)" old))
+    (should (equal (gethash old +discover--table) '(command . test-discover--new)))
+    (should (equal (gethash yours +discover--table) '(yours . test-discover-cmd)))
+    (should (eq (car (gethash (car cands) +discover--table)) 'yours))
+    (should-not (seq-find (lambda (c) (string-prefix-p "never " c)) cands))
+    (should (equal (+discover--embark-target 'general yours) '(command . "test-discover-cmd")))
+    (should (equal (+discover--group yours nil) "Your words → Emacs"))))
+
+(ert-deftest discover/a-command-run-from-here-counts-as-itself ()
+  "Usage records the command picked, by \"C-ß\", not the search."
+  (test-lisp--with-usage
+   (cl-letf (((symbol-function 'this-command-keys-vector) (lambda () [?\C-ß ?\C-ß])))
+     (let ((this-command 'view-lossage) (real-this-command '+discover/anything))
+       (+usage--record-h)))
+   (should (equal (gethash "C-ß" (gethash 'view-lossage +usage--counts)) 1))
+   (should-not (gethash '+discover/anything +usage--counts))))
+
+(ert-deftest discover/manual-of-a-mode ()
+  (should (equal (+discover--manual-of 'org-mode) "org"))
+  (should (equal (+discover--manual-of 'emacs-lisp-mode) "elisp")))

@@ -41,8 +41,8 @@ order.
 
 Ten lessons, each a few minutes, in the order that pays off fastest.  Each
 names the keys, what to try, and where the reference section is.  Lost?
-=SPC h /= lists every command this config adds, with its keys; =SPC H= is
-the hub.
+=C-ß= is where to start looking, anywhere ([[*=+discover.el= — C-ß, One Place to Start Looking][+discover.el]]); =SPC h /=
+lists every command this config adds, with its keys; =SPC H= is the hub.
 
 ** 1. Ask anything: =M-ß=
 
@@ -780,13 +780,7 @@ Each buffer gets its own direnv environment based on the nearest =.envrc=.
 Critical for NixOS projects where different directories have different
 Nix shells.
 
-*** Help Transient (=SPC ?=)
-
-| Group    | Commands                                         |
-|----------+--------------------------------------------------|
-| Describe | key, function, variable, face, mode, package     |
-| Lookup   | apropos, Doom modules, info manual, library      |
-| Navigate | bindings, personal bindings, where-is, which-key |
+The help menu that was on =SPC ?= is =C-ß= now: [[*=+discover.el= — C-ß, One Place to Start Looking][+discover.el]].
 
 *** Buffer Transient (=SPC ,=)
 
@@ -795,6 +789,48 @@ Nix shells.
 | Switch   | consult-buffer, ibuffer, project, recent       |
 | Actions  | save, save-all, kill, kill-others, new, revert |
 | Navigate | goto-line, outline, imenu, bookmark            |
+
+*** Every buffer (=M-ö= / =M-ä=)
+
+Back and forth through all buffers, =*Info*=, popups, =*scratch*= and
+other non-file buffers included, most recent first.  The order holds for a
+run of presses; the one you stop on is then the most recent.
+
+** =+discover.el= — C-ß, One Place to Start Looking
+
+=C-ß= from any buffer, Evil state or prompt (=SPC ?= too) opens one menu
+over Emacs's scattered help: what is here (the modes' commands and keys,
+keys under a prefix, this mode's manual, what is at point), a key or a
+command, searching by words, learning, and what your usage says.
+
+| Key in =C-ß=    | What                                                                                                                    |
+|-----------------+-------------------------------------------------------------------------------------------------------------------------|
+| =C-ß=           | Everything, by words (below)                                                                                            |
+| =i= / =d= / =a= | Inside every manual (=consult-info=), docstrings, names                                                                 |
+| =?= / =A=       | Ask which command does something / ask anything (=M-ß=)                                                                 |
+| =c= / =k= / =K= | Commands of these modes, their keys, all keys here (searchable)                                                         |
+| =p=             | Keys under a prefix: press =SPC g=, =g=, =z=, =C-c=…, then =RET=                                                        |
+| =h=             | This mode's manual (and the Emacs manual's entry for it)                                                                |
+| =.=             | What is this: the Org manual's page for the Org thing at point, a symbol's doc, or the character's faces and properties |
+| =x= / =W= / =n= | What a key does / which key runs a command / a command's manual page                                                    |
+| =l=             | What did I just press (lossage)                                                                                         |
+| In a prompt     | =P= the command asking, =C-;= act on the candidate, =E= export them                                                     |
+
+*Everything, by words* (=C-ß C-ß=) searches 17,000 candidates in groups:
+your words (copy → =evil-yank=, terminal → =+ghostel/toggle=), every
+command with its doc line (so English words in the docs match),
+renamed commands by their old name (=org-toggle-inline-images= → now
+=org-link-preview=), the Emacs manual's glossary (Region ≈ the selection),
+manuals and options.  Keys show on the left as they are where you came
+from; commands you use come first.  =RET= runs, opens or describes; =C-;=
+acts (describe, find source…); with nothing matching, =RET= asks the
+assistant, as in M-x.
+
+*Your words match Emacs's* in M-x too: "copy" finds =kill-ring-save=,
+"image" =org-link-preview= (=+discover-synonyms=).
+
+=SPC h D= searches the text of every manual (=consult-info=), =SPC h SPC=
+the commands of the modes on here (=consult-mode-command=).
 
 ** =+dashboard.el= — Feature Hub
 :PROPERTIES:
