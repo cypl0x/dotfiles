@@ -16,6 +16,7 @@
 
 
 (add-to-list 'doom-module-load-path "~/dev/Turm-emacs-integration/editor/emacs/doom")
+(add-to-list 'doom-module-load-path "~/dev/slender-mode/doom")   ; :lang lean +slender
 
 (doom! :input
        ;;bidi              ; (tfel ot) thgir etirw uoy gnipleh
@@ -155,7 +156,7 @@
        ;;julia             ; a better, faster MATLAB
        kotlin            ; a better, slicker Java(Script)
        latex             ; writing papers in Emacs has never been so fun
-       (lean +lsp)              ; for folks with too much to prove
+       (lean +slender +lsp)     ; slender-mode (~/dev/slender-mode), not nael
        ;;ledger            ; be audit you can be
        (lua +lsp +tree-sitter) ; one-based indices (the Hyprland config: lisp/+lua.el)
        markdown          ; writing docs for people to ignore

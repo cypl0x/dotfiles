@@ -40,19 +40,10 @@
          :desc "Constraints"        "=" #'agda2-show-constraints
          :desc "Module contents"    "o" #'agda2-module-contents-maybe-toplevel)))
 
-;;;; Lean 4 — Continuous checking ────────────────────────────────────────────
+;;;; Lean 4 ──────────────────────────────────────────────────────────────────
 
-;; Doom's `:lang lean' module with `+lsp' flag provides lean4-mode + eglot.
-;; Add convenience bindings.
-
-(after! lean4-mode
-  (map! :map lean4-mode-map
-        :localleader
-        (:prefix ("i" . "info")
-         :desc "Toggle info view"   "i" #'lean4-toggle-info
-         :desc "Restart server"     "r" #'eglot-reconnect)
-        (:prefix ("b" . "build")
-         :desc "Lake build"         "b" #'lean4-lake-build)))
+;; Lean is slender-mode: `(lean +slender +lsp)' in init.el, the module and
+;; client in ~/dev/slender-mode (its Doom module binds SPC m).
 
 ;;;; Coq/Rocq — Proof General + company-coq ─────────────────────────────────
 
@@ -133,7 +124,7 @@ Useful outside Agda buffers for writing type theory in org-mode, etc."
       (with-current-buffer b
         (when (or (derived-mode-p 'agda2-mode)
                   (derived-mode-p 'coq-mode)
-                  (derived-mode-p 'lean4-mode)
+                  (derived-mode-p 'slender-mode)
                   (derived-mode-p 'idris2-mode)
                   (derived-mode-p 'fstar-mode))
           (push (list (buffer-name)

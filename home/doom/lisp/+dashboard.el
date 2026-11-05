@@ -126,7 +126,7 @@
                 (format "Agda buffers:  %d\n"
                         (length (seq-filter (lambda (b) (with-current-buffer b (derived-mode-p 'agda2-mode))) (buffer-list))))
                 (format "Lean buffers:  %d\n"
-                        (length (seq-filter (lambda (b) (with-current-buffer b (derived-mode-p 'lean4-mode))) (buffer-list))))
+                        (length (seq-filter (lambda (b) (with-current-buffer b (derived-mode-p 'slender-mode))) (buffer-list))))
                 (format "Coq buffers:   %d\n"
                         (length (seq-filter (lambda (b) (with-current-buffer b (derived-mode-p 'coq-mode))) (buffer-list))))
                 "\n"
