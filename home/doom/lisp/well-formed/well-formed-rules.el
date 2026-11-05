@@ -538,6 +538,34 @@ result shows\"."
         (cl-incf i))
       (nreverse out))))
 
+(well-formed-define-rule unclear-antecedent
+  :category 'clarity :level 'info :langs '("en")
+  :doc "A pronoun the reader can't pin down: a bare \"this\"/\"that\" + verb in
+mid-sentence (\"…, and this means\"), or \"It\" right after a sentence that
+named two things (\"the cache and the index … It\" — which?)."
+  :function
+  (lambda (para)
+    (let ((text (well-formed-para-text para)) out (case-fold-search nil) prev)
+      (let ((pos 0))
+        (while (string-match "\\(?:, \\(?:and\\|but\\|so\\|because\\)\\|;\\| because\\) \\(this\\|that\\) \\(shows\\|means\\|leads\\|makes\\|is\\|was\\|causes\\|allows\\|gives\\|helps\\)\\>"
+                             text pos)
+          (push (list (match-beginning 1) (match-end 2)
+                      (format "%s what? Name what it refers to" (well-formed-quote (match-string 1 text)))
+                      nil)
+                out)
+          (setq pos (match-end 0))))
+      (pcase-dolist (`(,b . ,e) (well-formed-para-sentences para))
+        (let ((s (substring text b e)))
+          (when (and prev (string-match "\\`It \\(?:is\\|was\\|has\\|had\\|does\\|did\\|will\\|can\\|[[:lower:]]+s\\)\\>" s)
+                     (string-match "\\<the \\([[:lower:]]+\\) \\(?:and\\|or\\) the \\([[:lower:]]+\\)\\>" prev)
+                     (not (equal (match-string 1 prev) (match-string 2 prev))))
+            (push (list b (+ b 2)
+                        (format "“It”: the %s or the %s?" (match-string 1 prev) (match-string 2 prev))
+                        nil)
+                  out))
+          (setq prev s)))
+      (sort out (lambda (a b) (< (car a) (car b)))))))
+
 ;;;; Clarity
 
 (defvar well-formed-wordy-en

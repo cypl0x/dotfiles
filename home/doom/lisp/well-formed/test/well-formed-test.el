@@ -471,3 +471,12 @@ first check; a goal shows the way there."
   (should-not (memq 'tense-shift (well-formed-test--ids #'text-mode "We went in. It was dark. We walked on.")))
   (should (equal (well-formed-test--apply-first #'text-mode "It needs 5 GB.\n\nThen 2 GB more.\n\nAnd 8GB swap.\n" 'unit-format)
                  "It needs 5 GB.\n\nThen 2 GB more.\n\nAnd 8 GB swap.\n")))
+
+(ert-deftest well-formed-test-unclear-antecedent ()
+  (let ((found (well-formed-test--with #'text-mode
+                   "We cleared the cache and the index. It was slow. The run failed, and this means we wait.\n"
+                 (well-formed-check))))
+    (should (cl-find "“It”: the cache or the index?" found :key (lambda (f) (nth 4 f)) :test #'equal))
+    (should (cl-find "“this” what? Name what it refers to" found :key (lambda (f) (nth 4 f)) :test #'equal)))
+  (should-not (memq 'unclear-antecedent
+                    (well-formed-test--ids #'text-mode "We cleared the cache. It was slow. The run failed and stopped."))))
