@@ -27,11 +27,12 @@
 (autoload 'well-formed-report "well-formed-report" nil t)
 (autoload 'well-formed-menu "well-formed-menu" nil t)
 
-;; On after startup: the rules load (about 20 ms) once Emacs is idle, not
-;; while it starts.  The report's time tracking comes with it.
+;; On after startup: the rules load (about 20 ms) a second after the first
+;; buffer, not while Emacs starts (an idle timer never fired in a daemon
+;; nobody had typed in yet).  The report's time tracking comes with it.
 (add-hook 'doom-first-buffer-hook
           (defun +well-formed-enable-h ()
-            (run-with-idle-timer 1 nil
+            (run-with-timer 1 nil
                                  (lambda ()
                                    (require 'well-formed)
                                    (require 'well-formed-report)

@@ -655,6 +655,7 @@ consistency.  Findings show through flycheck or flymake."
     (when (bound-and-true-p flymake-mode)
       (remove-hook 'flymake-diagnostic-functions #'well-formed-flymake t)))
    ((featurep 'flycheck)
+    (put 'well-formed 'flycheck-modes (cl-adjoin major-mode (get 'well-formed 'flycheck-modes)))
     ;; flycheck may have found no checker before this mode was on (its
     ;; predicate is this mode); ask it again.
     (unless (bound-and-true-p flycheck-mode)
@@ -679,6 +680,7 @@ consistency.  Findings show through flycheck or flymake."
 (declare-function flycheck-error-new-at-pos "ext:flycheck" (pos level message &rest args))
 (declare-function flycheck-error-new "ext:flycheck" (&rest args))
 (declare-function flycheck-add-next-checker "ext:flycheck" (checker next &optional append))
+(declare-function flycheck-valid-checker-p "ext:flycheck" (checker))
 (defvar flycheck-checkers)
 (declare-function flycheck-buffer "ext:flycheck" ())
 (declare-function flycheck-mode "ext:flycheck" (&optional arg))
@@ -708,13 +710,15 @@ consistency.  Findings show through flycheck or flymake."
   (flycheck-define-generic-checker 'well-formed
     "Prose: correctness, clarity, engagement, delivery, consistency (well-formed)."
     :start #'well-formed--flycheck-start
-    :modes nil
+    ;; flycheck matches the major mode exactly; `well-formed-mode' adds its
+    ;; buffer's mode to these.
+    :modes '(text-mode org-mode markdown-mode gfm-mode)
     :predicate (lambda () (bound-and-true-p well-formed-mode)))
   (add-to-list 'flycheck-checkers 'well-formed t)
   ;; After the mode's own checker, whatever it found.
   (dolist (checker '(+org-lint markdown-markdownlint-cli markdown-markdownlint-cli2 markdown-mdl
                      proselint textlint tex-chktex))
-    (when (get checker 'flycheck-command-or-generic)
+    (when (flycheck-valid-checker-p checker)
       (ignore-errors (flycheck-add-next-checker checker '(t . well-formed) t)))))
 
 ;;;; flymake
