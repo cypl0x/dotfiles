@@ -47,6 +47,94 @@
      ("o" "This Org item to a session" familiar-peers-send-heading)
      ("y" "Region to a session" familiar-peers-send-region)]))
 (map! :leader :desc "AI analytics (familiar)" "o $" #'familiar-analytics)
+
+;;;; SPC z: everything familiar does, and its settings, in one menu
+
+(defvar familiar-budget)
+(defvar familiar-models)
+(defvar familiar-mcp-sampling)
+(defvar familiar-mcp-sampling-mode)
+(defvar familiar-mode-line-mode)
+(declare-function familiar-spent "familiar" ())
+
+(defun +familiar-menu--status ()
+  "The menu's heading: spend against the budget, the models, sampling."
+  (require 'familiar)
+  (format "familiar · %s of %s spent · %s · MCP sampling: %s"
+          (format "$%.2f" (familiar-spent))
+          (if familiar-budget (format "$%.2f" familiar-budget) "no budget")
+          (mapconcat (lambda (tm) (format "%s %s" (car tm)
+                                          (replace-regexp-in-string "\\`claude-\\|-[0-9-]+\\'" "" (symbol-name (cdr tm)))))
+                     familiar-models ", ")
+          (if (bound-and-true-p familiar-mcp-sampling-mode)
+              (bound-and-true-p familiar-mcp-sampling)
+            "off")))
+
+(defun +familiar/set-budget (usd)
+  "Set familiar's budget to USD dollars (this session; customize keeps it)."
+  (interactive (list (read-number "Budget in USD: " familiar-budget)))
+  (customize-set-variable 'familiar-budget usd)
+  (message "familiar: budget $%.2f (M-x customize-save-variable familiar-budget keeps it)" usd))
+
+(defun +familiar/cycle-sampling ()
+  "Cycle MCP sampling: ask, always, never."
+  (interactive)
+  (require 'familiar-mcp-sampling)
+  (setq familiar-mcp-sampling (pcase familiar-mcp-sampling ('ask 'always) ('always 'never) (_ 'ask)))
+  (message "familiar: MCP servers' completion requests: %s" familiar-mcp-sampling))
+
+(transient-define-prefix +familiar-menu ()
+  "familiar: everything it does, and its settings."
+  [:description +familiar-menu--status
+   ["Ask"
+    ("?" "Ask anything (M-ß)" familiar-ask)
+    ("+" "Follow-up" familiar-ask-continue)
+    ("N" "New conversation" familiar-ask-new)
+    ("A" "Earlier conversations" familiar-ask-sessions)
+    ("c" "Compose a long prompt" familiar-ask-compose)
+    ("e" "Export a conversation" familiar-ask-export)
+    ("p" "Insert a saved prompt" familiar-prompts-insert)]
+   ["Code"
+    ("x" "Explain" familiar-explain)
+    ("d" "Explain diagnostic" familiar-explain-diagnostic)
+    ("E" "Explain build error" familiar-explain-compilation-error)
+    ("F" "Fix (smerge)" familiar-fix)
+    ("v" "Review diff" familiar-review)
+    ("C" "Commit message" familiar-commit-message)
+    ("TAB" "Complete here" familiar-complete)
+    ("R" "Rename buffer" familiar-rename-buffer)]
+   ["Claude Code"
+    ("w" "Write to a session" familiar-peers-send)
+    ("W" "Sessions" familiar-peers)
+    ("o" "This Org item to one" familiar-peers-send-heading)
+    ("y" "Region to one" familiar-peers-send-region)
+    ("H" "Hand off context" familiar-handoff)]]
+  [["Looking back"
+    ("$" "Spend" familiar-spend)
+    ("a" "Analytics" familiar-analytics)
+    ("j" "History of every turn" familiar-history)
+    ("r" "Replay a turn" familiar-history-replay)
+    ("L" "What the AI changed" familiar-footprint)
+    ("P" "Review my prompts" familiar-rate-prompts)
+    ("u" "Update saved prompts" familiar-prompts-update)]
+   ["Bridges (for agents)"
+    ("h" "MCP over HTTP: start" familiar-mcp-http-start)
+    ("k" "MCP over HTTP: stop" familiar-mcp-http-stop)
+    ("i" "ACP server: start" familiar-acp-start)
+    ("I" "ACP server: stop" familiar-acp-stop)]
+   ["Settings"
+    ("b" "Budget…" +familiar/set-budget)
+    ("s" "Sampling: ask/always/never" +familiar/cycle-sampling :transient t)
+    ("S" "Sampling on/off" familiar-mcp-sampling-mode :transient t)
+    ("l" "Spend in mode line" familiar-mode-line-mode :transient t)
+    ("t" "Models and tiers…" (lambda () (interactive) (customize-variable 'familiar-models)))
+    ("T" "Task tiers…" (lambda () (interactive) (customize-variable 'familiar-task-tiers)))
+    ("," "All options…" (lambda () (interactive) (customize-group 'familiar)))]])
+
+(map! :leader :desc "familiar (everything)" "z" #'+familiar-menu)
+(after! +agent
+  (transient-append-suffix '+agent/transient "$"
+    '("Z" "All of familiar…" +familiar-menu)))
 ;; C-S-SPC: AI completions at point, ranked and explained (corfu-popupinfo).
 (map! "C-S-SPC" #'familiar-complete
       :i "C-S-SPC" #'familiar-complete)
