@@ -32,6 +32,11 @@
 (declare-function diff-hl-ediff-current-hunk "ext:diff-hl" ())
 (declare-function diff-hl-set-reference-rev "ext:diff-hl" (rev))
 (declare-function diff-hl-reset-reference-rev "ext:diff-hl" ())
+;; Menu suffixes diff-hl doesn't autoload: before diff-hl was loaded (a fresh
+;; session, no file opened yet) transient refused to open the menu.
+(autoload 'diff-hl-stage-some "diff-hl" nil t)
+(autoload 'diff-hl-mark-hunk "diff-hl" nil t)
+(autoload 'diff-hl-show-hunk-copy-original-text "diff-hl-show-hunk" nil t)
 (declare-function diff-hl-show-hunk "ext:diff-hl-show-hunk" ())
 (declare-function diff-hl-show-hunk-posframe "ext:diff-hl-show-hunk-posframe" (buffer &optional line))
 (declare-function diff-hl-show-hunk-copy-original-text "ext:diff-hl-show-hunk" ())

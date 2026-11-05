@@ -47,6 +47,53 @@
           (push (format "%s: %s" (car s) (cdr s)) bad))))
     (should-not bad)))
 
+(defun test-live--leader-decls (file)
+  "Return (KEYS . COMMAND) for every top-level `map! :leader' key in FILE.
+Forms for a mode map, the localleader or under a condition are skipped:
+those keys only exist later or sometimes."
+  (let (out leader)
+    (cl-labels
+        ((walk (items prefix)
+           (while items
+             (let ((x (pop items)))
+               (cond
+                ((eq x :leader) (setq leader t))
+                ((not leader) (pop items))     ; a global key before :leader
+                ((eq x :desc) (pop items))
+                ((keywordp x) (pop items))     ; :n, :after … with an argument
+                ((and (consp x) (eq (car x) :prefix))
+                 (let ((p (cadr x)))
+                   (walk (cddr x) (concat prefix (if (consp p) (car p) p) " "))))
+                ((consp x))                    ; :when, :map … nested: skip
+                ((stringp x)
+                 (let ((def (pop items)))
+                   (when (eq (car-safe def) 'function)
+                     (push (cons (concat prefix x) (cadr def)) out)))))))))
+      (with-temp-buffer
+        (insert-file-contents file)
+        (goto-char (point-min))
+        (condition-case nil
+            (while t
+              (let ((form (read (current-buffer))))
+                (when (and (eq (car-safe form) 'map!) (memq :leader form)
+                           (not (memq :map form)) (not (memq :localleader form))
+                           (not (memq :after form)) (not (memq :when form)))
+                  (walk (cdr form) ""))))
+          (end-of-file nil))))
+    out))
+
+(ert-deftest live/every-declared-leader-key-is-bound ()
+  "A key declared under :leader is bound to its command after startup.
+Catches a later (:prefix (\"K\" . \"desc\")) elsewhere: Doom binds a
+described prefix to a fresh empty keymap, wiping what was there."
+  (let (bad)
+    (dolist (f (directory-files test-live-lisp-dir t "\\`\\+.*\\.el\\'"))
+      (pcase-dolist (`(,keys . ,cmd) (test-live--leader-decls f))
+        (let ((got (test-live--leader keys)))
+          (unless (eq (if (consp got) (cdr got) got) cmd)
+            (push (format "SPC %s: %s, not %s (%s)" keys got cmd (file-name-nondirectory f)) bad)))))
+    (should-not (nreverse bad))))
+
 (ert-deftest live/leader-keys ()
   (should (eq (test-live--leader "A") '+agent/transient))
   (should (eq (test-live--leader "q R") '+daemon/sync-and-restart))
@@ -74,6 +121,8 @@
   (require 'familiar)
   (require 'git-commit)
   (should (eq (lookup-key git-commit-mode-map (kbd "M-g")) 'familiar-commit-message))
+  ;; The module turns the mode line on after 3 s idle: wait for a fresh session.
+  (with-timeout (6) (while (not (bound-and-true-p familiar-mode-line-mode)) (sit-for 0.2)))
   (should (member familiar--mode-line-construct global-mode-string))
   (should (eq (familiar--model 'commit) 'claude-haiku-5-5))
   ;; The real backend knows the price, so spend is never silently zero.

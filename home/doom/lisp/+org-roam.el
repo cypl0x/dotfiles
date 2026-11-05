@@ -245,8 +245,8 @@ what to try next.  Your vault isn't touched."
      ("SPC X a" "a TODO for an agent" org-capture))
     ("Triage: give each item its place"
      "Go through the inbox: a heading worth keeping becomes a note, or moves into one."
-     ("SPC n r n" "this heading becomes a note" +org-roam/heading-node)
-     ("SPC n r x" "this heading becomes a note of its own file" org-roam-extract-subtree)
+     ("SPC n r m n" "this heading becomes a note" +org-roam/heading-node)
+     ("SPC n r m x" "this heading becomes a note of its own file" org-roam-extract-subtree)
      ("SPC n r m m" "move this heading into another note" org-roam-refile))
     ("Write and link"
      "Links are what make notes worth having: link as you write."
@@ -296,14 +296,20 @@ command in it runs from here (RET or click)."
     (goto-char (point-min))
     (pop-to-buffer (current-buffer))))
 
-;; Key by key, not as a (:prefix ("n r" …)): Doom owns that prefix (its
-;; roam keys: f, i, a, d …); declaring it again here replaced them when
-;; this file was loaded anew.
+;; Key by key, not as a (:prefix ("n r" . "…")): a prefix with a
+;; description is bound to a fresh empty keymap, so declaring it again
+;; wipes every key bound under it before (+org-power names it, first).
 (map! :leader
       :desc "The workflow, step by step" "n r w" #'+org-roam/guide
       :desc "Org-roam menu"           "n r m" #'+org-roam-menu
       :desc "Make notes of files"     "n r I" #'+org-roam/init
-      :desc "Org-roam by example"     "n r e" #'+org-roam/tour)
+      :desc "Org-roam by example"     "n r e" #'+org-roam/tour
+      (:prefix ("n r d" . "dailies")
+       :desc "Today"                  "t" #'org-roam-dailies-goto-today
+       :desc "Yesterday"              "y" #'org-roam-dailies-goto-yesterday
+       :desc "Tomorrow"               "m" #'org-roam-dailies-goto-tomorrow
+       :desc "Pick a date"            "d" #'org-roam-dailies-goto-date
+       :desc "Jot into today"         "j" #'org-roam-dailies-capture-today))
 
 (provide '+org-roam)
 ;;; +org-roam.el ends here

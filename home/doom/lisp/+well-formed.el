@@ -12,8 +12,8 @@
 ;;   SPC P x   fix the finding at point (rule-based, or rewritten with AI)
 ;;   SPC P X   fix one rule throughout
 ;;   SPC P g   ignore it (here, the rule here, everywhere)
-;;   SPC P e   explain its rule             SPC P L   every finding (consult)
-;;   SPC P s   another word for the one at point (WordNet, offline)
+;;   SPC P e   explain its rule             SPC P F   every finding (consult)
+;;   SPC P y   another word for the one at point (WordNet, offline)
 ;;   SPC P v   the report: scores, readability, tone, plots
 ;;   SPC P S   style for this buffer (a document: #+well_formed: academic)
 ;;   ]e / [e   next / previous (flycheck), embark (C-;) acts on a finding
@@ -66,14 +66,14 @@
             (or (bound-and-true-p gptel-mode)
                 (string-match-p "\\`\\*\\(?:familiar\\|gptel\\|claude\\)" (buffer-name)))))
 (map! :leader
-      (:prefix ("P" . "prose")
+      (:prefix "P"
        :desc "Writing assistant menu" "m" #'well-formed-menu
        :desc "Fix finding"            "x" #'well-formed-fix
        :desc "Fix rule throughout"    "X" #'well-formed-fix-all
        :desc "Ignore finding"         "g" #'well-formed-ignore
        :desc "Explain finding"        "e" #'well-formed-explain
-       :desc "Synonym (WordNet)"      "s" #'well-formed-synonyms
-       :desc "List findings"          "L" #'well-formed-list
+       :desc "Synonym (WordNet)"      "y" #'well-formed-synonyms
+       :desc "List findings"          "F" #'well-formed-list
        :desc "Writing style"          "S" #'well-formed-set-style
        :desc "AI assessment"          "a" #'well-formed-ai-report))
 

@@ -5,7 +5,7 @@
 
 ;;; Commentary:
 
-;; M-x well-formed-synonyms (SPC P s): another word for the one at point,
+;; M-x well-formed-synonyms (SPC P y): another word for the one at point,
 ;; from WordNet's `wn' (offline), ranked by the context:
 ;;
 ;;   - the part of speech the word plays here first (after "the" a noun,

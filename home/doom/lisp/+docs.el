@@ -111,8 +111,8 @@ ORG is newer); its path."
 (defalias 'org-roam-manual #'+docs/org-roam-manual)
 
 (map! :leader
-      (:prefix ("n" . "notes")
-       (:prefix ("r" . "roam")
+      (:prefix "n"
+       (:prefix "r"
         :desc "Org Roam here (manual)" "?" #'+docs/org-roam
         :desc "Org-roam's manual"      "M" #'+docs/org-roam-manual)))
 

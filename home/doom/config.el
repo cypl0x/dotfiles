@@ -303,16 +303,15 @@
         :desc "Auto-resolve"                "r"  #'smerge-resolve
         :desc "Open in ediff"               "e"  #'smerge-ediff)
 
-       ;; ── Extend Doom's 'open in browser' prefix (SPC g o) ────────────
-       ;; Existing: SPC g o o  browse-at-remote
-       ;;           SPC g o y  copy URL to kill ring
+       ;; ── SPC g o: open in browser ─────────────────────────────────────
+       ;; Only these: this Doom binds nothing under it (no browse-at-remote).
+       ;; One described prefix per key: a second one wipes the first.
        (:prefix ("o" . "open in browser")
         :desc "Copy permalink (hash)"       "l"  #'git-link
         :desc "Copy commit permalink"       "L"  #'git-link-commit)
 
-       ;; ── Extend Doom's 'list' prefix (SPC g l) ───────────────────────
-       ;; Existing: SPC g l i/p/n  forge issues/PRs/notifications
-       ;;           SPC g l r/s/t/z  repos/submodules/todos/stashes
+       ;; ── SPC g l: lists ───────────────────────────────────────────────
+       ;; Only these: this Doom binds no forge lists here.
        (:prefix ("l" . "list")
         :desc "Files in repo (git ls)"      "g"  #'consult-ls-git
         :desc "Files in repo (other win)"   "G"  #'consult-ls-git-other-window)

@@ -358,7 +358,7 @@ mark unchanged and in order, one blank line between paragraphs, nothing else \
              (message "%d paragraph%s" (length paras) (if (cdr paras) "s" ""))))))))))
 
 (map! :leader
-      (:prefix ("P" . "prose")
+      (:prefix "P"
        :desc "Fill / unfill"         "q" #'+format/fill-dwim
        :desc "Sentence per line"     "L" #'+format/sentence-lines
        :desc "Split paragraphs (AI)" "p" #'+format/split-paragraphs

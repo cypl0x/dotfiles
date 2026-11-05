@@ -305,9 +305,6 @@ and whatever packages added (vellumory's V) stay."
         :desc "Insert link"         "i" #'org-roam-node-insert
         :desc "Capture"             "c" #'org-roam-capture
         :desc "Backlinks buffer"    "b" #'org-roam-buffer-toggle
-        :desc "Graph"               "g" #'org-roam-graph
-        :desc "Dailies today"       "t" #'org-roam-dailies-goto-today
-        :desc "Dailies capture"     "d" #'org-roam-dailies-capture-today
         :desc "Consult roam"        "s" #'consult-org-roam-search)
        :desc "org-ql views"         "v" #'org-ql-view
        :desc "org-ql search"        "q" #'org-ql-search
