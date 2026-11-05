@@ -225,13 +225,26 @@ follow, owners of repositories you starred."
                                 (lambda (r) (+gh-fs--note-owners (mapcar (lambda (u) (plist-get u :login)) (plist-get r :items))
                                                                  'found))))))))
 
+(defun +gh-fs--note-repo (owner r)
+  "Keep what OWNER's repository listing says about R (push date, size,
+default branch), so its directory needs no request of its own; its name."
+  (let ((name (plist-get r :name)))
+    (puthash (list :repo-meta owner name)
+             (list (ignore-errors (time-convert (date-to-time (plist-get r :pushed_at)) 'list))
+                   (* 1024 (or (plist-get r :size) 0)))
+             +gh-fs--memo)
+    (when-let* ((branch (plist-get r :default_branch)))
+      (unless (gethash (format "repos/%s/%s" owner name) +gh-fs--memo)
+        (puthash (format "repos/%s/%s" owner name) (list :default_branch branch) +gh-fs--memo)))
+    name))
+
 (defun +gh-fs--owner-repos (owner)
   "OWNER's repository names, or what has arrived of them so far (a fetch
 starts in the background; in the minibuffer it never waits)."
   (let ((key (list :repos owner)))
     (or (gethash key +gh-fs--memo)
         (if (not (minibufferp))
-            (puthash key (mapcar (lambda (r) (plist-get r :name))
+            (puthash key (mapcar (lambda (r) (+gh-fs--note-repo owner r))
                                  (+gh-fs--paginate (if (equal owner (plist-get (gethash "user" +gh-fs--memo) :login))
                                                        "user/repos?affiliation=owner&sort=pushed"
                                                      (format "users/%s/repos?sort=pushed" owner))))
@@ -243,7 +256,7 @@ starts in the background; in the minibuffer it never waits)."
                             (+gh-fs--async-api
                              (format "users/%s/repos?sort=pushed&per_page=100&page=%d" owner n)
                              (lambda (rs)
-                               (setq acc (append acc (mapcar (lambda (r) (plist-get r :name)) rs)))
+                               (setq acc (append acc (mapcar (lambda (r) (+gh-fs--note-repo owner r)) rs)))
                                (puthash (list :partial owner) acc +gh-fs--memo)
                                (+gh-fs--refresh-completion)
                                (if (and (= (length rs) 100) (< n 10)) (page (1+ n))
@@ -287,13 +300,20 @@ Owners and repositories already listed answer without a request; MTIME
   (let ((p (+gh-fs--parse file)))
     (cond
      ((null (+gh-fs-path-owner p)) (list 'dir 0 nil "040000" nil))
+     ((string-prefix-p "." (+gh-fs-path-owner p)) nil)   ; no login starts with "." (VC probes: .git, .svn)
      ((null (+gh-fs-path-repo p))
       (when (or (+gh-fs--known-owner-p (+gh-fs-path-owner p))
                 (and (not (minibufferp)) (+gh-fs--api (format "users/%s" (+gh-fs-path-owner p)))))
         (list 'dir 0 nil "040000" nil)))
-     ((and (string-empty-p (+gh-fs-path-path p)) (not with-mtime)
-           (member (+gh-fs-path-repo p) (gethash (list :repos (+gh-fs-path-owner p)) +gh-fs--memo)))
-      (list 'dir 0 nil "040000" nil))
+     ;; The owner's whole list is known and this name isn't in it: no such repository.
+     ((let ((all (gethash (list :repos (+gh-fs-path-owner p)) +gh-fs--memo)))
+        (and all (not (member (+gh-fs-path-repo p) all))))
+      nil)
+     ((and (string-empty-p (+gh-fs-path-path p))
+           (gethash (list :repo-meta (+gh-fs-path-owner p) (+gh-fs-path-repo p)) +gh-fs--memo))
+      ;; A repository its owner's listing told us about: no request.
+      (pcase-let ((`(,pushed ,size) (gethash (list :repo-meta (+gh-fs-path-owner p) (+gh-fs-path-repo p)) +gh-fs--memo)))
+        (list 'dir size nil "040000" pushed)))
      (t (when-let* ((tree (if with-mtime (+gh-fs--tree p) (+gh-fs--tree-soon p)))
                     (e (gethash (+gh-fs-path-path p) tree)))
           (append e (list (and with-mtime
