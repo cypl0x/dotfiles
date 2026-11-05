@@ -480,3 +480,27 @@ first check; a goal shows the way there."
     (should (cl-find "“this” what? Name what it refers to" found :key (lambda (f) (nth 4 f)) :test #'equal)))
   (should-not (memq 'unclear-antecedent
                     (well-formed-test--ids #'text-mode "We cleared the cache. It was slow. The run failed and stopped."))))
+
+(ert-deftest well-formed-test-synonyms-ranked-by-context ()
+  (require 'well-formed-synonyms)
+  ;; The parse, on wn's own format.
+  (should (equal (well-formed-synonyms--parse
+                  "Similarity of adj quick\n\n6 senses of quick\n\nSense 1\nquick, speedy -- (accomplished rapidly; \"x\")\n       => fast (vs. slow) -- (acting quickly)\n\nSense 2\nflying, quick, fast -- (hurried and brief)\n")
+                 '(("quick" "accomplished rapidly" nil 1) ("speedy" "accomplished rapidly" nil 1)
+                   ("fast" "acting quickly" t 1)
+                   ("flying" "hurried and brief" nil 2) ("quick" "hurried and brief" nil 2) ("fast" "hurried and brief" nil 2))))
+  (should (equal (car (well-formed-synonyms--guess-pos "to" "run" nil)) 'verb))
+  (should (equal (car (well-formed-synonyms--guess-pos "the" "bright" "light")) 'adj))
+  (should (equal (car (well-formed-synonyms--guess-pos "the" "issue" nil)) 'noun))
+  (should (equal (car (well-formed-synonyms--guess-pos nil "quickly" nil)) 'adv))
+  (skip-unless (executable-find "wn"))
+  (let ((c (mapcar #'car (well-formed-synonyms-candidates "issue" "the" nil "the problem is a topic"))))
+    (should (member "subject" c))
+    ;; Used nearby: last.
+    (should (> (cl-position "topic" c :test #'equal) (cl-position "subject" c :test #'equal))))
+  (with-temp-buffer
+    (insert "The Issue")
+    (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) "subject")))
+      (goto-char (point-max)) (backward-char 2)
+      (well-formed-synonyms))
+    (should (equal (buffer-string) "The Subject"))))

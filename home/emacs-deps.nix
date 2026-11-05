@@ -33,6 +33,9 @@ in {
   # These are tools that Doom packages shell out to at runtime.
   # The Doom config itself lives in home/doom/ and is linked via home/doom.nix.
   home.packages = with pkgs; [
+    # well-formed (lisp/well-formed/): offline synonyms at point (SPC P s), `wn`
+    wordnet
+
     # mu4e (email/mu4e +org +gmail module)
     mu # maildir indexer and mu4e backend
     isync # mbsync: IMAP sync daemon
