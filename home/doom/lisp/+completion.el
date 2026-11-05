@@ -267,7 +267,16 @@ after the path completion, which recognizes a path wherever it is."
 
 ;; Doom's corfu module binds C-SPC to plain `completion-at-point' in
 ;; corfu-mode-map's insert state, which wins over a global binding.
+(defun +completion/dwim-from-normal ()
+  "From normal state: insert state at point, then complete what fits there."
+  (interactive)
+  (when (fboundp 'evil-insert-state) (evil-insert-state))
+  (+completion/dwim))
+
+;; In normal state C-SPC was `set-mark-command': nothing showed, and it
+;; looked as if completion did nothing (evil selects with visual state).
 (map! :i "C-SPC" #'+completion/dwim
+      :n "C-SPC" #'+completion/dwim-from-normal
       :after corfu :map corfu-mode-map :i "C-SPC" #'+completion/dwim)
 
 ;; Typing in the minibuffer (M-x, M-ß, find-file) is insert-like: the same
