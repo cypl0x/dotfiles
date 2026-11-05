@@ -430,3 +430,44 @@ first check; a goal shows the way there."
       (should (string-match-p "Writing score" (get-text-property 0 'help-echo well-formed--mode-line)))
       ;; (format-mode-line is "" without a frame: the entry is checked live.)
       (should (member well-formed--mode-line-entry mode-line-misc-info)))))
+
+(ert-deftest well-formed-test-its-beyond-fixed-contexts ()
+  (dolist (case '(("I think its the cache." . "I think it's the cache.")
+                  ("Its just a test." . "It's just a test.")
+                  ("The tool has it's own name and it's value." . "The tool has its own name and it's value.")
+                  ("Look at its' value." . "Look at its value.")))
+    (should (equal (well-formed-test--apply-first #'text-mode (car case) 'confused-word) (cdr case))))
+  ;; Possessives that look alike stay.
+  (dolist (ok '("It was ahead of its time." "Its only purpose is speed." "The disk lost its hard drive cache."
+                "It's way too big." "It's state of the art." "It's type safe."))
+    (should-not (memq 'confused-word (well-formed-test--ids #'text-mode ok)))))
+
+(ert-deftest well-formed-test-politeness-in-mail ()
+  (should (equal (well-formed-test--apply-first #'message-mode "Send me the file by Friday." 'politeness)
+                 "Please send me the file by Friday."))
+  (well-formed-test--with #'message-mode "Send me the file."
+    (let ((f (cl-find 'politeness (well-formed-check) :key (lambda (f) (nth 2 f)))))
+      (should (equal (cadr (nth 5 f)) "Could you send me the file?"))))
+  ;; Asked already, or not a mail.
+  (dolist (ok '("Please send me the file." "Send me the file, thanks." "Could you send it?"))
+    (should-not (memq 'politeness (well-formed-test--ids #'message-mode ok))))
+  (should-not (memq 'politeness (well-formed-test--ids #'text-mode "Send me the file."))))
+
+(ert-deftest well-formed-test-fragment-run-on-rhythm-tense-units ()
+  (should (equal (well-formed-test--apply-first #'text-mode "We left early. Because it rained." 'fragment)
+                 "We left early because it rained."))
+  (should-not (memq 'fragment (well-formed-test--ids #'text-mode "Because it rained, we left early.")))
+  (should (equal (well-formed-test--apply-first #'text-mode "We left early We were tired." 'run-on)
+                 "We left early. We were tired."))
+  (should-not (memq 'run-on (well-formed-test--ids #'text-mode "The book I was reading is gone.")))
+  (should (memq 'rhythm (well-formed-test--ids
+                         #'text-mode
+                         "The cat sat on the warm mat. The dog lay by the open door. The bird sang in the tall tree. The fish swam in the small bowl.")))
+  (should-not (memq 'rhythm (well-formed-test--ids
+                             #'text-mode
+                             "The cat sat on the warm mat. Then it slept. The dog lay by the open door all day long without moving. The bird sang.")))
+  (should (memq 'tense-shift (well-formed-test--ids
+                              #'text-mode "We went in. It was dark. We walked on. We see a light.")))
+  (should-not (memq 'tense-shift (well-formed-test--ids #'text-mode "We went in. It was dark. We walked on.")))
+  (should (equal (well-formed-test--apply-first #'text-mode "It needs 5 GB.\n\nThen 2 GB more.\n\nAnd 8GB swap.\n" 'unit-format)
+                 "It needs 5 GB.\n\nThen 2 GB more.\n\nAnd 8 GB swap.\n")))

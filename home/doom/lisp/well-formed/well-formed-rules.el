@@ -180,7 +180,15 @@ capital, and so are days and months."
     ("\\<your \\(welcome\\|going\\|right\\|wrong\\|not\\|being\\|doing\\|the best\\)\\>" "%s → %s" "you're \\1")
     ("\\<its \\(a\\|an\\|not\\|been\\|going\\|very\\|true\\|important\\|possible\\|clear\\|likely\\)\\>"
      "\"it's\" = it is: %s → %s" "it's \\1")
+    ;; "its" before what can't follow a possessive: an article, a
+    ;; determiner, an adverb, a state.
+    ("\\<its \\(the\\|my\\|your\\|our\\|their\\|this\\|that\\|just\\|also\\|still\\|already\\|really\\|so\\|too\\|ok\\|okay\\|fine\\|done\\|here\\|there\\|now\\|almost\\|probably\\|definitely\\|always\\|never\\|enough\\)\\>"
+     "\"it's\" = it is: %s → %s" "it's \\1")
     ("\\<it's \\(own\\|self\\)\\>" "Possessive \"its\": %s → %s" "its \\1")
+    ;; "it's" before what a thing has.
+    ("\\<it's \\(name\\|value\\|size\\|color\\|colour\\|purpose\\|contents\\|parent\\|children\\|members\\|origin\\|role\\|job\\|output\\|input\\|length\\|width\\|height\\|source\\|default\\|author\\|owner\\|users\\)\\>"
+     "Possessive \"its\": %s → %s" "its \\1")
+    ("\\<\\(its'\\)" "%s is never right → %s" "its")
     ("\\<their \\(is\\|are\\|was\\|were\\|will be\\|has been\\)\\>" "%s → %s" "there \\1")
     ("\\<there \\(own\\)\\>" "%s → %s" "their \\1")
     ("\\<loose \\(weight\\|track\\|control\\|interest\\|the\\)\\>" "\"lose\", not \"loose\": %s → %s" "lose \\1")
@@ -1273,6 +1281,140 @@ or better what is possible."
                                   "Positive framing: %s → %s")))
                  para)))))
 
+(well-formed-define-rule fragment
+  :category 'correctness :level 'warning :langs '("en")
+  :doc "A clause that leans on another (because, although, which …) standing
+alone as a sentence: join it to the one before, or finish it."
+  :examples '(("We left early. Because it rained." . "We left early because it rained."))
+  :function
+  (lambda (para)
+    (let ((text (well-formed-para-text para)) out (case-fold-search nil) prev-end word)
+      (pcase-dolist (`(,b . ,e) (well-formed-para-sentences para))
+        (let ((s (string-trim-right (substring text b e))))
+          (when (and (string-match "\\`\\(Because\\|Although\\|Though\\|Whereas\\|Which\\|Unless\\|Whenever\\) [[:alpha:]]" s)
+                     (setq word (match-string 1 s))
+                     (not (string-search "," s))
+                     (string-suffix-p "." s)
+                     (>= (length (split-string s)) 3))
+            (let* ((msg (format "Fragment: a %s clause on its own" (well-formed-quote (downcase word))))
+                   (before (and prev-end (string-trim-right (substring text 0 prev-end))))
+                   (period (and before (string-suffix-p "." before) (1- (length before)))))
+              (push (if period
+                        ;; Joined to the sentence before: from its period on.
+                        (list period (+ b (length s)) msg
+                              (list (concat " " (downcase (substring s 0 1)) (substring s 1))))
+                      (list b (+ b (length s)) msg nil))
+                    out)))
+          (setq prev-end e)))
+      (nreverse out))))
+
+(well-formed-define-rule run-on
+  :category 'correctness :level 'warning :langs '("en")
+  :doc "Two sentences run together: a capitalized pronoun in mid-sentence
+usually starts a new one whose period went missing."
+  :examples '(("We left early We were tired." . "We left early. We were tired."))
+  :function
+  (well-formed-regexps
+   '(("[[:lower:]]\\( \\)\\(?:We\\|They\\|He\\|She\\|It\\|You\\) \\(?:am\\|is\\|are\\|was\\|were\\|have\\|has\\|had\\|will\\|can\\|could\\|would\\|should\\|did\\|do\\|does\\)\\>"
+      "Run-on: a new sentence seems to start here" ". " 1 t))))
+
+(well-formed-define-rule rhythm
+  :category 'engagement :level 'info
+  :doc "Four or more sentences in a row of about the same length read as a
+drone; vary them (a short one lands)."
+  :function
+  (lambda (para)
+    (let* ((text (well-formed-para-text para))
+           (lens (mapcar (pcase-lambda (`(,b . ,e)) (list b e (well-formed--word-count text b e)))
+                         (well-formed-para-sentences para)))
+           out run)
+      (cl-flet ((flush ()
+                  (when (>= (length run) 4)
+                    (let ((r (reverse run)))
+                      (push (list (car (car r)) (cadr (car (last r)))
+                                  (format "%d sentences of about %d words in a row: vary the length"
+                                          (length r) (round (/ (cl-loop for x in r sum (nth 2 x)) (float (length r))))))
+                            out)))
+                  (setq run nil)))
+        (dolist (s lens)
+          (if (and run (>= (nth 2 s) 6)
+                   (<= (abs (- (nth 2 s) (nth 2 (car (last run))))) 3)
+                   (<= (abs (- (nth 2 s) (nth 2 (car run)))) 3))
+              (push s run)
+            (flush)
+            (when (>= (nth 2 s) 6) (setq run (list s)))))
+        (flush))
+      (nreverse out))))
+
+(defconst well-formed--past-verb
+  "\\`\\(?:was\\|were\\|had\\|did\\|went\\|came\\|said\\|made\\|took\\|got\\|saw\\|knew\\|thought\\|found\\|gave\\|told\\|felt\\|left\\|ran\\|wrote\\|[[:alpha:]]+ed\\)\\'")
+(defconst well-formed--present-verb
+  "\\`\\(?:is\\|are\\|am\\|has\\|have\\|does\\|do\\|goes\\|comes\\|says\\|makes\\|takes\\|gets\\|sees\\|knows\\|thinks\\|finds\\|gives\\|tells\\|feels\\|leaves\\|runs\\|writes\\|see\\|go\\|come\\|say\\|make\\|take\\|get\\|know\\|think\\|find\\|give\\|tell\\|feel\\|leave\\|run\\|write\\|want\\|need\\|walk\\|look\\)\\'")
+
+(well-formed-define-rule tense-shift
+  :category 'clarity :level 'info :langs '("en")
+  :doc "A paragraph told in one tense with one sentence in another (\"We
+went in. It was dark. We see a light.\"): likely a slip."
+  :function
+  (lambda (para)
+    (let* ((text (well-formed-para-text para)) (case-fold-search nil)
+           (tenses
+            (cl-loop for (b . e) in (well-formed-para-sentences para)
+                     for s = (substring text b e)
+                     ;; The verb after a subject pronoun opening the sentence.
+                     when (string-match "\\`[[:space:]]*\\(?:I\\|We\\|They\\|He\\|She\\|It\\|You\\) \\([[:alpha:]]+\\)\\>" s)
+                     collect (let ((v (downcase (match-string 1 s))))
+                               (list b e (cond ((string-match-p well-formed--past-verb v) 'past)
+                                               ((string-match-p well-formed--present-verb v) 'present))))))
+           (past (cl-count 'past tenses :key #'caddr))
+           (present (cl-count 'present tenses :key #'caddr)))
+      (when (and (= (min past present) 1) (>= (max past present) 3))
+        (let ((odd (if (= past 1) 'past 'present)))
+          (cl-loop for (b e tense) in tenses
+                   when (eq tense odd)
+                   collect (list b e (format "%s here; the rest of the paragraph is in the %s"
+                                             (capitalize (symbol-name odd)) (if (eq odd 'past) "present" "past"))
+                                 nil)))))))
+
+(defvar well-formed-mail-modes
+  '(message-mode mu4e-compose-mode notmuch-message-mode org-msg-edit-mode)
+  "Modes where text is a mail to someone: politeness counts there.")
+
+(defconst well-formed--command-verbs
+  '(("en" "send" "give" "tell" "fix" "do" "make" "call" "check" "update" "provide" "let" "reply"
+     "answer" "write" "add" "remove" "change" "review" "finish" "sign" "forward" "confirm"
+     "explain" "share" "schedule" "book" "pay" "return" "submit" "approve" "delete" "stop")
+    ("de" "schick" "schicke" "sende" "gib" "sag" "mach" "mache" "ruf" "prüf" "prüfe" "schreib"
+     "schreibe" "antworte" "bestätige" "erklär" "erkläre" "teil" "teile" "lösch" "lösche" "zahl"))
+  "Verbs that open a command (imperative), by language.")
+
+(well-formed-define-rule politeness
+  :category 'delivery :level 'info
+  :doc "In a mail (or the business style), a bare command reads as a demand:
+\"Send me the file.\" asks better as \"Please send me the file.\" or
+\"Could you send me the file?\""
+  :examples '(("Send me the file." . "Please send me the file."))
+  :function
+  (lambda (para)
+    (when (or (apply #'derived-mode-p well-formed-mail-modes)
+              (eq (plist-get (well-formed-para-style para) :name) 'business))
+      (let* ((text (well-formed-para-text para)) (lang (well-formed-para-lang para))
+             (verbs (cdr (assoc lang well-formed--command-verbs))) out)
+        (pcase-dolist (`(,b . ,e) (well-formed-para-sentences para))
+          (let* ((s (string-trim-right (substring text b e)))
+                 (first (and (string-match "\\`\\([[:alpha:]]+\\)[[:space:]]+[[:alpha:]]" s)
+                             (match-string 1 s))))
+            (when (and first (member (downcase first) verbs)
+                       (string-match-p "[.!]\\'" s)
+                       (not (string-match-p "\\<\\(?:please\\|thanks\\|thank you\\|bitte\\|danke\\)\\>" (downcase s))))
+              (let ((rest (concat (downcase (substring s 0 1)) (substring s 1 -1))))
+                (push (list b (+ b (length s)) "A command in a mail: ask instead?"
+                            (if (equal lang "de")
+                                (list (concat "Bitte " rest "."))   ; "Könntest du" needs the verb moved
+                              (list (concat "Please " rest ".") (concat "Could you " rest "?"))))
+                      out)))))
+        (nreverse out)))))
+
 ;;;; Consistency (whole document)
 
 (defvar well-formed-spelling-pairs
@@ -1612,13 +1754,43 @@ Only headings of three words or more, with no masked markup inside, count."
               (setq first nil)))
           (nth 3 o) t t))))))
 
+(defconst well-formed--unit-symbols
+  '("KB" "MB" "GB" "TB" "KiB" "MiB" "GiB" "TiB" "ms" "µs" "ns" "Hz" "kHz" "MHz" "GHz"
+    "px" "pt" "km" "cm" "mm" "kg" "fps" "dpi" "Mbit" "Gbit")
+  "Unit symbols after a number: written with a space (5 GB) or without (5GB).")
+
+(defun well-formed--unit-format (paras)
+  "\"5 GB\" here, \"5GB\" there: the document's majority wins."
+  (let* ((re (concat "\\<[0-9]+\\(?:[.,][0-9]+\\)?\\( ?\\)\\(" (regexp-opt well-formed--unit-symbols) "\\)\\>"))
+         (occ (well-formed--matches
+               paras re
+               (lambda (text base)
+                 (list (if (string-empty-p (match-string 1 text)) "5GB" "5 GB")
+                       (+ base (match-beginning 0)) (+ base (match-end 0))
+                       (match-string 0 text))))))
+    (well-formed--minority-with
+     occ 'unit-format
+     (lambda (k major n) (format "%s here; %d elsewhere are written %s" (if (equal k "5GB") "No space before the unit" "A space before the unit") n major))
+     (lambda (o major)
+       (let ((s (nth 3 o)))
+         (if (equal major "5 GB")
+             (replace-regexp-in-string "\\([0-9]\\)\\([^0-9., ]\\)" "\\1 \\2" s nil nil nil)
+           (replace-regexp-in-string "\\([0-9]\\) " "\\1" s)))))))
+
 (defun well-formed--consistency-more (paras)
   (let ((en (cl-remove-if-not (lambda (p) (equal (well-formed-para-lang p) "en")) paras)))
     (unless (memq 'consistency (bound-and-true-p well-formed-disabled-categories))
       (append (and en (well-formed--number-style en))
               (and en (well-formed--term-case en))
               (well-formed--date-format paras)
+              (well-formed--unit-format paras)
               (well-formed--heading-case paras)))))
+
+(well-formed-define-rule unit-format
+  :category 'consistency :level 'info
+  :doc "A unit after a number with a space in some places (5 GB) and
+without in others (5GB); the one used more wins."
+  :function #'ignore)
 
 (well-formed-define-rule number-style
   :category 'consistency :level 'info :langs '("en")
