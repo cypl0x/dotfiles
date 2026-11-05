@@ -13,15 +13,14 @@
   #
   # rofi stays the primary launcher on SUPER+Space (configured in
   # home/hyprland/hyprland.conf with home/hyprland/rofi/doom-vibrant.rasi).
-  # These three modern alternatives are enabled side-by-side, each on its own
+  # These two modern alternatives are enabled side-by-side, each on its own
   # SUPER+<mod>+Space bind, so the winner can be chosen by feel. anyrun is
-  # themed to Doom Vibrant here; walker and vicinae ship on their defaults for
-  # now (their theme schemas are versioned — themed once one is chosen).
+  # themed to Doom Vibrant here; walker ships on its defaults for now (its
+  # theme schema is versioned — themed once one is chosen).
   #
   #   SUPER+Space         → rofi      (primary, themed)
   #   SUPER+SHIFT+Space   → walker
   #   SUPER+CTRL+Space    → anyrun    (themed)
-  #   SUPER+ALT+Space     → vicinae
 
   # anyrun — Rust, plugin-based, Hyprland-native.
   programs.anyrun = {
@@ -80,11 +79,5 @@
     settings = {
       theme = "default";
     };
-  };
-
-  # vicinae — Raycast-style launcher daemon.
-  programs.vicinae = {
-    enable = true;
-    systemd.enable = true; # autoStart defaults true under graphical-session
   };
 }

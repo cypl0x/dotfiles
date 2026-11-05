@@ -142,8 +142,8 @@ hl.on("hyprland.start", function()
 	-- foreground so the `&&` open never runs and the panel never appears at boot.
 	hl.exec_cmd("eww open syspanel")
 
-	-- Launcher daemons — walker needs the elephant backend running first. vicinae
-	-- runs its own systemd user service. (rofi on SUPER+Space needs nothing.)
+	-- Launcher daemons — walker needs the elephant backend running first.
+	-- (rofi on SUPER+Space needs nothing.)
 	--
 	-- anyrun is intentionally NOT daemonised: `anyrun daemon` + a toggling `anyrun`
 	-- client desyncs its visibility state (client reports "already visible" while no
@@ -362,11 +362,10 @@ local MCS = mainMod .. " CTRL SHIFT"
 -- SPC o t — open terminal
 bind(M, "Return", exec(terminal))
 -- SPC SPC / M-x — launcher (rofi drun). Alternatives on modifier variants so
--- you can pick a favourite: walker / anyrun / vicinae (see home/launchers.nix).
+-- you can pick a favourite: walker / anyrun (see home/launchers.nix).
 bind(M, "Space", exec(launcher))
 bind(MS, "Space", exec("walker"))
 bind(MC, "Space", exec("anyrun"))
-bind(MA, "Space", exec("vicinae toggle"))
 -- SPC , (buffers) — fuzzy switch/jump to any open window incl. terminals.
 -- Type-to-search, all workspaces. ALT+Tab is the *other* cross-workspace
 -- switcher (hyprshell, hold-ALT MRU cycling) — do NOT bind ALT+Tab here, the
@@ -760,6 +759,6 @@ hl.layer_rule({
 -- Launchers — rofi on SUPER+Space plus the three alternates (see AUTOSTART).
 hl.layer_rule({
 	name = "blur-launchers",
-	match = { namespace = "rofi|walker|anyrun|vicinae" },
+	match = { namespace = "rofi|walker|anyrun" },
 	blur = true,
 })
