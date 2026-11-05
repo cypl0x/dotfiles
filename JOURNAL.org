@@ -39,6 +39,32 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 08:22] — GitHub is a directory now; diagnostics calm; Babel fixed
+- 🚀 *=/github/OWNER/REPO[@REF]/PATH= is a file system* (+gh-fs.el). SPC f f,
+  dired/dirvish, SPC p f (whole repo from one call), consult, imenu,
+  bookmarks: all work on any repository, any branch/tag/commit, read-only,
+  contents fetched once by hash. =/github/you/= lists your repos.
+- ✔ *SPC o G*, the GitHub menu: READMEs rendered as on github.com (GitHub's
+  own renderer + shr; links come back into Emacs), dashboard (grouped
+  notifications and activity), profiles with avatar and pinned repos,
+  search + trending with filters, issues/PRs (forge when tracked), diffs,
+  releases, contributors; clone the least that works (partial default,
+  treeless, shallow, sparse, full) → same file + line locally; magit
+  dispatch =G=: local file → same file on GitHub. Lists sort by clicking
+  headers, filter, page, right-click actions. A report on your browsing:
+  per day, weekday × hour, top repos/owners/file types.
+- Verified by screenshots in a hidden lab frame; found and fixed on the
+  way: dirvish sent /github through TRAMP's parser; 30 identical CI
+  notifications buried the dashboard; my lab frames left 6 empty Doom
+  workspaces (removed; yours untouched).
+- ✔ *Diagnostics*: tints instead of squiggles, suggestions only in the
+  paragraph you're in, nothing in read-only buffers, and no more
+  flashing (an interrupted check made flycheck clear every highlight).
+- ✔ *Babel*: =gh --help= in a src block: an Org bug (blank line at the end
+  of output), reproduced in emacs -Q and Org main, fixed here, report
+  drafted. Shell blocks now give text, not a table of words.
+- Your list: repo TODOs moved into mess.org ("Migrated from ~/dotfiles").
+
 ** [2026-11-05 Do 07:25] — SPC s h driven with keys
 - ✔ In a hidden CLAUDE-LAB frame (you were editing mess.org, so no OS-level
   keys, no focus change): =M-SPC s h nrs RET= → "nrs" on a throwaway eshell
