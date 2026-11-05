@@ -276,17 +276,44 @@ after the path completion, which recognizes a path wherever it is."
 ;; theme's blue, 30% into the background, and bold; the text stays at WCAG AA
 ;; contrast (4.8:1 with doom-vibrant).
 ;;
-;; The popup itself was #2a2e38, the theme's bg-alt: the very background
-;; solaire gives every buffer that isn't a file (capture, *scratch*,
-;; familiar-ask), so there the popup and its documentation window melted
-;; into the text.  They get a shade of their own, lighter than both editor
-;; backgrounds, and a blue-grey border.
+;; The popup itself was bg-alt (#2a2e38), the background solaire gives every
+;; buffer that isn't a file, so there it melted into the text; then a grey
+;; shade with a blue-grey border, which looked grey and boxed.  Now: a
+;; surface of its own, the theme's blue 10% into the background (distinct
+;; from both editor backgrounds, text at AAA contrast), no border line (its
+;; width is 4 px of padding in the popup's color), roomier margins, the
+;; selection in blue, a blue scroll bar, quiet annotations; the
+;; documentation window the same.  Colors follow the theme.
+(defvar corfu-border-width) (defvar corfu-left-margin-width) (defvar corfu-right-margin-width)
+(defvar corfu-bar-width) (defvar corfu-min-width) (defvar corfu-max-width) (defvar corfu-count)
+(setq corfu-border-width 4
+      corfu-left-margin-width 1.0
+      corfu-right-margin-width 1.0
+      corfu-bar-width 0.35
+      corfu-min-width 24
+      corfu-max-width 90
+      corfu-count 12)
+
 (custom-set-faces!
-  `(corfu-current :background ,(doom-blend 'blue 'bg 0.3) :foreground ,(doom-color 'fg)
+  `(corfu-default :background ,(doom-blend 'blue 'bg 0.10) :foreground ,(doom-color 'fg))
+  `(corfu-border :background ,(doom-blend 'blue 'bg 0.10))
+  `(corfu-current :background ,(doom-blend 'blue 'bg 0.32) :foreground ,(doom-color 'fg)
                   :weight bold :extend t)
-  `(corfu-default :background ,(doom-lighten 'bg-alt 0.07) :foreground ,(doom-color 'fg))
-  `(corfu-border :background ,(doom-blend 'blue 'bg-alt 0.45))
+  `(corfu-bar :background ,(doom-color 'blue))
+  `(corfu-annotations :foreground ,(doom-color 'base7) :slant italic)
+  `(corfu-deprecated :strike-through t :foreground ,(doom-color 'base6))
   `(corfu-popupinfo :inherit corfu-default))
+
+;; The theme gives orderless's match faces a background, so in the selected
+;; row the matched part kept the popup's color while the rest turned blue.
+;; They keep their colors (foreground) and lose the background, after each
+;; theme load (a `custom-set-faces!' spec would replace the theme's).
+(defun +completion-match-faces-h ()
+  (dolist (face '(orderless-match-face-0 orderless-match-face-1
+                  orderless-match-face-2 orderless-match-face-3))
+    (when (facep face) (set-face-attribute face nil :background 'unspecified))))
+(add-hook 'doom-load-theme-hook #'+completion-match-faces-h)
+(with-eval-after-load 'orderless (+completion-match-faces-h))
 
 ;; SPC ': reopen the last minibuffer with what was in it.  `vertico-repeat'
 ;; did that for completion sessions only; M-ß's prompt (a plain
