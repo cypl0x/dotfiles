@@ -559,9 +559,11 @@ completing PARTIAL-METHOD (not MULTI-HOP)."
   (if (string-match-p +gh-fs--regexp (expand-file-name dir))
       (funcall fn dir flags)
     (funcall orig fn dir flags remote dps)))
-(with-eval-after-load 'dirvish
-  (when (fboundp 'dirvish-tramp-noselect)
-    (advice-add 'dirvish-tramp-noselect :around #'+gh-fs-dirvish-a)))
+;; It lives in dirvish-tramp.el, loaded after dirvish: advising it once
+;; dirvish had loaded (if defined by then) left it unadvised, and
+;; /github:OWNER/REPO failed with "Not a Tramp file name".
+(with-eval-after-load 'dirvish-tramp
+  (advice-add 'dirvish-tramp-noselect :around #'+gh-fs-dirvish-a))
 
 ;; A language server can't read /github/ files: don't start one there.
 (defun +gh-fs-no-lsp-a (&rest _)

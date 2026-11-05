@@ -140,6 +140,12 @@ described prefix to a fresh empty keymap, wiping what was there."
                          unless (ignore-errors (Info-find-node "org" n) t) collect n)))
   (should-not (cl-remove-if (lambda (p) (assoc (car p) (+discover-glossary))) +discover-plain)))
 
+(ert-deftest live/gh-fs-dirvish-lists-github-dirs ()
+  "/github:OWNER/REPO in dired: dirvish hands it to dired, not to TRAMP's
+parser (which says \"Not a Tramp file name\")."
+  (when (require 'dirvish-tramp nil t)
+    (should (advice-member-p #'+gh-fs-dirvish-a 'dirvish-tramp-noselect))))
+
 (defun test-live-run ()
   "Run live tests; return a summary string."
   (let ((stats (ert-run-tests "\\`live/" #'ignore)))
