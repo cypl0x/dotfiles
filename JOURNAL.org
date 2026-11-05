@@ -39,6 +39,15 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 23:51] — Atuin AI from Emacs (=SPC !=)
+- ✔ Atuin's own box (zsh's =?=) in a terminal below; the region is the
+  question.  Enter runs the command: in the shell buffer or M-! prompt
+  you asked from, else in a fresh terminal or in the background (=SPC u=),
+  reported in the echo area (and a notification when unfocused).
+- ✔ =?= at an empty M-!/compile/eshell/shell prompt, as in zsh; =ß= there
+  stays the Emacs assistant.
+- ✔ Checked against the real Atuin Hub; 354 batch tests, 9 live; nrs.
+
 ** [2026-11-05 Do 23:10] — C-ß: one place to start looking; M-ö/M-ä through every buffer
 - ✔ *C-ß* from anywhere (prompts too; =SPC ?= as well): one menu for what
   is here (modes' commands and keys, keys under a prefix, this mode's
