@@ -39,6 +39,26 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 19:16] — Six ideas from your usage data
+- ✔ *Keys wiped at every start*: a second =(:prefix ("K" . "desc"))= binds
+  a fresh empty map. =SPC n r= kept 2 of 23 keys, =SPC P= lost text stats,
+  review and improve. Fixed; a live test now checks every declared leader
+  key. =SPC n r d= is a dailies prefix; synonyms moved to =SPC P y=, the
+  findings list to =SPC P F=.
+- ✔ *M-x you give up on* (114 of 443): the words are kept; what you run
+  next is learned; the same words then show "→ command (key)", and RET
+  with nothing matching runs it or asks familiar.
+- ✔ *Shown buffers follow their file* when you haven't edited them.
+- ✔ =SPC t D= light/dark, each side remembers; vellumory follows.
+- ✔ *M-x hint*: "Next time: SPC f y" for kill-file-path and the like;
+  =SPC f n= / =N= copy the file name.
+- ✔ *autocorrect* learns from deleting a typo and retyping it.
+- ✔ *Vellumory*: RET turns a screen; =A= scrolls by itself (j/k speed).
+- ✔ agent-task-list.org: all 47 marked done.
+- ◐ *CI*: =--fallback= for the missing atuin-emacs; green after a push.
+- ✗ Coach: unchanged on purpose (25 tips in 72 long runs; relative
+  numbers would count wrong in Org).
+
 ** [2026-11-05 Do 16:06] — Obsidian matched, org-roam discoverable, screenshots in one key
 - ✔ *Obsidian*: all 29 core features have a counterpart (28 complete; sync
   needs the vault's first commit and a remote). The list is in
