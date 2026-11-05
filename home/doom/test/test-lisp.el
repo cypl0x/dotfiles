@@ -382,6 +382,28 @@ and a temp exec-path where bin/tar links to store/tar."
                     '(("M-x" . 1) ("SPC g g" . 2))))
      (should-not (assq 'self-insert-command m)))))
 
+(ert-deftest usage/mx-names-the-key-of-a-bound-twin ()
+  "M-x of an unbound command whose twin has a key: the echo area names it."
+  (test-lisp--with-usage
+   (defun test-usage--twin () (interactive))
+   (let ((+usage-equivalents '((kill-file-path . test-usage--twin)))
+         (old (current-global-map))
+         shown)
+     (use-global-map (copy-keymap old))
+     (keymap-set (current-global-map) "C-c t w" #'test-usage--twin)
+     (unwind-protect
+     (cl-letf (((symbol-function 'run-at-time) (lambda (_ _ fn) (funcall fn)))
+               ((symbol-function 'current-message) (lambda () "Copied: /a/b"))
+               ((symbol-function 'message) (lambda (fmt &rest args) (setq shown (apply #'format fmt args)))))
+       (test-lisp--run-command 'kill-file-path [?\M-x] t)
+       (should (equal (substring-no-properties shown) "Copied: /a/b   Next time: C-c t w (test-usage--twin)"))
+       (setq shown nil)
+       ;; By its own key, or a command without a twin: nothing.
+       (test-lisp--run-command 'kill-file-path [?\C-c ?k])
+       (test-lisp--run-command 'find-file [?\M-x] t)
+       (should-not shown))
+       (use-global-map old)))))
+
 (ert-deftest usage/save-merges-across-sessions ()
   (test-lisp--with-usage
    (test-lisp--run-command 'find-file [?\C-x ?\C-f])

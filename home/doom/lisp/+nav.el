@@ -138,6 +138,28 @@
                        (directory-files-recursively
                         org-directory "\\.org$")))
 
+;;;; Copy a file's name ─────────────────────────────────────────────────────
+;; SPC f y copies the path; kill-file-path was run through M-x 6 times for
+;; the same.  These two copy just the name.
+
+(defun +file--yank (name)
+  (if (not name)
+      (user-error "No file here")
+    (kill-new name)
+    (message "Copied: %s" name)))
+
+;;;###autoload
+(defun +file/yank-name ()
+  "Copy this buffer's file name, without its directory."
+  (interactive)
+  (+file--yank (and buffer-file-name (file-name-nondirectory buffer-file-name))))
+
+;;;###autoload
+(defun +file/yank-base-name ()
+  "Copy this buffer's file name without directory and extension."
+  (interactive)
+  (+file--yank (and buffer-file-name (file-name-base buffer-file-name))))
+
 ;;;; Keybindings ─────────────────────────────────────────────────────────────
 
 (map! :leader
@@ -148,6 +170,10 @@
       (:prefix "w"
        :desc "Swap windows"       "S" #'+nav/swap-windows
        :desc "Toggle maximize"    "M" #'+nav/toggle-maximize)
+
+      (:prefix "f"
+       :desc "Yank file name"     "n" #'+file/yank-name
+       :desc "Yank name, no ext." "N" #'+file/yank-base-name)
 
       ;; Append to existing search prefix — do NOT re-create with ("s" . "search").
       (:prefix "s"

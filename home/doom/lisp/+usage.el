@@ -74,6 +74,7 @@ keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
       (setq +usage--run (if (eq this-command +usage--last) (1+ +usage--run) 1))
       (when (and +usage-coach (= +usage--run +usage-coach-after))
         (+usage--coach this-command +usage--run how))
+      (when (equal how "M-x") (+usage--equivalent-hint this-command))
       (cl-incf (gethash (cons major-mode this-command) +usage--modes 0))
       (setq +usage--last this-command)
       (push (cons this-command major-mode) +usage--recent)
@@ -163,6 +164,32 @@ PRESSED is the key that ran it, when known."
     (when-let* ((tip (+usage-coach-tip command n pressed)))
       (setf (alist-get command +usage--coached) (current-time))
       (let ((message-log-max nil)) (message "%s" tip)))))
+
+;;;; M-x hint: the same thing has a key
+
+;; Emacs names a key after M-x only for the command you ran.  The log had
+;; unbound commands run by name whose twin is bound: kill-file-path (6×, the
+;; same as SPC f y), count-words (4×; text stats are SPC P s).
+(defvar +usage-equivalents
+  '((kill-file-path . +default/yank-buffer-path)
+    (kill-file-path-basename . +file/yank-name)
+    (kill-file-path-basename-without-extension . +file/yank-base-name)
+    (count-words . +prose/text-stats)
+    (count-words-region . +prose/text-stats))
+  "COMMAND run through M-x → a bound command doing the same.")
+
+(defun +usage--equivalent-hint (command)
+  "After M-x COMMAND: name the key of its bound twin, if it has one."
+  (when-let* ((twin (alist-get command +usage-equivalents))
+              (key (where-is-internal twin nil t)))
+    (run-at-time 1.5 nil
+                 (lambda ()
+                   (let ((shown (current-message))
+                         (message-log-max nil))
+                     (message "%s%sNext time: %s (%s)"
+                              (or shown "") (if shown "   " "")
+                              (propertize (key-description key) 'face 'help-key-binding)
+                              twin))))))
 
 (defun +usage--read ()
   (when (file-readable-p +usage-file)
