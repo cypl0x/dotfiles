@@ -48,9 +48,13 @@ keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
 (declare-function familiar-ask "familiar-ask" (prompt &optional new))
 
 (defun +usage--record-h ()
-  "Count `this-command' and how it was invoked."
+  "Count the command that ran and how it was invoked."
   ;; Keyboard macros replay keys nobody typed now (Claude's lab tests too):
-  ;; not evidence of how you work.
+  ;; not evidence of how you work.  `real-this-command', not `this-command':
+  ;; commands rewrite the latter (`kill-region' sets it so the next kill
+  ;; appends), which once filed 1,226 M-DEL (backward-kill-word) as
+  ;; kill-region.  After M-x it is `execute-extended-command' itself.
+  (let ((this-command (if (eq real-this-command 'execute-extended-command) this-command real-this-command)))
   (when (and (symbolp this-command) this-command
              (not executing-kbd-macro)
              (not (memq this-command +usage-ignore)))
@@ -73,9 +77,20 @@ keys (PREVIOUS . COMMAND) and (MAJOR-MODE . COMMAND).")
       (cl-incf (gethash (cons major-mode this-command) +usage--modes 0))
       (setq +usage--last this-command)
       (push (cons this-command major-mode) +usage--recent)
-      (when (nthcdr 40 +usage--recent) (setcdr (nthcdr 39 +usage--recent) nil)))))
+      (when (nthcdr 40 +usage--recent) (setcdr (nthcdr 39 +usage--recent) nil))))))
 
 
+
+(defun +usage-fix-kill-region-counts ()
+  "Move counts recorded as `kill-region' via word-deleting keys to
+`backward-kill-word' / `kill-word' (recorded before `real-this-command')."
+  (when-let* ((table (gethash 'kill-region +usage--counts)))
+    (pcase-dolist (`(,keys . ,cmd) '(("M-DEL" . backward-kill-word) ("<M-backspace>" . backward-kill-word)
+                                    ("C-<backspace>" . backward-kill-word) ("M-d" . kill-word)))
+      (when-let* ((n (gethash keys table)))
+        (remhash keys table)
+        (let ((to (or (gethash cmd +usage--counts) (puthash cmd (make-hash-table :test #'equal) +usage--counts))))
+          (cl-incf (gethash keys to 0) n))))))
 ;;;; Coach: long runs of one-step commands
 ;;
 ;; The counts showed held keys: j/k through PDFs (~1,900 line scrolls

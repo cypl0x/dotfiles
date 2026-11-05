@@ -2296,3 +2296,22 @@ in the background; nothing synchronous."
          (gist (substring-no-properties (well-formed--rule-gist rule))))
     (should (string-prefix-p (symbol-name (well-formed-rule-id rule)) gist))
     (should (<= (length (split-string gist "\n")) 5))))
+
+(ert-deftest usage/records-the-command-that-ran-not-what-it-set ()
+  "kill-region rewrites this-command; M-DEL must count as backward-kill-word."
+  (load (expand-file-name "+usage" test-lisp-dir) nil t)
+  (let ((+usage--counts (make-hash-table :test #'eq))
+        (+usage--pairs (make-hash-table :test #'equal))
+        (+usage--modes (make-hash-table :test #'equal))
+        (+usage--last nil) (+usage--recent nil) (+usage-coach nil))
+    (let ((real-this-command 'backward-kill-word) (this-command 'kill-region))
+      (cl-letf (((symbol-function 'this-command-keys-vector) (lambda () (kbd "M-DEL"))))
+        (+usage--record-h)))
+    (should (gethash 'backward-kill-word +usage--counts))
+    (should-not (gethash 'kill-region +usage--counts))
+    ;; Old data is moved over.
+    (puthash 'kill-region (let ((h (make-hash-table :test #'equal))) (puthash "M-DEL" 1226 h) (puthash "C-w" 1 h) h)
+             +usage--counts)
+    (+usage-fix-kill-region-counts)
+    (should (= (gethash "M-DEL" (gethash 'backward-kill-word +usage--counts)) 1227))
+    (should (equal (gethash "C-w" (gethash 'kill-region +usage--counts)) 1))))
