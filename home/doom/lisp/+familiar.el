@@ -37,6 +37,16 @@
 (autoload 'familiar-complete "familiar-complete" nil t)
 (autoload 'familiar-footprint "familiar-footprint" nil t)
 (autoload 'familiar-analytics "familiar-analytics" nil t)
+(dolist (fn '(familiar-peers familiar-peers-send familiar-peers-send-region familiar-peers-send-heading))
+  (autoload fn "familiar-peers" nil t))
+(with-eval-after-load '+agent
+  ;; Write to your running Claude Code sessions (their own peer messaging).
+  (transient-append-suffix '+agent/transient '(1 -1)
+    ["Claude Code sessions"
+     ("w" "Write to a session" familiar-peers-send)
+     ("W" "Sessions" familiar-peers)
+     ("o" "This Org item to a session" familiar-peers-send-heading)
+     ("y" "Region to a session" familiar-peers-send-region)]))
 (map! :leader :desc "AI analytics (familiar)" "o $" #'familiar-analytics)
 ;; C-S-SPC: AI completions at point, ranked and explained (corfu-popupinfo).
 (map! "C-S-SPC" #'familiar-complete

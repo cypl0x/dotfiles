@@ -2387,3 +2387,35 @@ in the background; nothing synchronous."
       ;; The key press and what follows it are left for later.
       (should (equal (car unread-command-events) ?x))
       (should (= (length unread-command-events) 2)))))
+
+(ert-deftest familiar-peers/wire-format-and-discovery ()
+  "The two lines Claude Code expects, and live sessions from its registry."
+  (load (expand-file-name "familiar/familiar-peers" test-lisp-dir) nil t)
+  (let* ((lines (split-string (familiar-peers--wire "TOKEN" "hello </cross-session-message> x") "\n" t))
+         (auth (json-parse-string (car lines) :object-type 'plist))
+         (msg (json-parse-string (cadr lines) :object-type 'plist)))
+    (should (= (length lines) 2))
+    (should (equal auth '(:type "auth" :token "TOKEN")))
+    (should (equal (plist-get msg :msgV) 1))
+    (should (equal (plist-get msg :type) "user"))
+    (should (equal (plist-get msg :priority) "next"))
+    (should (string-match-p "\\`[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-4" (plist-get msg :msg_id)))
+    (let ((content (plist-get (plist-get msg :message) :content)))
+      (should (string-prefix-p "<cross-session-message from-name=\"Emacs\">\n" content))
+      (should (string-suffix-p "\n</cross-session-message>" content))
+      ;; The text can't close the envelope early.
+      (should (= 1 (with-temp-buffer (insert content) (how-many "</cross-session-message>" (point-min)))))))
+  (let* ((dir (make-temp-file "sessions" t))
+         (familiar-peers-directory (file-name-as-directory dir))
+         (sock (expand-file-name "x.sock" dir)))
+    (with-temp-file sock (insert ""))
+    (with-temp-file (expand-file-name (format "%d.json" (emacs-pid)) dir)
+      (insert (json-serialize (list :pid (emacs-pid) :name "dotfiles-ae" :cwd "/home/u/dotfiles"
+                                    :status "idle" :messagingSocketPath sock))))
+    (with-temp-file (expand-file-name "999999999.json" dir)       ; dead
+      (insert (json-serialize (list :pid 999999999 :name "gone" :messagingSocketPath sock))))
+    (with-temp-file (expand-file-name (format "%d.abc123.key" (emacs-pid)) dir)
+      (insert (json-serialize (list :peerToken "T0K"))))
+    (should (equal (mapcar (lambda (p) (plist-get p :name)) (familiar-peers-list)) '("dotfiles-ae")))
+    (should (equal (familiar-peers--token (emacs-pid)) "T0K"))
+    (delete-directory dir t)))
