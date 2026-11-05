@@ -39,6 +39,18 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 09:03] — Your freezes were mine; kills archived; ages in dired
+- 🧊 *Read your freeze profiles*: 4 today (39–85 s), each after opening a
+  GitHub owner — dired asked every repository for a date and each made 3
+  blocking calls. Now the owner's listing answers for all: your 85 s case
+  is 0.93 s and 1 request. VC probes (.git/.svn) no longer hit the API.
+- ✔ *Kill ring*: not capped (your config says never discard). Older kills
+  move once into an archive; savehist 4.0 → 0.48 MB, startup 76 → 26 ms;
+  =SPC i Y= yanks from every kill ever.
+- ✔ *Dired/dirvish*: "2h 13min ago" next to the exact time, recent ones
+  highlighted, old ones dimmed.
+- ✔ vicinae removed (package, service, bind).
+
 ** [2026-11-05 Do 08:46] — /github: like /ssh:, completing without waiting; hunks
 - ✔ *Your three asks, in order*: SPC f f =/github:cypl0x/vellumory/README.org=
   (default branch; =@ref= for any other) — same buffer as =/github/…=;
