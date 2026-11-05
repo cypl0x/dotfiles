@@ -10,12 +10,14 @@
 ;;        re-applies `doom-font' by name.  Here zoom scales the default face's
 ;;        :height instead, which neomacs renders (same steps, same reset).
 ;;
-;; Scroll (a mouse wheel) jumped by lines, where GNU Emacs here scrolls
-;;        smoothly: GTK gives GNU pixel deltas even for wheels; neomacs
-;;        sends wheels as line steps (touchpads as pixels).  ultra-scroll can
-;;        only jump lines without pixel data, so under neomacs it gives way
-;;        to `pixel-scroll-precision-mode' interpolating each wheel step into
-;;        a smooth pixel scroll (neomacs supports those calls, issue #396).
+;; Scroll  one trackpad gesture kept scrolling for 20+ s and felt sluggish.
+;;        neomacs scrolls in its compositor only when pre-command-hook holds
+;;        nothing but a few whitelisted functions (display/neo/scroll.rs);
+;;        Doom always has more (Evil, which-key, magit …), so every scroll
+;;        event goes through the evaluator, one by one, and a gesture's 60–120
+;;        events a second pile up.  Here the scroll command folds every scroll
+;;        event already waiting (same direction) into one: deltas summed,
+;;        one scroll per batch, no backlog.
 ;;
 ;;; Code:
 
@@ -37,32 +39,35 @@ INCREMENT is in points as there (nil resets); FIXED-SIZE-P makes it the size."
       (unless increment (setq +neomacs--initial-height nil))
       t)))
 
-(defvar pixel-scroll-precision-interpolate-mice)
-(defvar pixel-scroll-precision-interpolate-page)
-(defvar pixel-scroll-precision-interpolation-total-time)
-(declare-function pixel-scroll-precision-mode "pixel-scroll" (&optional arg))
-(declare-function ultra-scroll-mode "ext:ultra-scroll" (&optional arg))
+(defun +neomacs--wheel-p (event)
+  (memq (event-basic-type event) '(wheel-up wheel-down wheel-left wheel-right)))
 
-(defun +neomacs-smooth-wheel-h (&rest _)
-  "Mouse wheels scroll smoothly: interpolated pixel scrolling, not ultra-scroll."
-  (when (bound-and-true-p ultra-scroll-mode) (ultra-scroll-mode -1))
-  (setq pixel-scroll-precision-interpolate-mice t
-        pixel-scroll-precision-interpolate-page t
-        pixel-scroll-precision-interpolation-total-time 0.12)
-  (pixel-scroll-precision-mode 1))
+(defun +neomacs--merge-wheel (event next)
+  "EVENT with NEXT's scroll added (same direction): pixels and line counts summed."
+  (let* ((a (nth 4 event)) (b (nth 4 next))
+         (pixels (cond ((and (consp a) (consp b)) (cons (+ (car a) (car b)) (+ (cdr a) (cdr b))))
+                       (t a))))
+    (list (car event) (nth 1 event) (or (nth 2 event) 1)
+          (+ (or (nth 3 event) 1) (or (nth 3 next) 1))
+          pixels)))
+
+(defun +neomacs-coalesce-wheel-a (args)
+  "Filter for the scroll command's ARGS: fold in every scroll event already
+waiting in the same direction, so one gesture is one scroll, not hundreds."
+  (let ((event (car args)))
+    (when (and (consp event) (+neomacs--wheel-p event))
+      (catch 'done
+        (while (input-pending-p)
+          (let ((next (read-event nil nil 0)))
+            (cond ((null next) (throw 'done nil))
+                  ((and (consp next) (eq (car next) (car event)))
+                   (setq event (+neomacs--merge-wheel event next)))
+                  (t (push next unread-command-events) (throw 'done nil)))))))
+    (cons event (cdr args))))
 
 (when +neomacs-p
-  (advice-add 'doom-adjust-font-size :around #'+neomacs-adjust-font-size-a))
-
-(defun +neomacs-ultra-scroll-h ()
-  "Doom just turned ultra-scroll on: hand over to interpolated scrolling."
-  (when (bound-and-true-p ultra-scroll-mode)
-    (run-at-time 0 nil #'+neomacs-smooth-wheel-h)))
-
-(when +neomacs-p
-  ;; After Doom turns ultra-scroll on (first input or first file).
-  (add-hook 'ultra-scroll-mode-hook #'+neomacs-ultra-scroll-h)
-  (with-eval-after-load 'pixel-scroll (+neomacs-smooth-wheel-h)))
+  (advice-add 'ultra-scroll :filter-args #'+neomacs-coalesce-wheel-a)
+  (advice-add 'mwheel-scroll :filter-args #'+neomacs-coalesce-wheel-a))
 
 (provide '+neomacs)
 ;;; +neomacs.el ends here

@@ -2359,17 +2359,6 @@ in the background; nothing synchronous."
           (should (= (face-attribute 'default :height) 120)))
       (set-face-attribute 'default nil :height orig))))
 
-(ert-deftest neomacs/wheels-scroll-smoothly-without-ultra-scroll ()
-  (require 'pixel-scroll)
-  (load (expand-file-name "+neomacs" test-lisp-dir) nil t)
-  (let ((pixel-scroll-precision-interpolate-mice nil))
-    (unwind-protect
-        (progn
-          (+neomacs-smooth-wheel-h)
-          (should pixel-scroll-precision-mode)
-          (should pixel-scroll-precision-interpolate-mice))
-      (pixel-scroll-precision-mode -1))))
-
 (ert-deftest system/views-read-this-machine ()
   "Each view's rows come from this machine (skipped where a tool is absent)."
   (load (expand-file-name "+system" test-lisp-dir) nil t)
@@ -2384,3 +2373,17 @@ in the background; nothing synchronous."
     (should (assoc "root" (+system--user-rows))))
   (when (executable-find "ss")
     (should (listp (+system--port-rows)))))
+
+(ert-deftest neomacs/one-gesture-one-scroll ()
+  "Queued scroll events of one direction fold into the first; others wait."
+  (load (expand-file-name "+neomacs" test-lisp-dir) nil t)
+  (let* ((pos (list (selected-window) 1 '(0 . 0) 0))
+         (ev (lambda (dir dy) (list dir pos 1 1 (cons 0.0 dy))))
+         (unread-command-events (list (funcall ev 'wheel-down 12.0) (funcall ev 'wheel-down 8.0)
+                                      ?x (funcall ev 'wheel-down 5.0))))
+    (let ((merged (car (+neomacs-coalesce-wheel-a (list (funcall ev 'wheel-down 10.0))))))
+      (should (equal (nth 4 merged) '(0.0 . 30.0)))
+      (should (= (nth 3 merged) 3))
+      ;; The key press and what follows it are left for later.
+      (should (equal (car unread-command-events) ?x))
+      (should (= (length unread-command-events) 2)))))

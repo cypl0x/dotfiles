@@ -1,0 +1,35 @@
+#+title: neomacs: compositor scrolling never engages under Doom; x-list-fonts is a stub
+#+date: 2026-11-05
+#+property: status draft (not filed; needs the user's OK)
+
+* Where to file
+GitHub issues on eval-exec/neomacs (two issues).
+
+* 1. Compositor scrolling is off whenever pre-command-hook has other functions
+
+neomacs 0.0.20 (and main at 167d51222f, 2026-11-05).  With Doom Emacs one
+trackpad gesture keeps scrolling for 20+ seconds and scrolling feels sluggish.
+
+Cause (crates/neovm-core/src/emacs_core/display/neo/scroll.rs): the
+compositor's scroll prediction requires `pre-command-hook' to hold only
+`eldoc-pre-command-refresh-echo-area', `neomacs--release-startup-gc-ceiling'
+or `tooltip-hide'.  Doom always has more (here: which-key--hide-popup,
+evil-escape-pre-command-hook, evil-repeat-pre-hook, magit-pre-command-hook,
+gcmh-set-high-threshold, …), so every scroll event is dispatched to the
+evaluator one by one, and a gesture's 60–120 events per second queue up.
+
+Suggestions: coalesce queued scroll events before dispatch (as GNU's
+`mwheel-coalesce-scroll-events'), or run pre-command-hook once per batch,
+or let users whitelist hooks known not to affect scrolling.
+
+Local workaround: ~/dotfiles/home/doom/lisp/+neomacs.el folds queued
+same-direction scroll events into one command.
+
+* 2. x-list-fonts returns nil in a graphical session
+
+crates/neovm-core/src/emacs_core/display/display/mod.rs,
+builtin_x_list_fonts: `if x_window_system_active(eval) { return Ok(Value::NIL) }`.
+So `x-resolve-font-name' fails for every font ("No fonts match
+`-*-Maple Mono NF-regular-…'") although fontconfig has it; Doom's font
+resizing (doom/increase-font-size) breaks.  Related: #293 (closed).
+Local workaround: zoom by the default face's :height (+neomacs.el).
