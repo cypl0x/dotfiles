@@ -39,6 +39,23 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 07:18] — One history, both ways: Atuin ⇄ Emacs
+- ✔ *SPC s h*: all ~1,900 Atuin commands, newest first, each with ✔/✘N,
+  duration, age, directory, @host. Narrow: =s= ok, =f= failed, =d= here,
+  =h= this host. RET goes where it makes sense: a shell's prompt (eshell,
+  shell, vterm, ghostel, eat), the =M-!=/compile prompt you're in (=M-r=
+  there), or edit-and-run where it ran. Embark: copy, insert, run, dired, delete.
+- ✔ *The other way*: =compile=, =M-!=, =M-&= and eshell now record into
+  Atuin (author "emacs", exit, duration): Ctrl-R in the terminal finds them.
+  Live round-trip: =true # claude-atuin-check2= → Atuin: exit 0, 5 ms,
+  right directory. First try recorded comint's =stty…exec zsh -c= wrapper
+  and no exit; fixed (=compilation-arguments=, sentinel). Test entries deleted.
+- Safety: Atuin's =--delete= takes /anything matching/; the delete action
+  lists matches first and refuses if any other command would go.
+- 🎉 +merge did its job live: you had mess.org unsaved; my note went into
+  your buffer, you saved, both are on disk.
+- Commit b6f80f4; 274/274 tests.
+
 ** [2026-11-05 Do 07:13] — Two screenshots, two root causes
 - ✔ *magit + delta*: your gitconfig's =line-numbers = true= survives
   =--color-only=; delta prefixed "542┊ 543┊" to every line, magit lost the
