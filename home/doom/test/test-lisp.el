@@ -2818,3 +2818,27 @@ color, are reported (black diff-hl bars passed the contrast check)."
       (should (member "claude-mark-a" found))   ; the text's color
       (should (member "claude-mark-c" found))   ; same as b
       (should-not (member "claude-mark-b" found)))))
+
+(ert-deftest org-links/markup-stays-shown-while-editing-it ()
+  "Markers of =verbatim= and a link's target stay shown while point is in
+them, also after typing there refontifies the line."
+  (require 'org)
+  (load (expand-file-name "+org-links" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (org-mode)
+    (setq-local org-hide-emphasis-markers t org-link-descriptive t)
+    (insert "Text =verb= and [[https://example.org][Site]] end.")
+    (font-lock-ensure)
+    (let ((marker (save-excursion (goto-char (point-min)) (search-forward "=") (1- (point)))))
+      (should (invisible-p marker))
+      (goto-char (1+ (+ marker 2))) (+org-links-reveal-h)
+      (should-not (invisible-p marker))
+      ;; Typing inside: refontified, and still shown.
+      (insert "x") (font-lock-flush) (font-lock-ensure)
+      (should-not (invisible-p marker))
+      ;; Into the link, editing its description.
+      (search-forward "Si") (+org-links-reveal-h)
+      (insert "y") (font-lock-flush) (font-lock-ensure)
+      (should-not (invisible-p (save-excursion (search-backward "example"))))
+      ;; The verbatim, left, is hidden again.
+      (should (invisible-p marker)))))

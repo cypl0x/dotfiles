@@ -121,26 +121,48 @@ minor modes."
 ;; trigger, which keeps prose from wiggling), so a link flipped between its
 ;; two forms as states changed and couldn't be edited where it stood.  Now
 ;; a link is shown as written, [[target][description]], as long as point is
-;; on it, in any state, at once; leaving it hides it again.  Emphasis
-;; markers stay org-appear's.
+;; on it, in any state, at once; leaving it hides it again.  The same for
+;; every markup object: =verbatim=, ~code~, *bold*, /italic/, _underline_,
+;; +strike+ show their markers while point is in them.
+;;
+;; Editing inside one used to hide it again: typing makes font-lock
+;; refontify the line during redisplay, after the command, and that hid
+;; the target anew.  Now font-lock itself leaves the object at point shown
+;; (an advice after it refontifies), so it stays while you edit.
 
-(defvar-local +org-links--revealed nil "(BEG . END) markers of the link shown as written.")
+(defvar-local +org-links--revealed nil "(BEG . END) markers of the object shown as written.")
 (declare-function org-element-context "org-element" (&optional element))
 (declare-function org-element-type "org-element-ast" (node &optional anonymous))
 (declare-function org-element-property "org-element-ast" (property node &optional dflt force-undefer))
 
+(defconst +org-links--reveal-types '(link bold italic underline strike-through verbatim code)
+  "Org objects shown as written while point is in them.")
+
+(defconst +org-links--markup-faces '(org-link bold italic underline org-verbatim org-code)
+  "Faces that mark such an object, for a cheap first test.")
+
+(defun +org-links--marked-p (pos)
+  (and (>= pos (point-min)) (< pos (point-max))
+       (let ((face (get-text-property pos 'face)))
+         (or (cl-intersection (ensure-list face) +org-links--markup-faces)
+             (and (consp face) (plist-get face :strike-through))
+             (get-text-property pos 'invisible)))))
+
 (defun +org-links--link-at-point ()
-  "Bounds (BEG . END) of the link at point, or nil.  Cheap off links."
-  (when (or (memq 'org-link (ensure-list (get-text-property (point) 'face)))
-            (and (> (point) (point-min))
-                 (memq 'org-link (ensure-list (get-text-property (1- (point)) 'face)))))
+  "Bounds (BEG . END) of the link or markup object at point, or nil.
+Cheap off markup: Org's parser only runs where its faces are."
+  (when (or (+org-links--marked-p (point)) (+org-links--marked-p (1- (point))))
     (let ((ctx (save-match-data (org-element-context))))
-      (when (eq (org-element-type ctx) 'link)
+      (when (memq (org-element-type ctx) +org-links--reveal-types)
         (cons (org-element-property :begin ctx)
               (- (org-element-property :end ctx) (or (org-element-property :post-blank ctx) 0)))))))
 
+(defun +org-links--unhide (beg end)
+  (with-silent-modifications
+    (remove-text-properties beg end '(invisible nil display nil composition nil))))
+
 (defun +org-links-reveal-h ()
-  "Show the link at point as written; hide the one left."
+  "Show the object at point as written; hide the one left."
   (let ((shown +org-links--revealed))
     (unless (and shown (<= (car shown) (point) (cdr shown)))
       (when shown
@@ -148,9 +170,17 @@ minor modes."
         (font-lock-flush (car shown) (cdr shown))
         (set-marker (car shown) nil) (set-marker (cdr shown) nil))
       (when-let* ((bounds (+org-links--link-at-point)))
-        (with-silent-modifications
-          (remove-text-properties (car bounds) (cdr bounds) '(invisible nil display nil composition nil)))
+        (+org-links--unhide (car bounds) (cdr bounds))
         (setq +org-links--revealed (cons (copy-marker (car bounds)) (copy-marker (cdr bounds) t)))))))
+
+(defun +org-links-keep-revealed-a (beg end &rest _)
+  "After font-lock fontifies BEG..END: the object at point stays shown."
+  (when-let* ((shown +org-links--revealed)
+              ((< (car shown) end))
+              ((> (cdr shown) beg)))
+    (+org-links--unhide (car shown) (cdr shown))))
+
+(advice-add 'font-lock-default-fontify-region :after #'+org-links-keep-revealed-a)
 
 (add-hook 'org-mode-hook
           (defun +org-links-reveal-setup-h ()
