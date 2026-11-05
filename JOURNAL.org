@@ -39,6 +39,25 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 05:49] — A model reads along; the vault files itself
+- Writing: as you pause, each paragraph you changed gets a careful
+  editor's reading, judged against the style you declare
+  (=#+well_formed_goal: a precise technical note=).  Its rewrites apply
+  with =SPC P x=; =SPC P a= gives an honest assessment with percentages.
+- =SPC n x= from anywhere: jot something down, and the model files it into
+  the right file and heading of your vault.
+- Org-roam: your whole vault is the graph now.  =SPC n r I= makes your
+  files notes, =SPC n r m= is one menu for everything, =SPC n r e= a tour.
+- =C-c '= on a heading edits that subtree in a buffer of its own.
+- Lua: Hyprland's config is translated (checked equal to the old one, not
+  switched yet), and Emacs knows Hyprland's Lua API.
+- Two themes at Modus contrast: doom-modus-vibrant and its light twin.
+- Notifications: Do-Not-Disturb was on, unnoticed; it now announces
+  itself, and stale notifications close themselves.
+- =*Messages*= reads like a log; completions look good; CI is green again.
+- Fixed my own regressions: heading colors, and squiggles that vanished
+  after a fix.
+
 ** [2026-11-05 Do 04:42] — Fixes for everything, and seven papercuts
 - =SPC P x= fixes any well-formed finding.  A long sentence gets split
   where its clauses meet ("…in the spring. The team then…").  "The file
