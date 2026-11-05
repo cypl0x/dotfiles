@@ -1846,3 +1846,20 @@ and a temp exec-path where bin/tar links to store/tar."
   (with-temp-buffer
     (rename-buffer "*Messages-like*" t)
     (should-not (+persist-new-buffer-real-p (current-buffer)))))
+
+(ert-deftest gh-browse-parse-and-resolve ()
+  "Targets parse as GitHub does; links in a file resolve within its repository."
+  (load (expand-file-name "+gh-browse" test-lisp-dir) nil t)
+  (let ((p (+gh-browse--parse "https://github.com/o/r/tree/v2/docs/#x")))
+    (should (equal (list (+gh-place-owner p) (+gh-place-repo p) (+gh-place-ref p) (+gh-place-path p))
+                   '("o" "r" "v2" "docs"))))
+  (let ((p (+gh-browse--parse "o/r@dev:src/a.el")))
+    (should (equal (list (+gh-place-ref p) (+gh-place-path p)) '("dev" "src/a.el"))))
+  (should-not (+gh-browse--parse "../README.md" t))
+  (let ((here (+gh-place-make :owner "o" :repo "r" :ref "main" :path "docs/guide.md")))
+    (should (equal (+gh-place-path (+gh-browse--resolve here "../README.md")) "README.md"))
+    (should (equal (+gh-place-path (+gh-browse--resolve here "img/x.png#y")) "docs/img/x.png"))
+    (should (equal (+gh-place-path (+gh-browse--resolve here "/LICENSE")) "LICENSE"))
+    (should (equal (+gh-place-repo (+gh-browse--resolve here "https://github.com/a/b")) "b"))
+    (should (equal (+gh-browse--resolve here "https://github.com/a/b/issues/3") "https://github.com/a/b/issues/3"))
+    (should-not (+gh-browse--resolve here "#top"))))
