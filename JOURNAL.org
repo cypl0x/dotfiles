@@ -39,6 +39,24 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 12:14] — well-formed: 15 new checks, synonyms, a score in the mode line
+- ✔ *New checks*, each tested on mess.org, this journal and the README, so
+  only real findings remain:
+  - correctness: comma splices, run-ons, fragments, plural apostrophes,
+    its/it's
+  - clarity: unclear "this" and "it", tense shifts
+  - engagement: sentence rhythm
+  - delivery: commands in mail ("Please …")
+  - consistency within a document: number style, a term's capitals
+    (GitHub), date format, unit spacing, heading case
+- ✔ *SPC P s*: synonyms offline (WordNet), ranked by the word's role in
+  the sentence.
+- ✔ *Mode line*: =✎87 +312= after each check (a score, plus words written
+  today); set =well-formed-daily-goal= for a target.
+- 🔎 *neomacs freeze at 11:57*: 91 % garbage collection. Its memory had to
+  come back from swap first; the machine is about 8 GiB over its RAM. It
+  also wrote 205 MB of logs to its terminal, so it now logs warnings only.
+
 ** [2026-11-05 Do 11:42] — neomacs: zoom back, faster scrolling, lag measured
 - ✔ *Zoom in neomacs* works again. Replacing the scroll fix had dropped the
   line that switches the zoom fix on; a test now guards all three.
