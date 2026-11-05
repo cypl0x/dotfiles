@@ -39,6 +39,19 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 06:38] — Two Emacsen, and the desktop in Emacs
+- =neomacs=: the Rust-core Emacs runs your whole Doom config beside your
+  main Emacs, sharing your packages, with its own server and build.
+- Info manuals: easy to read, code in color, and every manual opens where
+  you stopped (=SPC h I= continues reading).  Your own manuals, including
+  one for well-formed, are in =C-h i=.
+- =SPC o s= systemd units, =SPC o j= the journal, =SPC o h= Hyprland's
+  windows, binds and workspaces, all in proced's style.
+- =SPC h !=: when Emacs lags or is slow, measure it, and an agent
+  diagnoses and fixes it, stopping when the numbers say fixed.
+- The scripts now speak both Hyprland config languages (=hypr-dispatch=),
+  so switching to Lua no longer breaks them.
+
 ** [2026-11-05 Do 05:49] — A model reads along; the vault files itself
 - Writing: as you pause, each paragraph you changed gets a careful
   editor's reading, judged against the style you declare
