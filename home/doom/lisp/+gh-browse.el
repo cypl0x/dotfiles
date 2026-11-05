@@ -880,8 +880,14 @@ counted in :count; newest first."
                (replace-regexp-in-string "api\\.github\\.com/repos/" "github.com/" (or (plist-get subject :url) "")))))
     (insert (propertize (format "%-30s" (truncate-string-to-width (plist-get (plist-get n :repository) :full_name) 30))
                         'face 'font-lock-constant-face)
-            (+gh--button (format "%-12s %s" (plist-get subject :type) (truncate-string-to-width (plist-get subject :title) 64))
-                         (+gh--url-action url))
+            (let ((b (+gh--button (format "%-12s %s" (plist-get subject :type) (truncate-string-to-width (plist-get subject :title) 64))
+                                  (+gh--url-action url)))
+                  (thread (plist-get n :id)))
+              (define-key (get-text-property 0 'keymap b) "r"
+                          (lambda () (interactive)
+                            (+gh--gh "api" "-X" "PATCH" (concat "notifications/threads/" thread))
+                            (message "Marked read (g refreshes)")))
+              (propertize b 'help-echo "RET or click: open · r: mark read"))
             (propertize (format "  %s%s · %s" (let ((c (or (plist-get n :count) 1))) (if (> c 1) (format "×%d · " c) ""))
                                 (plist-get n :reason) (+gh--age (plist-get n :updated_at)))
                         'face 'shadow))))
@@ -954,6 +960,37 @@ counted in :count; newest first."
         (url-copy-file (concat url (if (string-search "?" url) "&" "?") "s=96") file t))
       (create-image file nil nil :height 96 :ascent 'center))))
 
+
+(defun +gh--contributions (login)
+  "LOGIN's contribution calendar of the last year: ((DATE . COUNT) …)."
+  (let ((weeks (plist-get (plist-get (plist-get (plist-get (plist-get
+                (+gh--json "api" "graphql" "-f"
+                           (format "query={ user(login:%S) { contributionsCollection { contributionCalendar { weeks { contributionDays { date contributionCount } } } } } }" login))
+                :data) :user) :contributionsCollection) :contributionCalendar) :weeks)))
+    (cl-loop for w in weeks
+             append (mapcar (lambda (d) (cons (plist-get d :date) (plist-get d :contributionCount)))
+                            (plist-get w :contributionDays)))))
+
+(defun +gh--render-contributions (days)
+  "DAYS ((DATE . COUNT) …) as GitHub's calendar: weeks across, weekdays down."
+  (let* ((total (apply #'+ (mapcar #'cdr days)))
+         (mx (max 1 (apply #'max 0 (mapcar #'cdr days))))
+         (best (car (sort (copy-sequence days) (lambda (a b) (> (cdr a) (cdr b)))))))
+    (insert (propertize (format "%d contributions in the last year · busiest day %s (%d)\n" total (car best) (cdr best))
+                        'face 'shadow) "  ")
+    (if (not (and (display-graphic-p) (image-type-available-p 'svg)))
+        (insert (mapconcat (lambda (d) (if (zerop (cdr d)) "·" (string (aref "░▒▓█" (min 3 (floor (* 3.99 (/ (float (cdr d)) mx))))))))
+                           days "")
+                "\n")
+      (let* ((p (+gh--palette)) (cell 12) (weeks (ceiling (length days) 7.0))
+             (svg (svg-create (+ 10 (* weeks cell)) (+ 6 (* 7 cell)))))
+        (svg-rectangle svg 0 0 (+ 10 (* weeks cell)) (+ 6 (* 7 cell)) :fill (plist-get p :bg))
+        (cl-loop for d in days for i from 0
+                 do (let ((v (cdr d)))
+                      (svg-rectangle svg (+ 4 (* (/ i 7) cell)) (+ 3 (* (% i 7) cell)) (- cell 2) (- cell 2) :rx 2
+                                     :fill (if (zerop v) (plist-get p :dim) (plist-get p :b))
+                                     :fill-opacity (if (zerop v) 0.18 (+ 0.3 (* 0.7 (/ (float v) mx)))))))
+        (insert-image (svg-image svg :ascent 'center) "[contributions]") (insert "\n")))))
 ;;;###autoload
 (defun +gh/profile (login)
   "LOGIN's profile: who, pinned, top repositories, activity, organizations."
@@ -983,6 +1020,7 @@ counted in :count; newest first."
                          "  " (+gh--button "[as a directory]" (lambda () (interactive) (dired (concat +gh-fs-root "/" login "/"))))
                          "  " (+gh--button "[on github.com]" (lambda () (interactive) (browse-url (plist-get u :html_url))))
                          "\n\n")
+                 (+gh--section "Contributions" (list (+gh--contributions login)) #'+gh--render-contributions t)
                  (+gh--section "Pinned" pinned #'+gh--render-repo)
                  (+gh--section "Top repositories"
                                (seq-take (sort (+gh--json "api" (format "users/%s/repos?per_page=100&sort=pushed" login))
@@ -1107,6 +1145,23 @@ OPEN, a function of NAME, makes the names buttons."
                             (propertize (make-string (max 1 n) ?█) 'face 'font-lock-function-name-face 'font-lock-face 'font-lock-function-name-face)
                             (format " %d" (cdr c)))))))
 
+
+(defun +gh--render-pr-metrics (prs)
+  "Your merged PRS (gh search prs): count, time to merge, where."
+  (let* ((hours (mapcar (lambda (p) (/ (float-time (time-subtract (date-to-time (plist-get p :closedAt))
+                                                                  (date-to-time (plist-get p :createdAt))))
+                                       3600.0))
+                        prs))
+         (sorted (sort (copy-sequence hours) #'<))
+         (median (and sorted (nth (/ (length sorted) 2) sorted)))
+         (open (length (ignore-errors (+gh--json "search" "prs" "--author" "@me" "--state" "open" "-L" "100" "--json" "number"))))
+         (repos (+gh--count (lambda (p) (plist-get (plist-get p :repository) :nameWithOwner)) prs)))
+    (insert (format "%d merged in the last 90 days · %d open now · median time to merge %s\n"
+                    (length prs) open
+                    (cond ((null median) "–") ((< median 1) (format "%d min" (round (* 60 median))))
+                          ((< median 48) (format "%.1f h" median)) (t (format "%.1f days" (/ median 24))))))
+    (dolist (r (seq-take repos 5))
+      (insert (format "    %-36s %d\n" (car r) (cdr r))))))
 ;;;###autoload
 (defun +gh/report ()
   "What you look at on GitHub: when, which repositories, owners, files."
@@ -1139,6 +1194,12 @@ OPEN, a function of NAME, makes the names buttons."
                                                                     (and p (eq (plist-get v :kind) 'file)
                                                                          (or (file-name-extension p) "(none)"))))
                                                       visits))
+                   (+gh--section "Your pull requests"
+                                 (list (ignore-errors
+                                         (+gh--json "search" "prs" "--author" "@me" "--merged" "-L" "100"
+                                                    "--merged-at" (format-time-string ">=%Y-%m-%d" (time-subtract nil (* 90 86400)))
+                                                    "--json" "createdAt,closedAt,repository")))
+                                 #'+gh--render-pr-metrics t)
                    (+gh--top "Searches" (+gh--count (lambda (v) (plist-get v :query)) visits)
                              (lambda (q) (+gh--search-repos q))))))))
 

@@ -2134,3 +2134,30 @@ and a temp exec-path where bin/tar links to store/tar."
       (insert text)
       (should-not (condition-case e (progn (org-table-convert-region (point-min) (point-max) 'babel-auto) nil)
                     (error e))))))
+
+(ert-deftest gh-cli/commands-and-flags-come-from-gh-help ()
+  (load (expand-file-name "+gh-browse" test-lisp-dir) nil t)
+  (load (expand-file-name "+gh-cli" test-lisp-dir) nil t)
+  (cl-letf (((symbol-function '+gh-cli--help-lines)
+             (lambda (args)
+               (split-string
+                (pcase args
+                  ('nil "CORE COMMANDS\n  issue:       Manage issues\n  pr:          Manage pull requests\n\nFLAGS\n  --help")
+                  ('("issue") "GENERAL COMMANDS\n  create:     Create a new issue\n  list:       List issues\n\nFLAGS\n")
+                  ('("pr") "AVAILABLE COMMANDS\n  merge:      Merge a pull request\n")
+                  ('("issue" "create") "FLAGS\n  -t, --title string   Supply a title\n  -R, --repo [HOST/]OWNER/REPO   Select another repository\n      --web            Open the browser\n")
+                  (_ ""))
+                "\n"))))
+    (should (equal (mapcar #'car (+gh-cli--commands-in nil)) '("issue" "pr")))
+    (should (equal (+gh-cli--commands-in '("issue")) '(("create" . "Create a new issue") ("list" . "List issues"))))
+    (should (equal (mapcar #'car (+gh-cli--flags "issue create")) '("--title" "--repo" "--web")))))
+
+(ert-deftest gh-cli/compose-sends-title-and-body ()
+  (load (expand-file-name "+gh-cli" test-lisp-dir) nil t)
+  (let (sent)
+    (save-window-excursion
+      (with-current-buffer (+gh-compose "*test compose*" "Test" (lambda (title body) (setq sent (list title body))) t)
+        (insert "The title\n\nFirst paragraph.\n")
+        (+gh-compose-send)))
+    (should (equal sent '("The title" "First paragraph.")))
+    (should-not (get-buffer "*test compose*"))))
