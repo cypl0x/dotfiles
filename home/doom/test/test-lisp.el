@@ -899,6 +899,35 @@ and a temp exec-path where bin/tar links to store/tar."
     (should (equal (buffer-substring-no-properties (line-beginning-position) (line-end-position)) "plain [2 times]"))
     (should (get-text-property (point) 'line-prefix))))
 
+(ert-deftest org-subtree-edit/round-trip-at-its-level ()
+  (load (expand-file-name "+org-subtree-edit" test-lisp-dir) nil t)
+  (require 'org)
+  (cl-letf (((symbol-function 'pop-to-buffer) (lambda (b &rest _) (set-buffer b))))
+    (with-temp-buffer
+      (let ((org-mode-hook nil)) (org-mode))
+      (insert "* Top\n** Middle\n*** Deep\ntext\n**** Deeper\n** Next\n")
+      (let ((src (current-buffer)))
+        (goto-char (point-min)) (search-forward "*** Deep")
+        (+org-subtree-edit)
+        ;; Promoted: level 3 reads as level 1.
+        (should (equal (buffer-string) "* Deep\ntext\n** Deeper\n"))
+        (goto-char (point-max)) (insert "** Added\n")
+        (cl-letf (((symbol-function 'quit-window) #'ignore))
+          (+org-subtree-edit-finish))
+        (with-current-buffer src
+          (should (equal (buffer-string) "* Top\n** Middle\n*** Deep\ntext\n**** Deeper\n**** Added\n** Next\n")))))
+    ;; The original changed meanwhile: refuses.
+    (with-temp-buffer
+      (let ((org-mode-hook nil)) (org-mode))
+      (insert "* A\nbody\n* B\n")
+      (let ((src (current-buffer)))
+        (goto-char (point-min))
+        (+org-subtree-edit)
+        (let ((edit (current-buffer)))
+          (with-current-buffer src (goto-char (point-min)) (forward-line 1) (insert "changed\n"))
+          (set-buffer edit)
+          (should-error (+org-subtree-edit-finish) :type 'user-error))))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)
