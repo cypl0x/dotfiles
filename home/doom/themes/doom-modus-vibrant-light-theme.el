@@ -8,7 +8,13 @@
 ;;; Code:
 
 (require 'doom-themes)
-(load (expand-file-name "modus-vibrant-palette" (file-name-directory (or load-file-name buffer-file-name))) nil t)
+;; load-theme evaluates the theme without load-file-name; find the palette
+;; where load-theme found this file (custom-theme--load-path).
+(load (or (and (or load-file-name buffer-file-name)
+               (expand-file-name "modus-vibrant-palette"
+                                 (file-name-directory (or load-file-name buffer-file-name))))
+          (locate-file "modus-vibrant-palette" (custom-theme--load-path) '(".el" ".elc")))
+      nil t)
 (defconst modus-vibrant-light-bg "#ffffff" "Modus Operandi's background.")
 
 
