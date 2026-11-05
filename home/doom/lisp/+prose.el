@@ -129,7 +129,12 @@ Case-sensitive like jinx: its \"[A-Z]+\\\\>\" (all-caps words) matched \"teh\"."
   ;; The variable-pitch font is set via doom-variable-pitch-font.
   ;; When Maple Mono NF is used for both, mixed-pitch effectively does nothing
   ;; but the hook is ready for when a proper variable-pitch font is configured.
-  (setq mixed-pitch-set-height t))
+  ;;
+  ;; No fixed height: with one, mixed-pitch remapped `default' in Org and
+  ;; Markdown to the size current when the buffer opened (:height 136), so
+  ;; C-ä / C-ö / C-ü (doom/increase-font-size …) changed every other text,
+  ;; the minibuffer included, but not those buffers.
+  (setq mixed-pitch-set-height nil))
 
 ;;;; Text Statistics — Enhanced ──────────────────────────────────────────────
 
