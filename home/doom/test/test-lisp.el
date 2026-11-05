@@ -2667,3 +2667,19 @@ relative to the Org file, folders first then newest first."
               (set-buffer-modified-p nil)
               (kill-buffer))))
       (delete-directory dir t))))
+
+(ert-deftest themes/doom-colors-only-under-doom-themes-and-cursor-reset ()
+  "doom-color specs apply only while a doom theme is on; loading a theme
+forgets the frames' cursor color first."
+  (load (expand-file-name "+themes" test-lisp-dir) nil t)
+  (let ((custom-enabled-themes '(modus-operandi)))
+    (should-not (+themes-doom-p)))
+  (let ((custom-enabled-themes '(doom-modus-vibrant-light)))
+    (should (+themes-doom-p)))
+  (let ((custom-enabled-themes nil))
+    (should-not (+themes-doom-p)))
+  (set-face-attribute 'cursor (selected-frame) :background "#123456")
+  (cl-letf (((symbol-function 'disable-theme) #'ignore))
+    (+themes-only-one-a 'some-theme))
+  (should (eq (face-attribute 'cursor :background (selected-frame)) 'unspecified))
+  (should (memq #'+themes-cursor-h enable-theme-functions)))

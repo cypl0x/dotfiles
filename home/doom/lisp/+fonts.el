@@ -41,6 +41,7 @@
               (global-font-lock-mode 1)))
           90)
 
+(declare-function +themes-doom-p "+themes" ())
 (after! doom-themes
   (custom-set-faces!
     ;; Use italic weight for comments — Maple Mono NF has a beautiful italic.
@@ -49,13 +50,15 @@
     ;; Bold keywords to make control flow pop.
     '(font-lock-keyword-face :weight bold)
     ;; Slightly dimmed line numbers to reduce visual noise.
-    `(line-number :foreground ,(doom-darken (doom-color 'fg) 0.6))
-    `(line-number-current-line :foreground ,(doom-color 'fg) :weight bold)
+    ;; Colors from doom-color only under a doom theme (lisp/+themes.el): under
+    ;; modus-operandi it answered black line numbers.
+    `(line-number ,@(and (+themes-doom-p) (list :foreground (doom-darken (doom-color 'fg) 0.6))))
+    `(line-number-current-line ,@(and (+themes-doom-p) (list :foreground (doom-color 'fg))) :weight bold)
     ;; pulse.el's olive #AAAA33 (gptel flashes each answer with it, pulsar's
     ;; generic face inherits it) under the light text: contrast 1.38.  Blue
     ;; blended into the background keeps the flash visible at 5.24 (WCAG AA).
-    `(pulse-highlight-start-face :background ,(doom-blend 'blue 'bg 0.25))
-    `(pulse-highlight-face :background ,(doom-blend 'blue 'bg 0.25))))
+    `(pulse-highlight-start-face ,@(and (+themes-doom-p) (list :background (doom-blend 'blue 'bg 0.25))))
+    `(pulse-highlight-face ,@(and (+themes-doom-p) (list :background (doom-blend 'blue 'bg 0.25))))))
 
 ;; *bold* in an Org headline looked like the rest of it: headlines are bold
 ;; (org-level-N), and so was Org's face for *…*.  Maple Mono NF has SemiBold

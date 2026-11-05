@@ -294,14 +294,20 @@ after the path completion, which recognizes a path wherever it is."
       corfu-max-width 90
       corfu-count 12)
 
+;; Colors from doom-color only under a doom theme (lisp/+themes.el): after
+;; doom-modus-vibrant, modus-operandi's popup came out its dark navy.
+(declare-function +themes-doom-p "+themes" ())
+(defmacro +completion--doom (&rest attrs)
+  "ATTRS (a plist) while a doom theme is on, else nothing."
+  `(and (+themes-doom-p) (list ,@attrs)))
 (custom-set-faces!
-  `(corfu-default :background ,(doom-blend 'blue 'bg 0.10) :foreground ,(doom-color 'fg))
-  `(corfu-border :background ,(doom-blend 'blue 'bg 0.10))
-  `(corfu-current :background ,(doom-blend 'blue 'bg 0.32) :foreground ,(doom-color 'fg)
+  `(corfu-default ,@(+completion--doom :background (doom-blend 'blue 'bg 0.10) :foreground (doom-color 'fg)))
+  `(corfu-border ,@(+completion--doom :background (doom-blend 'blue 'bg 0.10)))
+  `(corfu-current ,@(+completion--doom :background (doom-blend 'blue 'bg 0.32) :foreground (doom-color 'fg))
                   :weight bold :extend t)
-  `(corfu-bar :background ,(doom-color 'blue))
-  `(corfu-annotations :foreground ,(doom-color 'base7) :slant italic)
-  `(corfu-deprecated :strike-through t :foreground ,(doom-color 'base6))
+  `(corfu-bar ,@(+completion--doom :background (doom-color 'blue)))
+  `(corfu-annotations ,@(+completion--doom :foreground (doom-color 'base7)) :slant italic)
+  `(corfu-deprecated :strike-through t ,@(+completion--doom :foreground (doom-color 'base6)))
   `(corfu-popupinfo :inherit corfu-default))
 
 ;; The theme gives orderless's match faces a background, so in the selected

@@ -220,7 +220,7 @@
   :config
   ;; Match the annotation colour to the comments face of the active theme.
   (custom-set-faces!
-    `(blamer-face :foreground ,(doom-color 'comments) :italic t)))
+    `(blamer-face ,@(and (+themes-doom-p) (list :foreground (doom-color 'comments))) :italic t)))
 
 ;; ── magit-todos — TODO/FIXME/… section in magit status ────────────────────
 (after! magit-todos
