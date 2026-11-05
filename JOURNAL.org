@@ -39,6 +39,20 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 07:02] — "Changed on disk; overwrite?" is gone: Emacs merges
+- ✔ Your question from mess.org, answered with code instead of steps.
+  Emacs now remembers each file as it last read/saved it — the common
+  ancestor — so it can do a *real three-way merge* (=diff3 -m=) of your
+  unsaved buffer and whatever wrote the file underneath (me, git, …).
+- Happens on its own: first edit of a stale buffer, on save, when you come
+  back to it. By hand: =SPC f M=. Different places → silent merge, your
+  edits stay unsaved, point stays. Same lines → ediff with the ancestor.
+- Verified in your running Doom on a scratch file: edit line 2, outside
+  write to line 6, =save-buffer= → file has both, no question asked.
+- And I follow the rule now: mess.org notes go through your buffer
+  (=+merge-edit-file=), saved only if you had no unsaved edits.
+- Commit 7a30143; 269/269 tests.
+
 ** [2026-11-05 Do 06:54] — GitHub repositories in Emacs, nothing cloned
 - ✔ *SPC o G*, Enter on empty input → the awesome list's README, rendered.
   Each directory = 1 =gh api= call; files come in that same answer (raw
