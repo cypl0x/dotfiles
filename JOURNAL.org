@@ -39,6 +39,22 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 07:24] — familiar, measured: SPC o $
+- ✔ *Analytics* from the ledger (349 priced requests): $1.10 spent, 41% of
+  input from the cache, $8.90 left — at last week's $0.178/day that lasts
+  until about 2026-12-25.
+- Plots (SVG, text sparklines in a terminal): spend per day + cumulative
+  vs budget, tokens in/out, weekday × hour heatmap; bars per task/model;
+  mean/median/p95 tables; the 12 dearest requests, RET → their prompt;
+  =e= CSV, =r= range (all, 30, 7 days, today).
+- Recommendations from your data, numbers attached. Real one: /fix could
+  run on the fast tier, $0.00096 instead of $0.019/. I caught myself
+  first: "bursts of ask" and "ask on the fast tier" were artefacts of
+  tool-call rounds — those rules now skip conversations, which get their
+  own honest insight (121 follow-up rounds, 54% cached).
+- Charts checked visually (rasterized and read back); legend moved off
+  the line. Commit 2e8e55e; 277/277 tests.
+
 ** [2026-11-05 Do 07:18] — One history, both ways: Atuin ⇄ Emacs
 - ✔ *SPC s h*: all ~1,900 Atuin commands, newest first, each with ✔/✘N,
   duration, age, directory, @host. Narrow: =s= ok, =f= failed, =d= here,
