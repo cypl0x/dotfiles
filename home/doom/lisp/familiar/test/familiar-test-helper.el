@@ -25,7 +25,7 @@
   (when-let* ((doom (or (getenv "EMACSDIR") (expand-file-name "~/.config/emacs/")))
               (build (car (file-expand-wildcards
                            (expand-file-name (concat ".local/straight/build-" emacs-version) doom)))))
-    (dolist (pkg '("gptel" "transient" "compat" "cond-let" "llama" "mcp-server-lib" "mcp" "jsonrpc"))
+    (dolist (pkg '("gptel" "transient" "compat" "cond-let" "llama" "mcp-server-lib" "mcp" "jsonrpc" "package-lint"))
       (let ((dir (expand-file-name pkg build)))
         (when (and (file-directory-p dir)
                    (or (equal pkg "jsonrpc") (not (locate-library pkg))))

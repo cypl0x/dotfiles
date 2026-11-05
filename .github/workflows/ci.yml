@@ -110,6 +110,29 @@ jobs:
             "((builtins.getFlake \"github:NixOS/nixpkgs/$rev\").legacyPackages.x86_64-linux.emacs-nox.pkgs.withPackages (p: [p.gptel]))" \
             --command make emacs-check
 
+  familiar:
+    name: familiar (MELPA checks + ERT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      # The package on its own, as MELPA would take it: package-lint,
+      # checkdoc, byte-compile with warnings as errors, then its tests.
+      - name: package-lint, checkdoc, compile, test
+        run: |
+          rev=$(jq -r '.nodes[.nodes.root.inputs.nixpkgs].locked.rev' flake.lock)
+          nix shell --impure --expr \
+            "((builtins.getFlake \"github:NixOS/nixpkgs/$rev\").legacyPackages.x86_64-linux.emacs-nox.pkgs.withPackages (p: [p.gptel p.package-lint p.mcp p.mcp-server-lib]))" \
+            --command make -C home/doom/lisp/familiar melpa test
+
   build-thinkpad:
     name: Build thinkpad configuration
     runs-on: ubuntu-latest
