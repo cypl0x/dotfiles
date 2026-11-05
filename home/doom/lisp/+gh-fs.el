@@ -378,6 +378,14 @@ Owners and repositories already listed answer without a request; MTIME
   (let ((default-directory temporary-file-directory))
     (apply operation args)))
 
+(defun +gh-fs--without-t (switches)
+  "SWITCHES (ls options) without -t in their short-option clusters."
+  (if (listp switches) (mapcar #'+gh-fs--without-t switches)
+    (mapconcat (lambda (w) (if (string-match-p "\\`-[^-]" w)
+                               (let ((s (replace-regexp-in-string "t" "" w))) (if (equal s "-") "" s))
+                             w))
+               (split-string switches " " t) " ")))
+
 (defun +gh-fs-handler (operation &rest args)
   "File name handler for `+gh-fs-root'."
   (pcase operation
@@ -433,7 +441,8 @@ Owners and repositories already listed answer without a request; MTIME
     ('insert-directory
      (pcase-let ((`(,file ,switches ,wildcard ,full) args))
        (require 'ls-lisp)
-       (ls-lisp--insert-directory file switches wildcard full)))
+       ;; Not by time (-t, lisp/+dired.el): each entry's time is a call.
+       (ls-lisp--insert-directory file (+gh-fs--without-t switches) wildcard full)))
     ;; Contents
     ('insert-file-contents
      (pcase-let ((`(,file ,visit ,beg ,end ,replace) args))

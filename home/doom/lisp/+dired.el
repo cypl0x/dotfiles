@@ -9,7 +9,15 @@
 ;; `+dired-age-mode' toggles it (on by default), in dirvish as the attribute
 ;; `file-age', in plain dired as text after each line.
 ;;
+;; Order: folders first, then newest first, everywhere: `ls' sorts as it lists
+;; (-t, --group-directories-first), so nothing is re-sorted after dired opens.
+;; /github listings leave -t out (lisp/+gh-fs.el): a time per entry is a call.
+;;
 ;;; Code:
+
+(defvar dired-listing-switches)
+(with-eval-after-load 'dired
+  (setq dired-listing-switches "-ahlt --group-directories-first"))
 
 (require 'cl-lib)
 

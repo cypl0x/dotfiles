@@ -2583,3 +2583,34 @@ keep the default order; times are cached until a refresh."
                 (let ((minibuffer-completing-file-name t))
                   (should (equal (+completion-sort-files-newest '("b" "a")) '("a" "b"))))))))
       (delete-directory dir t))))
+
+(ert-deftest dired/newest-first-folders-first-not-for-github ()
+  "Listings come newest first, folders first, sorted by ls; /github's
+handler leaves -t out (a time per entry would be a call)."
+  (load (expand-file-name "+gh-fs" test-lisp-dir) nil t)
+  (should (equal (+gh-fs--without-t "-ahlt --group-directories-first") "-ahl --group-directories-first"))
+  (should (equal (+gh-fs--without-t "-t -al") " -al"))
+  (should (equal (+gh-fs--without-t '("-lt" "--time-style=iso")) '("-l" "--time-style=iso")))
+  (require 'dired)
+  (load (expand-file-name "+dired" test-lisp-dir) nil t)
+  (should (equal dired-listing-switches "-ahlt --group-directories-first"))
+  (let ((dir (file-name-as-directory (make-temp-file "dired" t))))
+    (unwind-protect
+        (progn
+          (dolist (f '(("old.txt" . 1000) ("new.txt" . 3000)))
+            (write-region "" nil (expand-file-name (car f) dir))
+            (set-file-times (expand-file-name (car f) dir) (seconds-to-time (cdr f))))
+          (make-directory (expand-file-name "zdir" dir))
+          (set-file-times (expand-file-name "zdir" dir) (seconds-to-time 500))
+          (with-current-buffer (dired-noselect dir)
+            (unwind-protect
+                (let ((names (save-excursion
+                               (goto-char (point-min))
+                               (cl-loop until (eobp)
+                                        for f = (dired-get-filename 'no-dir t)
+                                        when (and f (not (member f '("." ".."))))
+                                        collect f
+                                        do (forward-line 1)))))
+                  (should (equal names '("zdir" "new.txt" "old.txt"))))
+              (kill-buffer))))
+      (delete-directory dir t))))
