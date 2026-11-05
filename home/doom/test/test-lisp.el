@@ -2555,3 +2555,31 @@ retries and walks come out of them."
                 (should (string-match-p "magit-status → magit-stage → magit-commit-create → with-editor-finish: 5 times"
                                         (+usage-flows-summary)))))))
       (delete-directory +usage-flows-directory t))))
+
+(ert-deftest completion/files-newest-first-directories-first ()
+  "File prompts list directories first, then newest first; remote ones
+keep the default order; times are cached until a refresh."
+  (load (expand-file-name "+completion" test-lisp-dir) nil t)
+  (let ((dir (file-name-as-directory (make-temp-file "ff" t))))
+    (unwind-protect
+        (progn
+          (dolist (f '(("old.png" . 1000) ("new.png" . 3000) ("mid.png" . 2000)))
+            (write-region "" nil (expand-file-name (car f) dir))
+            (set-file-times (expand-file-name (car f) dir) (seconds-to-time (cdr f))))
+          (make-directory (expand-file-name "sub" dir))
+          (with-temp-buffer
+            (cl-letf (((symbol-function 'minibuffer-contents-no-properties) (lambda () dir))
+                      ((symbol-function 'vertico-sort-history-length-alpha) (lambda (l) (sort (copy-sequence l) #'string<))))
+              (let ((minibuffer-completing-file-name t))
+                (should (equal (+completion-sort-files-newest '("old.png" "../" "mid.png" "sub/" "new.png"))
+                               '("sub/" "new.png" "mid.png" "old.png" "../")))
+                ;; Cached: a newer time on disk doesn't reorder until refreshed.
+                (set-file-times (expand-file-name "old.png" dir) (seconds-to-time 9000))
+                (should (equal (car (+completion-sort-files-newest '("old.png" "new.png"))) "new.png"))
+                (setq +completion--mtimes nil)
+                (should (equal (car (+completion-sort-files-newest '("old.png" "new.png"))) "old.png")))
+              ;; Remote: the default order.
+              (cl-letf (((symbol-function 'minibuffer-contents-no-properties) (lambda () "/ssh:host:/tmp/")))
+                (let ((minibuffer-completing-file-name t))
+                  (should (equal (+completion-sort-files-newest '("b" "a")) '("a" "b"))))))))
+      (delete-directory dir t))))

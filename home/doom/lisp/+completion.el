@@ -431,6 +431,111 @@ a reopened one keeps its edits."
       "C-\"" #'+minibuffer/newer)
 
 
+;;;; Files: newest first, and live (SPC f f)
+;;
+;; SPC f f seemed to show "cached" files: a new screenshot wasn't there.  It
+;; was, but sorted by history, length and name it sat somewhere among the
+;; old ones, and a file made while the prompt is open never appeared
+;; (vertico recomputes when the input changes).  In file prompts now:
+;; directories first, then newest first; and the directory being completed
+;; is watched, so new files show up at the top as they come.  C-c C-r
+;; reads it again by hand.  Remote and handled directories (TRAMP, /github)
+;; keep the default order: a time per file would be a round trip each.
+
+(defvar +completion-files-newest-max 2000
+  "Directories with more entries keep the default order (a stat each).")
+
+(defvar-local +completion--mtimes nil "This prompt's file → time cache.")
+(defvar-local +completion--watch nil "(DIRECTORY . WATCH) for this prompt.")
+(defvar vertico--input)
+(declare-function vertico--exhibit "ext:vertico" ())
+(declare-function vertico-sort-history-length-alpha "ext:vertico" (list))
+(declare-function file-notify-add-watch "filenotify" (file flags callback))
+(declare-function file-notify-rm-watch "filenotify" (descriptor))
+
+(defun +completion--file-dir ()
+  "The local directory this file prompt completes in, or nil."
+  (when minibuffer-completing-file-name
+    (let ((dir (file-name-directory
+                (expand-file-name (substitute-in-file-name (minibuffer-contents-no-properties))))))
+      (and dir (not (file-remote-p dir))
+           (not (find-file-name-handler dir 'file-attributes))
+           (file-directory-p dir)
+           dir))))
+
+(defun +completion-sort-files-newest (files)
+  "FILES (a file prompt's candidates): directories first, newest first."
+  (let ((dir (+completion--file-dir)))
+    (if (or (null dir) (> (length files) +completion-files-newest-max))
+        (vertico-sort-history-length-alpha files)
+      (let* ((cache (or +completion--mtimes (setq +completion--mtimes (make-hash-table :test #'equal))))
+             (time (lambda (f)
+                     (let ((path (expand-file-name f dir)))
+                       (or (gethash path cache)
+                           (puthash path (float-time (or (file-attribute-modification-time
+                                                          (file-attributes path))
+                                                         0))
+                                    cache)))))
+             (dot (lambda (f) (member f '("./" "../")))))
+        (sort (copy-sequence files)
+              (lambda (a b)
+                (cond ((funcall dot a) nil) ((funcall dot b) t)
+                      ((and (string-suffix-p "/" a) (not (string-suffix-p "/" b))) t)
+                      ((and (string-suffix-p "/" b) (not (string-suffix-p "/" a))) nil)
+                      (t (> (funcall time a) (funcall time b))))))))))
+
+(defun +completion/refresh-files ()
+  "Read the directory of this file prompt again."
+  (interactive)
+  (setq +completion--mtimes nil)
+  (when (boundp 'vertico--input)
+    (setq vertico--input t)
+    (vertico--exhibit)))
+
+(defun +completion--watch-h ()
+  "In a file prompt: watch the directory being completed, refresh on change."
+  (let ((dir (+completion--file-dir)))
+    (unless (equal dir (car +completion--watch))
+      (when (cdr +completion--watch) (ignore-errors (file-notify-rm-watch (cdr +completion--watch))))
+      (setq +completion--watch
+            (cons dir
+                  (and dir
+                       (let ((buf (current-buffer)) timer)
+                         (ignore-errors
+                           (file-notify-add-watch
+                            dir '(change)
+                            (lambda (_event)
+                              ;; A burst of changes (a download): one refresh.
+                              (when timer (cancel-timer timer))
+                              (setq timer
+                                    (run-at-time 0.2 nil
+                                                 (lambda ()
+                                                   (when (buffer-live-p buf)
+                                                     (with-current-buffer buf
+                                                       (+completion/refresh-files))))))))))))))))
+
+(defun +completion--unwatch-h ()
+  (when (cdr +completion--watch) (ignore-errors (file-notify-rm-watch (cdr +completion--watch))))
+  (setq +completion--watch nil))
+
+(add-hook 'minibuffer-setup-hook
+          (defun +completion-files-setup-h ()
+            (when minibuffer-completing-file-name
+              (add-hook 'post-command-hook #'+completion--watch-h nil t)
+              (add-hook 'minibuffer-exit-hook #'+completion--unwatch-h nil t)
+              (+completion--watch-h))))
+
+(with-eval-after-load 'vertico-multiform
+  (defvar vertico-multiform-categories)
+  (setf (alist-get 'file vertico-multiform-categories)
+        (cons '(vertico-sort-function . +completion-sort-files-newest)
+              (assq-delete-all 'vertico-sort-function
+                               (copy-sequence (alist-get 'file vertico-multiform-categories))))))
+(with-eval-after-load 'vertico
+  (defvar vertico-map)
+  (define-key vertico-map (kbd "C-c C-r") #'+completion/refresh-files))
+
+
 ;;;; Unicode
 
 ;; \omega in prose completes to ω, the character shown next to each name in
