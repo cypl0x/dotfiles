@@ -15,6 +15,8 @@
 ;;              a cell, C-c C-c writes it back (Obsidian's Bases)
 ;;   SPC n r u  a new note named by the time (Obsidian's unique note)
 ;;   SPC n r a  record audio into the vault; again stops and links it here
+;;   SPC n r W  publish the vault as a website (local HTML, an index, files)
+;;   SPC n r Y  sync: commit the vault; pull and push if it has a remote
 ;;
 ;;; Code:
 
@@ -307,6 +309,54 @@ its Emacs buffer, saved unless it had edits of yours waiting."
     (message "%d cell%s written back" (length changes) (if (= 1 (length changes)) "" "s"))
     (when changes (+org-vault/base keys +org-vault--base-filter))))
 
+;;;; Publish: the vault as a website, locally
+
+(defvar org-publish-project-alist)
+(declare-function org-publish "ox-publish" (project &optional force async))
+
+;;;###autoload
+(defun +org-vault/publish (dir)
+  "The vault as a website in DIR (asked; ~/vault-site/ by default): every
+note as HTML with its links working, an index of all of them, attachments
+copied.  Local only; nothing is uploaded."
+  (interactive (list (read-directory-name "Publish the vault into: " "~/vault-site/")))
+  (require 'ox-publish)
+  (let* ((root (+org-graph--root))
+         (dir (file-name-as-directory (expand-file-name dir)))
+         (org-publish-project-alist
+          `(("vault-notes" :base-directory ,root :base-extension "org" :recursive t
+             :publishing-directory ,dir :publishing-function org-html-publish-to-html
+             :exclude "\\(?:\\`\\|/\\)\\.git/" :with-toc t :section-numbers nil
+             :auto-sitemap t :sitemap-filename "index.org" :sitemap-title "The vault"
+             :sitemap-sort-files alphabetically)
+            ("vault-files" :base-directory ,root :recursive t :publishing-directory ,dir
+             :base-extension "png\\|jpe?g\\|gif\\|svg\\|pdf\\|flac\\|css"
+             :exclude "\\(?:\\`\\|/\\)\\.git/" :publishing-function org-publish-attachment)
+            ("vault" :components ("vault-notes" "vault-files")))))
+    ;; A vault has links to what isn't there (yet): marked, not fatal.
+    (let ((org-export-with-broken-links 'mark)) (org-publish "vault" t))
+    (message "Published to %s (open %sindex.html)" (abbreviate-file-name dir) (abbreviate-file-name dir))
+    dir))
+
+;;;; Sync: commit the vault, and push where it has somewhere to go
+
+;;;###autoload
+(defun +org-vault/sync ()
+  "Commit the vault's changes; if it has a remote, pull (rebase) and push."
+  (interactive)
+  (let ((default-directory (+org-graph--root)))
+    (unless (file-directory-p ".git") (user-error "The vault isn't a git repository"))
+    (if (string-empty-p (string-trim (shell-command-to-string "git status --porcelain")))
+        (message "Nothing to commit in the vault")
+      (call-process "git" nil nil nil "add" "-A")
+      (call-process "git" nil nil nil "commit" "-q" "-m" (format-time-string "vault: %F %H:%M")))
+    (if (string-empty-p (string-trim (shell-command-to-string "git remote")))
+        (message "Committed; the vault has no remote to sync with (git remote add …)")
+      (if (and (zerop (call-process "git" nil nil nil "pull" "-q" "--rebase"))
+               (zerop (call-process "git" nil nil nil "push" "-q")))
+          (message "Vault synced")
+        (message "Sync stopped: see git status in %s" (abbreviate-file-name default-directory))))))
+
 ;;;; A note named by the time
 
 ;;;###autoload
@@ -359,6 +409,8 @@ the recording at point (where you started)."
       :desc "Properties of the vault" "n r P" #'+org-vault/properties
       :desc "Base: notes by properties" "n r B" #'+org-vault/base
       :desc "Unique note (by time)" "n r u" #'+org-vault/unique-note
+      :desc "Publish the vault (HTML)" "n r W" #'+org-vault/publish
+      :desc "Sync the vault (git)"  "n r Y" #'+org-vault/sync
       :desc "Record audio here"     "n r a" #'+org-vault/record)
 
 (provide '+org-vault)
