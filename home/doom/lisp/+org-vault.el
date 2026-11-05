@@ -14,7 +14,7 @@
 ;;   SPC n r B  a base: the headings with these properties as a table; edit
 ;;              a cell, C-c C-c writes it back (Obsidian's Bases)
 ;;   SPC n r u  a new note named by the time (Obsidian's unique note)
-;;   SPC n r a  record audio into the vault; again stops and links it here
+;;   SPC n r o  record audio into the vault; again stops and links it here
 ;;   SPC n r W  publish the vault as a website (local HTML, an index, files)
 ;;   SPC n r Y  sync: commit the vault; pull and push if it has a remote
 ;;
@@ -401,7 +401,7 @@ the recording at point (where you started)."
       (setq +org-vault--recording
             (list (start-process "vault-recording" nil "pw-record" file) file (current-time)
                   (current-buffer) (point-marker)))
-      (message "● Recording into %s; SPC n r a again stops and links it here" (abbreviate-file-name file)))))
+      (message "● Recording into %s; SPC n r o again stops and links it here" (abbreviate-file-name file)))))
 
 (map! :leader
       :desc "Peek the linked note"  "n r p" #'+org-vault/peek
@@ -412,7 +412,8 @@ the recording at point (where you started)."
       :desc "Unique note (by time)" "n r u" #'+org-vault/unique-note
       :desc "Publish the vault (HTML)" "n r W" #'+org-vault/publish
       :desc "Sync the vault (git)"  "n r Y" #'+org-vault/sync
-      :desc "Record audio here"     "n r a" #'+org-vault/record)
+      ;; o, not a: SPC n r a is Doom's random note.
+      :desc "Record audio here"     "n r o" #'+org-vault/record)
 
 (provide '+org-vault)
 ;;; +org-vault.el ends here

@@ -548,6 +548,7 @@
 (load! "lisp/+org-roam")    ;; Org-roam: make notes of files, one menu (SPC n r m), a tour
 (load! "lisp/+org-graph")   ;; the vault as a graph, in Emacs (SPC n r g)
 (load! "lisp/+org-vault")   ;; peek, links panel, tags, properties, unique note, audio (SPC n r)
+(load! "lisp/+org-canvas")  ;; canvas: cards on a board, kept as an Org file (SPC n r C)
 (load! "lisp/+org-subtree-edit") ;; C-c ' on a heading: the subtree in its own buffer
 (load! "lisp/+systemd")     ;; systemd units, timers and the journal, proced-style (SPC o s, SPC o j)
 (load! "lisp/+attention")   ;; SPC h !: measure lag or slowness, a dedicated agent fixes it

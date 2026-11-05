@@ -3001,3 +3001,39 @@ right headings, two in one file included."
               (should-not (string-match-p "Alpha" (buffer-string))))))
       (dolist (b (list "*base*" "tasks.org")) (when (get-buffer b) (with-current-buffer b (set-buffer-modified-p nil)) (kill-buffer b)))
       (delete-directory dir t))))
+
+(ert-deftest org-canvas/cards-move-connect-delete-in-an-org-file ()
+  "A canvas is an Org file: cards are headings placed by X/Y, arrows are :TO:;
+moving, connecting and deleting write there; the board draws them."
+  (require 'org)
+  (load (expand-file-name "+org-graph" test-lisp-dir) nil t)
+  (load (expand-file-name "+org-canvas" test-lisp-dir) nil t)
+  (let* ((dir (file-name-as-directory (make-temp-file "vault" t)))
+         (+org-graph-directory dir)
+         (file (expand-file-name "canvas/plan.org" dir)))
+    (unwind-protect
+        (save-window-excursion
+          (+org/canvas "plan")
+          (with-current-buffer "*canvas: plan*"
+            (+org-canvas-new "First idea")
+            (let ((first +org-canvas--selected))
+              (+org-canvas-new "Second idea")
+              (should (= (length (+org-canvas-cards file)) 2))
+              (+org-canvas-right)
+              (should (= (plist-get (+org-canvas--selected-card) :x) (+ 40 +org-canvas-step)))
+              (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) "First idea")))
+                (+org-canvas-connect))
+              (should (equal (plist-get (+org-canvas--selected-card) :to) (list first)))
+              (let ((drawn (+org-canvas-svg (+org-canvas-cards file) nil '(0 . 0) 1.0 800 600)))
+                (should (eq (car (car drawn)) 'svg))
+                (should (= (length (cdr drawn)) 2)))
+              ;; Deleting the first removes the arrow to it.
+              (setq +org-canvas--selected first)
+              (cl-letf (((symbol-function 'y-or-n-p) (lambda (&rest _) t)))
+                (+org-canvas-delete))
+              (let ((cards (+org-canvas-cards file)))
+                (should (= (length cards) 1))
+                (should (null (plist-get (car cards) :to)))))))
+      (dolist (b (list "*canvas: plan*" "plan.org"))
+        (when (get-buffer b) (with-current-buffer b (set-buffer-modified-p nil)) (kill-buffer b)))
+      (delete-directory dir t))))

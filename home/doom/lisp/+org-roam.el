@@ -180,7 +180,10 @@ has none.  TARGET: a file or directory."
     ("P" "properties of the vault" +org-vault/properties)
     ("B" "a base: notes by properties" +org-vault/base)
     ("u" "a note named by the time" +org-vault/unique-note)
-    ("o" "record audio here" +org-vault/record)]
+    ("o" "record audio here" +org-vault/record)
+    ("C" "a canvas: cards on a board" +org/canvas)
+    ("W" "publish the vault (HTML)" +org-vault/publish)
+    ("Y" "sync the vault (git)" +org-vault/sync)]
    ["Graph (org-roam's)"
     ("G" "Graphviz image" org-roam-graph)
     ("S" "resync the database" org-roam-db-sync)]
@@ -261,7 +264,7 @@ what to try next.  Your vault isn't touched."
      ("on a link" "its note's opening in the echo area; SPC n r p shows it" +org-vault/peek))
     ("Every day"
      "A note per day for what doesn't belong anywhere yet."
-     ("SPC n r d" "today's note" org-roam-dailies-goto-today)
+     ("SPC n r d t" "today's note" org-roam-dailies-goto-today)
      ("SPC n r m j" "jot into today" org-roam-dailies-capture-today))
     ("Keep it tidy"
      "Turn unlinked mentions into links; tags and properties for what you look things up by."
@@ -293,12 +296,14 @@ command in it runs from here (RET or click)."
     (goto-char (point-min))
     (pop-to-buffer (current-buffer))))
 
+;; Key by key, not as a (:prefix ("n r" …)): Doom owns that prefix (its
+;; roam keys: f, i, a, d …); declaring it again here replaced them when
+;; this file was loaded anew.
 (map! :leader
-      (:prefix ("n r" . "roam")
-       :desc "The workflow, step by step" "w" #'+org-roam/guide
-       :desc "Org-roam menu"           "m" #'+org-roam-menu
-       :desc "Make notes of files"     "I" #'+org-roam/init
-       :desc "Org-roam by example"     "e" #'+org-roam/tour))
+      :desc "The workflow, step by step" "n r w" #'+org-roam/guide
+      :desc "Org-roam menu"           "n r m" #'+org-roam-menu
+      :desc "Make notes of files"     "n r I" #'+org-roam/init
+      :desc "Org-roam by example"     "n r e" #'+org-roam/tour)
 
 (provide '+org-roam)
 ;;; +org-roam.el ends here
