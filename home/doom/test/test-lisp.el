@@ -2899,3 +2899,34 @@ project groups and packages' templates stay; ours go to the inbox."
     (should (cl-every (lambda (tp) (or (not (nth 3 tp)) (equal (nth 3 tp) '(file +org-capture-inbox))
                                        (eq (car (nth 3 tp)) 'file+olp+datetree)))
                       +org-capture-templates))))
+
+(ert-deftest org-graph/reads-links-cuts-locally-lays-out ()
+  "The vault's notes and file:/id: links; the neighbourhood of a note; a
+layout inside the picture."
+  (load (expand-file-name "+org-graph" test-lisp-dir) nil t)
+  (let ((dir (file-name-as-directory (make-temp-file "vault" t))))
+    (unwind-protect
+        (progn
+          (make-directory (expand-file-name "roam" dir))
+          (write-region "#+title: Home\n[[file:a.org][A]] and [[file:roam/b.org]] and [[file:shot.png]]\n" nil (expand-file-name "home.org" dir))
+          (write-region "#+title: A\n[[file:roam/b.org][B]]\n" nil (expand-file-name "a.org" dir))
+          (write-region "#+title: B\nback to [[id:home-id][home]]\n" nil (expand-file-name "roam/b.org" dir))
+          (write-region "#+title: Alone\nno links\n" nil (expand-file-name "alone.org" dir))
+          (cl-letf (((symbol-function '+org-graph--ids)
+                     (lambda () (let ((h (make-hash-table :test #'equal)))
+                                  (puthash "home-id" (expand-file-name "home.org" dir) h) h))))
+            (let* ((g (+org-graph-read dir))
+                   (home (expand-file-name "home.org" dir)) (b (expand-file-name "roam/b.org" dir)))
+              (should (= (hash-table-count (car g)) 5))            ; 4 notes + the png
+              (should (equal (plist-get (gethash b (car g)) :group) "roam"))
+              (should (member (cons b home) (cdr g)))             ; the id: link
+              (let ((local (+org-graph-local g home 1)))
+                (should (= (hash-table-count (car local)) 3))     ; home, a, b; not alone, not the png
+                (should (= (hash-table-count (car (+org-graph-local g home 1 t))) 4)))
+              (let ((pos (+org-graph-layout g 400 300 40)))
+                (maphash (lambda (_ p) (should (and (<= 30 (car p) 370) (<= 30 (cdr p) 270)))) pos))
+              (let ((drawn (+org-graph-svg g (+org-graph-layout g 400 300 10) home)))
+                (should (eq (car (car drawn)) 'svg))
+                ;; One clickable area per node.
+                (should (= (length (cdr drawn)) 5))))))
+      (delete-directory dir t))))

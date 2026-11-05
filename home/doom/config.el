@@ -546,6 +546,7 @@
 (load! "lisp/+lua")         ;; Lua for hyprland.lua: Hyprland API in LuaLS, selene, stylua, eval in Hyprland
 (load! "lisp/+messages")    ;; *Messages* with times, colors, rendered markup, buttons
 (load! "lisp/+org-roam")    ;; Org-roam: make notes of files, one menu (SPC n r m), a tour
+(load! "lisp/+org-graph")   ;; the vault as a graph, in Emacs (SPC n r g)
 (load! "lisp/+org-subtree-edit") ;; C-c ' on a heading: the subtree in its own buffer
 (load! "lisp/+systemd")     ;; systemd units, timers and the journal, proced-style (SPC o s, SPC o j)
 (load! "lisp/+attention")   ;; SPC h !: measure lag or slowness, a dedicated agent fixes it
