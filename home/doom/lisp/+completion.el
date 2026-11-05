@@ -199,9 +199,18 @@ backticks on the line."
 ;; shade off the popup's own (#242730 on #2a2e38): barely visible.  Now the
 ;; theme's blue, 30% into the background, and bold; the text stays at WCAG AA
 ;; contrast (4.8:1 with doom-vibrant).
+;;
+;; The popup itself was #2a2e38, the theme's bg-alt: the very background
+;; solaire gives every buffer that isn't a file (capture, *scratch*,
+;; familiar-ask), so there the popup and its documentation window melted
+;; into the text.  They get a shade of their own, lighter than both editor
+;; backgrounds, and a blue-grey border.
 (custom-set-faces!
   `(corfu-current :background ,(doom-blend 'blue 'bg 0.3) :foreground ,(doom-color 'fg)
-                  :weight bold :extend t))
+                  :weight bold :extend t)
+  `(corfu-default :background ,(doom-lighten 'bg-alt 0.07) :foreground ,(doom-color 'fg))
+  `(corfu-border :background ,(doom-blend 'blue 'bg-alt 0.45))
+  `(corfu-popupinfo :inherit corfu-default))
 
 ;; SPC ': reopen the last minibuffer with what was in it.  `vertico-repeat'
 ;; did that for completion sessions only; M-ß's prompt (a plain

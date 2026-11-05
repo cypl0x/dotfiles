@@ -24,6 +24,7 @@
 (require 'familiar)
 
 (declare-function corfu--exhibit "ext:corfu" ())
+(declare-function corfu--goto "ext:corfu" (index))
 
 (defcustom familiar-complete-count 8
   "How many completions to ask for."
@@ -146,7 +147,10 @@ explanation as the text property `familiar-why'."
                     ;; command (a timer), so draw now.
                     (when (and (bound-and-true-p completion-in-region-mode)
                                (fboundp 'corfu--exhibit))
-                      (corfu--exhibit)))))))))))))
+                      (corfu--exhibit)
+                      ;; They're ranked: the best is selected, and its
+                      ;; reason shows in the documentation window at once.
+                      (when (fboundp 'corfu--goto) (corfu--goto 0) (corfu--exhibit))))))))))))))
 
 (provide 'familiar-complete)
 ;;; familiar-complete.el ends here
