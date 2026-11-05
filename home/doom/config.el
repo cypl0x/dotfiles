@@ -540,6 +540,7 @@
 (load! "lisp/+attention")   ;; SPC h !: measure lag or slowness, a dedicated agent fixes it
 (load! "lisp/+info")        ;; Info: readable, highlighted, remembers where you were; own manuals in C-h i
 (load! "lisp/+hyprland")    ;; Hyprland windows, binds, workspaces, monitors (SPC o h)
+(load! "lisp/+desktop")     ;; SPC o y: network, Bluetooth, audio, disks, NixOS generations, power
 (load! "lisp/+org-slash")    ;; /table5x2, /code, /todo ... in Org (Notion-like)
 (load! "lisp/+org-cheatsheet") ;; SPC m ?: Org by example, from the manual
 (load! "lisp/+org-ai-capture") ;; SPC m C: write headings, AI files them where they belong
