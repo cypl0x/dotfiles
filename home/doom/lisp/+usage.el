@@ -257,6 +257,8 @@ PRESSED is the key that ran it, when known."
                (seq-take rows (or n 80))
                "\n")))
 
+(declare-function +usage-flows-summary "+usage-flows" (&optional days))
+
 ;;;###autoload
 (defun +usage/suggest ()
   "Ask familiar for workflow suggestions from what you actually use."
@@ -268,7 +270,11 @@ PRESSED is the key that ran it, when known."
            "(name a free one in Doom/evil), long key sequences I repeat that have shorter ones, "
            "chains of commands that want one command, built-in or package features that would "
            "replace what I do by hand.  Lead with the five with the most effect.\n\n"
-           "#+begin_example\n" (+usage-summary) "\n#+end_example")
+           "#+begin_example\n" (+usage-summary) "\n#+end_example"
+           ;; The order too: chains repeated, undone, retried (lisp/+usage-flows.el).
+           (let ((flows (and (fboundp '+usage-flows-summary) (+usage-flows-summary))))
+             (if (string-empty-p (or flows "")) ""
+               (concat "\n\nAnd the order I work in:\n#+begin_example\n" flows "\n#+end_example"))))
    t))
 
 

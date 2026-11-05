@@ -2503,3 +2503,55 @@ in the background; nothing synchronous."
           (with-current-buffer buf (set-buffer-modified-p nil)) (kill-buffer buf)))
       (when (get-buffer "*Filed into the vault*") (kill-buffer "*Filed into the vault*"))
       (delete-directory org-directory t))))
+
+(ert-deftest usage-flows/record-split-chains-detours-retries-walks ()
+  "Events fold runs and note edits; flows split at pauses; chains, detours,
+retries and walks come out of them."
+  (load (expand-file-name "+usage-flows" test-lisp-dir) nil t)
+  (let ((+usage-flows--pending nil) (+usage-flows-directory (make-temp-file "flows" t)))
+    (unwind-protect
+        (progn
+          ;; Recording: three j presses fold into one, an edit is noticed.
+          (with-temp-buffer
+            (cl-letf (((symbol-function 'this-command-keys-vector) (lambda () [?j])))
+              (dotimes (_ 3)
+                (let ((real-this-command 'evil-next-line) (this-command 'evil-next-line))
+                  (+usage-flows--pre-h) (+usage-flows--post-h))))
+            (let ((real-this-command 'self-insert-command) (this-command 'self-insert-command))
+              (+usage-flows--pre-h) (insert "x") (+usage-flows--post-h)))
+          (should (equal (mapcar (lambda (e) (list (nth 2 e) (nth 3 e) (nth 7 e))) (reverse +usage-flows--pending))
+                         '((evil-next-line 3 nil) (self-insert-command 1 t))))
+          (+usage-flows-save)
+          (should (= (length (+usage-flows-events 1)) 2))
+          ;; Analysis on synthetic events: (START END CMD N KEYS MODE PROJECT EDITED).
+          (let* ((ev (lambda (time cmd &optional edited n) (list time time cmd (or n 1) nil 'org-mode nil edited)))
+                 (events
+                  (append
+                   ;; The same chain five times, 20 s apart (five flows).
+                   (cl-loop for k below 5 for t0 = (* k 20.0)
+                            append (list (funcall ev t0 'magit-status) (funcall ev (+ t0 1) 'magit-stage)
+                                         (funcall ev (+ t0 2) 'magit-commit-create)
+                                         (funcall ev (+ t0 3) 'with-editor-finish t)))
+                   ;; A detour: killed, then undone.
+                   (list (funcall ev 200.0 'kill-line t) (funcall ev 200.5 'evil-undo t))
+                   ;; A retry: find-file, cancelled, find-file again.
+                   (list (funcall ev 300.0 'find-file) (funcall ev 301.0 'keyboard-quit) (funcall ev 303.0 'find-file))
+                   ;; A walk: 20 moves, then an edit.
+                   (list (funcall ev 400.0 'evil-next-line nil 20) (funcall ev 401.0 'evil-delete t))))
+                 (flows (+usage-flows-split events)))
+            (should (= (length flows) 8))
+            (should (equal (car (car (+usage-flows-chains flows)))
+                           '(magit-status magit-stage magit-commit-create with-editor-finish)))
+            (should (= (nth 1 (car (+usage-flows-chains flows))) 5))
+            (should (equal (car (+usage-flows-detours events)) '(kill-line . 1)))
+            (should (equal (car (+usage-flows-retries events)) '(find-file . 1)))
+            (should (= (car (car (+usage-flows-walks flows))) 20))
+            (with-temp-buffer
+              (cl-letf (((symbol-function '+usage-flows-events) (lambda (&optional _) events)))
+                (+usage-flows-mode)
+                (+usage-flows--render)
+                (should (string-match-p "5×.*magit-status → magit-stage" (buffer-string)))
+                (should (string-match-p "Long walks before an edit" (buffer-string)))
+                (should (string-match-p "magit-status → magit-stage → magit-commit-create → with-editor-finish: 5 times"
+                                        (+usage-flows-summary)))))))
+      (delete-directory +usage-flows-directory t))))
