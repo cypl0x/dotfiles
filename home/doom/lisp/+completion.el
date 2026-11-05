@@ -22,6 +22,7 @@
 (declare-function cape-elisp-block "ext:cape" (&optional interactive))
 (declare-function cape-capf-super "ext:cape" (&rest capfs))
 (declare-function org-in-src-block-p "org" (&optional inside element))
+(declare-function +org-slash-empty-capf "+org-slash" ())
 (declare-function org-at-heading-p "org" (&optional invisible-not-ok))
 (declare-function org-roam-complete-link-at-point "ext:org-roam-mode" ())
 (declare-function pcomplete-completions-at-point "pcomplete" ())
@@ -222,6 +223,10 @@ backticks on the line."
   "What point is in, for choosing completion sources: a symbol."
   (cond ((derived-mode-p 'org-mode)
          (cond ((looking-back "\\[\\[[^]\n]*" (line-beginning-position)) 'org-link)
+               ;; Nothing typed: what fits here (lisp/+org-slash.el).
+               ((and (or (bolp) (memq (char-before) '(?\s ?\t)))
+                     (not (org-in-src-block-p t)))
+                'org-empty)
                ((looking-back "^[ \t]*#\\+[[:alnum:]_]*" (line-beginning-position)) 'org-keyword)
                ((and (org-at-heading-p)
                      (looking-back ":[[:alnum:]_@#%:]*" (line-beginning-position)))
@@ -244,6 +249,7 @@ after the path completion, which recognizes a path wherever it is."
     ('org-link (delq nil (list (and (fboundp 'org-roam-complete-link-at-point)
                                     #'org-roam-complete-link-at-point)
                                #'cape-file)))
+    ('org-empty (list #'+org-slash-empty-capf))
     ((or 'org-keyword 'org-tag) (list #'pcomplete-completions-at-point))
     ('org-src (list #'cape-elisp-block #'cape-dabbrev))
     ('inline-code (list #'+completion-code-capf))

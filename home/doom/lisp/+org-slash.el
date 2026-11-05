@@ -116,6 +116,49 @@ pops up from /t on (two characters)."
                 (funcall fn)))
             :exclusive 'no))))
 
+;;;; Nothing typed yet: C-SPC offers what can go here
+
+(declare-function org-get-buffer-tags "org" ())
+(defvar org-todo-keywords-1)
+
+(defun +org-slash-empty-capf ()
+  "With nothing typed before point: what fits here, for C-SPC.
+Right after a heading's stars, the TODO keywords and priorities; later in
+a heading, the buffer's tags; elsewhere in prose, the /commands (without
+the /: picking one inserts it)."
+  (when (and (derived-mode-p 'org-mode)
+             (or (bolp) (memq (char-before) '(?\s ?\t)))
+             (+org-slash--here-p))
+    (let ((heading (save-excursion (beginning-of-line) (looking-at "\\(\\*+\\) "))))
+      (cond
+       ;; "** |": a keyword or a priority.
+       ((and heading (= (point) (match-end 0)))
+        (list (point) (point)
+              (append (mapcar (lambda (k) (concat k " ")) org-todo-keywords-1)
+                      '("[#A] " "[#B] " "[#C] "))
+              :annotation-function (lambda (c) (if (string-prefix-p "[#" c) "  priority" "  keyword"))
+              :exclusive 'no))
+       ;; "** TODO Title |": a tag.
+       (heading
+        (list (point) (point)
+              (mapcar (lambda (tag) (concat ":" (car tag) ":")) (org-get-buffer-tags))
+              :annotation-function (lambda (_) "  tag")
+              :exclusive 'no))
+       (t
+        (let ((start (point)))
+          (list start start
+                (mapcar #'car +org-slash-commands)
+                :annotation-function (lambda (c) (concat "  " (nth 1 (assoc c +org-slash-commands))))
+                :company-kind (lambda (_) 'snippet)
+                :exit-function
+                (lambda (cand status)
+                  (when-let* (((memq status '(finished exact)))
+                              (fn (+org-slash--command cand)))
+                    ;; The name goes; what it names comes in its place.
+                    (delete-region start (point))
+                    (funcall fn)))
+                :exclusive 'no)))))))
+
 (add-hook 'org-mode-hook
           (defun +org-slash-h ()
             (add-hook 'completion-at-point-functions #'+org-slash-capf 60 t)))

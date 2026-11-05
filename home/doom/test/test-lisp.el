@@ -2683,3 +2683,27 @@ forgets the frames' cursor color first."
     (+themes-only-one-a 'some-theme))
   (should (eq (face-attribute 'cursor :background (selected-frame)) 'unspecified))
   (should (memq #'+themes-cursor-h enable-theme-functions)))
+
+(ert-deftest org-slash/c-spc-with-nothing-typed ()
+  "With nothing typed C-SPC offers what fits: keywords after a heading's
+stars, tags later in a heading, the /commands (without /) in prose."
+  (require 'org)
+  (load (expand-file-name "+org-slash" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (org-mode)
+    (insert "* Groceries :shop:\n* ")
+    (pcase-let ((`(,_ ,_ ,cands . ,_) (+org-slash-empty-capf)))
+      (should (member "TODO " cands)) (should (member "[#A] " cands)))
+    (insert "Next thing ")
+    (pcase-let ((`(,_ ,_ ,cands . ,_) (+org-slash-empty-capf)))
+      (should (member ":shop:" cands)))
+    (insert "\n\nSome text ")
+    (pcase-let ((`(,beg ,_ ,cands . ,props) (+org-slash-empty-capf)))
+      (should (member "check" cands))
+      ;; Picking one inserts what it names, not the name.
+      (goto-char beg) (insert "check")
+      (funcall (plist-get props :exit-function) "check" 'finished)
+      (should-not (string-match-p "Some text check" (buffer-string))))
+    ;; Something typed: not this capf's turn.
+    (insert "wor")
+    (should-not (+org-slash-empty-capf))))
