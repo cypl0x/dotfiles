@@ -1959,3 +1959,64 @@ and a temp exec-path where bin/tar links to store/tar."
     (should-not (+suggest-prose-mid-line-p))      ; end of line
     (insert ".)") (backward-char 2)
     (should-not (+suggest-prose-mid-line-p))))    ; only closing punctuation
+
+(defmacro test-atuin--with-fake (calls &rest body)
+  "BODY with `call-process'/`make-process' for atuin faked; CALLS gets each argv."
+  (declare (indent 1))
+  `(cl-letf* ((real-call (symbol-function 'call-process))
+              ((symbol-function 'executable-find) (lambda (p &rest _) (and (equal p "atuin") "/bin/atuin")))
+              ((symbol-function 'call-process)
+               (lambda (prog &optional _in dest _disp &rest args)
+                 (if (not (equal prog "atuin")) (apply real-call prog _in dest _disp args)
+                   (push args ,calls)
+                   (when dest
+                     (with-current-buffer (if (bufferp dest) dest (current-buffer))
+                       (insert (pcase (car args)
+                                 ("search" (concat "2026-11-05 06:00:00\t0\t2s\t/tmp\tthinkpad\t1h\tmake test\0"
+                                                   "2026-11-05 07:00:00\t2\t140ms\t/srv\tinari\t5m\tnrs\n--flag\0"))
+                                 ("history" "01ID\n")
+                                 ("uuid" "SESSION\n")
+                                 (_ "")))))
+                   0)))
+              ((symbol-function 'make-process) (lambda (&rest plist) (push (plist-get plist :command) ,calls) nil)))
+     ,@body))
+
+(ert-deftest atuin/entries-newest-first-with-everything ()
+  (load (expand-file-name "+atuin" test-lisp-dir) nil t)
+  (let (calls)
+    (test-atuin--with-fake calls
+      (let ((entries (+atuin--entries)))
+        (should (equal (mapcar (lambda (e) (plist-get e :command)) entries) '("nrs\n--flag" "make test")))
+        (should (equal (plist-get (car entries) :exit) 2))
+        (should (equal (plist-get (car entries) :host) "inari"))
+        (let ((cand (+atuin--candidate (car entries))))
+          (should (equal (substring-no-properties cand) "nrs ⏎ --flag"))
+          (should (string-match-p "✘2.*140ms.*5m.*/srv.*@inari"
+                                  (substring-no-properties (+atuin--annotate cand)))))))))
+
+(ert-deftest atuin/emacs-runs-are-recorded ()
+  "compile and M-! go into Atuin: start with the command, end with exit and duration."
+  (load (expand-file-name "+atuin" test-lisp-dir) nil t)
+  (let (calls (+atuin--session nil) (+atuin-record t) (default-directory "/tmp/"))
+    (test-atuin--with-fake calls
+      (let ((started (+atuin--start "make test")))
+        (should (equal (car started) "01ID"))
+        (+atuin--end started 3))
+      (should (member '("history" "start" "--author" "emacs" "--" "make test") calls))
+      (should (cl-find-if (lambda (c) (and (equal (seq-take c 5) '("atuin" "history" "end" "--exit" "3"))
+                                           (equal (car (last c)) "01ID")))
+                          calls))
+      ;; Only what you typed: an internal shell-command isn't recorded.
+      (setq calls nil)
+      (let ((this-command 'some-command))
+        (+atuin-shell-command-a #'ignore "true"))
+      (should-not calls)
+      (let ((this-command 'shell-command))
+        (+atuin-shell-command-a (lambda (&rest _) 0) "true"))
+      (should (member '("history" "start" "--author" "emacs" "--" "true") calls)))))
+
+(ert-deftest atuin/delete-refuses-when-it-would-take-others ()
+  (load (expand-file-name "+atuin" test-lisp-dir) nil t)
+  (cl-letf (((symbol-function '+atuin--matches) (lambda (_) '("nrs" "nrs --fast")))
+            ((symbol-function 'yes-or-no-p) (lambda (&rest _) (error "asked"))))
+    (should-error (+atuin-embark-delete (propertize "nrs" '+atuin '(:command "nrs"))) :type 'user-error)))
