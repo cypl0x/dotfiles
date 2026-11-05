@@ -960,6 +960,39 @@ and a temp exec-path where bin/tar links to store/tar."
           (with-current-buffer buf (set-buffer-modified-p nil)) (kill-buffer buf)))
       (delete-directory org-directory t))))
 
+(ert-deftest attention/lag-finds-the-slow-hook-and-cleans-up ()
+  (load (expand-file-name "+attention" test-lisp-dir) nil t)
+  (let* ((+attention-dir (make-temp-file "attention" t))
+         (file (expand-file-name "lag.txt" +attention-dir)))
+    (defun attention-test-slow-h () (sleep-for 0.02))
+    (defun attention-test-quick-h () nil)
+    (add-hook 'post-command-hook #'attention-test-slow-h)
+    (add-hook 'post-command-hook #'attention-test-quick-h)
+    (unwind-protect
+        (progn
+          (should (string-match-p "measuring until" (+attention-measure-lag 0.5 file)))
+          (dotimes (_ 5) (run-hooks 'post-command-hook))
+          (sit-for 0.8)
+          (let ((report (with-temp-buffer (insert-file-contents file) (buffer-string))))
+            (should (string-match-p "^  attention-test-slow-h +[0-9.]+" report))
+            ;; Slowest first.
+            (should (< (string-search "attention-test-slow-h" report)
+                       (or (string-search "attention-test-quick-h" report) most-positive-fixnum))))
+          ;; No timing advice left behind.
+          (should-not (advice-member-p '+attention 'attention-test-slow-h)))
+      (remove-hook 'post-command-hook #'attention-test-slow-h)
+      (remove-hook 'post-command-hook #'attention-test-quick-h)
+      (delete-directory +attention-dir t))))
+
+(ert-deftest attention/profile-text-ranks-functions ()
+  (load (expand-file-name "+attention" test-lisp-dir) nil t)
+  (let ((log (make-hash-table :test #'equal)))
+    (puthash (vector 'leaf-a 'caller 'top) 30 log)
+    (puthash (vector 'leaf-b 'caller 'top) 10 log)
+    (let ((text (+attention--profile-text log)))
+      (should (string-match-p "100\\.0%  caller" text))
+      (should (string-match-p " 75\\.0%  leaf-a" text)))))
+
 (ert-deftest format/c-ret-heading-gets-blank-lines ()
   ;; Doom's heading insertion, as +org--insert-item does it (stars by hand).
   (cl-letf (((symbol-function 'doom-insert-heading-stub)
