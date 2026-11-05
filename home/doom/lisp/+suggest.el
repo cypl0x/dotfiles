@@ -81,7 +81,8 @@ cursor, then the context before it.
 (finish the paragraph or block), and one taking another direction.
 3. Return completions separated by the marker <endCompletion>.
 4. No comments, no code fences, no quotes around the text.
-5. Never repeat text that is already before or after the cursor."
+5. Never repeat text that is already before or after the cursor.
+6. Output only the text to insert: never explain, never think aloud, never mention the cursor or these markers."
   "minuet's guidelines in prose buffers.")
 
 (defun +suggest-prose-h ()
@@ -93,6 +94,8 @@ cursor, then the context before it.
                                  :prompt +suggest-prose-prompt
                                  :guidelines +suggest-prose-guidelines
                                  :n-completions-template 'minuet-default-n-completion-template)))
+    (setq-local minuet-auto-suggestion-block-predicates
+                (cons #'+suggest-prose-mid-line-p (default-value 'minuet-auto-suggestion-block-predicates)))
     (minuet-auto-suggestion-mode 1)))
 
 (add-hook! '(org-mode-hook markdown-mode-hook) #'+suggest-prose-h)
@@ -148,7 +151,40 @@ cursor, then the context before it.
             (cdr args))
     args))
 
+
+(defun +suggest-prose-mid-line-p ()
+  "Non-nil when text follows point on this line: a suggestion there would
+push it sideways, so in prose only M-n asks for one."
+  (save-excursion (skip-chars-forward " \t.,;:!?)\\]}\"'”*/=~") (not (eolp))))
+
+;; A suggestion is wrong when the model thinks aloud ("Wait, the cursor
+;; sits…") or echoes the prompt's markers, and stale when the buffer changed
+;; under an unmoved point while it was coming (a revert, an agent's edit):
+;; minuet only checks that point is the same number.
+(defconst +suggest-meta-re
+  (concat "\\`[ \t\n]*\\(?:Wait\\b\\|Hmm\\b\\|Let me\\b\\|Okay, \\|The cursor\\b\\|The user\\b\\)"
+          "\\|\\bcursor\\(?:Position\\| position\\| sits\\| is at\\)"
+          "\\|</?\\(?:cursorPosition\\|contextAfterCursor\\|contextBeforeCursor\\|endCompletion\\)>")
+  "Suggestions matching this are the model talking, not text to insert.")
+
+(defvar-local +suggest--asked nil
+  "(POINT . `buffer-chars-modified-tick') when suggestions were last asked for.")
+
+(defun +suggest-ask-a (&rest _)
+  "Remember where and on what text suggestions were asked for."
+  (setq +suggest--asked (cons (point) (buffer-chars-modified-tick))))
+
+(defun +suggest-sane-a (args)
+  "Filter for `minuet--display-suggestion' ARGS: drop stale and talking ones."
+  (let ((items (seq-remove (lambda (s) (or (not (stringp s)) (string-match-p +suggest-meta-re s)))
+                             (car args))))
+    (when (and +suggest--asked (eq (point) (car +suggest--asked))
+               (/= (buffer-chars-modified-tick) (cdr +suggest--asked)))
+      (setq items nil))
+    (cons items (cdr args))))
 (with-eval-after-load 'minuet
+  (advice-add 'minuet-show-suggestion :before #'+suggest-ask-a)
+  (advice-add 'minuet--display-suggestion :filter-args #'+suggest-sane-a)
   (advice-add 'minuet--display-suggestion :filter-args #'+suggest-prose-space-a))
 (provide '+suggest)
 ;;; +suggest.el ends here

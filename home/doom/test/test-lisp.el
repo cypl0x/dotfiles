@@ -1934,3 +1934,28 @@ and a temp exec-path where bin/tar links to store/tar."
     (should (eq (+merge-edit-file file (lambda () (goto-char (point-max)) (insert "agent2\n"))) 'in-buffer))
     (should (equal (buffer-string) "agent\na\nb\nuser\nagent2\n"))
     (should (equal (+merge--disk-text file) "agent\na\nb\n"))))
+
+(ert-deftest suggest/drops-talking-and-stale-suggestions ()
+  "Thinking aloud and marker echoes never show; nor replies to changed text."
+  (load (expand-file-name "+suggest" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (insert "Some prose here")
+    (+suggest-ask-a)
+    (should (equal (car (+suggest-sane-a
+                         (list (list " and more." "Wait, the cursor sits right after \"here\"."
+                                     "text <endCompletion>" "so the cursorPosition is"))))
+                   '(" and more.")))
+    ;; The buffer changed while point stayed (a revert, an agent's edit).
+    (save-excursion (goto-char (point-min)) (insert "X") (delete-char -1))
+    (should-not (car (+suggest-sane-a (list (list " and more.")))))))
+
+(ert-deftest suggest/no-auto-suggestion-mid-line-in-prose ()
+  (load (expand-file-name "+suggest" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (insert "- [ ] If possible\n- [ ] If not")
+    (goto-char (point-min)) (forward-line 1)
+    (should (+suggest-prose-mid-line-p))          ; column 0 before text
+    (goto-char (point-max))
+    (should-not (+suggest-prose-mid-line-p))      ; end of line
+    (insert ".)") (backward-char 2)
+    (should-not (+suggest-prose-mid-line-p))))    ; only closing punctuation
