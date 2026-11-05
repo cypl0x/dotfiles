@@ -248,14 +248,33 @@ evaluations small and their output short.  Be brief in your reports: \
 cause, fix, numbers."
   "The brief of the attention agent: complaint and data file.")
 
+(defvar +attention--agent nil "The last attention agent's buffer.")
+(defvar shell-maker--busy)
+(declare-function agent-shell-project-buffers "ext:agent-shell" (&optional cwd))
+
+(defun +attention--idle-p (buf)
+  (and (buffer-live-p buf) (not (buffer-local-value 'shell-maker--busy buf))))
+
+(defun +attention--agent-for-job ()
+  "An agent to brief: the last attention agent if idle; else, asked, an
+idle agent in ~/dotfiles; else nil (start a dedicated one)."
+  (or (and (+attention--idle-p +attention--agent) +attention--agent)
+      (when-let* ((idle (seq-find #'+attention--idle-p
+                                  (ignore-errors (agent-shell-project-buffers (expand-file-name "~/dotfiles/"))))))
+        (and (y-or-n-p (format "Give this to the running agent %s? (n: a dedicated one) " (buffer-name idle)))
+             idle))))
+
 (defun +attention--hand-off (complaint file)
-  "Start a dedicated agent session for COMPLAINT with the measurement FILE."
+  "Brief an agent on COMPLAINT with the measurement FILE: a running idle
+one if there is (see `+attention--agent-for-job'), else a dedicated one."
   (if (not (and (require 'agent-shell nil t) (require 'agent-shell-anthropic nil t)))
       (progn (find-file-other-window file)
              (message "No agent-shell here: the measurement is open; %s" file))
     (let* ((default-directory (expand-file-name "~/dotfiles/"))
-           (buf (agent-shell--start :config (agent-shell-anthropic-make-claude-code-config)
-                                    :no-focus t :new-session t :session-strategy 'new)))
+           (buf (or (+attention--agent-for-job)
+                    (agent-shell--start :config (agent-shell-anthropic-make-claude-code-config)
+                                        :no-focus t :new-session t :session-strategy 'new))))
+      (setq +attention--agent buf)
       (agent-shell-insert :text (format +attention-brief complaint file)
                           :submit t :no-focus t :shell-buffer buf)
       (display-buffer buf)
@@ -277,6 +296,34 @@ cause, fix, numbers."
            (+attention-measure-slow +attention-seconds nil
                                     (lambda (file) (+attention--hand-off "Emacs is slow" file)))))
 
+
+(defvar +perf-freeze-dir)
+(declare-function profiler-read-profile "profiler" (filename))
+(declare-function profiler-profile-log "profiler" (profile))
+
+(defun +attention-profile-file-text (prof)
+  "The profile PROF (a file `profiler-write-profile' wrote) as text."
+  (require 'profiler)
+  (+attention--profile-text (profiler-profile-log (profiler-read-profile prof))))
+
+;;;###autoload
+(defun +attention/last-freeze ()
+  "The last freeze the recorder caught: its report and profile to an agent."
+  (interactive)
+  (let* ((txts (and (boundp '+perf-freeze-dir)
+                    (directory-files +perf-freeze-dir t "\\`freeze-.*\\.txt\\'")))
+         (txt (or (car (last txts)) (user-error "No freeze recorded yet")))
+         (prof (concat (file-name-sans-extension txt) ".prof"))
+         (file (+attention--file "freeze")))
+    (with-temp-file file
+      (insert-file-contents txt)
+      (goto-char (point-max))
+      (when (file-exists-p prof)
+        (insert "\n\nCPU profile during the freeze (time in a subprocess or a"
+                " blocking call doesn't show as CPU; the live processes above do):\n\n"
+                (+attention-profile-file-text prof))))
+    (+attention--hand-off (format "Emacs froze (%s)" (with-temp-buffer (insert-file-contents txt) (buffer-substring 1 (line-end-position))))
+                          file)))
 ;;;###autoload
 (defun +attention/snapshot ()
   "Emacs' state, in a buffer."
@@ -287,7 +334,8 @@ cause, fix, numbers."
   "Something is wrong right now: measure it, and an agent fixes it."
   [["Measure, then an agent fixes it"
     ("l" "typing lags (30 s of typing)" +attention/lag)
-    ("s" "Emacs is slow (30 s profile)" +attention/slow)]
+    ("s" "Emacs is slow (30 s profile)" +attention/slow)
+    ("f" "the last freeze (recorded)" +attention/last-freeze)]
    ["Look"
     ("a" "Emacs' state now" +attention/snapshot)]])
 

@@ -2244,3 +2244,43 @@ in the background; nothing synchronous."
       (should (equal (ago (+ (* 3 86400) (* 4 3600))) "3d 4h ago"))
       (should (equal (ago (* 400 86400)) "1y 1mo ago"))
       (should (equal (ago -300) "in 5min")))))
+
+(ert-deftest attention/reuses-an-idle-agent-or-asks ()
+  (load (expand-file-name "+attention" test-lisp-dir) nil t)
+  (let ((a (generate-new-buffer "agent a")) (b (generate-new-buffer "agent b")))
+    (unwind-protect
+        (progn
+          (with-current-buffer a (setq-local shell-maker--busy nil))
+          (with-current-buffer b (setq-local shell-maker--busy nil))
+          ;; The last attention agent, idle: used without asking.
+          (let ((+attention--agent a))
+            (cl-letf (((symbol-function 'y-or-n-p) (lambda (&rest _) (error "asked"))))
+              (should (eq (+attention--agent-for-job) a))))
+          ;; Busy: another idle agent in ~/dotfiles, only if you say so.
+          (with-current-buffer a (setq-local shell-maker--busy t))
+          (let ((+attention--agent a))
+            (cl-letf (((symbol-function 'agent-shell-project-buffers) (lambda (&rest _) (list a b)))
+                      ((symbol-function 'y-or-n-p) (lambda (&rest _) t)))
+              (should (eq (+attention--agent-for-job) b)))
+            (cl-letf (((symbol-function 'agent-shell-project-buffers) (lambda (&rest _) (list a b)))
+                      ((symbol-function 'y-or-n-p) (lambda (&rest _) nil)))
+              (should-not (+attention--agent-for-job)))))
+      (kill-buffer a) (kill-buffer b))))
+
+(ert-deftest attention/last-freeze-goes-to-the-agent-with-its-profile ()
+  (require 'profiler)
+  (load (expand-file-name "+attention" test-lisp-dir) nil t)
+  (let* ((+perf-freeze-dir (make-temp-file "freezes" t))
+         (+attention-dir (make-temp-file "attention" t))
+         (txt (expand-file-name "freeze-20261105-085231.txt" +perf-freeze-dir))
+         handed)
+    (with-temp-file txt (insert "Frozen for 85 s, recovered 2026-11-05 08:52:31\n\nLive processes:\n  gh api …\n"))
+    (with-temp-file (concat (file-name-sans-extension txt) ".prof") (insert "profile"))
+    (cl-letf (((symbol-function '+attention-profile-file-text) (lambda (_) "  41.8%  redisplay_internal\n"))
+              ((symbol-function '+attention--hand-off) (lambda (complaint file) (setq handed (list complaint file)))))
+      (+attention/last-freeze))
+    (should (string-match-p "Frozen for 85 s" (car handed)))
+    (with-temp-buffer
+      (insert-file-contents (cadr handed))
+      (should (search-forward "Live processes" nil t))
+      (should (search-forward "CPU profile during the freeze" nil t)))))
