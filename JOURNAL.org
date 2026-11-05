@@ -39,6 +39,27 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 13:43] — Your new items: files, themes, suggestions, flows
+- ✔ *SPC f f* wasn't cached; new files were just sorted out of sight. Now
+  folders first, then newest first, and the folder updates while the
+  prompt is open (=C-c C-r= refreshes it).
+- ✔ *Org file links*: =[[file:= and =file:= complete paths, newest first;
+  after =[[= the link types complete.
+- ✔ *dired / dirvish*: folders first, newest first. =ls= does the sorting,
+  so nothing is re-sorted after opening.
+- ✔ *Themes*: =load-theme= stacked themes, which left the echo area black.
+  Now loading a theme replaces the others. modus-operandi is the default
+  for now.
+- ✔ *doom-modus-vibrant-light*: the mode line is readable, TODO is red and
+  DONE green, and each syntax role has its own colour family. Your look
+  with =SPC h t= is still pending.
+- ✔ *Inline suggestions* weren't off, just too slow. They now arrive in
+  about 1.8 s; =M-x +suggest/stats= shows how they fare.
+- ✔ *SPC z*: one menu for all of familiar and its settings.
+- ✔ *+usage flows*: commands are now recorded in order, so you can see the
+  chains you repeat (=M-x +usage/flows=).
+- ✔ familiar's CI job: checkdoc's verb check passes too.
+
 ** [2026-11-05 Do 13:02] — familiar grows up: a package, a module, sampling, analytics
 - ✔ *MCP sampling*: when an MCP server asks for a completion, familiar
   answers. It asks you first, stays within the budget, and records it in
