@@ -114,5 +114,89 @@ minor modes."
 
 (add-hook 'org-mode-hook #'+org-links-mode)
 
+;;;; Completing links as you type them
+;;
+;; In [[file:… and a bare file:… (and the other link types that take a
+;; path), the path completes from the disk, relative to the Org file, a
+;; directory at a time: folders first, then newest first, so the screenshot
+;; just taken is the first candidate; the directory is read again as you
+;; type, so new files are there at once.  After [[ the link types complete.
+
+(declare-function org-link-types "ol" ())
+
+(defconst +org-links-path-types
+  '("file" "file+sys" "file+emacs" "docview" "attachment" "pdf" "pdfview")
+  "Link types whose target is a path.")
+
+(defun +org-links--newest-first (base input)
+  "A display sort for candidates under INPUT's directory (relative to BASE)."
+  (let ((dir (expand-file-name (or (file-name-directory input) "") base)))
+    (lambda (files)
+      (if (or (file-remote-p dir) (> (length files) 2000))
+          files
+        (let ((time (lambda (f) (float-time (or (file-attribute-modification-time
+                                                 (file-attributes (expand-file-name f dir)))
+                                                0)))))
+          (sort (copy-sequence files)
+                (lambda (a b)
+                  (let ((da (string-suffix-p "/" a)) (db (string-suffix-p "/" b)))
+                    (cond ((equal a "../") nil) ((equal b "../") t)   ; up: last
+                          ((and da (not db)) t) ((and db (not da)) nil)
+                          (t (> (funcall time a) (funcall time b))))))))))))
+
+(defun +org-links-capf ()
+  "Complete Org link types after [[, and paths in file-like links."
+  (let ((bol (line-beginning-position)))
+    (save-excursion
+      (cond
+       ;; [[fi| → link types
+       ((looking-back "\\[\\[\\([[:alpha:]+-]*\\)" bol)
+        (let ((beg (match-beginning 1)))
+          (list beg (point)
+                (mapcar (lambda (ty) (concat ty ":")) (delete-dups (cons "file" (org-link-types))))
+                :exclusive 'no)))
+       ;; [[file:some/pa| or file:some/pa| → paths
+       ((looking-back (concat "\\(?:\\[\\[\\|[[:space:](]\\|^\\)"
+                              (regexp-opt +org-links-path-types) ":\\([^]\[\n \t]*\\)")
+                      bol)
+        (let* ((beg (match-beginning 1))
+               (base (if buffer-file-name (file-name-directory buffer-file-name) default-directory)))
+          (unless (or (file-remote-p base) (find-file-name-handler base 'file-attributes))
+            (list beg (point)
+                  (lambda (str pred action)
+                    (if (eq action 'metadata)
+                        `(metadata (category . file)
+                                   (display-sort-function . ,(+org-links--newest-first base str)))
+                      (let ((default-directory base)
+                            ;; Not Emacs's lock and autosave files (.#x, #x#).
+                            (pred (lambda (f)
+                                    (and (not (string-match-p "\\`\\.?#" (file-name-nondirectory
+                                                                     (directory-file-name f))))
+                                         (not (member f '("./" ".")))
+                                         (or (null pred) (funcall pred f))))))
+                        (completion-file-name-table str pred action))))
+                  :exclusive 'no
+                  :exit-function (lambda (str _status)
+                                   ;; A folder: go on into it.
+                                   (when (string-suffix-p "/" str)
+                                     (run-at-time 0 nil #'completion-at-point)))
+                  :annotation-function
+                  (lambda (cand)
+                    (unless (string-suffix-p "/" cand)
+                      (when-let* ((attrs (file-attributes
+                                          (expand-file-name
+                                           cand (expand-file-name
+                                                 (or (file-name-directory
+                                                      (buffer-substring-no-properties beg (point)))
+                                                     "")
+                                                 base)))))
+                        (propertize (format-time-string "  %Y-%m-%d %H:%M"
+                                                        (file-attribute-modification-time attrs))
+                                    'face 'completions-annotations))))))))))))
+
+(add-hook 'org-mode-hook
+          (defun +org-links-capf-h ()
+            (add-hook 'completion-at-point-functions #'+org-links-capf -50 t)))
+
 (provide '+org-links)
 ;;; +org-links.el ends here

@@ -2635,3 +2635,35 @@ handler leaves -t out (a time per entry would be a call)."
           (should (equal (face-attribute 'claude-test-face :background nil t) "#ffffff")))
       (mapc #'disable-theme (seq-filter (lambda (th) (memq th '(claude-a claude-b))) custom-enabled-themes))
       (delete-directory dir t))))
+
+(ert-deftest org-links/complete-types-and-paths-newest-first ()
+  "After [[ link types complete; in [[file: and bare file: links paths do,
+relative to the Org file, folders first then newest first."
+  (require 'org)
+  (load (expand-file-name "+org-links" test-lisp-dir) nil t)
+  (let* ((dir (file-name-as-directory (make-temp-file "orglinks" t)))
+         (org (expand-file-name "notes.org" dir)))
+    (unwind-protect
+        (progn
+          (dolist (f '(("old.png" . 1000) ("new.png" . 3000) ("shots/a.png" . 2000) ("shots/b.png" . 4000)))
+            (make-directory (file-name-directory (expand-file-name (car f) dir)) t)
+            (write-region "" nil (expand-file-name (car f) dir))
+            (set-file-times (expand-file-name (car f) dir) (seconds-to-time (cdr f))))
+          (with-current-buffer (find-file-noselect org)
+            (unwind-protect
+                (cl-flet ((cands (text)
+                            (erase-buffer) (insert text)
+                            (pcase-let* ((`(,beg ,end ,table . ,_) (+org-links-capf))
+                                         (str (buffer-substring-no-properties beg end))
+                                         (all (all-completions str table))
+                                         (sort (alist-get 'display-sort-function
+                                                          (and (functionp table)
+                                                               (cdr (funcall table str nil 'metadata))))))
+                              (if sort (funcall sort all) all))))
+                  (should (equal (seq-remove (lambda (c) (member c '("./" "../"))) (cands "See [[file:"))
+                                 '("shots/" "new.png" "old.png")))
+                  (should (equal (cands "Bare file:shots/") '("b.png" "a.png" "../")))
+                  (should (member "file:" (cands "[[fi"))))
+              (set-buffer-modified-p nil)
+              (kill-buffer))))
+      (delete-directory dir t))))
