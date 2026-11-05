@@ -39,6 +39,12 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 07:25] — SPC s h driven with keys
+- ✔ In a hidden CLAUDE-LAB frame (you were editing mess.org, so no OS-level
+  keys, no focus change): =M-SPC s h nrs RET= → "nrs" on a throwaway eshell
+  prompt, unrun; =M-SPC s h f SPC RET= → narrowed to failures, picked an
+  exit-1 command. No minibuffer left open; lab buffer and frame removed.
+
 ** [2026-11-05 Do 07:24] — familiar, measured: SPC o $
 - ✔ *Analytics* from the ledger (349 priced requests): $1.10 spent, 41% of
   input from the cache, $8.90 left — at last week's $0.178/day that lasts
