@@ -473,6 +473,19 @@ same file is one buffer)."
 (+gh-fs--register)
 (with-eval-after-load 'tramp (+gh-fs--register))
 
+;; Offered with TRAMP's methods: "/gi" completes to "/github:" as "/ss" to
+;; "/ssh:".  Only the completion list; TRAMP itself never sees these names.
+(declare-function tramp-completion-make-tramp-file-name "tramp" (method user host localname))
+(defun +gh-fs-tramp-methods-a (fn partial-method &optional multi-hop)
+  "Around `tramp-get-completion-methods' (FN): github among the methods
+completing PARTIAL-METHOD (not MULTI-HOP)."
+  (let ((methods (funcall fn partial-method multi-hop)))
+    (if (and (not multi-hop) (string-prefix-p (or partial-method "") "github"))
+        (cons (tramp-completion-make-tramp-file-name "github" nil nil nil) methods)
+      methods)))
+(with-eval-after-load 'tramp
+  (advice-add 'tramp-get-completion-methods :around #'+gh-fs-tramp-methods-a))
+
 ;;;; Projects: SPC p f lists the whole repository (one call)
 
 (defun +gh-fs-project (dir)

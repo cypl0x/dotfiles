@@ -2212,3 +2212,11 @@ in the background; nothing synchronous."
       (funcall (cdar pending) '((:name "awesome") (:name "ky")))
       (should (equal (+gh-fs--children "/github:sindresorhus/") '("awesome" "ky")))
       (should (equal (file-name-all-completions "aw" "/github:sindresorhus/") '("awesome/"))))))
+
+(ert-deftest gh-fs/github-completes-like-a-tramp-method ()
+  "\"/gi\" offers \"/github:\" next to TRAMP's methods."
+  (require 'tramp)
+  (load (expand-file-name "+gh-fs" test-lisp-dir) nil t)
+  (should (member "/github:" (tramp-get-completion-methods "gi")))
+  (should-not (member "/github:" (tramp-get-completion-methods "ss")))
+  (should (member "/ssh:" (tramp-get-completion-methods "ss"))))
