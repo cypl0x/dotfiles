@@ -172,10 +172,22 @@ Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
 
 ;;;; org-appear — Auto-reveal markup ─────────────────────────────────────────
 
+;; Markers show only while you write (insert state), not while you read and
+;; move: revealed under the cursor in normal state, they shifted the rest of
+;; the line sideways (a link 50 px at 4x zoom, measured 2026-11-05; 0 px
+;; with this): the "wiggle" going through paragraphs.  org-appear's own
+;; recipe for Evil.
+(defun +org-appear-evil-h ()
+  "Reveal markup only in insert state in this Org buffer."
+  (add-hook 'evil-insert-state-entry-hook #'org-appear-manual-start nil t)
+  (add-hook 'evil-insert-state-exit-hook #'org-appear-manual-stop nil t))
+
 (use-package! org-appear
   :after org
   :hook (org-mode . org-appear-mode)
+  :hook (org-mode . +org-appear-evil-h)
   :config
+  (setq org-appear-trigger 'manual)
   (setq org-appear-autoemphasis t
         org-appear-autolinks t
         org-appear-autosubmarkers t
