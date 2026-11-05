@@ -2970,3 +2970,34 @@ by the time."
               (set-buffer-modified-p nil) (kill-buffer))))
       (when (get-buffer "*note links*") (kill-buffer "*note links*"))
       (delete-directory dir t))))
+
+(ert-deftest org-vault/base-table-writes-back-in-place ()
+  "A base lists headings by their properties; edited cells go back to the
+right headings, two in one file included."
+  (require 'org)
+  (load (expand-file-name "+org-graph" test-lisp-dir) nil t)
+  (load (expand-file-name "+org-vault" test-lisp-dir) nil t)
+  (let* ((dir (file-name-as-directory (make-temp-file "vault" t)))
+         (+org-graph-directory dir)
+         (f (expand-file-name "tasks.org" dir)))
+    (unwind-protect
+        (progn
+          (write-region "* Alpha\n:PROPERTIES:\n:STATUS: open\n:END:\n* Beta\n:PROPERTIES:\n:STATUS: done\n:END:\n" nil f)
+          (save-window-excursion
+            (+org-vault/base '("STATUS"))
+            (with-current-buffer "*base*"
+              (should (string-match-p "| Alpha +| open +|" (buffer-string)))
+              (goto-char (point-min)) (search-forward "open") (replace-match "waiting")
+              (search-forward "done") (replace-match "closed")
+              (+org-vault-base-write)))
+          (let ((text (with-temp-buffer (insert-file-contents f) (buffer-string))))
+            (should (string-match-p "\\* Alpha\n:PROPERTIES:\n:STATUS: +waiting" text))
+            (should (string-match-p "\\* Beta\n:PROPERTIES:\n:STATUS: +closed" text)))
+          ;; Filtered.
+          (save-window-excursion
+            (+org-vault/base '("STATUS") '("STATUS" . "closed"))
+            (with-current-buffer "*base*"
+              (should (string-match-p "Beta" (buffer-string)))
+              (should-not (string-match-p "Alpha" (buffer-string))))))
+      (dolist (b (list "*base*" "tasks.org")) (when (get-buffer b) (with-current-buffer b (set-buffer-modified-p nil)) (kill-buffer b)))
+      (delete-directory dir t))))

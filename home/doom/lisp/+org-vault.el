@@ -11,6 +11,8 @@
 ;;              unlinked mentions both ways; RET goes there
 ;;   SPC n r t  every tag in the vault, how often; RET lists what has it
 ;;   SPC n r P  every property, how often, its values; RET lists them
+;;   SPC n r B  a base: the headings with these properties as a table; edit
+;;              a cell, C-c C-c writes it back (Obsidian's Bases)
 ;;   SPC n r u  a new note named by the time (Obsidian's unique note)
 ;;   SPC n r a  record audio into the vault; again stops and links it here
 ;;
@@ -211,6 +213,100 @@ mentions, file: links included, in a side window."
                       (lambda (row) (+org-vault--list (format "Property %s" (car row)) (reverse (cdr row))
                                                       (lambda (value _) (if (string-empty-p value) "(empty)" value))))))
 
+;;;; Bases: a table of notes by their properties, edited in place
+
+(defvar-local +org-vault--base nil "(KEYS . ROWS) of this base: ROWS are (FILE POS TITLE VALUES...).")
+(defvar-local +org-vault--base-filter nil "(KEY . VALUE) this base is filtered by.")
+
+(defun +org-vault--base-rows (keys &optional filter)
+  "Headings with any of KEYS: (FILE POS TITLE VALUE...), FILTER (KEY . VALUE)
+keeping those whose KEY is VALUE."
+  (let ((props (+org-vault-properties)) (seen (make-hash-table :test #'equal)) rows)
+    (dolist (key keys)
+      (pcase-dolist (`(,file ,pos ,_) (gethash key props))
+        (puthash (cons file pos) t seen)))
+    (maphash
+     (lambda (loc _)
+       (pcase-let ((`(,file . ,pos) loc))
+         (with-temp-buffer
+           (insert-file-contents file)
+           (goto-char pos)
+           (let* ((heading (save-excursion (re-search-backward "^\\*+ \\(.*\\)$" nil t)))
+                  (title (if heading (string-trim (replace-regexp-in-string ":[[:alnum:]_@#%:]+:[ \t]*\\'" "" (match-string 1)))
+                           (file-name-base file)))
+                  (start (or heading (point-min)))
+                  (values (mapcar (lambda (k)
+                                    (save-excursion
+                                      (goto-char start)
+                                      (if (re-search-forward (concat "^[ \t]*:" (regexp-quote k) ":[ \t]*\\(.*\\)$")
+                                                             (save-excursion (or (re-search-forward "^[ \t]*:END:" nil t) (point-max))) t)
+                                          (string-trim (match-string 1)) "")))
+                                  keys)))
+             (when (or (null filter)
+                       (equal (nth (cl-position (car filter) keys :test #'equal) values) (cdr filter)))
+               (push (append (list file start title) values) rows))))))
+     seen)
+    (sort rows (lambda (a b) (string< (nth 2 a) (nth 2 b))))))
+
+;;;###autoload
+(defun +org-vault/base (keys &optional filter)
+  "A table of the vault's headings by the properties KEYS (asked), filtered
+by FILTER (KEY=VALUE, optional).  Edit a cell and C-c C-c writes it back."
+  (interactive
+   (let* ((all (hash-table-keys (+org-vault-properties)))
+          (keys (completing-read-multiple "Properties (comma between): " all nil t))
+          (f (read-string "Only where (KEY=VALUE, empty: all): ")))
+     (list keys (and (string-match "\\`\\([^=]+\\)=\\(.*\\)\\'" f) (cons (match-string 1 f) (match-string 2 f))))))
+  (let ((rows (+org-vault--base-rows keys filter)))
+    (with-current-buffer (get-buffer-create "*base*")
+      (org-mode)
+      (erase-buffer)
+      (insert (format "#+title: Base: %s%s\n# C-c C-c writes edited cells back; C-c ^ sorts by the column at point.\n\n"
+                      (string-join keys ", ") (if filter (format " where %s = %s" (car filter) (cdr filter)) "")))
+      (insert "| Note | " (string-join keys " | ") " |\n|-\n")
+      (dolist (row rows)
+        (insert "| " (replace-regexp-in-string "|" "¦" (nth 2 row)) " | "
+                (string-join (mapcar (lambda (v) (replace-regexp-in-string "|" "¦" v)) (nthcdr 3 row)) " | ") " |\n"))
+      (forward-line -1) (org-table-align)
+      (setq-local +org-vault--base (cons keys rows) +org-vault--base-filter filter)
+      (local-set-key (kbd "C-c C-c") #'+org-vault-base-write)
+      (goto-char (point-min))
+      (pop-to-buffer (current-buffer)))))
+
+(declare-function org-table-align "org-table" ())
+(declare-function org-entry-put "org" (epom property value))
+(declare-function org-table-get "org-table" (line column))
+
+(defun +org-vault-base-write ()
+  "Write the cells changed in this base back to their headings.
+Each file is changed from the bottom up (an edit shifts what follows) in
+its Emacs buffer, saved unless it had edits of yours waiting."
+  (interactive)
+  (pcase-let ((`(,keys . ,rows) +org-vault--base) (changes nil))
+    (save-excursion
+      (goto-char (point-min))
+      (re-search-forward "^|-")
+      (forward-line 1)
+      (dolist (row rows)
+        (let ((cells (mapcar #'string-trim
+                             (cdr (split-string (buffer-substring-no-properties
+                                                 (line-beginning-position) (line-end-position))
+                                                "|" t)))))
+          (cl-loop for key in keys for old in (nthcdr 3 row) for new in cells
+                   for value = (replace-regexp-in-string "¦" "|" new)
+                   unless (equal old value)
+                   do (push (list (nth 0 row) (nth 1 row) key value) changes)))
+        (forward-line 1)))
+    (dolist (file (delete-dups (mapcar #'car changes)))
+      (with-current-buffer (find-file-noselect file)
+        (let ((yours (buffer-modified-p)))
+          (dolist (c (sort (seq-filter (lambda (c) (equal (car c) file)) changes)
+                           (lambda (a b) (> (nth 1 a) (nth 1 b)))))
+            (save-excursion (goto-char (nth 1 c)) (org-entry-put (point) (nth 2 c) (nth 3 c))))
+          (unless yours (save-buffer)))))
+    (message "%d cell%s written back" (length changes) (if (= 1 (length changes)) "" "s"))
+    (when changes (+org-vault/base keys +org-vault--base-filter))))
+
 ;;;; A note named by the time
 
 ;;;###autoload
@@ -261,6 +357,7 @@ the recording at point (where you started)."
       :desc "Links of this note"    "n r l" #'+org-vault/links
       :desc "Tags of the vault"     "n r t" #'+org-vault/tags
       :desc "Properties of the vault" "n r P" #'+org-vault/properties
+      :desc "Base: notes by properties" "n r B" #'+org-vault/base
       :desc "Unique note (by time)" "n r u" #'+org-vault/unique-note
       :desc "Record audio here"     "n r a" #'+org-vault/record)
 
