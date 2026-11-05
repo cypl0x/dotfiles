@@ -26,6 +26,8 @@
 ;;   {"msgV":1,"msg_id":UUID,"type":"user","priority":"next",
 ;;    "message":{"role":"user","content":"<cross-session-message …>…"}}
 ;; The session gets it as a message from "Emacs", like one from a peer.
+;; A busy session reads it at its next turn boundary (after the tool call
+;; it is running), not at once: a quiet minute is normal, not a loss.
 ;; Emacs has no inbox of its own: the message asks for replies through
 ;; emacsclient.
 
