@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-05 Do 06:54] — GitHub repositories in Emacs, nothing cloned
+- ✔ *SPC o G*, Enter on empty input → the awesome list's README, rendered.
+  Each directory = 1 =gh api= call; files come in that same answer (raw
+  call only above 1 MB). Kept for the session. Verified against the real
+  API: awesome → README → link to awesome-nodejs → its README → =^= → listing.
+- RET on links: other repos (their README), relative paths, else browser.
+  =b= branch/tag/commit, =l= history of the path (RET = browse at that
+  commit), =c= shallow clone into ~/dev/gh/ (asks, shows size), =y= URL.
+- Not done: a TRAMP handler (=find-file= on gh: paths). Tell me if wanted.
+- Live in your daemon; commit d16fdfb; 264/264 tests.
+
 ** [2026-11-05 Do 06:38] — Two Emacsen, and the desktop in Emacs
 - =neomacs=: the Rust-core Emacs runs your whole Doom config beside your
   main Emacs, sharing your packages, with its own server and build.
