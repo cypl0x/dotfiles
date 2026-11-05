@@ -83,7 +83,22 @@ then scale it by `+neomacs-scroll-speed'."
       (setq event (+neomacs--speed-up event)))
     (cons event (cdr args))))
 
+;; Gutter  typing in mess.org lagged with memory to spare: a profile gave 84 %
+;;        of the time to diff-hl's live diff (`diff-hl-flydiff-mode'): at
+;;        every 0.5 s pause the whole buffer written to a temp file (a
+;;        coding-system scan of all of it), `diff' run, its output put in
+;;        diff-mode (whose hooks revert buffers).  Natively compiled in GNU
+;;        Emacs that goes unnoticed; neomacs runs it as bytecode.  Here the
+;;        gutter follows saves only.
+(declare-function diff-hl-flydiff-mode "ext:diff-hl-flydiff" (&optional arg))
+
+(defun +neomacs-no-flydiff-a (fn &rest args)
+  "Around `diff-hl-flydiff-mode': keep it off under neomacs (FN, ARGS)."
+  (if +neomacs-p (funcall fn -1) (apply fn args)))
+
 (when +neomacs-p
+  (advice-add 'diff-hl-flydiff-mode :around #'+neomacs-no-flydiff-a)
+  (with-eval-after-load 'diff-hl-flydiff (diff-hl-flydiff-mode -1))
   (advice-add 'doom-adjust-font-size :around #'+neomacs-adjust-font-size-a)
   (advice-add 'ultra-scroll :filter-args #'+neomacs-coalesce-wheel-a)
   (advice-add 'mwheel-scroll :filter-args #'+neomacs-coalesce-wheel-a))

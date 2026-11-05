@@ -2424,6 +2424,7 @@ in the background; nothing synchronous."
   (unwind-protect
       (progn
         (should (advice-member-p #'+neomacs-adjust-font-size-a 'doom-adjust-font-size))
+        (should (advice-member-p #'+neomacs-no-flydiff-a 'diff-hl-flydiff-mode))
         (should (advice-member-p #'+neomacs-coalesce-wheel-a 'ultra-scroll))
         (should (advice-member-p #'+neomacs-coalesce-wheel-a 'mwheel-scroll))
         (let ((+neomacs-scroll-speed 2.5))
@@ -2432,6 +2433,7 @@ in the background; nothing synchronous."
           ;; Line-only events (mouse wheels) are left alone.
           (should (equal (+neomacs--speed-up '(wheel-down nil 1 3)) '(wheel-down nil 1 3)))))
     (advice-remove 'doom-adjust-font-size #'+neomacs-adjust-font-size-a)
+    (advice-remove 'diff-hl-flydiff-mode #'+neomacs-no-flydiff-a)
     (advice-remove 'ultra-scroll #'+neomacs-coalesce-wheel-a)
     (advice-remove 'mwheel-scroll #'+neomacs-coalesce-wheel-a)))
 
