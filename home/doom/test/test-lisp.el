@@ -3654,3 +3654,18 @@ right under it, keyword values at column 12."
                      (concat "#+title:    X\n#+subtitle: Y\n\n* Description\nText here.\n\n"
                              "** Sub\nMore text:\n#+begin_src elisp\n(foo)\n#+end_src\n\nAfter.\n\n"
                              "- a\n- b\n\n* Empty\n** Child\nx\n"))))))
+
+(ert-deftest themes/too-dim-text-gets-just-readable-same-hue ()
+  "A foreground below 4.5:1 moves in lightness only, just far enough:
+lighter on a dark background, darker on a light one; readable ones stay."
+  (require 'color)
+  (let* ((dark (+themes-readable-color "#62686E" "#242730" 4.5))
+         (light (+themes-readable-color "#ff8c00" "#ffffff" 4.5))
+         (hue (lambda (c) (car (apply #'color-rgb-to-hsl (+themes--rgb c))))))
+    (should (>= (+themes-contrast dark "#242730") 4.5))
+    (should (< (+themes-contrast dark "#242730") 4.8))           ; just far enough
+    (should (> (+themes--luminance dark) (+themes--luminance "#62686E")))
+    (should (< (abs (- (funcall hue dark) (funcall hue "#62686E"))) 0.02))
+    (should (>= (+themes-contrast light "#ffffff") 4.5))
+    (should (< (+themes--luminance light) (+themes--luminance "#ff8c00")))
+    (should-not (+themes-readable-color "#ffffff" "#000000" 4.5))))

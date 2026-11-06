@@ -274,6 +274,48 @@ spec that sets it, else the face's own default spec; nil when none does."
       (display-buffer (current-buffer)))
     findings))
 
+;;;; Readable under every theme
+
+;; The audit found doom-vibrant's comments, `shadow' (annotations, dimmed
+;; text), done items and the inactive mode line at 2.3-2.6:1, its doc
+;; strings at 3.7:1; WCAG asks 4.5:1 for text.  After a theme loads, each
+;; audited face below that has its foreground's lightness moved just far
+;; enough (hue and saturation kept): the theme's look, still readable.
+;; nil turns it off.
+(defcustom +themes-readable-ratio 4.5
+  "Contrast every audited face's text gets at least, or nil to leave themes alone."
+  :type '(choice (const nil) number) :group 'faces)
+
+(defvar +themes-readable-skip '(default region hl-line vertico-current corfu-current)
+  "Audited faces left alone: backgrounds the others are measured on.")
+
+(defun +themes-readable-color (fg bg ratio)
+  "FG with only its lightness changed until it is at RATIO on BG (toward
+white on a dark BG, black on a light one), or nil if it is already."
+  (require 'color)
+  (when (< (or (+themes-contrast fg bg) 99) ratio)
+    (cl-destructuring-bind (h s l) (apply #'color-rgb-to-hsl (+themes--rgb fg))
+      (let ((step (if (< (+themes--luminance bg) 0.18) 0.01 -0.01)))
+        (cl-loop for l2 = (+ l step) then (+ l2 step)
+                 while (<= 0.0 l2 1.0)
+                 for c = (apply #'color-rgb-to-hex (append (color-hsl-to-rgb h s l2) '(2)))
+                 when (>= (+themes-contrast c bg) ratio) return c)))))
+
+(defun +themes-readable-h (&optional _theme)
+  "Lift the audited faces that read below `+themes-readable-ratio'."
+  (when +themes-readable-ratio
+    (let ((default-bg (face-background 'default nil t)))
+      (dolist (face +themes-audit-faces)
+        (when (and (facep face) (not (memq face +themes-readable-skip)))
+          (let* ((fg (face-foreground face nil t))
+                 (bg (or (face-background face nil t) default-bg))
+                 (new (and (+themes--color-p fg) (+themes--color-p bg)
+                           (+themes-readable-color fg bg +themes-readable-ratio))))
+            (when new (set-face-attribute face nil :foreground new))))))))
+
+;; Before the audit's own look after a load (90): it sees the lifted faces.
+(add-hook 'enable-theme-functions #'+themes-readable-h 85)
+
 (defun +themes--audit-after-load-h (_theme)
   "After a theme loads: a word in the echo area if the audit finds anything."
   (when +themes-audit-on-load
