@@ -74,7 +74,6 @@
 ;; Git / Version control
 ;; ---------------------------------------------------------------------------
 
-(package! magit-delta)         ;; delta pager — syntax-highlighted diffs
 (package! difftastic)          ;; structural, syntax-aware diffs (via difft binary)
 (package! blamer)              ;; GitLens-style inline blame overlay
 (package! git-link)            ;; stable commit-hash permalink URLs

@@ -1182,7 +1182,6 @@ the learning path, =+docs/info= builds it as an Info manual (cache dir,
 | =gcc=        | vterm + jinx compilation             |
 | =gnuplot=    | org-mode plotting                    |
 | =maim=       | org-download clipboard               |
-| =delta=      | magit-delta syntax-highlighted diffs |
 | =difftastic= | structural, syntax-aware diffs       |
 
 ** Auth Credentials (=~/.authinfo=)

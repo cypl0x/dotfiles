@@ -170,24 +170,6 @@
   ;; Show up to 60 open and 20 recently-closed topics per repository.
   (setq forge-topic-list-limit '(60 . 20)))
 
-;; ── magit-delta — syntax-highlighted diffs ─────────────────────────────────
-;; Requires: delta binary  (cargo install git-delta  or  nix: pkgs.delta)
-(use-package! magit-delta
-  :hook (magit-mode . magit-delta-mode)
-  :config
-  ;; --color-only: let magit own the diff layout; delta only adds ANSI colours.
-  ;; But --color-only keeps gitconfig's `line-numbers = true', and delta then
-  ;; prefixes "542┊ 543┊" to each line: magit can't find the +/- markers and
-  ;; dumps hunks outside their file's section.  delta/magit.gitconfig (Nix,
-  ;; home/common.nix) is the same theme with line numbers off.
-  (setq magit-delta-delta-args
-        (append '("--max-line-distance" "0.6"
-                  "--true-color" "always"
-                  "--color-only")
-                (let ((config (expand-file-name "delta/magit.gitconfig"
-                                                (or (getenv "XDG_CONFIG_HOME") "~/.config"))))
-                  (and (file-exists-p config) (list "--config" config))))))
-
 ;; ── difftastic — structural, syntax-aware diffs ────────────────────────────
 ;; Understands language syntax: moved/renamed code shows as moves, not add+del.
 ;; Requires: difft binary  (cargo install difftastic  or  nix: pkgs.difftastic)
