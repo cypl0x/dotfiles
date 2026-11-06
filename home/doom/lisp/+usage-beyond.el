@@ -237,7 +237,8 @@ So \"/home/me/bin/x  sync\" and \"~/bin/x sync\" count as one command."
 
 (defun +usage-beyond--desktop-setup-h ()
   ;; The main daemon only: a second Emacs would count every event twice.
-  (if (and (bound-and-true-p +usage-mode) (eq (daemonp) t))
+  (if (and (bound-and-true-p +usage-mode) (daemonp)
+           (equal (bound-and-true-p server-name) "server"))  ; also after SPC q R (--daemon=server)
       (ignore-errors (+usage-beyond-desktop-start))
     (+usage-beyond-desktop-stop)))
 (add-hook '+usage-mode-hook #'+usage-beyond--desktop-setup-h)
