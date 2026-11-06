@@ -140,6 +140,8 @@ is set: then nothing is caught)."
     (let ((inhibit-read-only t))
       (erase-buffer)
       (special-mode)
+      ;; A keymap of its own: the mode's is shared by every buffer in it.
+      (use-local-map (make-composed-keymap nil (current-local-map)))
       (local-set-key (kbd "RET") #'+watch/ask)
       (local-set-key (kbd "a") #'+watch/ask)
       (if (zerop (hash-table-count +watch--errors))

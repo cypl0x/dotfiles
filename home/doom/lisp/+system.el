@@ -222,6 +222,8 @@
       (call-process "uname" nil t nil "-srvm")
       (insert "Up since " (string-trim (with-output-to-string (call-process "uptime" nil standard-output nil "-s"))) "\n"))
     (special-mode)
+    ;; A keymap of its own: the mode's is shared by every buffer in it.
+    (use-local-map (make-composed-keymap nil (current-local-map)))
     (local-set-key "g" #'+desktop/machine)
     (goto-char (point-min))
     (pop-to-buffer (current-buffer))))

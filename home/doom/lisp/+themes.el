@@ -269,6 +269,8 @@ spec that sets it, else the face's own default spec; nil when none does."
                                     (length +themes-audit-faces) (length (face-list)))
                             'face 'shadow)))
       (special-mode)
+      ;; A keymap of its own: the mode's is shared by every buffer in it.
+      (use-local-map (make-composed-keymap nil (current-local-map)))
       (local-set-key "g" #'+themes/audit)
       (goto-char (point-min))
       (display-buffer (current-buffer)))

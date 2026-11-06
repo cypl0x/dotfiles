@@ -287,6 +287,8 @@ function), and KEYS: (KEY COMMAND) pairs."
             ("Mains" (insert (format "  %s\n\n" (if (equal (+desktop--read (expand-file-name "online" dir)) "1") "connected" "unplugged"))))
             (_ (insert "\n")))))
       (special-mode))
+    ;; A keymap of its own: the mode's is shared by every buffer in it.
+    (use-local-map (make-composed-keymap nil (current-local-map)))
     (local-set-key "g" #'+desktop/power)
     (pop-to-buffer (current-buffer))))
 

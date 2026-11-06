@@ -138,6 +138,8 @@ Emacs writes there with modification hooks off, so this runs after each
               font-lock-keywords-only t)
   (font-lock-mode 1)
   (goto-address-mode 1)
+  ;; A keymap of its own: the mode's is shared by every buffer in it.
+  (use-local-map (make-composed-keymap nil (current-local-map)))
   (local-set-key "f" #'+messages-errors)
   (local-set-key "t" #'+messages-toggle-times))
 

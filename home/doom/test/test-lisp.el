@@ -31,18 +31,18 @@
               "echo \"ARGS $*\" >> " log "\n"
               "case \"$*\" in *--stdin*) printf 'STDIN ' >> " log "; cat >> " log "; echo >> " log ";; esac\n"
               "case \"$*\" in *' ls'*) cat <<'EOF'\n"
-              "[{\"id\":1,\"is_focused\":true,\"tabs\":[{\"id\":2,\"title\":\"build\",\"is_focused\":true,\"windows\":["
-              "{\"id\":3,\"title\":\"make\",\"cwd\":\"/src\",\"at_prompt\":false,\"is_focused\":true,"
+              "[{\"id\":1,\"is_active\":true,\"tabs\":[{\"id\":2,\"title\":\"build\",\"is_active\":true,\"windows\":["
+              "{\"id\":3,\"title\":\"make\",\"cwd\":\"/src\",\"at_prompt\":false,\"is_active\":true,"
               "\"last_reported_cmdline\":\"make -j8\",\"last_cmd_exit_status\":0,"
               "\"foreground_processes\":[{\"cmdline\":[\"/usr/bin/make\",\"-j8\"]}]},"
-              "{\"id\":4,\"title\":\"zsh\",\"cwd\":\"/home\",\"at_prompt\":true,\"is_focused\":false,"
+              "{\"id\":4,\"title\":\"zsh\",\"cwd\":\"/home\",\"at_prompt\":true,\"is_active\":false,"
               "\"last_reported_cmdline\":\"false\",\"last_cmd_exit_status\":1,\"foreground_processes\":[]}]}]}]\n"
               "EOF\n;; esac\n"
               "case \"$*\" in *launch*) echo 9;; esac\n"))
     (set-file-modes fake #o755)
     (unwind-protect
         (cl-letf (((symbol-function '+kitty-sockets) (lambda () '("/run/user/1000/kitty-77")))
-                  ((symbol-function '+kitty--active-pid) (lambda () nil))
+                  ((symbol-function '+kitty--active-pid) (lambda (_pids) nil))
                   ((symbol-function 'executable-find) (lambda (p &rest _) (and (equal p "timeout") "/usr/bin/timeout")))
                   ((symbol-function 'completing-read)
                    (lambda (_p table &rest _) (car (last (all-completions "" table))))))
@@ -51,6 +51,8 @@
             (should (equal (+kitty--label (car ws)) "build › make"))
             (should (string-match-p "▶ make -j8" (+kitty--annotation (car ws))))
             (should (string-match-p "at the prompt  ✘ last exit 1" (+kitty--annotation (cadr ws)))))
+          ;; By name (the @kitty tool): +kitty-windows's own matching mustn't clobber the name's.
+          (should (= 4 (plist-get (+kitty--window-by-name "kitty-77:4") :id)))
           ;; Send the line: Enter after it; the window is remembered.
           (with-temp-buffer
             (insert "ls -la\nsecond")
@@ -4244,3 +4246,18 @@ lighter on a dark background, darker on a light one; readable ones stay."
     (should (>= (+themes-contrast light "#ffffff") 4.5))
     (should (< (+themes--luminance light) (+themes--luminance "#ff8c00")))
     (should-not (+themes-readable-color "#ffffff" "#000000" 4.5))))
+
+(ert-deftest keymaps/local-set-key-never-into-a-shared-map ()
+  ;; `local-set-key' writes into the mode's keymap, shared by every buffer in
+  ;; the mode: C-c C-c bound in one Org buffer was bound in all.
+  (let (offenders)
+    (dolist (file (directory-files-recursively test-lisp-dir "\\.el\\'"))
+      (with-temp-buffer
+        (insert-file-contents file)
+        (while (re-search-forward "^[ \t]*(local-set-key" nil t)
+          (unless (save-excursion
+                    (forward-line 0)
+                    (re-search-backward "(use-local-map (make-composed-keymap\\|(local-set-key"
+                                        (line-beginning-position -5) t))
+            (push (format "%s:%d" (file-name-nondirectory file) (line-number-at-pos)) offenders)))))
+    (should-not offenders)))

@@ -262,6 +262,13 @@ every home-manager generation, whichever file changed.")
         ((eq fix #'+daemon/sync-and-restart) "doom sync and restart (SPC q R)")
         (t "restart (C-u SPC q R)")))
 
+(defvar-keymap +daemon-status-mode-map
+  :parent special-mode-map
+  "g" #'+daemon/status)
+
+(define-derived-mode +daemon-status-mode special-mode "In sync?"
+  "The `*in sync?*' buffer: what this Emacs lags behind, and the fixes.")
+
 (defun +daemon/status ()
   "Say whether this Emacs is in sync with your config.
 If not: what lags behind, and the fix for each."
@@ -284,8 +291,7 @@ If not: what lags behind, and the fix for each."
             (insert "\n\n"))
           (insert "g checks again.")
           (goto-char (point-min)))
-        (special-mode)
-        (local-set-key "g" (lambda () (interactive) (+daemon/status)))
+        (+daemon-status-mode)
         (display-buffer (current-buffer))))))
 
 (map! :leader :desc "In sync with the config?" "q ?" #'+daemon/status)

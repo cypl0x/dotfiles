@@ -271,6 +271,8 @@ by FILTER (KEY=VALUE, optional).  Edit a cell and C-c C-c writes it back."
                 (string-join (mapcar (lambda (v) (replace-regexp-in-string "|" "¦" v)) (nthcdr 3 row)) " | ") " |\n"))
       (forward-line -1) (org-table-align)
       (setq-local +org-vault--base (cons keys rows) +org-vault--base-filter filter)
+      ;; A keymap of its own: the mode's is shared by every buffer in it.
+      (use-local-map (make-composed-keymap nil (current-local-map)))
       (local-set-key (kbd "C-c C-c") #'+org-vault-base-write)
       (goto-char (point-min))
       (pop-to-buffer (current-buffer)))))
