@@ -71,6 +71,81 @@
           (should-not (+kitty-ask-tools '(echo) nil)))
       (delete-directory dir t))))
 
+;;; +mindreader
+
+(defvar test-mr--ran nil)
+(dolist (c '(test-mr-open test-mr-capture test-mr-tag test-mr-finish test-mr-other))
+  (defalias c (lambda () (interactive) (push c test-mr--ran))))
+
+(defmacro test-mr--with-events (events &rest body)
+  "BODY with EVENTS (COMMAND MODE SECONDS-AGO) as today's recorded flow."
+  (declare (indent 1))
+  `(let* ((dir (file-name-as-directory (make-temp-file "flows" t)))
+          (+usage-flows-directory dir)
+          (+usage-flows--pending nil)
+          (+mindreader--cache (make-hash-table :test #'equal))
+          (now (float-time)))
+     (unwind-protect
+         (progn
+           (with-temp-file (expand-file-name (format-time-string "%F.eld") dir)
+             (dolist (e ,events)
+               (let ((tm (- now (nth 2 e))))
+                 (prin1 (list tm tm (nth 0 e) 1 "x" (nth 1 e) "proj" nil) (current-buffer))
+                 (insert "\n"))))
+           ,@body)
+       (delete-directory dir t))))
+
+(defun test-mr--day (start)
+  "One capture flow starting START seconds ago, with typing and noise."
+  (list (list 'test-mr-open 'org-mode start)
+        (list 'test-mr-capture 'org-mode (- start 5))
+        (list 'self-insert-command 'org-mode (- start 6))
+        (list 'evil-next-line 'org-mode (- start 7))
+        (list 'vertico-next 'minibuffer (- start 8))
+        (list 'test-mr-tag 'org-mode (- start 30))
+        (list 'test-mr-finish 'org-mode (- start 60))))
+
+(ert-deftest mindreader/predicts-from-the-same-situation-and-walks-a-flow ()
+  ;; inbox: M-# shows what I'd do next here, and full flows.
+  (load (expand-file-name "+usage-flows" test-lisp-dir) nil t)
+  (load (expand-file-name "+mindreader" test-lisp-dir) nil t)
+  (test-mr--with-events (append (test-mr--day 4000) (test-mr--day 3000) (test-mr--day 2000)
+                                (test-mr--day 1000)
+                                (list (list 'test-mr-other 'text-mode 500)))
+    (let ((steps (+mindreader-steps)))
+      ;; Typing, moving and the minibuffer aren't steps.
+      (should (equal (delete-dups (mapcar (lambda (s) (aref s 1)) steps))
+                     '(test-mr-open test-mr-capture test-mr-tag test-mr-finish test-mr-other)))
+      ;; After the capture, in Org: tagging first.
+      (should (eq (caar (+mindreader-predict (list 'test-mr-open 'test-mr-capture 'org-mode "proj") steps))
+                  'test-mr-tag))
+      ;; The flow from the capture, as a whole.
+      (let ((flow (car (+mindreader-flows 'test-mr-capture steps))))
+        (should (equal (car flow) '(test-mr-capture test-mr-tag test-mr-finish)))
+        (should (= (nth 2 flow) 4))))
+    ;; A week ago counts half.
+    (should (< (abs (- (+mindreader--weight (- (float-time) (* 7 86400)) (float-time)) 0.5)) 0.01))
+    ;; Picking the flow runs its first step, then walks through the rest.
+    (let ((+usage-mode t) (test-mr--ran nil) (+mindreader--walk nil) shown)
+      (cl-letf (((symbol-function '+mindreader-context)
+                 (lambda () (list 'test-mr-finish 'test-mr-open 'org-mode "proj")))
+                ((symbol-function 'completing-read)
+                 (lambda (_p table &rest _)
+                   (seq-find (lambda (c) (string-prefix-p "▶ test-mr-capture" c)) (all-completions "" table))))
+                ((symbol-function 'message) (lambda (fmt &rest args) (setq shown (apply #'format fmt args)))))
+        (+mindreader/next)
+        (should (equal test-mr--ran '(test-mr-capture)))
+        (should (equal +mindreader--walk '(test-mr-tag test-mr-finish)))
+        (+mindreader--walk-h)               ; after the first step
+        (should (string-match-p "next: test-mr-tag" shown))
+        (let ((real-this-command 'test-mr-other) (this-command 'test-mr-other)) (+mindreader--walk-h))
+        (should (equal +mindreader--walk '(test-mr-tag test-mr-finish)))   ; in between: still on
+        (let ((real-this-command 'test-mr-tag) (this-command 'test-mr-tag)) (+mindreader--walk-h))
+        (should (string-match-p "next: test-mr-finish" shown))
+        (let ((real-this-command 'test-mr-finish) (this-command 'test-mr-finish)) (+mindreader--walk-h))
+        (should (equal shown "Flow done"))
+        (should-not +mindreader--walk)))))
+
 ;;; +daemon
 
 (ert-deftest daemon/relaunch-script-waits-restarts-and-restores ()
