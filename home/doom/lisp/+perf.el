@@ -173,9 +173,46 @@ them collecting garbage) was, as a line."
               "mostly waiting (a subprocess, the network, a file, a client)"
             "mostly computing (see the profile)")))
 
-(defun +perf-freeze-context (gap &optional cpu gc)
+;; The /ssh: freeze of 2026-11-06 (132 s in TRAMP) had its cause, a sort in
+;; lisp/+completion.el, cut off: profiles keep 16 frames, TRAMP filled them.
+;; Deeper stacks, and the report names the functions of this config that
+;; the samples ran through, the likeliest place to fix.
+
+(defvar +perf-freeze-stack-depth 48
+  "Frames kept per sample by the freeze recorder (Emacs's default is 16).")
+
+(defvar +perf-own-code-regexp "/doom/lisp/\\|/home/doom/"
+  "File names (`symbol-file') of the code `+perf-freeze-culprits' names.")
+
+(defun +perf-freeze-culprits (log &optional n)
+  "This config's functions in LOG's samples, most first: up to N (3) of
+\(FUNCTION . PERCENT), the share of samples running through it (5% or more)."
+  (let ((total 0) (by (make-hash-table :test #'eq)) (own (make-hash-table :test #'eq)))
+    (maphash
+     (lambda (bt count)
+       (cl-incf total count)
+       (let (seen)
+         (seq-doseq (f bt)
+           (when (and (symbolp f) f (not (memq f seen))
+                      (let ((o (gethash f own :unknown)))
+                        (if (eq o :unknown)
+                            (puthash f (let ((file (ignore-errors (symbol-file f 'defun))))
+                                         (and file (string-match-p +perf-own-code-regexp file) t))
+                                     own)
+                          o)))
+             (push f seen)
+             (cl-incf (gethash f by 0) count)))))
+     log)
+    (let (rows)
+      (maphash (lambda (f c) (let ((pct (/ (* 100.0 c) (max total 1))))
+                               (when (>= pct 5) (push (cons f pct) rows))))
+               by)
+      (seq-take (sort rows (lambda (a b) (> (cdr a) (cdr b)))) (or n 3)))))
+
+(defun +perf-freeze-context (gap &optional cpu gc culprits)
   "What Emacs was doing around a freeze of GAP seconds, as text.
-CPU and GC: Emacs's processor and garbage collection seconds during it."
+CPU and GC: Emacs's processor and garbage collection seconds during it;
+CULPRITS: this config's functions in the samples (`+perf-freeze-culprits')."
   (let* ((now (float-time))
          (from (- now gap 2))
          (evals (seq-filter (lambda (e) (> (nth 1 e) from))
@@ -183,6 +220,11 @@ CPU and GC: Emacs's processor and garbage collection seconds during it."
     (concat
      (format "Frozen for %.0f s, recovered %s\n" gap (format-time-string "%F %T"))
      (if cpu (+perf-freeze-verdict gap cpu (or gc 0)) "")
+     (if culprits
+         (concat "Your code in it: "
+                 (mapconcat (lambda (c) (format "%s (%.0f%%)" (car c) (cdr c))) culprits ", ")
+                 "\n")
+       "")
      (if evals
          (concat "\nClient evals during it (emacsclient):\n"
                  (mapconcat (lambda (e)
@@ -252,24 +294,29 @@ says so, instead of an error every 30 seconds.  A restart clears it."
       (let ((file (expand-file-name (format-time-string "freeze-%Y%m%d-%H%M%S.prof")
                                     +perf-freeze-dir)))
         (make-directory +perf-freeze-dir t)
-        ;; Before our own message replaces the echo area.
-        (write-region (+perf-freeze-context gap
-                                            (and last-run (- (car run) (car last-run)))
-                                            (and last-run (- (cdr run) (cdr last-run))))
-                      nil
-                      (concat (file-name-sans-extension file) ".txt") nil 'silent)
         ;; `profiler-cpu-profile' wraps the variable that `profiler-stop' fills;
         ;; the live samples come from the function `profiler-cpu-log'.
-        (when-let* ((log (+perf--cpu-log)))
-          (profiler-write-profile
-           (profiler-make-profile :type 'cpu :timestamp (current-time) :log log)
-           file))
-        (message "Emacs was frozen for %.0f s; profile: %s" gap file)
-        (when (executable-find "notify-send")
-          (call-process "notify-send" nil 0 nil "-a" "Emacs" "-u" "critical"
-                        (format "Emacs was frozen for %.0f s" gap)
-                        (format "Profile and context saved: %s (.txt)\nM-x profiler-find-profile"
-                                (abbreviate-file-name file))))))
+        (let* ((log (+perf--cpu-log))
+               (culprits (and log (ignore-errors (+perf-freeze-culprits log)))))
+          ;; Before our own message replaces the echo area.
+          (write-region (+perf-freeze-context gap
+                                              (and last-run (- (car run) (car last-run)))
+                                              (and last-run (- (cdr run) (cdr last-run)))
+                                              culprits)
+                        nil
+                        (concat (file-name-sans-extension file) ".txt") nil 'silent)
+          (when log
+            (profiler-write-profile
+             (profiler-make-profile :type 'cpu :timestamp (current-time) :log log)
+             file))
+          (message "Emacs was frozen for %.0f s%s; profile: %s" gap
+                   (if culprits (format " in %s" (caar culprits)) "") file)
+          (when (executable-find "notify-send")
+            (call-process "notify-send" nil 0 nil "-a" "Emacs" "-u" "critical"
+                          (format "Emacs was frozen for %.0f s" gap)
+                          (format "%sProfile and context saved: %s (.txt)\nM-x profiler-find-profile"
+                                  (if culprits (format "Your code in it: %s\n" (caar culprits)) "")
+                                  (abbreviate-file-name file)))))))
      ;; Keep only the last minute or so, so a recording shows the freeze.
      ((zerop (% +perf--freeze-ticks 30))
       (+perf--cpu-log)))))
@@ -283,6 +330,12 @@ says so, instead of an error every 30 seconds.  A restart clears it."
   (remove-hook 'pre-command-hook #'+perf--freeze-note-command-h)
   (when +perf-freeze-recorder-mode
     (add-hook 'pre-command-hook #'+perf--freeze-note-command-h)
+    ;; The depth is read when sampling starts: restart it if it was shallower.
+    (when (< profiler-max-stack-depth +perf-freeze-stack-depth)
+      (setq profiler-max-stack-depth +perf-freeze-stack-depth)
+      (when (profiler-cpu-running-p)
+        (profiler-cpu-stop)
+        (ignore-errors (profiler-cpu-log))))   ; the old log keeps its depth until read
     (unless (profiler-cpu-running-p) (profiler-cpu-start profiler-sampling-interval))
     (setq +perf--freeze-timer (run-with-timer 2 2 #'+perf--freeze-tick))))
 

@@ -761,6 +761,25 @@ and meanings learned before that are dropped."
     ;; Without CPU figures (the first tick), no verdict.
     (should-not (string-match-p "computed" (+perf-freeze-context 30.0)))))
 
+(ert-deftest perf/freeze-culprits-are-this-configs-functions-by-share ()
+  ;; +perf-freeze-gap is this config's (lisp/+perf.el); car and
+  ;; tramp-send-command are not.
+  (let ((log (make-hash-table :test #'equal)))
+    (puthash (vector 'car '+perf-freeze-gap 'tramp-send-command nil) 90 log)
+    (puthash (vector '+perf-freeze-gap '+perf-freeze-gap nil) 5 log) ; counted once per sample
+    (puthash (vector 'car nil) 5 log)
+    (let ((c (+perf-freeze-culprits log)))
+      (should (equal '(+perf-freeze-gap) (mapcar #'car c)))
+      (should (= 95.0 (cdar c)))))
+  ;; Below 5%: not named.
+  (let ((log (make-hash-table :test #'equal)))
+    (puthash (vector '+perf-freeze-gap nil) 4 log)
+    (puthash (vector 'car nil) 96 log)
+    (should-not (+perf-freeze-culprits log)))
+  (should (string-search "Your code in it: +completion-sort-files-newest (88%)"
+                          (let ((+perf--freeze-commands (make-ring 20)))
+                            (+perf-freeze-context 30.0 29.0 2.0 '((+completion-sort-files-newest . 88.0)))))))
+
 (ert-deftest perf/client-evals-of-a-second-or-more-are-noted ()
   (let ((+perf--client-evals (make-ring 10))
         (+perf--client-eval-running nil))
