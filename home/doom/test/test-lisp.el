@@ -780,6 +780,55 @@ and meanings learned before that are dropped."
                           (let ((+perf--freeze-commands (make-ring 20)))
                             (+perf-freeze-context 30.0 29.0 2.0 '((+completion-sort-files-newest . 88.0)))))))
 
+(ert-deftest perf/slow-commands-counted-unless-they-read-input ()
+  (let* ((+perf--slow (make-hash-table :test #'equal))
+         (+perf-slow-threshold 0.2)
+         (+perf-freeze-recorder-mode nil)
+         (this-command 'test-slow-cmd))
+    ;; Took 0.3 s and read nothing more: counted.
+    (setq +perf--command-start (cons (- (float-time) 0.3) num-nonmacro-input-events))
+    (+perf--command-end-h)
+    ;; Took 0.1 s: not.
+    (setq +perf--command-start (cons (- (float-time) 0.1) num-nonmacro-input-events))
+    (+perf--command-end-h)
+    ;; Took 5 s but read a key meanwhile (a y/n prompt): not.
+    (setq +perf--command-start (cons (- (float-time) 5) (1- num-nonmacro-input-events)))
+    (+perf--command-end-h)
+    (pcase-let ((`((,cmd ,n ,total ,_worst ,_c)) (+perf-slow-rows 1)))
+      (should (eq cmd 'test-slow-cmd))
+      (should (= n 1))
+      (should (< 0.29 total 0.4)))))
+
+(ert-deftest perf/slow-commands-add-up-over-days-saved-and-read-back ()
+  (let* ((file (make-temp-file "slow" nil ".eld"))
+         (+perf-slow-file file)
+         (+perf--slow (make-hash-table :test #'equal))
+         (+perf--slow-dirty nil)
+         (yesterday (format-time-string "%F" (time-subtract nil 86400)))
+         (old (format-time-string "%F" (time-subtract nil (* 40 86400)))))
+    (unwind-protect
+        (progn
+          (+perf-note-slow 'a 0.5 '(+x))
+          (+perf-note-slow 'a 0.3 '(+x +y))
+          (puthash (cons yesterday 'a) (list 2 2.0 1.5 '((+y . 2))) +perf--slow)
+          (puthash (cons yesterday 'b) (list 1 0.4 0.4 nil) +perf--slow)
+          (puthash (cons old 'c) (list 9 99.0 9.0 nil) +perf--slow)
+          (should (equal (mapcar #'car (+perf-slow-rows 1)) '(a)))
+          (let ((week (+perf-slow-rows 7)))
+            (should (equal (mapcar #'car week) '(a b)))       ; c is 40 days old
+            (should (equal (cdr (assq 'a week)) '(4 2.8 1.5 (+y +x))))) ; +y named 3×, +x 2×
+          (+perf--slow-save)
+          ;; Read back: entries over 30 days old are dropped.
+          (let ((+perf--slow nil))
+            (should (gethash (cons yesterday 'b) (+perf--slow-table)))
+            (should-not (gethash (cons old 'c) (+perf--slow-table))))
+          (save-window-excursion
+            (+perf/slow-commands)
+            (with-current-buffer "*slow commands*"
+              (should (string-match-p "| 0.8 s | +2 | 0.50 s | a +| \\+x, \\+y" (buffer-string)))
+              (kill-buffer))))
+      (delete-file file))))
+
 (ert-deftest perf/client-evals-of-a-second-or-more-are-noted ()
   (let ((+perf--client-evals (make-ring 10))
         (+perf--client-eval-running nil))
@@ -2308,7 +2357,9 @@ findings stand, following the text; once saved it runs again."
                   (+wait-call "Connecting to pi"
                               (lambda ()
                                 (let ((p (make-process :name "w" :command '("sleep" "1.3") :noquery t)))
-                                  (while (accept-process-output p)))
+                                  ;; Short timeouts: in the full suite a bare wait sometimes ran no
+                                  ;; timers until the process ended (alone it always did).
+                                  (while (process-live-p p) (accept-process-output p 0.05)))
                                 'done)))))
     (should (seq-some (lambda (s) (and s (string-match-p "\\`Connecting to pi… [0-9] s (C-g stops it)\\'" s))) said))
     (should (null (car said)))          ; cleared at the end

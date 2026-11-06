@@ -342,6 +342,148 @@ says so, instead of an error every 30 seconds.  A restart clears it."
 (unless noninteractive (+perf-freeze-recorder-mode 1))
 
 
+;;;; Slow keystrokes: below a freeze, still felt
+
+;; A command that takes 0.3 s is felt on every press but never reaches the
+;; freeze threshold.  Each command taking `+perf-slow-threshold' or more
+;; (and less than a freeze) is counted per day, with the config's functions
+;; its CPU samples ran through (the freeze recorder's profiler, read right
+;; after the command).  Commands that read more input (a prompt, y/n) are
+;; left out: their time is yours, not Emacs's.  M-x +perf/slow-commands,
+;; SPC h ! k: today's and the week's worst, by the time they cost.
+
+(defvar +perf-slow-threshold 0.25 "Seconds a command takes to count as slow.")
+
+(defvar +perf-slow-file (expand-file-name "slow-commands.eld" (bound-and-true-p doom-cache-dir))
+  "Where slow commands are kept (30 days).")
+
+(defvar +perf--slow nil
+  "Hash (DAY . COMMAND) → (COUNT TOTAL WORST CULPRITS), CULPRITS an alist
+FUNCTION → times named.")
+(defvar +perf--slow-dirty nil)
+(defvar +perf--command-start nil "(TIME . INPUT-EVENTS) when this command began.")
+
+(defun +perf--slow-table ()
+  (or +perf--slow
+      (setq +perf--slow
+            (let ((table (make-hash-table :test #'equal))
+                  (cutoff (format-time-string "%F" (time-subtract nil (* 30 86400)))))
+              (when (file-readable-p +perf-slow-file)
+                (pcase-dolist (`(,key . ,val) (ignore-errors
+                                                (with-temp-buffer
+                                                  (insert-file-contents +perf-slow-file)
+                                                  (read (current-buffer)))))
+                  (unless (string< (car key) cutoff) (puthash key val table))))
+              table))))
+
+(defun +perf--slow-save ()
+  (when +perf--slow-dirty
+    (let (rows (print-length nil) (print-level nil))
+      (maphash (lambda (k v) (push (cons k v) rows)) (+perf--slow-table))
+      (make-directory (file-name-directory +perf-slow-file) t)
+      (with-temp-file +perf-slow-file (prin1 rows (current-buffer))))
+    (setq +perf--slow-dirty nil)))
+
+(defun +perf-note-slow (command secs &optional culprits)
+  "Count COMMAND as having taken SECS today, CULPRITS (functions) in it."
+  (let* ((key (cons (format-time-string "%F") command))
+         (e (or (gethash key (+perf--slow-table)) (list 0 0.0 0.0 nil))))
+    (dolist (c culprits)
+      (cl-incf (alist-get c (nth 3 e) 0)))
+    (puthash key (list (1+ (nth 0 e)) (+ (nth 1 e) secs) (max (nth 2 e) secs) (nth 3 e))
+             (+perf--slow-table))
+    (setq +perf--slow-dirty t)))
+
+(defun +perf--command-start-h ()
+  (setq +perf--command-start (cons (float-time) num-nonmacro-input-events)))
+
+(defun +perf--command-end-h ()
+  (when-let* ((start +perf--command-start))
+    (setq +perf--command-start nil)
+    (let ((secs (- (float-time) (car start))))
+      (when (and (>= secs +perf-slow-threshold)
+                 (< secs +perf-freeze-threshold)
+                 (symbolp this-command) this-command
+                 (not executing-kbd-macro)
+                 ;; It read no more input: the time was Emacs's.
+                 (= num-nonmacro-input-events (cdr start)))
+        (+perf-note-slow this-command secs
+                         (and +perf-freeze-recorder-mode
+                              (when-let* ((log (+perf--cpu-log)))
+                                (mapcar #'car (ignore-errors (+perf-freeze-culprits log 2))))))))))
+
+(defun +perf-slow-rows (days)
+  "Slow commands of the last DAYS days, costliest first:
+\(COMMAND COUNT TOTAL WORST CULPRITS), CULPRITS most named first."
+  (let ((cutoff (format-time-string "%F" (time-subtract nil (* (1- days) 86400))))
+        (by (make-hash-table :test #'eq)) rows)
+    (maphash (lambda (k v)
+               (unless (string< (car k) cutoff)
+                 (let ((e (or (gethash (cdr k) by) (list 0 0.0 0.0 nil))))
+                   (dolist (c (nth 3 v)) (cl-incf (alist-get (car c) (nth 3 e) 0) (cdr c)))
+                   (puthash (cdr k) (list (+ (nth 0 e) (nth 0 v)) (+ (nth 1 e) (nth 1 v))
+                                          (max (nth 2 e) (nth 2 v)) (nth 3 e))
+                            by))))
+             (+perf--slow-table))
+    (maphash (lambda (cmd e)
+               (push (list cmd (nth 0 e) (nth 1 e) (nth 2 e)
+                           (mapcar #'car (sort (nth 3 e) (lambda (a b) (> (cdr a) (cdr b))))))
+                     rows))
+             by)
+    (sort rows (lambda (a b) (> (nth 2 a) (nth 2 b))))))
+
+;;;###autoload
+(defun +perf/slow-commands ()
+  "Commands that were slow (not frozen), today and this week, by the time
+they cost; with the config's functions found in their CPU samples."
+  (interactive)
+  (with-current-buffer (get-buffer-create "*slow commands*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert (format "Commands taking %.2f s or more (and under a freeze), by the time they cost.\n"
+                      +perf-slow-threshold))
+      (pcase-dolist (`(,title . ,days) '(("Today" . 1) ("Last 7 days" . 7)))
+        (insert "\n* " title "\n| cost | times | worst | command | your code in it |\n|-\n")
+        (let ((rows (seq-take (+perf-slow-rows days) 15)))
+          (if (null rows) (insert "| | | | nothing slow | |\n")
+            (pcase-dolist (`(,cmd ,n ,total ,worst ,culprits) rows)
+              (insert (format "| %.1f s | %d | %.2f s | %s | %s |\n" total n worst cmd
+                              (mapconcat #'symbol-name (seq-take culprits 2) ", ")))))))
+      (org-mode)
+      (org-table-map-tables #'org-table-align t)
+      (goto-char (point-min))
+      (setq buffer-read-only t))
+    (pop-to-buffer (current-buffer))))
+
+(defvar +perf--slow-save-timer nil)
+
+(define-minor-mode +perf-slow-recorder-mode
+  "Count commands taking `+perf-slow-threshold' or more (M-x +perf/slow-commands)."
+  :global t
+  :group 'convenience
+  (remove-hook 'pre-command-hook #'+perf--command-start-h)
+  (remove-hook 'post-command-hook #'+perf--command-end-h)
+  (remove-hook 'kill-emacs-hook #'+perf--slow-save)
+  (when (timerp +perf--slow-save-timer) (cancel-timer +perf--slow-save-timer))
+  (setq +perf--slow-save-timer nil)
+  (when +perf-slow-recorder-mode
+    (add-hook 'pre-command-hook #'+perf--command-start-h)
+    (add-hook 'post-command-hook #'+perf--command-end-h)
+    (add-hook 'kill-emacs-hook #'+perf--slow-save)
+    (setq +perf--slow-save-timer (run-with-idle-timer 600 t #'+perf--slow-save))))
+
+(unless noninteractive (+perf-slow-recorder-mode 1))
+
+(declare-function org-table-map-tables "org-table" (fn &optional quietly))
+(declare-function org-table-align "org-table" ())
+(declare-function transient-get-suffix "transient" (prefix loc))
+
+(with-eval-after-load '+attention
+  (unless (ignore-errors (transient-get-suffix '+attention-menu "k"))
+    (transient-append-suffix '+attention-menu "a"
+      '("k" "slow keystrokes (today, this week)" +perf/slow-commands))))
+
+
 ;;;; pulsar resolves its command aliases once, not per buffer
 
 ;; `pulsar-mode' is buffer-local and turned on in every new buffer and after

@@ -53,7 +53,10 @@ run meanwhile, so the echo area can say what Emacs waits for
                              :connection-type 'pipe :noquery t :stderr stderr :sentinel #'ignore)))
     (unwind-protect
         (progn
-          (while (accept-process-output proc))
+          ;; Short timeouts, not a bare wait: that sometimes ran no timers
+          ;; until the process ended (seen in the test suite).
+          (while (process-live-p proc) (accept-process-output proc 0.1))
+          (while (accept-process-output proc 0))
           (while (accept-process-output stderr 0))
           (cons (process-exit-status proc)
                 (with-current-buffer err (buffer-string))))
