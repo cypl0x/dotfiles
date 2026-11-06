@@ -518,11 +518,16 @@ directory taken as ./ (~/Pictures/./) without its /./."
     (if (or (null dir) (> (length files) +completion-files-newest-max))
         (vertico-sort-history-length-alpha files)
       (let* ((cache (or +completion--mtimes (setq +completion--mtimes (make-hash-table :test #'equal))))
+             ;; The prompt's directory is local, but a candidate need not
+             ;; be: typing /ssh: completes hosts in /, and the date of
+             ;; /ssh:pi-zero-lan: opened that connection (132 s frozen,
+             ;; 2026-11-06).  Remote candidates sort as oldest.
              (time (lambda (f)
                      (let ((path (expand-file-name f dir)))
                        (or (gethash path cache)
-                           (puthash path (float-time (or (file-attribute-modification-time
-                                                          (file-attributes path))
+                           (puthash path (float-time (or (and (not (file-remote-p path))
+                                                              (file-attribute-modification-time
+                                                               (file-attributes path)))
                                                          0))
                                     cache)))))
              (dot (lambda (f) (member f '("./" "../")))))

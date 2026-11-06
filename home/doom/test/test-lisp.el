@@ -2747,7 +2747,17 @@ keep the default order; times are cached until a refresh."
               ;; Remote: the default order.
               (cl-letf (((symbol-function 'minibuffer-contents-no-properties) (lambda () "/ssh:host:/tmp/")))
                 (let ((minibuffer-completing-file-name t))
-                  (should (equal (+completion-sort-files-newest '("b" "a")) '("a" "b"))))))))
+                  (should (equal (+completion-sort-files-newest '("b" "a")) '("a" "b")))))
+              ;; /ssh: completes hosts in a local directory: their dates
+              ;; are never asked for (that opened the connection).
+              (cl-letf (((symbol-function 'minibuffer-contents-no-properties) (lambda () "/ssh:")))
+                (let ((minibuffer-completing-file-name t) (+completion--mtimes nil) asked)
+                  (require 'tramp)
+                  (cl-letf* ((orig (symbol-function 'file-attributes))
+                             ((symbol-function 'file-attributes)
+                              (lambda (f &rest r) (when (file-remote-p f) (push f asked)) (apply orig f r))))
+                    (+completion-sort-files-newest '("ssh:pi:" "ssh:inari:"))
+                    (should-not asked)))))))
       (delete-directory dir t))))
 
 (ert-deftest dired/newest-first-folders-first-not-for-github ()
