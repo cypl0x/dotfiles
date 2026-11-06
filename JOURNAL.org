@@ -39,6 +39,14 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-06 Fr 02:46] — What went wrong in the session, fixed
+- ✔ 109 timer errors in Org capture: minuet counted context from the
+  file's start in narrowed buffers; corrected copy (upstream still so).
+- ✔ ispell word completion error each session: off (prose completion
+  covers it); ispell knows the English word list.
+- ✔ M-x "meant" learning took unrelated next commands; now only related
+  ones count, wrong ones pruned (21 → 10).
+
 ** [2026-11-06 Fr 01:59] — /github: again, slender for Lean, Atuin AI further
 - ✔ =/github:OWNER/REPO= opens in dired again (dirvish hook was never set).
 - ✔ Lean is slender-mode =(lean +slender +lsp)=, the slender session's module.
