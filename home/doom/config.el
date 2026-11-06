@@ -12,10 +12,10 @@
 ;; ---------------------------------------------------------------------------
 
 ;; Font configuration moved to lisp/+fonts.el (Maple Mono NF, all 5 slots).
-;; (setq doom-theme 'doom-vibrant)
+(setq doom-theme 'doom-vibrant)
 ;; modus-operandi until doom-modus-vibrant-light is polished end to end
 ;; (mess.org); then back to it.
-(setq doom-theme 'modus-operandi)
+;; (setq doom-theme 'modus-operandi)
 (setq display-line-numbers-type t)
 
 ;; Date/time in modeline
@@ -83,7 +83,11 @@
         "C-j" #'vertico-next
         "C-k" #'vertico-previous
         "C-h" #'vertico-directory-up
-        "C-l" #'vertico-insert))
+        "C-l" #'vertico-insert
+        ;; M-DEL (1,989 uses in 14 days) was backward-kill-word: in a file
+        ;; name it stopped at - and ., and put every piece on the kill ring.
+        ;; This removes a whole path segment (a word elsewhere), no kill.
+        "M-DEL" #'vertico-directory-delete-word))
 
 (defun +vertico-preview-candidate ()
   "Show the current Vertico candidate in a read-only buffer."
