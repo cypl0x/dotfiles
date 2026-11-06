@@ -163,6 +163,7 @@ styles still match the word itself."
     ("save into the vault, save buffer as a note" (+org-vault/save-into-vault))
     ("key notation, shift, control, meta, alt, super key" (+discover/key-notation))
     ("translate a word, dictionary" (leo-translate-word +lookup/dictionary-definition))
+    ("agent tasks, what the agents do, my tasks for agents" (+org-vault/agent-tasks) "SPC n A")
     ("cut" (evil-delete kill-region) "Emacs: kill; Evil deletes into a register")
     ("paste" (evil-paste-after yank) "Emacs: yank (the opposite of Evil's y)")
     ("clipboard history, paste an older copy" (+default/yank-pop consult-yank-pop) "the kill ring")

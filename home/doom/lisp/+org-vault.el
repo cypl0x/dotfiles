@@ -418,5 +418,32 @@ the recording at point (where you started)."
       ;; o, not a: SPC n r a is Doom's random note.
       :desc "Record audio here"     "n r o" #'+org-vault/record)
 
+;;;; SPC n A — what you gave the agents
+
+;; Tasks captured for an agent (C-c c a: :agent:) and mess.org's list, in one
+;; view: open ones first, then those done in the last two weeks with the
+;; agent's note under them (RET goes there, TAB shows it).
+(declare-function org-ql-search "ext:org-ql-search" (buffers-files query &rest args))
+
+(defun +org-vault--agent-files ()
+  "The vault's top-level Org files (inbox.org, mess.org, …)."
+  (directory-files org-directory t "\\`[^.#].*\\.org\\'"))
+
+;;;###autoload
+(defun +org-vault/agent-tasks ()
+  "Your tasks for agents: open first, then done in the last 14 days."
+  (interactive)
+  (require 'org-ql)
+  (org-ql-search (+org-vault--agent-files)
+    '(and (or (tags "agent") (path "mess\\.org"))
+          (or (todo) (done))
+          (or (not (done)) (closed :from -14)))
+    :title "Agent tasks (open, then done in 14 days)"
+    :sort '(todo priority date)
+    :super-groups '((:name "Open" :not (:todo ("DONE" "KILL")))
+                    (:name "Done, last 14 days" :todo ("DONE" "KILL")))))
+
+(map! :leader :desc "Agent tasks (open, done)" "n A" #'+org-vault/agent-tasks)
+
 (provide '+org-vault)
 ;;; +org-vault.el ends here

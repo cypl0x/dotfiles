@@ -150,8 +150,10 @@ Explicit colours, not :inherit: org-modern appends org-modern-label (0.8)
 itself, and inheriting faces rendered labels at 14, 18 and 22 px side by
 side.  Inverse video, so hl-line's background on the current line becomes
 the label's text instead of wiping the label out."
-  (list :foreground (if (stringp face-or-colour) face-or-colour
-                      (face-foreground face-or-colour nil t))
+  (list :foreground (cond ((stringp face-or-colour) face-or-colour)
+                          ((and face-or-colour (facep face-or-colour))
+                           (face-foreground face-or-colour nil t))
+                          (t (face-foreground 'shadow nil t)))
         :background (face-background 'default nil t)
         :inverse-video t
         :weight 'semibold))
@@ -159,7 +161,9 @@ the label's text instead of wiping the label out."
 (defun +org-modern-todo-faces-h ()
   "Keyword and priority labels in the colours Org itself uses for them.
 Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
-  (let ((muted (doom-color 'base7)))
+  ;; doom-color is nil under a theme not from Doom (modus-operandi, your light
+  ;; side): Org then failed to load ("Invalid face").
+  (let ((muted (or (doom-color 'base7) (face-foreground 'shadow nil t))))
     (setq org-modern-todo-faces
           (append (mapcar (lambda (kf) (cons (car kf) (+org-modern-label-face (cdr kf))))
                           org-todo-keyword-faces)
