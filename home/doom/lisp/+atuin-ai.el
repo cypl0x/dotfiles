@@ -179,6 +179,14 @@ OPENED: when the box opened (to find what Atuin AI said about a command)."
 runs in the background, where you wouldn't see it start."
   :type '(repeat string))
 
+(defun +atuin-ai--open-db ()
+  "Atuin's sessions database, read only where `sqlite-open' offers that
+(newer Emacs; it is only ever read here either way)."
+  (let ((open #'sqlite-open))          ; not checked against the older arity
+    (if (> (or (cdr (func-arity open)) 0) 1)
+        (funcall open +atuin-ai-sessions-db t)
+      (funcall open +atuin-ai-sessions-db))))
+
 (defun +atuin-ai-suggestion (command &optional since)
   "What Atuin AI said when it suggested COMMAND (since SINCE, seconds):
 \(:danger LEVEL :danger-notes TEXT :confidence LEVEL :description TEXT),
@@ -187,7 +195,7 @@ newest suggestion when none is COMMAND exactly (the hook can respell it)."
   (when (and (fboundp 'sqlite-available-p) (sqlite-available-p)
              (file-readable-p +atuin-ai-sessions-db))
     (ignore-errors
-      (let ((db (sqlite-open +atuin-ai-sessions-db t)))   ; read only
+      (let ((db (+atuin-ai--open-db)))
         (unwind-protect
             (let* ((inputs
                     (mapcar (lambda (row)
@@ -214,7 +222,7 @@ newest suggestion when none is COMMAND exactly (the hook can respell it)."
   (when (and (fboundp 'sqlite-available-p) (sqlite-available-p)
              (file-readable-p +atuin-ai-sessions-db))
     (ignore-errors
-      (let ((db (sqlite-open +atuin-ai-sessions-db t)))
+      (let ((db (+atuin-ai--open-db)))
         (unwind-protect
             (mapcar (lambda (row)
                       (let ((data (json-parse-string (cadr row) :object-type 'alist)))
