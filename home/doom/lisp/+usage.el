@@ -8,6 +8,7 @@
 ;;   M-x +usage-mode     start/stop counting (off by default)
 ;;   M-x +usage/report   commands by frequency, with keys used and keys bound
 ;;   M-x +usage/suggest  familiar reads the counts and suggests keys and shortcuts
+;;   M-x +usage/tip      one tip, the one that helps most now (C-ß 1; C-u: all so far)
 ;;   M-x +usage/time     time per mode, cancelled prompts and key prefixes
 ;;   M-x                 commands you run here (this mode, after this command) first
 ;;   SPC A .             anticipate: likely next commands here (C-u: ask the model)
@@ -305,13 +306,97 @@ PRESSED is the key that ran it, when known."
            "(name a free one in Doom/evil), long key sequences I repeat that have shorter ones, "
            "chains of commands that want one command, built-in or package features that would "
            "replace what I do by hand.  Lead with the five with the most effect.\n\n"
-           "#+begin_example\n" (+usage-summary) "\n#+end_example"
-           ;; The order too: chains repeated, undone, retried (lisp/+usage-flows.el).
-           (let ((flows (and (fboundp '+usage-flows-summary) (+usage-flows-summary))))
-             (if (string-empty-p (or flows "")) ""
-               (concat "\n\nAnd the order I work in:\n#+begin_example\n" flows "\n#+end_example"))))
+           (+usage-evidence))
    t))
 
+
+;;;; One tip, not a list
+;;
+;; +usage/suggest answers with a list to read through.  SPC h ! t asks for
+;; the one change that would help most now, in a line, in the echo area.
+;; Tips given before go along, so the next one is another; they're kept
+;; (`+usage-tips-file'), C-u SPC h ! t lists them.
+
+(declare-function familiar-request "familiar" (prompt &rest args))
+(defvar familiar-models)
+
+(defvar +usage-tips-file (locate-user-emacs-file "usage-tips.eld")
+  "Tips given by `+usage/tip', newest first: a list of (TIME . TEXT).")
+
+(defvar +usage-evidence-functions nil
+  "Functions returning more evidence for `+usage/suggest' and `+usage/tip':
+each a string (an Org section) or nil.  Beyond Emacs: shell, desktop …")
+
+(defun +usage-evidence ()
+  "What you do, for the model: counts, the order of commands, and the rest
+`+usage-evidence-functions' add."
+  (mapconcat
+   #'identity
+   (delq nil
+         (append
+          (list (concat "#+begin_example\n" (+usage-summary) "\n#+end_example")
+                ;; The order too: chains repeated, undone, retried (lisp/+usage-flows.el).
+                (let ((flows (and (fboundp '+usage-flows-summary) (+usage-flows-summary))))
+                  (unless (string-empty-p (or flows ""))
+                    (concat "And the order I work in:\n#+begin_example\n" flows "\n#+end_example"))))
+          (mapcar (lambda (f) (ignore-errors (funcall f))) +usage-evidence-functions)))
+   "\n\n"))
+
+(defun +usage--tips ()
+  (when (file-readable-p +usage-tips-file)
+    (with-temp-buffer
+      (insert-file-contents +usage-tips-file)
+      (ignore-errors (read (current-buffer))))))
+
+(defun +usage--save-tip (text)
+  (let ((tips (seq-take (cons (cons (format-time-string "%F %R") text) (+usage--tips)) 200))
+        (print-length nil) (print-level nil))
+    (with-temp-file +usage-tips-file (prin1 tips (current-buffer)))))
+
+(defun +usage-tip-prompt ()
+  "The prompt `+usage/tip' sends."
+  (let ((before (seq-take (+usage--tips) 30)))
+    (concat "Here is how I work (local counts; nothing else is known about me).  "
+            "Give me exactly ONE change that would help me most now: a key for "
+            "something I reach by M-x or long keys, a command that replaces a chain "
+            "I repeat, a feature that replaces handwork.  One or two lines of plain "
+            "text: what to do (name the key or command) and why, with the count it "
+            "comes from.  No list, no preamble."
+            (if before
+                (concat "\n\nAlready given, so suggest something else:\n"
+                        (mapconcat (lambda (tip) (concat "- " (cdr tip))) before "\n"))
+              "")
+            "\n\n" (+usage-evidence))))
+
+(defun +usage/tip (&optional list)
+  "One tip from what you actually do, in the echo area.
+With prefix arg LIST, the tips given so far instead."
+  (interactive "P")
+  (if list
+      (let ((tips (+usage--tips)))
+        (unless tips (user-error "No tips yet"))
+        (with-current-buffer (get-buffer-create "*usage tips*")
+          (let ((inhibit-read-only t))
+            (erase-buffer)
+            (pcase-dolist (`(,time . ,text) tips)
+              (insert (propertize time 'face 'shadow) "  " text "\n\n")))
+          (goto-char (point-min))
+          (special-mode)
+          (pop-to-buffer (current-buffer))))
+    (unless (require 'familiar nil t) (user-error "familiar isn't available"))
+    (message "✦ Looking for the one tip…")
+    (let ((model (alist-get 'smart familiar-models)))
+      (familiar-request
+       (+usage-tip-prompt)
+       :task 'review :model model
+       :callback (lambda (response _info)
+                   (if (not (stringp response))
+                       (message "No tip: the request failed")
+                     (let ((text (string-trim response)))
+                       (+usage--save-tip text)
+                       (let ((message-truncate-lines nil))
+                         (message "%s %s" (propertize (format "✦ Tip (%s):" model) 'face 'shadow)
+                                  text)))))))))
 
 (defun +usage--sequences ()
   "Saved plus unsaved sequence counts: (PAIRS . MODES), two `equal' hash tables."

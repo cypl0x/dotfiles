@@ -753,6 +753,7 @@ A complete key instead: what it does."
     ("/" "My own commands"            +docs/commands)
     ("L" "My learning path"           +docs/learn)
     ("u" "What to learn next"         +usage/suggest)
+    ("1" "One tip (C-u: the ones so far)" +usage/tip)
     ("g" "M-x searches given up"      +usage/mx-gave-up)
     ("U" "What I use (report)"        +usage/report)]])
 

@@ -423,6 +423,34 @@ and a temp exec-path where bin/tar links to store/tar."
           (real-this-command (if via-mx 'execute-extended-command cmd)))
       (+usage--record-h))))
 
+(ert-deftest usage/tip-gives-one-and-not-the-same-again ()
+  ;; inbox: "+usage/suggest like command but just a single suggestion".
+  (let* ((+usage-tips-file (make-temp-file "tips" nil ".eld"))
+         (familiar-models '((smart . m-smart)))
+         (+usage-evidence-functions (list (lambda () "* Shell\nzz-evidence")))
+         sent shown)
+    (delete-file +usage-tips-file)
+    (unwind-protect
+        (cl-letf (((symbol-function 'require) (lambda (f &rest _) (or (eq f 'familiar) (featurep f))))
+                  ((symbol-function '+usage-summary) (lambda () "counts"))
+                  ((symbol-function 'familiar-request)
+                   (lambda (prompt &rest args)
+                     (push prompt sent)
+                     (funcall (plist-get args :callback) "  Bind SPC g b to magit-blame (M-x ×40).  " nil)))
+                  ((symbol-function 'message)
+                   (lambda (fmt &rest args) (setq shown (apply #'format fmt args)))))
+          (+usage/tip)
+          (should (string-match-p "exactly ONE change" (car sent)))
+          (should (string-match-p "zz-evidence" (car sent)))
+          (should-not (string-match-p "Already given" (car sent)))
+          (should (equal (substring-no-properties shown)
+                         "✦ Tip (m-smart): Bind SPC g b to magit-blame (M-x ×40)."))
+          ;; The next one is told what was given.
+          (+usage/tip)
+          (should (string-match-p "Already given.*\n- Bind SPC g b to magit-blame" (car sent)))
+          (should (= 2 (length (+usage--tips)))))
+      (ignore-errors (delete-file +usage-tips-file)))))
+
 (ert-deftest usage/off-by-default ()
   (should-not +usage-mode))
 
