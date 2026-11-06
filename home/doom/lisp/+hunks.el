@@ -13,6 +13,7 @@
 ;;           history of these lines (git log -L), blame, compare against
 ;;           any revision (branch, tag, commit) instead of HEAD, marks in
 ;;           dired, amend view (changes since HEAD^).
+;; SPC g e   who changed each line, in the echo area as you move (toggle)
 ;;
 ;;; Code:
 
@@ -222,6 +223,24 @@
 (add-hook 'diff-hl-mode-hook #'+hunks-mouse-h)
 
 (map! :leader :desc "This change (hunk)…" "g H" #'+hunks-menu)
+
+;;;; Who changed this line, in the echo area
+
+;; Magit's own echo style: the commit of the line at point (author, age,
+;; summary) in the echo area as you move; no overlays in the text.
+(declare-function magit-blame-echo "ext:magit-blame" (args))
+(declare-function magit-blame-quit "ext:magit-blame" ())
+(defvar magit-blame-mode)
+
+(defun +hunks/blame-echo ()
+  "Toggle: who changed each line, in the echo area as you move (Magit)."
+  (interactive)
+  (if (bound-and-true-p magit-blame-mode)
+      (magit-blame-quit)
+    (require 'magit-blame)
+    (call-interactively #'magit-blame-echo)))
+
+(map! :leader :desc "Blame in the echo area (toggle)" "g e" #'+hunks/blame-echo)
 
 (provide '+hunks)
 ;;; +hunks.el ends here
