@@ -1111,8 +1111,13 @@ A prompt equal to the newest one isn't added again (`add-to-history')."
 (defcustom familiar-ask-remember-modifiers t
   "Non-nil: a prompt starts with the @modifiers of the one asked before.
 @echo, @fast, @model:NAME, @follow-up and the like stay until you delete
-them; @p:NAME (a prompt from the library) doesn't."
+them; those in `familiar-ask-modifiers-not-remembered' don't."
   :type 'boolean :group 'familiar)
+
+(defcustom familiar-ask-modifiers-not-remembered '("p" "replace" "inline" "transient")
+  "@modifiers that act once: a prompt from the library, or what changes text.
+Kept, @replace with a region active would overwrite it unasked."
+  :type '(repeat string) :group 'familiar)
 
 (defvar familiar-ask-modifiers nil
   "The @modifiers of the last prompt asked, as strings (\"@echo\" …).")
@@ -1127,8 +1132,9 @@ them; @p:NAME (a prompt from the library) doesn't."
   "An @NAME or @NAME:ARG in a prompt; group 1 the whole, 2 the name.")
 
 (defun familiar-ask--modifiers (prompt)
-  "The @modifiers PROMPT holds, in order, as strings."
-  (let ((names (familiar-ask--modifier-names)) (start 0) found)
+  "The @modifiers PROMPT holds that stay for the next one, in order, as strings."
+  (let ((names (seq-difference (familiar-ask--modifier-names) familiar-ask-modifiers-not-remembered))
+        (start 0) found)
     (while (string-match familiar-ask--modifier-re prompt start)
       (setq start (match-end 0))
       (when (member (match-string 2 prompt) names)
@@ -1137,23 +1143,29 @@ them; @p:NAME (a prompt from the library) doesn't."
 
 ;; @words the prompt understands stand out as you type them.
 (defvar-local familiar-ask--modifier-overlays nil)
+(defvar-local familiar-ask--names nil
+  "`familiar-ask--modifier-names' when the prompt opened: not per keystroke.")
 
 (defun familiar-ask--highlight-modifiers (&rest _)
   "Show the known @modifiers in the prompt in `font-lock-keyword-face'."
   (mapc #'delete-overlay familiar-ask--modifier-overlays)
   (setq familiar-ask--modifier-overlays nil)
-  (let ((names (familiar-ask--modifier-names)))
+  (let ((names (or familiar-ask--names (familiar-ask--modifier-names))))
     (save-excursion
-      (goto-char (minibuffer-prompt-end))
-      (while (re-search-forward familiar-ask--modifier-re nil t)
-        (when (or (member (match-string 2) names) (equal (match-string 2) "p"))
-          (let ((ov (make-overlay (match-beginning 1) (match-end 1))))
-            (overlay-put ov 'face 'font-lock-keyword-face)
-            (push ov familiar-ask--modifier-overlays)))))))
+      (save-restriction
+        ;; The prompt's text alone: its first @word is at ^.
+        (narrow-to-region (minibuffer-prompt-end) (point-max))
+        (goto-char (point-min))
+        (while (re-search-forward familiar-ask--modifier-re nil t)
+          (when (or (member (match-string 2) names) (equal (match-string 2) "p"))
+            (let ((ov (make-overlay (match-beginning 1) (match-end 1))))
+              (overlay-put ov 'face 'font-lock-keyword-face)
+              (push ov familiar-ask--modifier-overlays))))))))
 
 (defun familiar-ask--read (&optional model)
   "Read a prompt, with history and @keyword completion.
-MODEL, a name, is shown as who answers instead of the tier's model."
+MODEL, a name, is shown as who answers instead of the tier's model; a
+remembered @model doesn't come back then (it would win over MODEL)."
   (minibuffer-with-setup-hook
       (lambda ()
         (use-local-map (make-composed-keymap familiar-ask-minibuffer-map (current-local-map)))
@@ -1161,13 +1173,18 @@ MODEL, a name, is shown as who answers instead of the tier's model."
         (dolist (capf (reverse familiar-ask-prompt-capfs))
           (add-hook 'completion-at-point-functions capf 50 t))
         (setq-local familiar-ask--prompt-p t)
+        (setq-local familiar-ask--names (familiar-ask--modifier-names))
         (add-hook 'after-change-functions #'familiar-ask--highlight-modifiers nil t)
         (familiar-ask--highlight-modifiers)
         (run-hooks 'familiar-ask-prompt-setup-hook))
     (prog1 (read-string (format "Ask (%s): " (or model (alist-get familiar-ask-tier familiar-models)))
                         (prog1 (or familiar-ask--draft
-                                   (and familiar-ask-remember-modifiers familiar-ask-modifiers
-                                        (concat (string-join familiar-ask-modifiers " ") " ")))
+                                   (when-let* (((and familiar-ask-remember-modifiers))
+                                               (kept (if model
+                                                         (seq-remove (lambda (m) (string-prefix-p "@model" m))
+                                                                     familiar-ask-modifiers)
+                                                       familiar-ask-modifiers)))
+                                     (concat (string-join kept " ") " ")))
                           (setq familiar-ask--draft nil))
                         'familiar-ask-history)
       (when (bound-and-true-p savehist-mode)

@@ -1679,8 +1679,8 @@ prompt turns and the callback)."
 
 (ert-deftest familiar-ask/modifiers-are-remembered-for-the-next-prompt ()
   (skip-unless test-familiar-available)
-  (should (equal (familiar-ask--modifiers "why @echo is @follow-up x @model:haiku @p:summary @nope")
-                 '("@echo" "@follow-up" "@model:haiku")))
+  (should (equal (familiar-ask--modifiers "why @echo is @follow-up x @model:haiku @p:summary @nope @replace")
+                 '("@echo" "@follow-up" "@model:haiku")))   ; @replace acts once
   (let ((familiar-ask-modifiers '("@echo" "@fast")) initial)
     (cl-letf (((symbol-function 'read-string) (lambda (_p init &rest _) (setq initial init) "x")))
       (let ((familiar-ask-remember-modifiers t)) (familiar-ask--read))
@@ -1689,7 +1689,12 @@ prompt turns and the callback)."
       (should-not initial)
       ;; A kept draft (C-c C-k) wins.
       (let ((familiar-ask--draft "draft")) (familiar-ask--read))
-      (should (equal initial "draft")))))
+      (should (equal initial "draft"))))
+  ;; M-1 … C-u C-u: a remembered @model would win over the model picked.
+  (let ((familiar-ask-modifiers '("@echo" "@model:haiku")) (familiar-ask-remember-modifiers t) initial)
+    (cl-letf (((symbol-function 'read-string) (lambda (_p init &rest _) (setq initial init) "x")))
+      (familiar-ask--read "m-deep")
+      (should (equal initial "@echo ")))))
 
 (ert-deftest familiar-ask/known-modifiers-are-highlighted ()
   (skip-unless test-familiar-available)
@@ -1703,7 +1708,15 @@ prompt turns and the callback)."
     ;; Redone on each change, not piled up.
     (familiar-ask--highlight-modifiers)
     (should (= 2 (length (seq-filter (lambda (o) (overlay-get o 'face))
-                                     (overlays-in (point-min) (point-max))))))))
+                                     (overlays-in (point-min) (point-max)))))))
+  ;; In the minibuffer: the first @word, right after the prompt, too.
+  (with-temp-buffer
+    (insert "Ask (m): @echo why")
+    (cl-letf (((symbol-function 'minibuffer-prompt-end) (lambda () 10)))
+      (familiar-ask--highlight-modifiers))
+    (should (equal (mapcar (lambda (o) (buffer-substring (overlay-start o) (overlay-end o)))
+                           familiar-ask--modifier-overlays)
+                   '("@echo")))))
 
 (ert-deftest familiar-ask/prefix-picks-the-model ()
   (skip-unless test-familiar-available)
