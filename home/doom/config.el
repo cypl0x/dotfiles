@@ -36,11 +36,18 @@
 
 (use-package! savefold
   :init
-  (setq savefold-backends '(outline org markdown))
+  ;; Org's backend `require's org: at startup that loaded Org and with it
+  ;; everything configured `:after org' (org-roam, org-ql, citar …), 1.9 of
+  ;; 3.4 s (Doom's --debug-init log, 2026-11-06).  It comes on when Org
+  ;; loads instead, still before the first Org buffer's folds are restored.
+  (setq savefold-backends '(outline markdown))
   (setq savefold-directory (locate-user-emacs-file "savefold"))  ;; default
 
   :config
-  (savefold-mode 1))
+  (savefold-mode 1)
+  (with-eval-after-load 'org
+    (require 'savefold-org)
+    (savefold-org-mode 1)))
 
 ;; ---------------------------------------------------------------------------
 ;; Editor

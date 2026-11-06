@@ -19,7 +19,18 @@
 (require 'cl-lib)
 (require 'subr-x)
 (require 'svg)
-(require 'org)
+;; Not org itself: required here it loaded Org (and all that waits for it)
+;; at every start, 1.8 s.  Its macros are enough; the commands load it.
+(require 'org-macs)
+(declare-function org-back-to-heading "org" (&optional invisible-ok))
+(declare-function org-end-of-meta-data "org" (&optional full))
+(declare-function org-end-of-subtree "org" (&optional invisible-ok to-heading element))
+(declare-function org-entry-get "org" (epom property &optional inherit literal-nil))
+(declare-function org-entry-put "org" (epom property value))
+(declare-function org-fold-show-subtree "org-fold" ())
+(declare-function org-get-heading "org" (&optional no-tags no-todo no-priority no-comment))
+(declare-function org-id-get-create "org-id" (&optional force))
+(declare-function org-map-entries "org" (func &optional match scope &rest skip))
 
 (declare-function +org-graph--root "+org-graph" ())
 
@@ -288,6 +299,7 @@
    (let ((dir (expand-file-name "canvas/" (+org-graph--root))))
      (list (completing-read "Canvas: " (and (file-directory-p dir)
                                             (mapcar #'file-name-base (directory-files dir nil "\\.org\\'")))))))
+  (require 'org)
   (let* ((dir (expand-file-name "canvas/" (+org-graph--root)))
          (file (expand-file-name (concat name ".org") dir)))
     (make-directory dir t)
