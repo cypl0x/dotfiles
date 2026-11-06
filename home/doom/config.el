@@ -561,6 +561,7 @@
 (load! "lisp/+discover")     ;; C-ß: one place to start looking (keys, commands, manuals, your words)
 (load! "lisp/+completion")   ;; C-SPC: completion sources by context (links, tags, words, code)
 (load! "lisp/+edit")       ;; v grows the selection, SPC c ~ cases, C-c ' comments apart, tree-sitter text objects
+(load! "lisp/+casual")     ;; SPC m m: the mode's Casual menu (dired, Info, agenda, help …); C-o in calc, isearch
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules

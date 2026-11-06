@@ -39,6 +39,7 @@
 (declare-function +usage--merged "+usage" ())
 (declare-function +usage-say-later "+usage" (text))
 (declare-function familiar-ask "familiar-ask" (prompt &optional fresh origin))
+(declare-function +casual-menu-here "+casual" ())
 (declare-function consult-info "ext:consult-info" (&rest manuals))
 (declare-function helpful-symbol "ext:helpful" (symbol))
 (declare-function helpful-variable "ext:helpful" (symbol))
@@ -225,6 +226,8 @@ styles still match the word itself."
     ("what did I just press, key history" (view-lossage))
     ("messages, log" (view-echo-area-messages))
     ("what is this (at point)" (+discover/at-point))
+    ("menu of this mode, what can I do here" (+casual/menu-here) "SPC m m (Casual)")
+    ("editing menu, everything about editing" (casual-editkit-main-tmenu) "Casual EditKit")
     ("errors in the background, what failed" (+watch/errors) "SPC h ! e")
     ("search the manuals" (consult-info)))
   "(WORDS COMMANDS [NOTE]): words you'd use, the commands that do it (the
@@ -611,6 +614,10 @@ A complete key instead: what it does."
   (with-current-buffer (if (buffer-live-p +discover--from) +discover--from (current-buffer))
     (derived-mode-p 'org-mode)))
 
+(defun +discover--casual-p ()
+  (with-current-buffer (if (buffer-live-p +discover--from) +discover--from (current-buffer))
+    (and (fboundp '+casual-menu-here) (+casual-menu-here))))
+
 (defun +discover--minibuffer-p ()
   (and (buffer-live-p +discover--from) (minibufferp +discover--from)))
 
@@ -634,6 +641,7 @@ A complete key instead: what it does."
     ("m" "The modes, explained"       describe-mode)
     ("h" "This mode's manual"         +discover/manual-here)
     ("." "What is this? (at point)"   +discover/at-point)
+    ("y" "This mode's menu (Casual)" +casual/menu-here :if +discover--casual-p)
     ("s" "Settings of this mode"      customize-mode)
     ("o" "Org by example"             +org/cheatsheet :if +discover--org-p)]
    ["A key or a command"
