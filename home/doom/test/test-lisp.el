@@ -16,6 +16,61 @@
 (load (expand-file-name "+vellumory" test-lisp-dir) nil t)
 
 
+;;; +kitty
+
+(ert-deftest kitty/windows-send-and-keys-through-the-socket ()
+  ;; inbox: kitty from Emacs (list tabs, run in a shell, send keys).
+  (load (expand-file-name "+kitty" test-lisp-dir) nil t)
+  (let* ((dir (make-temp-file "kitty" t))
+         (log (expand-file-name "log" dir))
+         (fake (expand-file-name "kitten" dir))
+         (+kitty-program fake)
+         (+kitty--target nil))
+    (with-temp-file fake
+      (insert "#!/bin/sh\n"
+              "echo \"ARGS $*\" >> " log "\n"
+              "case \"$*\" in *--stdin*) printf 'STDIN ' >> " log "; cat >> " log "; echo >> " log ";; esac\n"
+              "case \"$*\" in *' ls'*) cat <<'EOF'\n"
+              "[{\"id\":1,\"is_focused\":true,\"tabs\":[{\"id\":2,\"title\":\"build\",\"is_focused\":true,\"windows\":["
+              "{\"id\":3,\"title\":\"make\",\"cwd\":\"/src\",\"at_prompt\":false,\"is_focused\":true,"
+              "\"last_reported_cmdline\":\"make -j8\",\"last_cmd_exit_status\":0,"
+              "\"foreground_processes\":[{\"cmdline\":[\"/usr/bin/make\",\"-j8\"]}]},"
+              "{\"id\":4,\"title\":\"zsh\",\"cwd\":\"/home\",\"at_prompt\":true,\"is_focused\":false,"
+              "\"last_reported_cmdline\":\"false\",\"last_cmd_exit_status\":1,\"foreground_processes\":[]}]}]}]\n"
+              "EOF\n;; esac\n"
+              "case \"$*\" in *launch*) echo 9;; esac\n"))
+    (set-file-modes fake #o755)
+    (unwind-protect
+        (cl-letf (((symbol-function '+kitty-sockets) (lambda () '("/run/user/1000/kitty-77")))
+                  ((symbol-function '+kitty--active-pid) (lambda () nil))
+                  ((symbol-function 'executable-find) (lambda (p &rest _) (and (equal p "timeout") "/usr/bin/timeout")))
+                  ((symbol-function 'completing-read)
+                   (lambda (_p table &rest _) (car (last (all-completions "" table))))))
+          (let ((ws (+kitty-windows)))
+            (should (equal (mapcar (lambda (w) (plist-get w :id)) ws) '(3 4)))
+            (should (equal (+kitty--label (car ws)) "build › make"))
+            (should (string-match-p "▶ make -j8" (+kitty--annotation (car ws))))
+            (should (string-match-p "at the prompt  ✘ last exit 1" (+kitty--annotation (cadr ws)))))
+          ;; Send the line: Enter after it; the window is remembered.
+          (with-temp-buffer
+            (insert "ls -la\nsecond")
+            (goto-char (point-min))
+            (+kitty/send))
+          (should (equal +kitty--target '("/run/user/1000/kitty-77" . 4)))
+          (+kitty/send-key "ctrl+c")
+          (let ((default-directory "/tmp/")) (+kitty/cd))
+          (with-temp-buffer (insert (with-temp-buffer (insert-file-contents log) (buffer-string)))
+            (let ((text (buffer-string)))
+              (should (string-match-p "ARGS @ --to unix:/run/user/1000/kitty-77 send-text --match id:4 --stdin\nSTDIN ls -la\r" text))
+              (should (string-match-p "send-key --match id:4 ctrl\\+c" text))
+              (should (string-match-p "STDIN cd -- /tmp/\r" text))))
+          ;; cd refuses a window where a program runs.
+          (setq +kitty--target '("/run/user/1000/kitty-77" . 3))
+          (should-error (+kitty/cd) :type 'user-error)
+          ;; M-ß gets the tools only with @kitty.
+          (should-not (+kitty-ask-tools '(echo) nil)))
+      (delete-directory dir t))))
+
 ;;; +daemon
 
 (ert-deftest daemon/relaunch-script-waits-restarts-and-restores ()
