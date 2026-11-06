@@ -39,6 +39,21 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-06 Fr 04:02] — Quality of life, round 3 (18 items)
+- ✔ Startup 3.4–4.3 s → 2.2 s: Org no longer loads at start (savefold's
+  Org backend, +org-canvas's require).
+- ✔ SPC b U reopens what you closed; M-x/C-ß "did you mean" for typos;
+  C-ß learns your words; popups and blame in C-ß.
+- ✔ Error watchdog (SPC h ! e): background errors said once, caught with a
+  backtrace (found slender's timer bug; their session fixed it).
+- ✔ Editing: v grows by syntax (expreg), SPC c ~ cases, C-c ' comments
+  apart, tree-sitter text objects, Doom's multiple cursors.
+- ✔ SPC m m: each mode's Casual menu; SPC g e blame in the echo area;
+  header line: project › file › function/heading (SPC t h); SPC h X
+  explains a whole command line.
+- ✔ Inbox: vertico refresh error, delta removed, timer error.
+- ✔ CI: familiar's job without ELPA's vanished jsonrpc; sqlite arity.
+
 ** [2026-11-06 Fr 02:46] — What went wrong in the session, fixed
 - ✔ 109 timer errors in Org capture: minuet counted context from the
   file's start in narrowed buffers; corrected copy (upstream still so).
