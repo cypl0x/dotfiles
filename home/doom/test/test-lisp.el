@@ -3452,3 +3452,23 @@ no Vertico overlays) refreshes nothing: it raised overlayp nil."
         (setq-local vertico--count-ov nil)
         (+completion/refresh-files)
         (should-not exhibited)))))
+
+(ert-deftest nav/reopen-closed-file-where-you-were ()
+  "SPC b U: the file closed last comes back at the same place; a file
+still open or gone is skipped."
+  (let* ((+buffer-closed nil)
+         (file (make-temp-file "reopen" nil ".txt" "one\ntwo\nthree\n"))
+         (gone (make-temp-file "gone")))
+    (unwind-protect
+        (save-window-excursion
+          (find-file gone) (kill-buffer) (delete-file gone)
+          (find-file file) (goto-char (point-min)) (forward-line 2)
+          (kill-buffer)
+          (should (equal (car (car +buffer-closed)) (abbreviate-file-name file)))
+          (+buffer/reopen-closed)
+          (should (equal buffer-file-name file))
+          (should (= (line-number-at-pos) 3))
+          ;; Open now, and the other one deleted: nothing left to reopen.
+          (should-error (+buffer/reopen-closed) :type 'user-error)
+          (kill-buffer))
+      (delete-file file))))

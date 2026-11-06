@@ -124,6 +124,58 @@
   (interactive "p")
   (+buffer-ring--step (- (or n 1))))
 
+;;;; SPC b U — reopen what you closed ─────────────────────────────────────────
+;;
+;; Like a browser's Ctrl-Shift-T: the file buffers you killed, newest first,
+;; each where you were in it (point, window start).  SPC b U reopens the
+;; last one; with C-u, pick one.  Kept across restarts (savehist).  From
+;; M-x attempts: "reop" (2026-11-05), nothing matched it.
+
+(defvar +buffer-closed nil
+  "Files of killed buffers, newest first: (FILE POINT WINDOW-START TIME).")
+(defvar +buffer-closed-max 50 "How many closed files are remembered.")
+
+(defun +buffer--remember-closed-h ()
+  "Remember this file buffer, being killed, to reopen it."
+  (when-let* ((file buffer-file-name))
+    (let ((win (get-buffer-window (current-buffer))))
+      (setq +buffer-closed
+            (seq-take (cons (list (abbreviate-file-name file) (point)
+                                  (if win (window-start win) (point))
+                                  (float-time))
+                            (seq-remove (lambda (e) (equal (car e) (abbreviate-file-name file)))
+                                        +buffer-closed))
+                      +buffer-closed-max)))))
+
+(defvar savehist-additional-variables)
+(add-hook 'kill-buffer-hook #'+buffer--remember-closed-h)
+(with-eval-after-load 'savehist
+  (add-to-list 'savehist-additional-variables '+buffer-closed))
+
+(defun +buffer--closed-open ()
+  "The remembered closed files that exist and aren't open now."
+  (seq-filter (lambda (e) (and (file-exists-p (car e)) (not (find-buffer-visiting (car e)))))
+              +buffer-closed))
+
+(defun +buffer/reopen-closed (&optional pick)
+  "Reopen the file buffer closed last, where you were in it.
+With PICK (\\[universal-argument]), choose among those closed before."
+  (interactive "P")
+  (let* ((closed (or (+buffer--closed-open) (user-error "No closed file to reopen")))
+         (entry (if (not pick) (car closed)
+                  (let* ((cands (mapcar (lambda (e)
+                                          (cons (format "%s  (%s ago)" (car e)
+                                                        (format-seconds "%Y, %D, %H, %M%z" (- (float-time) (nth 3 e))))
+                                                e))
+                                        closed)))
+                    (cdr (assoc (completing-read "Reopen: " cands nil t) cands))))))
+    (pcase-let ((`(,file ,pos ,start . ,_) entry))
+      (find-file file)
+      (goto-char (min pos (point-max)))
+      (set-window-start (selected-window) (min start (point-max))))))
+
+(map! :leader :desc "Reopen closed buffer (C-u: pick)" "b U" #'+buffer/reopen-closed)
+
 ;;;; Window management enhancements ──────────────────────────────────────────
 
 (defun +nav/swap-windows ()

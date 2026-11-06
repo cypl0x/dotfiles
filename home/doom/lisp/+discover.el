@@ -194,6 +194,7 @@ styles still match the word itself."
     ("workspaces, tabs" (+workspace/new))
     ("restore session, reopen last session" (doom/quickload-session))
     ("next buffer, previous buffer" (+buffer/previous previous-buffer))
+    ("reopen closed, undo close tab" (+buffer/reopen-closed) "C-u: pick one")
     ("popup: show or hide the popups" (+popup/toggle) "Doom's popups: help, messages, REPLs …")
     ("popup into a real window" (+popup/raise))
     ("close all popups" (+popup/close-all))
