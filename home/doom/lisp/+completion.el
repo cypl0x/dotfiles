@@ -297,19 +297,16 @@ after the path completion, which recognizes a path wherever it is."
           (defun +minibuffer-bar-cursor-h ()
             (setq-local cursor-type 'bar)))
 
-;; The selected candidate in corfu's popup was the editor background, one
-;; shade off the popup's own (#242730 on #2a2e38): barely visible.  Now the
-;; theme's blue, 30% into the background, and bold; the text stays at WCAG AA
-;; contrast (4.8:1 with doom-vibrant).
-;;
-;; The popup itself was bg-alt (#2a2e38), the background solaire gives every
-;; buffer that isn't a file, so there it melted into the text; then a grey
-;; shade with a blue-grey border, which looked grey and boxed.  Now: a
-;; surface of its own, the theme's blue 10% into the background (distinct
-;; from both editor backgrounds, text at AAA contrast), no border line (its
-;; width is 4 px of padding in the popup's color), roomier margins, the
-;; selection in blue, a blue scroll bar, quiet annotations; the
-;; documentation window the same.  Colors follow the theme.
+;; corfu's popups (C-SPC, C-S-SPC and the documentation beside them) take
+;; their colors from the theme: the popup is the theme's `tooltip' (corfu's
+;; own default), the selected candidate the theme's `vertico-current', the
+;; minibuffer's selection.  Nothing here names a color, so doom-vibrant,
+;; doom-modus-vibrant(-light) and modus-operandi each look like themselves
+;; (the blue tint set here before clashed with doom-vibrant).  Why not the
+;; theme's own `corfu-current': doom themes make it the editor background,
+;; one shade off the popup (#242730 on #2a2e38 in doom-vibrant), so the
+;; selection could hardly be seen.  The border is padding in the popup's
+;; color; the selection is bold.
 (defvar corfu-border-width) (defvar corfu-left-margin-width) (defvar corfu-right-margin-width)
 (defvar corfu-bar-width) (defvar corfu-min-width) (defvar corfu-max-width) (defvar corfu-count)
 (setq corfu-border-width 4
@@ -320,24 +317,11 @@ after the path completion, which recognizes a path wherever it is."
       corfu-max-width 90
       corfu-count 12)
 
-;; Colors from doom-color only under a doom theme (lisp/+themes.el): after
-;; doom-modus-vibrant, modus-operandi's popup came out its dark navy.
-(declare-function +themes-doom-p "+themes" ())
-(declare-function +themes-tint "+themes" (color bg fg alpha &optional ratio))
-(defmacro +completion--doom (&rest attrs)
-  "ATTRS (a plist) while a doom theme is on, else nothing."
-  `(and (+themes-doom-p) (list ,@attrs)))
 (custom-set-faces!
-  `(corfu-default ,@(+completion--doom :background (doom-blend 'blue 'bg 0.10) :foreground (doom-color 'fg)))
-  `(corfu-border ,@(+completion--doom :background (doom-blend 'blue 'bg 0.10)))
-  ;; As much blue as keeps the text at 4.5:1 (32% left 4.3:1 in a dark theme).
-  `(corfu-current ,@(+completion--doom :background (+themes-tint (doom-color 'blue) (doom-color 'bg) (doom-color 'fg) 0.32)
-                                       :foreground (doom-color 'fg))
-                  :weight bold :extend t)
-  `(corfu-bar ,@(+completion--doom :background (doom-color 'blue)))
-  `(corfu-annotations ,@(+completion--doom :foreground (doom-color 'base7)) :slant italic)
-  `(corfu-deprecated :strike-through t ,@(+completion--doom :foreground (doom-color 'base6)))
-  `(corfu-popupinfo :inherit corfu-default))
+  '(corfu-border :inherit tooltip)
+  ;; unspecified: the theme's own colors for it would win over the inherited.
+  '(corfu-current :inherit vertico-current :background unspecified :foreground unspecified
+                  :weight bold :extend t))
 
 ;; The theme gives orderless's match faces a background, so in the selected
 ;; row the matched part kept the popup's color while the rest turned blue.

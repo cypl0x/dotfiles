@@ -1066,6 +1066,22 @@ and meanings learned before that are dropped."
       (should-not (+completion-path-capf)))
     (delete-directory dir t)))
 
+(ert-deftest completion/popup-colors-come-from-the-theme ()
+  ;; No color named for corfu's faces: they inherit the theme's tooltip and
+  ;; selection (inbox: the blue tint clashed with doom-vibrant).  Faces are
+  ;; shimmed away in batch, so this reads the forms in the file.
+  (let ((forms (with-temp-buffer
+                 (insert-file-contents (expand-file-name "+completion.el" test-lisp-dir))
+                 (let (acc) (condition-case nil (while t (push (read (current-buffer)) acc))
+                              (end-of-file)) acc)))
+        corfu)
+    (dolist (f forms)
+      (when (and (eq (car-safe f) 'custom-set-faces!) (string-search "corfu" (format "%S" f)))
+        (push f corfu)))
+    (should corfu)
+    (should-not (string-match-p "\"#[0-9a-fA-F]+\"\\|doom-color\\|doom-blend" (format "%S" corfu)))
+    (should (string-search "(corfu-current :inherit vertico-current" (format "%S" corfu)))))
+
 (ert-deftest org-links/state-and-description ()
   (load (expand-file-name "+org-links" test-lisp-dir) nil t)
   (let ((dir (make-temp-file "links" t)))
