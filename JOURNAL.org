@@ -39,6 +39,18 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-06 Fr 15:51] — Polish round: a fresh review of today's work, 12 fixes
+- 🛠 C-c C-c in a vault base, RET in Background errors, g in SPC q ? were
+  bound in every buffer of that mode (Org, help…). Each buffer now has its
+  own keymap; a test keeps it so.
+- 🛠 C-ß 1 / +usage/suggest froze seconds on hundreds of MB of transcripts:
+  now read in a child Emacs. Secrets in quoted commands and prompts → «…».
+- 🛠 @kitty could never read a window's text; "focused" now means the kitty
+  you used last; SPC m a shows the output's end, not its start.
+- 🛠 M-ß: the first @word is highlighted; @replace/@inline aren't kept for
+  the next prompt; M-1..3 beat a kept @model.
+- 🛠 M-p on a fresh suggestion cycles it; desktop recording survives SPC q R;
+  same command spelled two ways counts once; caches stay bounded.
 ** [2026-11-06 Fr 10:33] — Inbox: ten items, all done (inbox.org is the source)
 - ✔ Popups take the theme's colors; M-ß: @echo says who answered, @words
   highlighted and kept, M-1/2/3 or C-u C-u pick the model, SPC m m raises
