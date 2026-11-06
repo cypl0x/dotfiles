@@ -225,6 +225,7 @@ styles still match the word itself."
     ("what did I just press, key history" (view-lossage))
     ("messages, log" (view-echo-area-messages))
     ("what is this (at point)" (+discover/at-point))
+    ("errors in the background, what failed" (+watch/errors) "SPC h ! e")
     ("search the manuals" (consult-info)))
   "(WORDS COMMANDS [NOTE]): words you'd use, the commands that do it (the
 first one defined is offered), what Emacs or Evil calls it.")

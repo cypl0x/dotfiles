@@ -534,6 +534,7 @@
 (load! "lisp/+org-subtree-edit") ;; C-c ' on a heading: the subtree in its own buffer
 (load! "lisp/+systemd")     ;; systemd units, timers and the journal, proced-style (SPC o s, SPC o j)
 (load! "lisp/+attention")   ;; SPC h !: measure lag or slowness, a dedicated agent fixes it
+(load! "lisp/+watch")      ;; errors in the background: said once, caught with a backtrace, SPC h ! e
 (load! "lisp/+info")        ;; Info: readable, highlighted, remembers where you were; own manuals in C-h i
 (load! "lisp/+hyprland")    ;; Hyprland windows, binds, workspaces, monitors (SPC o h)
 (load! "lisp/+desktop")     ;; SPC o y: network, Bluetooth, audio, disks, NixOS generations, power

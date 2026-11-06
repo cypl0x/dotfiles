@@ -3472,3 +3472,36 @@ still open or gone is skipped."
           (should-error (+buffer/reopen-closed) :type 'user-error)
           (kill-buffer))
       (delete-file file))))
+
+
+;;; +watch: errors in the background
+
+(load (expand-file-name "+watch" test-lisp-dir) nil t)
+
+(ert-deftest watch/notices-catches-and-reports-a-background-error ()
+  "An error line in *Messages*: noticed once, its next signal caught with
+a backtrace, shown in the report."
+  (let ((+watch--errors (make-hash-table :test #'equal))
+        (+watch--armed nil) (+watch--pos nil) (said nil)
+        (signal-hook-function nil))
+    (cl-letf (((symbol-function '+usage-say-later) (lambda (text) (push text said))))
+      (with-current-buffer (messages-buffer)
+        (let ((inhibit-read-only t))
+          (goto-char (point-max))
+          (insert "Error running timer: (wrong-type-argument timerp nil) [3 times]\n")))
+      (+watch--scan)
+      (+watch--scan)                    ; seen once only
+      (should (= (length said) 1))
+      (should (string-match-p "timerp nil" (car said)))
+      (should (eq signal-hook-function #'+watch--signal-h))
+      (ignore-errors (cancel-timer nil))
+      (should-not signal-hook-function)  ; disarmed after the catch
+      (let ((e (car (hash-table-values +watch--errors))))
+        (should (= (plist-get e :count) 3))
+        (should (string-match-p "cancel-timer" (plist-get e :backtrace))))
+      (save-window-excursion
+        (+watch/errors)
+        (with-current-buffer "*Background errors*"
+          (should (string-match-p "3× .*Error running timer: (wrong-type-argument timerp nil)"
+                                  (buffer-string)))
+          (should (string-match-p "cancel-timer" (buffer-string))))))))
