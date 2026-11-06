@@ -3159,6 +3159,51 @@ stars, tags later in a heading, the /commands (without /) in prose."
     (insert "wor")
     (should-not (+org-slash-empty-capf))))
 
+(ert-deftest completion/c-spc-with-nothing-typed-ranks-words-and-the-menu ()
+  "inbox: C-SPC with no input offered only the / menu.  Now words that fit
+come too: what followed the previous word first, then this section's
+words, the menu after them mid-line (first on an empty line); among
+equals, what was picked more often; the dictionaries as you type."
+  (require 'org)
+  (load (expand-file-name "+org-slash" test-lisp-dir) nil t)
+  (load (expand-file-name "+completion" test-lisp-dir) nil t)
+  (require 'cape)
+  (let ((+completion--picks (make-hash-table :test #'equal))
+        (+completion--picks-dirty nil)
+        (dict (make-temp-file "dict")))
+    (with-temp-file dict (insert "parsimony\nparser\nzebra\n"))
+    (unwind-protect
+        (with-temp-buffer
+          (org-mode)
+          (insert "* Notes\nThe parser reads tokens.  The parser builds trees.\nThe parser ")
+          (pcase-let* ((`(,beg ,end ,table . ,props) (+completion-empty-capf))
+                       (cands (all-completions "" table))
+                       (pos (lambda (c) (seq-position cands c))))
+            (should (= beg end (point)))
+            ;; After "parser": what followed it, first.
+            (should (equal (seq-take cands 2) '("reads" "builds")))
+            ;; This section's words before the / menu mid-line.
+            (should (< (funcall pos "tokens") (funcall pos "check")))
+            (should (string-match-p "after “parser” ×1" (funcall (plist-get props :annotation-function) "reads")))
+            ;; Picked often: first among equals.
+            (dotimes (_ 3) (funcall (plist-get props :exit-function) "builds" 'finished))
+            (should (= 3 (gethash "builds" +completion--picks))))
+          (pcase-let* ((`(,_ ,_ ,table . ,props) (+completion-empty-capf)))
+            (should (equal (seq-take (all-completions "" table) 2) '("builds" "reads")))
+            (should (string-match-p "picked ×3" (funcall (plist-get props :annotation-function) "builds")))
+            ;; Typed "pa": the dictionaries join, after the buffer's words.
+            (let ((cape-dict-file dict))
+              (should (equal (all-completions "pa" table) '("parser" "parsimony")))))
+          ;; On an empty line the menu leads.
+          (insert "\n\n")
+          (pcase-let* ((`(,_ ,_ ,table . ,_) (+completion-empty-capf))
+                       (cands (all-completions "" table)))
+            (should (< (seq-position cands "check") (seq-position cands "tokens"))))
+          ;; Mid-word: not this capf's turn.
+          (insert "wor")
+          (should-not (+completion-empty-capf)))
+      (delete-file dict))))
+
 (ert-deftest completion/file-preview-shows-follows-and-cleans-up ()
   "C-SPC in a file prompt shows the selected file in a side window and
 follows the selection; closing it removes the window and the buffers it

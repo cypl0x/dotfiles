@@ -8,6 +8,7 @@
 ;;   Org src block            the block's code (cape-elisp-block for elisp)
 ;;   prose: Org/Markdown/text, comments, strings
 ;;                            dictionary (English + German) and buffer words
+;;   nothing typed yet        words that fit here, then the / menu (see below)
 ;;   code                     the mode's own (eglot, elisp), buffer words, files
 ;;
 ;; The dictionaries are plain word lists built from the hunspell ones jinx
@@ -24,6 +25,8 @@
 (declare-function org-in-src-block-p "org" (&optional inside element))
 (declare-function +org-slash-empty-capf "+org-slash" ())
 (declare-function org-at-heading-p "org" (&optional invisible-not-ok))
+(declare-function outline-next-heading "outline" ())
+(declare-function org-back-to-heading "org" (&optional invisible-ok))
 (declare-function org-roam-complete-link-at-point "ext:org-roam-mode" ())
 (declare-function pcomplete-completions-at-point "pcomplete" ())
 (require 'map)
@@ -102,7 +105,10 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
                           words (and (length> typed 1) (+completion--words typed))))
                   (complete-with-action action words string pred)))
               :exclusive 'no
-              :company-kind (lambda (_) 'text))))))
+              :company-kind (lambda (_) 'text)
+              ;; Counted: among words that fit equally, the ones you pick come first.
+              :exit-function (lambda (c status)
+                               (when (memq status '(finished exact sole)) (+completion-note-pick c))))))))
 
 (defvar +completion-next-word-limit 400000
   "Characters of text (this buffer first, then others of its mode) read
@@ -176,8 +182,162 @@ an unclosed \"=~/va\" like prose and got words."
               :annotation-function (lambda (c) (if (string-suffix-p "/" c) "  dir" ""))
               :company-kind (lambda (c) (if (string-suffix-p "/" c) 'folder 'file)))))))
 
+
+;;;; C-SPC with nothing typed: what fits here, best first
+
+;; With nothing typed, C-SPC in Org offered only the / menu (blocks,
+;; tables …).  Now that menu comes with words, ranked by how well they fit
+;; here, and among equally fitting ones, by how often you picked them:
+;;
+;;   1. the words that followed the previous word elsewhere ("the" → …)
+;;   2. in a heading, keywords and tags; on an empty line, the / menu
+;;   3. words of this section and of the screen, the most frequent first
+;;   4. the rest of the buffer's words; mid-line, the / menu
+;;
+;; As you type, the dictionaries (en_US, en_GB, de_DE) join for what you
+;; typed.  What you pick is counted (`+completion-picks-file').
+(defvar +completion-picks-file (locate-user-emacs-file "completion-picks.eld")
+  "Words and items picked from completion, with how often: an alist.")
+
+(defvar +completion--picks nil "WORD → times picked, a hash table (loaded lazily).")
+
+(defun +completion--picks ()
+  (or +completion--picks
+      (let ((table (make-hash-table :test #'equal)))
+        (when (file-readable-p +completion-picks-file)
+          (pcase-dolist (`(,w . ,n) (with-temp-buffer
+                                      (insert-file-contents +completion-picks-file)
+                                      (ignore-errors (read (current-buffer)))))
+            (puthash w n table)))
+        (setq +completion--picks table))))
+
+(defvar +completion--picks-dirty nil)
+
+(defun +completion-note-pick (word)
+  "Count WORD as picked."
+  (cl-incf (gethash (substring-no-properties word) (+completion--picks) 0))
+  (setq +completion--picks-dirty t))
+
+(defun +completion--save-picks ()
+  (when +completion--picks-dirty
+    (let (alist (print-length nil))
+      (maphash (lambda (w n) (push (cons w n) alist)) +completion--picks)
+      (with-temp-file +completion-picks-file (prin1 alist (current-buffer))))
+    (setq +completion--picks-dirty nil)))
+(add-hook 'kill-emacs-hook #'+completion--save-picks)
+(run-with-idle-timer 300 t #'+completion--save-picks)
+
+(defun +completion--count-words (beg end table &optional min)
+  "Count the prose words between BEG and END into TABLE (at least MIN letters)."
+  (save-excursion
+    (goto-char beg)
+    (let ((case-fold-search nil)
+          (re (format "\\<[[:alpha:]][[:lower:]'’-]\\{%d,\\}\\>" (1- (or min 3)))))
+      (while (re-search-forward re end t)
+        (cl-incf (gethash (match-string-no-properties 0) table 0))))))
+
+(defun +completion--here-words ()
+  "Words near point, (NEAR . BUFFER): two tables WORD → count.
+Near: this Org section (or paragraph) and the window; buffer: up to
+`+completion-next-word-limit' characters around point."
+  (let ((near (make-hash-table :test #'equal))
+        (all (make-hash-table :test #'equal))
+        (half (/ +completion-next-word-limit 2)))
+    (save-restriction
+      (widen)
+      (let ((sec (if (derived-mode-p 'org-mode)
+                     (cons (save-excursion (or (ignore-errors (org-back-to-heading t) (point)) (point-min)))
+                           (save-excursion (or (ignore-errors (outline-next-heading)) (point-max))))
+                   (cons (save-excursion (backward-paragraph) (point))
+                         (save-excursion (forward-paragraph) (point))))))
+        (+completion--count-words (car sec) (cdr sec) near)
+        (when-let* ((win (get-buffer-window (current-buffer))))
+          (+completion--count-words (window-start win) (window-end win) near)))
+      (+completion--count-words (max (point-min) (- (point) half))
+                                (min (point-max) (+ (point) half)) all))
+    (cons near all)))
+
+(defun +completion--empty-rows ()
+  "The candidates with nothing typed: (CANDIDATE TIER SCORE NOTE EXIT)."
+  (let* ((rows nil)
+         (seen (make-hash-table :test #'equal))
+         (add (lambda (cand tier score note &optional exit)
+                (unless (gethash cand seen)
+                  (puthash cand t seen)
+                  (push (list cand tier score note exit) rows))))
+         (prev (save-excursion
+                 (skip-chars-backward " \t")
+                 (and (not (bolp))
+                      (looking-back "\\b\\([[:alpha:]][[:alpha:]'’-]*\\)" (line-beginning-position))
+                      (match-string-no-properties 1))))
+         (slash (and (derived-mode-p 'org-mode) (fboundp '+org-slash-empty-capf)
+                     (ignore-errors (+org-slash-empty-capf))))
+         (bol (save-excursion (skip-chars-backward " \t") (bolp)))
+         (heading (and (derived-mode-p 'org-mode) (org-at-heading-p))))
+    (when prev
+      (pcase-dolist (`(,w . ,n) (seq-take (+completion--next-words prev) 30))
+        (funcall add w 3 n (format "after “%s” ×%d" prev n))))
+    (when slash
+      (pcase-let ((`(,_ ,_ ,table . ,props) slash))
+        (dolist (c (all-completions "" table))
+          (funcall add c (if (or bol heading) 2 0) 0
+                   (string-trim (or (funcall (or (plist-get props :annotation-function) #'ignore) c) ""))
+                   (plist-get props :exit-function)))))
+    (unless heading
+      (pcase-let ((`(,near . ,all) (+completion--here-words)))
+        (maphash (lambda (w n) (funcall add w 1 n (format "here ×%d" n))) near)
+        (maphash (lambda (w n) (when (> n 1) (funcall add w 0 n (format "in this buffer ×%d" n)))) all)))
+    rows))
+
+(defun +completion--rank (rows)
+  "ROWS best first: by tier, then times picked, then their score."
+  (let ((picks (+completion--picks)))
+    (sort rows (lambda (a b)
+                 (let ((pa (gethash (car a) picks 0)) (pb (gethash (car b) picks 0)))
+                   (cond ((/= (nth 1 a) (nth 1 b)) (> (nth 1 a) (nth 1 b)))
+                         ((/= pa pb) (> pa pb))
+                         (t (> (nth 2 a) (nth 2 b)))))))))
+
+(defvar +completion-empty-max 200 "Most candidates `+completion-empty-capf' offers.")
+
+(defun +completion-empty-capf ()
+  "With nothing typed before point: words and items that fit here, ranked
+\(see above); the dictionaries join as you type."
+  (when (and (or (bolp) (memq (char-before) '(?\s ?\t)))
+             (memq (+completion-context) '(org-empty prose)))
+    (let* ((rows (seq-take (+completion--rank (+completion--empty-rows)) +completion-empty-max))
+           (cands (mapcar #'car rows))
+           (start (point))
+           (dict-for nil) (dict nil))
+      (when rows
+        (list start start
+              (lambda (string pred action)
+                (if (eq action 'metadata)
+                    '(metadata (display-sort-function . identity) (cycle-sort-function . identity))
+                  ;; Typed a letter or two: the dictionaries' words too, after these.
+                  (when (and (length> string 1) (not (equal string dict-for)))
+                    (setq dict-for string
+                          dict (and (require 'cape nil t) (boundp 'cape-dict-file) cape-dict-file
+                                    (seq-remove (lambda (w) (member w cands))
+                                                (cdr (cape--dict-list string))))))
+                  (complete-with-action action (if (length> string 1) (append cands dict) cands)
+                                        string pred)))
+              :annotation-function
+              (lambda (c)
+                (let ((row (assoc c rows))
+                      (n (gethash c (+completion--picks) 0)))
+                  (concat "  " (if row (nth 3 row) "dictionary")
+                          (if (> n 0) (format " · picked ×%d" n) ""))))
+              :exit-function
+              (lambda (c status)
+                (when (memq status '(finished exact sole))
+                  (+completion-note-pick c)
+                  (when-let* ((exit (nth 4 (assoc c rows))))
+                    (funcall exit c status))))
+              :company-kind (lambda (c) (if (nth 4 (assoc c rows)) 'snippet 'text))
+              :exclusive 'no)))))
 (defun +completion--prose ()
-  (list #'+completion-prose-capf #'+completion-next-word-capf))
+  (list #'+completion-prose-capf #'+completion-empty-capf))
 
 ;; corfu completes as you type, but in Org nothing offered words: Org's
 ;; capfs are keywords, tags and src blocks only.
@@ -260,7 +420,7 @@ after the path completion, which recognizes a path wherever it is."
     ('org-link (delq nil (list (and (fboundp 'org-roam-complete-link-at-point)
                                     #'org-roam-complete-link-at-point)
                                #'cape-file)))
-    ('org-empty (list #'+org-slash-empty-capf))
+    ('org-empty (list #'+completion-empty-capf))
     ((or 'org-keyword 'org-tag) (list #'pcomplete-completions-at-point))
     ('org-src (list #'cape-elisp-block #'cape-dabbrev))
     ('inline-code (list #'+completion-code-capf))
