@@ -28,8 +28,16 @@
 ;;   an answer      the echo area, or a buffer when it is long
 ;;
 ;; Commands it runs from Emacs are recorded in Atuin's history (+atuin.el).
-;; Asked from a remote (TRAMP) directory, the box and its commands run
-;; here, in your home directory: Atuin isn't on the other machine.
+;; Asked from a remote (TRAMP) directory, the box runs here (Atuin is
+;; here), the command there.
+;;
+;; Atuin AI rates each command it suggests (low, medium, high risk); that
+;; rating, read from its own record of the conversation, is asked about
+;; before a high-risk command runs in the background, where you wouldn't
+;; watch it (`+atuin-ai-confirm'): there, in a terminal, or not at all.
+;; A background command that failed: SPC o ! w asks Atuin AI why, with
+;; the command, how it ended and its last output as the question.  Tab in
+;; Org or Markdown puts the command in as a shell block.
 ;;
 ;;; Code:
 
@@ -67,9 +75,13 @@ and prompts: `terminal' (a fresh terminal, which stays a shell) or
 
 (defconst +atuin-ai-buffer "*Atuin AI*")
 (defvar-local +atuin-ai--command nil "The command this buffer runs.")
+(defvar-local +atuin-ai--info nil "What Atuin AI said about it (`+atuin-ai-suggestion').")
+;; Kept when the finished run's buffer changes mode (ghostel-compile does).
+(put '+atuin-ai--command 'permanent-local t)
+(put '+atuin-ai--info 'permanent-local t)
 (defvar +atuin-ai--last nil "The buffer of the last background command.")
 (defvar +atuin-ai--questions nil "Questions typed with `+atuin-ai/ask-typed'.")
-(defvar +atuin-ai--running nil "(BUFFER FILE ORIGIN HOW) of each open box.")
+(defvar +atuin-ai--running nil "(BUFFER FILE ORIGIN HOW OPENED) of each open box.")
 
 ;;;; What the box said
 
@@ -91,9 +103,12 @@ Anything else it printed (an error, say) comes back as an answer."
     (derived-mode-p 'eshell-mode 'comint-mode 'vterm-mode 'ghostel-mode 'eat-mode)))
 
 (defun +atuin-ai--origin ()
-  "Where the question is asked: buffer, window, directory, prompt or not."
+  "Where the question is asked: buffer, window, directory (where commands
+run, remote ones too), the box's directory (local: Atuin is here), prompt
+or not."
   (list :buffer (current-buffer) :window (selected-window)
-        :dir (if (file-remote-p default-directory) (expand-file-name "~/") default-directory)
+        :dir default-directory
+        :box-dir (if (file-remote-p default-directory) (expand-file-name "~/") default-directory)
         :minibuffer (minibufferp)))
 
 ;;;; The box
@@ -103,12 +118,12 @@ Anything else it printed (an error, say) comes back as an answer."
 When it closes, what was chosen is done for ORIGIN, commands run HOW."
   (require 'ghostel)
   (let* ((file (make-temp-file "atuin-ai-" nil ".out"))
-         (default-directory (plist-get origin :dir))
+         (default-directory (plist-get origin :box-dir))
          (buf (generate-new-buffer +atuin-ai-buffer)))
-    (with-current-buffer buf (setq default-directory (plist-get origin :dir)))
+    (with-current-buffer buf (setq default-directory (plist-get origin :box-dir)))
     ;; Known before it can close (`+atuin-ai--exit-h').  Ghostel buffers
     ;; start in Evil's insert state by themselves: keys go to the box.
-    (push (list buf file origin how) +atuin-ai--running)
+    (push (list buf file origin how (float-time)) +atuin-ai--running)
     (let ((enable-recursive-minibuffers t))
       (pop-to-buffer buf))
     ;; stdout is the terminal (the box); the choice goes to stderr.
@@ -121,7 +136,7 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
   "A box closed: do what was chosen in it."
   (when-let* ((box (assq buffer +atuin-ai--running)))
     (setq +atuin-ai--running (delq box +atuin-ai--running))
-    (pcase-let ((`(,_ ,file ,origin ,how) box))
+    (pcase-let ((`(,_ ,file ,origin ,how ,opened) box))
       (let ((result (+atuin-ai-parse
                      (with-temp-buffer
                        (ignore-errors (insert-file-contents file))
@@ -130,7 +145,7 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
         (when-let* ((w (get-buffer-window buffer t)))
           (ignore-errors (delete-window w)))
         ;; Out of the sentinel before acting.
-        (run-at-time 0 nil #'+atuin-ai--act result origin how)))))
+        (run-at-time 0 nil #'+atuin-ai--act result origin how opened)))))
 
 (add-hook 'ghostel-exit-functions #'+atuin-ai--exit-h)
 
@@ -141,14 +156,70 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
     (when (buffer-live-p (plist-get origin :buffer))
       (set-buffer (plist-get origin :buffer)))))
 
-(defun +atuin-ai--act (result origin how)
-  "Do what RESULT (from `+atuin-ai-parse') says, for ORIGIN."
+(defun +atuin-ai--act (result origin how &optional opened)
+  "Do what RESULT (from `+atuin-ai-parse') says, for ORIGIN.
+OPENED: when the box opened (to find what Atuin AI said about a command)."
   (+atuin-ai--back origin)
   (pcase result
     (`(cancel) nil)
     (`(print . ,text) (+atuin-ai--answer text))
-    (`(execute . ,command) (+atuin-ai--execute command origin how))
+    (`(execute . ,command) (+atuin-ai--execute command origin how opened))
     (`(insert . ,command) (+atuin-ai--insert command origin how))))
+
+;;;; What Atuin AI said about a command
+
+(defcustom +atuin-ai-sessions-db (expand-file-name "~/.local/share/atuin/ai_sessions.db")
+  "Atuin AI's conversations (read only, to learn how risky a command is)."
+  :type 'file)
+
+(defcustom +atuin-ai-confirm '("high")
+  "Risk levels (Atuin AI's: low, medium, high) that ask before a command
+runs in the background, where you wouldn't see it start."
+  :type '(repeat string))
+
+(defun +atuin-ai-suggestion (command &optional since)
+  "What Atuin AI said when it suggested COMMAND (since SINCE, seconds):
+\(:danger LEVEL :danger-notes TEXT :confidence LEVEL :description TEXT),
+from its own record of the conversation; nil if it isn't there.  The
+newest suggestion when none is COMMAND exactly (the hook can respell it)."
+  (when (and (fboundp 'sqlite-available-p) (sqlite-available-p)
+             (file-readable-p +atuin-ai-sessions-db))
+    (ignore-errors
+      (let ((db (sqlite-open +atuin-ai-sessions-db t)))   ; read only
+        (unwind-protect
+            (let* ((inputs
+                    (mapcar (lambda (row)
+                              (alist-get 'input (json-parse-string (car row) :object-type 'alist)))
+                            (sqlite-select
+                             db "select event_data from session_events
+                                 where event_type = 'tool_call' and created_at >= ?
+                                   and event_data like '%\"suggest_command\"%'
+                                 order by created_at desc limit 20"
+                             (list (floor (or since 0))))))
+                   (same (lambda (i) (equal (+atuin-ai--one-line (alist-get 'command i ""))
+                                            (+atuin-ai--one-line command))))
+                   (input (or (seq-find same inputs) (car inputs))))
+              (when input
+                (list :danger (alist-get 'danger input)
+                      :danger-notes (alist-get 'danger_notes input)
+                      :confidence (alist-get 'confidence input)
+                      :description (alist-get 'description input))))
+          (sqlite-close db))))))
+
+(defun +atuin-ai--confirm (command info)
+  "Whether COMMAND, rated in INFO, may run in the background: background,
+terminal (to watch it instead) or nil."
+  (let ((danger (plist-get info :danger)))
+    (if (not (member danger +atuin-ai-confirm))
+        'background
+      (pcase (car (read-multiple-choice
+                   (format "Atuin AI rates `%s' %s risk%s.  Run it"
+                           (+atuin-ai--one-line command) danger
+                           (if-let* ((n (plist-get info :danger-notes))) (format " (%s)" n) ""))
+                   '((?b "in the background" "Out of sight, as you asked")
+                     (?t "in a terminal" "Where you watch it")
+                     (?n "not at all" "Nothing runs"))))
+        (?b 'background) (?t 'terminal) (_ nil)))))
 
 ;;;; Doing it
 
@@ -185,17 +256,30 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
     (when run (exit-minibuffer))
     t))
 
-(defun +atuin-ai--execute (command origin how)
+(defun +atuin-ai--execute (command origin how &optional opened)
   (or (+atuin-ai--in-prompt origin command t)
       (+atuin-ai--in-shell (plist-get origin :buffer) command t)
-      (let ((default-directory (plist-get origin :dir)))
-        (if (eq how 'background)
-            (+atuin-ai-background command)
-          (+atuin-ai-terminal command)))))
+      (let* ((default-directory (plist-get origin :dir))
+             (info (+atuin-ai-suggestion command opened))
+             (how (if (eq how 'background) (+atuin-ai--confirm command info) how)))
+        (pcase how
+          ('background (+atuin-ai-background command info))
+          ('terminal (+atuin-ai-terminal command))
+          (_ (message "Not run: %s" (+atuin-ai--one-line command)))))))
+
+(defun +atuin-ai--in-document (buffer command)
+  "COMMAND as a shell block at point, in an Org or Markdown BUFFER."
+  (with-current-buffer buffer
+    (when-let* ((block (cond ((derived-mode-p 'org-mode) "#+begin_src sh\n%s\n#+end_src\n")
+                             ((derived-mode-p 'markdown-mode) "```sh\n%s\n```\n"))))
+      (unless (bolp) (end-of-line) (insert "\n"))
+      (insert (format block command))
+      t)))
 
 (defun +atuin-ai--insert (command origin how)
   (or (+atuin-ai--in-prompt origin command nil)
       (+atuin-ai--in-shell (plist-get origin :buffer) command nil)
+      (+atuin-ai--in-document (plist-get origin :buffer) command)
       (let ((default-directory (plist-get origin :dir)))
         (+atuin-ai--execute (read-shell-command
                              (format "Run in %s: " (abbreviate-file-name default-directory))
@@ -214,17 +298,33 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
     (with-current-buffer buf (ghostel-send-string (concat command "\r")))
     buf))
 
-(defun +atuin-ai-background (command)
-  "Run COMMAND out of sight in `default-directory'; report when it ends."
+(defun +atuin-ai-background (command &optional info)
+  "Run COMMAND out of sight in `default-directory' (a remote one too);
+report when it ends.  INFO: what Atuin AI said about it (its risk)."
   (let* ((name (format "*atuin: %s*" (truncate-string-to-width (+atuin-ai--one-line command) 50 nil nil "…")))
          (compilation-save-buffers-predicate #'ignore)   ; save nothing of yours
          (display-buffer-overriding-action '(display-buffer-no-window (allow-no-window . t)))
          (buf (compilation-start command nil (lambda (_) name))))
     (with-current-buffer buf
       (setq-local +atuin-ai--command command)
+      (setq-local +atuin-ai--info info)
       (add-hook 'compilation-finish-functions #'+atuin-ai--report nil t))
-    (message "Running in the background: %s" command)
+    (message "Running in the background%s: %s"
+             (if (file-remote-p default-directory)
+                 (format " on %s" (file-remote-p default-directory 'host)) "")
+             (+atuin-ai--one-line command))
     buf))
+
+(defun +atuin-ai-output (buffer &optional lines)
+  "The last LINES (default 30) BUFFER's command printed."
+  (with-current-buffer buffer
+    (save-excursion
+      (goto-char (point-max))
+      (let ((end (if (re-search-backward "^Compilation \\(?:finished\\|exited\\|interrupt\\|killed\\)" nil t)
+                     (match-beginning 0) (point-max))))
+        (goto-char end)
+        (forward-line (- (or lines 30)))
+        (string-trim (buffer-substring-no-properties (point) end))))))
 
 (defun +atuin-ai-last-line (buffer)
   "The last line BUFFER's command printed (before the compile footer)."
@@ -244,11 +344,15 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
   "Say how the background command in BUFFER ended (STATUS from compile)."
   (let* ((ok (string-prefix-p "finished" status))
          (command (buffer-local-value '+atuin-ai--command buffer))
+         (danger (plist-get (buffer-local-value '+atuin-ai--info buffer) :danger))
          (last (+atuin-ai-last-line buffer))
-         (text (format "%s %s%s" (if ok "✔" "✘") (+atuin-ai--one-line command)
+         (text (format "%s %s%s%s" (if ok "✔" "✘") (+atuin-ai--one-line command)
+                       (if (member danger '("medium" "high")) (format " [%s risk]" danger) "")
                        (if last (concat "  →  " last) ""))))
     (message "%s  (%s)" (propertize text 'face (if ok 'success 'error))
-             (substitute-command-keys "its output: \\[+atuin-ai/last-output]"))
+             (substitute-command-keys
+              (if ok "its output: \\[+atuin-ai/last-output]"
+                "its output: \\[+atuin-ai/last-output], why: \\[+atuin-ai/why]")))
     (setq +atuin-ai--last buffer)
     (when (and (not (eq (frame-focus-state) t))
                (require 'notifications nil t))
@@ -262,6 +366,26 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
   (if (buffer-live-p +atuin-ai--last)
       (pop-to-buffer +atuin-ai--last)
     (user-error "No background command yet")))
+
+(defun +atuin-ai/why (&optional buffer)
+  "Ask Atuin AI why the last background command (or BUFFER's) failed:
+the command, where, how it ended and its last output are the question."
+  (interactive)
+  (let ((buf (or buffer +atuin-ai--last)))
+    (unless (buffer-live-p buf) (user-error "No background command yet"))
+    (let* ((command (buffer-local-value '+atuin-ai--command buf))
+           (dir (buffer-local-value 'default-directory buf))
+           (status (with-current-buffer buf
+                     (save-excursion
+                       (goto-char (point-max))
+                       (when (re-search-backward "^Compilation \\(.*\\) at " nil t)
+                         (match-string-no-properties 1)))))
+           (output (+atuin-ai-output buf 30))
+           (question (format "This failed (%s) in %s:\n%s\nIts last output:\n%s\nWhy, and what should I run instead?"
+                             (or status "failed") (abbreviate-file-name dir) command
+                             (truncate-string-to-width output 1500 nil nil "…"))))
+      (let ((default-directory dir))
+        (+atuin-ai--launch question (+atuin-ai--origin) +atuin-ai-run)))))
 
 ;;;; Commands
 
@@ -326,6 +450,7 @@ other way).  QUESTION is sent right away."
     ("q" "Type the question first…"      +atuin-ai/ask-typed)]
    ["Then"
     ("o" "Last background output"        +atuin-ai/last-output)
+    ("w" "Why did it fail?"              +atuin-ai/why)
     ("r" "Switch how commands run"       +atuin-ai/toggle-run :transient t)
     ("h" "Shell history (Atuin)"         +atuin/history)]])
 

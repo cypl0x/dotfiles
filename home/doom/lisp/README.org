@@ -937,6 +937,14 @@ In the background it runs as =compile= (so it is in Atuin's history); when
 it ends the echo area says ✔ or ✘, the command and its last line, and a
 desktop notification does when Emacs isn't focused.
 
+Atuin AI rates each command it suggests (low, medium, high risk).  Before a
+high-risk one runs in the background, Emacs asks: there, in a terminal, or
+not at all (=+atuin-ai-confirm=; the rating comes from Atuin's own record
+of the conversation, read only).  A failed background run: =SPC o ! w=
+asks Atuin AI why, with the command, how it ended and its last 30 lines.
+Tab in Org or Markdown puts the command in as a shell block.  From a
+remote directory the box runs here, the command there.
+
 Every turn, wherever it came from (M-ß, =ß= in the shell, OpenAI clients,
 familiar's tasks), lands in one Org history (=familiar-history.el=,
 monthly files): question, answer, model, tokens, cost, and for M-ß a link

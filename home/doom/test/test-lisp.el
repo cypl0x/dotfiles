@@ -3258,3 +3258,89 @@ command runs out of sight and the echo area says how it ended."
         (should (equal (buffer-string) "<box>"))
         (+atuin-ai/question-mark 1)
         (should (equal (buffer-string) "<box>?"))))))
+
+(defun test-atuin-ai--db (rows)
+  "A sessions db like Atuin's, with suggest_command ROWS ((COMMAND DANGER AT) …)."
+  (let* ((file (make-temp-file "atuin-ai-db" nil ".db"))
+         (db (sqlite-open file)))
+    (sqlite-execute db "create table session_events (id text primary key, session_id text,
+      parent_id text, invocation_id text, event_type text, event_data text, created_at integer)")
+    (cl-loop for (command danger at) in rows for i from 0 do
+             (sqlite-execute db "insert into session_events values (?, 's', null, 'i', 'tool_call', ?, ?)"
+                             (list (format "e%d" i)
+                                   (json-serialize `((id . "t") (name . "suggest_command")
+                                                     (input . ((command . ,command) (danger . ,danger)
+                                                               (danger_notes . "deletes files")
+                                                               (confidence . "high")))))
+                                   at)))
+    (sqlite-close db)
+    file))
+
+(ert-deftest atuin-ai/knows-how-risky-atuin-said-a-command-is ()
+  (skip-unless (and (fboundp 'sqlite-available-p) (sqlite-available-p)))
+  (let ((+atuin-ai-sessions-db (test-atuin-ai--db '(("ls" "low" 100) ("rm -rf build" "high" 200)
+                                                    ("find .\n -name x" "medium" 300)))))
+    (unwind-protect
+        (progn
+          (should (equal (plist-get (+atuin-ai-suggestion "rm -rf build") :danger) "high"))
+          (should (equal (plist-get (+atuin-ai-suggestion "rm -rf build") :danger-notes) "deletes files"))
+          ;; The hook respells newlines: still found.
+          (should (equal (plist-get (+atuin-ai-suggestion "find . -name x") :danger) "medium"))
+          ;; Only since the box opened; nothing matches: the newest one.
+          (should (equal (plist-get (+atuin-ai-suggestion "ls" 150) :danger) "medium"))
+          (should-not (+atuin-ai-suggestion "ls" 400)))
+      (delete-file +atuin-ai-sessions-db))))
+
+(ert-deftest atuin-ai/a-risky-command-asks-before-running-out-of-sight ()
+  (let (asked ran)
+    (cl-letf (((symbol-function 'read-multiple-choice) (lambda (prompt _) (setq asked prompt) '(?n)))
+              ((symbol-function '+atuin-ai-background) (lambda (c &rest _) (push (list 'bg c) ran)))
+              ((symbol-function '+atuin-ai-terminal) (lambda (c) (push (list 'term c) ran)))
+              ((symbol-function 'message) #'ignore))
+      (let ((origin (list :buffer (current-buffer) :dir default-directory)))
+        (cl-letf (((symbol-function '+atuin-ai-suggestion) (lambda (&rest _) '(:danger "high" :danger-notes "deletes"))))
+          (+atuin-ai--execute "rm -rf x" origin 'background)
+          (should (string-match-p "high risk (deletes)" asked))
+          (should-not ran)
+          ;; In a terminal you watch it: no question.
+          (setq asked nil)
+          (+atuin-ai--execute "rm -rf x" origin 'terminal)
+          (should-not asked)
+          (should (equal ran '((term "rm -rf x")))))
+        (cl-letf (((symbol-function '+atuin-ai-suggestion) (lambda (&rest _) '(:danger "low"))))
+          (setq ran nil)
+          (+atuin-ai--execute "ls" origin 'background)
+          (should (equal ran '((bg "ls")))))))))
+
+(ert-deftest atuin-ai/tab-in-org-or-markdown-inserts-a-shell-block ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "Some text")
+    (should (+atuin-ai--in-document (current-buffer) "ls -la"))
+    (should (equal (buffer-string) "Some text\n#+begin_src sh\nls -la\n#+end_src\n")))
+  (with-temp-buffer
+    (should-not (+atuin-ai--in-document (current-buffer) "ls"))))
+
+(ert-deftest atuin-ai/why-asks-with-the-command-its-end-and-output ()
+  (let ((+atuin-record nil) asked)
+    (cl-letf (((symbol-function 'frame-focus-state) #'always)
+              ((symbol-function 'message) #'ignore)
+              ((symbol-function '+atuin-ai--launch) (lambda (q &rest _) (setq asked q))))
+      (let* ((default-directory temporary-file-directory)
+             (buf (+atuin-ai-background "echo boom; exit 3"))
+             (proc (get-buffer-process buf)))
+        (while (and proc (process-live-p proc)) (accept-process-output proc 0.1))
+        (accept-process-output nil 0.2)
+        (with-current-buffer buf (fundamental-mode))   ; ghostel-compile changes the mode
+        (+atuin-ai/why buf)
+        (should (string-match-p "exited abnormally with code 3" asked))
+        (should (string-match-p "echo boom; exit 3" asked))
+        (should (string-match-p "^boom$" asked))
+        (kill-buffer buf)))))
+
+(ert-deftest atuin-ai/remote-asks-here-and-runs-there ()
+  (let ((default-directory "/ssh:inari:/srv/"))
+    (cl-letf (((symbol-function 'minibufferp) #'ignore))
+      (let ((o (+atuin-ai--origin)))
+        (should (equal (plist-get o :dir) "/ssh:inari:/srv/"))
+        (should-not (file-remote-p (plist-get o :box-dir)))))))
