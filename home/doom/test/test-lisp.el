@@ -3516,3 +3516,20 @@ words that begin one, and short ones, stay."
     (should-not (+usage-mx-correct "zzfrob"))          ; begins a word
     (should-not (+usage-mx-correct "zq"))              ; too short to guess
     (should-not (+usage-mx-correct "qqqqqqqqqqqq"))))  ; nothing close
+
+(ert-deftest tldr/remembers-the-whole-line-and-explains-it ()
+  "SPC h X on a shell line: the program's page, the line on top, e asks."
+  (with-temp-buffer
+    (insert "$ tar -czvf out.tgz src | wc -l")
+    (should (equal (+tldr--line-at-point) "tar -czvf out.tgz src | wc -l"))
+    (erase-buffer) (insert "tar")
+    (should-not (+tldr--line-at-point)))      ; one word: nothing to explain
+  (let (asked)
+    (cl-letf (((symbol-function 'pop-to-buffer) #'ignore)
+              ((symbol-function 'familiar-ask) (lambda (p &rest _) (setq asked p))))
+      (+tldr/lookup "tar" "tar -czvf out.tgz src")
+      (with-current-buffer "*tldr: tar*"
+        (should (string-match-p "Your line: tar -czvf out.tgz src" (buffer-string)))
+        (+tldr/explain))
+      (should (string-match-p "part by part.*\ntar -czvf out.tgz src" asked))
+      (kill-buffer "*tldr: tar*"))))
