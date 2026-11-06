@@ -3557,3 +3557,27 @@ and offered first next time; words already in its name are not."
             (should (string-prefix-p "inline image " first))
             (should (equal (gethash first +discover--table) '(yours . test-discover-link-preview)))))
       (when (file-exists-p +discover-learned-file) (delete-file +discover-learned-file)))))
+
+
+;;; +where: the header line
+
+(load (expand-file-name "+where" test-lisp-dir) nil t)
+
+(ert-deftest where/names-the-function-or-the-heading-path ()
+  (let ((dir (make-temp-file "where" t)))
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "a.el" dir)
+            (insert "(defun where-test-fn ()\n  (list 1\n        2))\n"))
+          (with-current-buffer (find-file-noselect (expand-file-name "a.el" dir))
+            (goto-char (point-min)) (search-forward "2")
+            (should (string-match-p "a\\.el › where-test-fn" (+where-line)))
+            (should (equal header-line-format '(:eval +where--text)))
+            (kill-buffer))
+          (with-temp-file (expand-file-name "n.org" dir)
+            (insert "* Top\n** Inner\ntext\n"))
+          (with-current-buffer (find-file-noselect (expand-file-name "n.org" dir))
+            (goto-char (point-max))
+            (should (string-match-p "n\\.org › Top › Inner" (+where-line)))
+            (kill-buffer)))
+      (delete-directory dir t))))
