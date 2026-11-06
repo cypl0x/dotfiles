@@ -39,6 +39,12 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-06 Fr 05:50] — Freeze folder audited; reports explain themselves
+- 🧊 All 16 recorded freezes accounted for: the 11-05 morning ones were
+  /github/ listings (fixed then; re-checked now in a fresh Doom: owners
+  0.8–2.7 s, repos ~1 s), 18:55 was my emacsclient eval.
+- ✔ Each report now says how much of the gap Emacs computed (and spent in
+  GC) versus waited, and names the emacsclient evals that ran through it.
 ** [2026-11-06 Fr 04:02] — Quality of life, round 3 (18 items)
 - ✔ Startup 3.4–4.3 s → 2.2 s: Org no longer loads at start (savefold's
   Org backend, +org-canvas's require).
