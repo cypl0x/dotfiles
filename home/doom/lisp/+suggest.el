@@ -187,6 +187,7 @@ push it sideways, so in prose only M-n asks for one."
   "Filter for `minuet--display-suggestion' ARGS: drop stale and talking ones.
 One brought back (`+suggest/again') was checked when it first came."
   (if +suggest--recalling args
+    (setq +suggest--recalled nil)       ; a fresh one: M-n/M-p cycle it
     (let* ((all (seq-filter #'stringp (car args)))
            (items (seq-remove (lambda (s) (string-match-p +suggest-meta-re s)) all))
            (stale (and +suggest--asked (eq (point) (car +suggest--asked))
@@ -312,7 +313,7 @@ Non-nil when one showed."
 (defun +suggest--recalled-showing-p ()
   "Non-nil when the suggestion showing is one brought back."
   (and +suggest--recalled (bound-and-true-p minuet-active-mode)
-       (memq last-command '(+suggest/next +suggest/previous))))
+       (memq last-command '(+suggest/again +suggest/next +suggest/previous))))
 
 (defun +suggest/again ()
   "Bring back the last suggestion that went away, without asking the model."

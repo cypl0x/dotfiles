@@ -2619,7 +2619,16 @@ findings stand, following the text; once saved it runs again."
     (should (= (point) 5))
     (let ((last-command '+suggest/previous))
       (+suggest/next))
-    (should (equal minuet--current-suggestions '("second")))))
+    (should (equal minuet--current-suggestions '("second")))
+    ;; A fresh one comes: M-p cycles it, no jump back to a kept one.
+    (goto-char (point-max))
+    (minuet--cleanup-suggestion)
+    (minuet--display-suggestion '("third" "fourth"))
+    (should-not +suggest--recalled)
+    (let ((last-command '+suggest/previous))
+      (+suggest/previous))
+    (should (equal minuet--current-suggestions '("third" "fourth")))
+    (should (= (point) (point-max)))))
 
 (ert-deftest suggest/no-auto-suggestion-mid-line-in-prose ()
   (load (expand-file-name "+suggest" test-lisp-dir) nil t)
