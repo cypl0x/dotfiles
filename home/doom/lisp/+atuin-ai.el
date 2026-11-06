@@ -182,10 +182,10 @@ runs in the background, where you wouldn't see it start."
 (defun +atuin-ai--open-db ()
   "Atuin's sessions database, read only where `sqlite-open' offers that
 (newer Emacs; it is only ever read here either way)."
-  (let ((open #'sqlite-open))          ; not checked against the older arity
-    (if (> (or (cdr (func-arity open)) 0) 1)
-        (funcall open +atuin-ai-sessions-db t)
-      (funcall open +atuin-ai-sessions-db))))
+  (if (> (or (cdr (func-arity #'sqlite-open)) 0) 1)
+      ;; Only reached where it takes READONLY; older ones would warn.
+      (with-no-warnings (sqlite-open +atuin-ai-sessions-db t))
+    (sqlite-open +atuin-ai-sessions-db)))
 
 (defun +atuin-ai-suggestion (command &optional since)
   "What Atuin AI said when it suggested COMMAND (since SINCE, seconds):
