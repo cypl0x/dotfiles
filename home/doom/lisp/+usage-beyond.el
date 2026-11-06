@@ -69,6 +69,18 @@ Each is (COMMAND EXIT SECONDS CWD TIME)."
       (pop words))
     (and words (file-name-nondirectory (car words)))))
 
+(defun +usage-beyond--command-key (command)
+  "COMMAND as counted: home as ~, `\\#' as `#', runs of space as one.
+So \"/home/me/bin/x  sync\" and \"~/bin/x sync\" count as one command."
+  (let ((home (regexp-quote (directory-file-name (expand-file-name "~")))))
+    (string-trim
+     (replace-regexp-in-string
+      "[ \t\n]+" " "
+      (string-replace "\\#" "#"
+                      (replace-regexp-in-string
+                       (concat "\\(?:\\`\\|[ =:]\\)\\(" home "\\)\\(?:/\\| \\|\\'\\)")
+                       "~" command nil nil 1))))))
+
 (defun +usage-beyond-shell (&optional rows)
   "The shell summary (Org), from ROWS (default: Atuin's)."
   (when-let* ((rows (or rows (+usage-beyond--atuin-rows))))
@@ -82,17 +94,20 @@ Each is (COMMAND EXIT SECONDS CWD TIME)."
           (nix-time 0.0) (cds 0)
           (days (max 1 (/ (- (float-time) (nth 4 (car rows))) 86400.0))))
       (pcase-dolist (`(,cmd ,exit ,secs ,cwd ,_) rows)
-        (let ((prog (+usage-beyond--program cmd)))
+        (let ((prog (+usage-beyond--program cmd))
+              (key (+usage-beyond--command-key cmd)))
           (when prog
-            (cl-incf (gethash prog programs 0))
+            ;; Leaving a shell isn't using a program.
+            (unless (member prog '("exit" "logout"))
+              (cl-incf (gethash prog programs 0)))
             ;; 130: C-c.  A session (ssh, a shell, an editor) ends with the status of
             ;; whatever ran last in it: not a failure of its own.
             (when (and (integerp exit) (/= exit 0) (/= exit 130)
                        (not (member prog '("exit" "logout" "ssh" "mosh" "tmux" "emacs" "nvim" "vim" "zsh" "bash" "claude")))
                        (not (string-match-p "\\`nix \\(?:develop\\|shell\\|run\\)" cmd)))
               (cl-incf (gethash prog fails 0))
-              (cl-incf (gethash cmd failed 0)))
-            (when (>= (length cmd) 25) (cl-incf (gethash cmd long 0)))
+              (cl-incf (gethash key failed 0)))
+            (when (>= (length key) 25) (cl-incf (gethash key long 0)))
             (cl-incf (gethash (abbreviate-file-name (or cwd "?")) dirs 0))
             (when (member prog '("cd" "z" "zi")) (cl-incf cds))
             (when (equal prog "git")
@@ -319,7 +334,7 @@ Firefox locks its database while it runs: a copy is read."
 (defun +usage-beyond--prompt-p (text)
   "Non-nil when TEXT is something typed, not a harness message."
   (and (stringp text) (not (string-empty-p (string-trim text)))
-       (not (string-match-p "\\`[ \n]*\\(?:<\\|Stop hook feedback\\|\\[Request interrupted\\|Caveat:\\|A session-scoped Stop hook\\|This session is being continued\\)" text))))
+       (not (string-match-p "\\`[ \n]*\\(?:<\\|Stop hook feedback\\|\\[Request interrupted\\|Caveat:\\|A session-scoped Stop hook\\|This session is being continued\\|[Uu]nknown skill:\\)" text))))
 
 (defun +usage-beyond--file-prompts (file &optional codex)
   "The prompts in transcript FILE (CODEX: a Codex one).

@@ -162,6 +162,20 @@
     (should (string-match-p "^- git ×1$" shell))                    ; after sudo
     (should (string-match-p "×5  nix build .#thing" shell))
     (should (string-match-p "(5 min waited for builds and switches)" shell)))
+  ;; One command however spelled: home as ~, \# as #; exit isn't a program.
+  (let* ((home (expand-file-name "~"))
+         (now (float-time))
+         (shell (+usage-beyond-shell
+                 (list (list (concat home "/.config/emacs/bin/doom sync") 0 1.0 "/" (- now 50))
+                       (list "~/.config/emacs/bin/doom  sync" 0 1.0 "/" (- now 40))
+                       (list "~/.config/emacs/bin/doom sync" 0 1.0 "/" (- now 30))
+                       (list "nix build .\\#tx --out-link x" 1 1.0 "/" (- now 20))
+                       (list "nix build .#tx --out-link x" 1 1.0 "/" (- now 10))
+                       (list "exit" 1 0.0 "/" (- now 5))))))
+    (should (equal (+usage-beyond--command-key (concat "cd " home "x/y")) (concat "cd " home "x/y")))
+    (should (string-match-p "^- ×3  ~/.config/emacs/bin/doom sync$" shell))
+    (should (string-match-p "^- ×2  nix build .#tx --out-link x$" shell))
+    (should-not (string-match-p "^- exit" shell)))
   ;; Desktop: focus time, switches, glances back.
   (let ((+usage-beyond--desktop (list :focus nil :time nil :switch nil :workspace 0 :back 0))
         (+usage-beyond--current nil) (+usage-beyond--previous nil)
@@ -191,6 +205,7 @@
   ;; Prompts: harness messages aren't prompts; repeats are found.
   (should-not (+usage-beyond--prompt-p "<command-name>/goal</command-name>"))
   (should-not (+usage-beyond--prompt-p "Stop hook feedback: …"))
+  (should-not (+usage-beyond--prompt-p "Unknown skill: login"))
   (should (+usage-beyond--prompt-p "Can you fix the build?"))
   (let ((ai (let ((familiar-history-directory nil))
               (+usage-beyond-ai '((claude "t" "dotfiles" "continue") (claude "t" "dotfiles" "Continue")
