@@ -746,6 +746,30 @@ and meanings learned before that are dropped."
               (should (string-match-p "Echo area: Contacting host…" text)))))
       (delete-process proc))))
 
+(ert-deftest perf/freeze-context-says-waiting-or-computing-and-names-client-evals ()
+  (let ((+perf--freeze-commands (make-ring 20))
+        (+perf--client-evals (make-ring 10))
+        (+perf--client-eval-running nil))
+    ;; A slow client eval through the freeze, and one long before it.
+    (ring-insert +perf--client-evals (list (- (float-time) 500) (- (float-time) 490) "(old)"))
+    (ring-insert +perf--client-evals (list (- (float-time) 35) (- (float-time) 1) "(where-is-internal\n  'foo)"))
+    (let ((text (+perf-freeze-context 33.0 1.2 0.4)))
+      (should (string-match-p "computed 1.2 s of it (0.4 s collecting garbage): mostly waiting" text))
+      (should (string-match-p "Client evals during it.*\n +34 s  (where-is-internal 'foo)" text))
+      (should-not (string-match-p "(old)" text)))
+    (should (string-match-p "mostly computing" (+perf-freeze-context 30.0 29.0 3.0)))
+    ;; Without CPU figures (the first tick), no verdict.
+    (should-not (string-match-p "computed" (+perf-freeze-context 30.0)))))
+
+(ert-deftest perf/client-evals-of-a-second-or-more-are-noted ()
+  (let ((+perf--client-evals (make-ring 10))
+        (+perf--client-eval-running nil))
+    (+perf--client-eval-a (lambda (_ _) (should (equal "(fast)" (cdr +perf--client-eval-running)))) "(fast)" nil)
+    (should (ring-empty-p +perf--client-evals))
+    (should-not +perf--client-eval-running)
+    (+perf--client-eval-a (lambda (_ _) (sleep-for 1.05)) "(slow)" nil)
+    (should (equal "(slow)" (nth 2 (ring-ref +perf--client-evals 0))))))
+
 (ert-deftest perf/freeze-recorder-ignores-suspend ()
   (let* ((dir (make-temp-file "freezes" t))
          (counter (make-temp-file "suspends" nil nil "3\n"))

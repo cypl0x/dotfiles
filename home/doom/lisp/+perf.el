@@ -138,12 +138,61 @@ duplicates, then SEQUENCE2's that are new."
   (when (symbolp this-command)
     (ring-insert +perf--freeze-commands (cons (float-time) this-command))))
 
-(defun +perf-freeze-context (gap)
-  "What Emacs was doing around a freeze of GAP seconds, as text."
-  (let ((now (float-time)))
+;; Which of the two it was took detective work every time: the 81 s freeze
+;; of 2026-11-05 08:49 had 6.5 s of samples (waiting: ~150 sequential `gh'
+;; calls listing /github/), the 37 s one at 18:55 was an emacsclient eval
+;; sent by an agent.  So each report now says how much of the gap Emacs
+;; spent computing (and collecting garbage), and which client evals ran
+;; through it.
+
+(defvar +perf--freeze-run nil "Emacs's CPU time and `gc-elapsed' at the last tick.")
+
+(defvar +perf--client-evals (make-ring 10)
+  "Recent emacsclient evals that took a second or more: (START END EXPR).")
+
+(defvar +perf--client-eval-running nil "The client eval in progress: (START . EXPR).")
+
+(defun +perf--client-eval-a (fn expr proc)
+  "Note emacsclient evals that take a second or more (`server-eval-and-print')."
+  (let ((start (float-time)))
+    (setq +perf--client-eval-running (cons start expr))
+    (unwind-protect (funcall fn expr proc)
+      (setq +perf--client-eval-running nil)
+      (when (>= (- (float-time) start) 1)
+        (ring-insert +perf--client-evals (list start (float-time) expr))))))
+
+(with-eval-after-load 'server
+  (advice-add 'server-eval-and-print :around #'+perf--client-eval-a))
+
+(defun +perf-freeze-verdict (gap cpu gc)
+  "What a freeze of GAP seconds with CPU seconds of Emacs's time (GC of
+them collecting garbage) was, as a line."
+  (format "Emacs computed %.1f s of it (%.1f s collecting garbage): %s\n"
+          cpu gc
+          (if (< cpu (* 0.5 gap))
+              "mostly waiting (a subprocess, the network, a file, a client)"
+            "mostly computing (see the profile)")))
+
+(defun +perf-freeze-context (gap &optional cpu gc)
+  "What Emacs was doing around a freeze of GAP seconds, as text.
+CPU and GC: Emacs's processor and garbage collection seconds during it."
+  (let* ((now (float-time))
+         (from (- now gap 2))
+         (evals (seq-filter (lambda (e) (> (nth 1 e) from))
+                            (ring-elements +perf--client-evals))))
     (concat
-     (format "Frozen for %.0f s, recovered %s\n\nLast commands (seconds ago):\n"
-             gap (format-time-string "%F %T"))
+     (format "Frozen for %.0f s, recovered %s\n" gap (format-time-string "%F %T"))
+     (if cpu (+perf-freeze-verdict gap cpu (or gc 0)) "")
+     (if evals
+         (concat "\nClient evals during it (emacsclient):\n"
+                 (mapconcat (lambda (e)
+                              (format "  %4.0f s  %s" (- (nth 1 e) (nth 0 e))
+                                      (truncate-string-to-width
+                                       (replace-regexp-in-string "[\n\t ]+" " " (nth 2 e)) 200 nil nil "…")))
+                            evals "\n")
+                 "\n")
+       "")
+     "\nLast commands (seconds ago):\n"
      (mapconcat (lambda (c) (format "  %6.0f  %s" (- now (car c)) (cdr c)))
                 (ring-elements +perf--freeze-commands) "\n")
      "\n\nLive processes:\n"
@@ -188,10 +237,13 @@ says so, instead of an error every 30 seconds.  A restart clears it."
 
 (defun +perf--freeze-tick ()
   (let* ((now (float-time))
+         (run (cons (float-time (get-internal-run-time)) gc-elapsed))
          (suspends (+perf--suspend-count))
          (gap (and (or (null suspends) (eql suspends +perf--suspend-count))
-                   (+perf-freeze-gap now +perf--freeze-last))))
+                   (+perf-freeze-gap now +perf--freeze-last)))
+         (last-run +perf--freeze-run))
     (setq +perf--freeze-last now
+          +perf--freeze-run run
           +perf--suspend-count suspends
           +perf--freeze-ticks (1+ +perf--freeze-ticks))
     (unless (profiler-cpu-running-p) (profiler-cpu-start profiler-sampling-interval))
@@ -201,7 +253,10 @@ says so, instead of an error every 30 seconds.  A restart clears it."
                                     +perf-freeze-dir)))
         (make-directory +perf-freeze-dir t)
         ;; Before our own message replaces the echo area.
-        (write-region (+perf-freeze-context gap) nil
+        (write-region (+perf-freeze-context gap
+                                            (and last-run (- (car run) (car last-run)))
+                                            (and last-run (- (cdr run) (cdr last-run))))
+                      nil
                       (concat (file-name-sans-extension file) ".txt") nil 'silent)
         ;; `profiler-cpu-profile' wraps the variable that `profiler-stop' fills;
         ;; the live samples come from the function `profiler-cpu-log'.
