@@ -88,9 +88,18 @@ A word already there only gets its lookup count and date updated."
 (with-eval-after-load 'leo
   (advice-add 'leo--open-translation-buffer :after #'+vocab--record-a))
 
+;; org-fc (fce1cb2, upstream HEAD on 2026-11-06) builds every card's
+;; algorithm as (funcall CONSTRUCTOR ()): that nil is EIEIO's obsolete
+;; object-name argument, so each card read said "Obsolete name argument
+;; nil passed to org-fc-algo-sm2 constructor" in the echo area.
+(defun +vocab--algo-constructor-a (ctor)
+  "CTOR, minus the obsolete leading nil org-fc passes it."
+  (lambda (&rest slots) (apply ctor (if (equal slots '(nil)) nil slots))))
+
 (with-eval-after-load 'org-fc
   (add-to-list 'org-fc-directories (file-name-directory +vocab-file))
-  (setq org-fc-default-algo 'sm2))
+  (setq org-fc-default-algo 'sm2)
+  (advice-add 'org-fc-algo-constructor :filter-return #'+vocab--algo-constructor-a))
 
 (defun +vocab/review ()
   "Review the due vocabulary cards."

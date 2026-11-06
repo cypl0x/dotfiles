@@ -1215,6 +1215,13 @@ and meanings learned before that are dropped."
     (("Substantive"
       (((result . "hearing")) ((result . "das   Hören   kein Pl.")))))))
 
+(ert-deftest vocab/org-fc-algorithms-built-without-the-obsolete-name ()
+  (require 'eieio)
+  (let ((ctor (+vocab--algo-constructor-a (lambda (&rest slots) slots))))
+    (should (equal nil (funcall ctor nil)))   ; org-fc's (funcall CTOR ())
+    (should (equal nil (funcall ctor)))
+    (should (equal '(:a 1) (funcall ctor :a 1)))))
+
 (ert-deftest vocab/translations-flatten-and-clean ()
   (let ((+vocab-max-translations 2))
     (should (equal (+vocab-translations test-vocab-results)
