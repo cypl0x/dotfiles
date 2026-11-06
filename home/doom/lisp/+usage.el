@@ -356,7 +356,7 @@ each a string (an Org section) or nil.  Beyond Emacs: shell, desktop …")
 (defun +usage-tip-prompt ()
   "The prompt `+usage/tip' sends."
   (let ((before (seq-take (+usage--tips) 30)))
-    (concat "Here is how I work (local counts; nothing else is known about me).  "
+    (concat "Here is how I work (local records; nothing else is known about me).  "
             "Give me exactly ONE change that would help me most now: a key for "
             "something I reach by M-x or long keys, a command that replaces a chain "
             "I repeat, a feature that replaces handwork.  One or two lines of plain "

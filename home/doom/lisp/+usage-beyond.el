@@ -21,7 +21,9 @@
 ;;   +usage/suggest and +usage/tip   see the same summary
 ;;
 ;; Read on demand, local.  Only what a report or a suggestion shows leaves
-;; Emacs, and only when you ask the model (the summary, not the data).
+;; Emacs, and only when you ask the model (the summary, not the data), with
+;; what looks like a password, token or key in it replaced (`+usage-beyond-redact').
+;; For +usage/tip the summary is read in a child Emacs, never in this one.
 ;;
 ;;; Code:
 
@@ -363,12 +365,17 @@ Cached while the file doesn't change."
   "Prompts to Claude Code and Codex in the last `+usage-beyond-days' days:
 \(TOOL TIME PROJECT TEXT)."
   (when (executable-find "jq")
-    (let ((since (+usage-beyond--since)) out)
+    (let* ((since (+usage-beyond--since))
+           ;; Transcripts stamp in UTC ISO 8601, which sorts as text.
+           (since-iso (format-time-string "%FT%T" since t))
+           out)
       (dolist (spec '((claude . "~/.claude/projects/*/*.jsonl") (codex . "~/.codex/sessions/*/*/*/*.jsonl")))
         (dolist (file (file-expand-wildcards (expand-file-name (cdr spec))))
           (when (> (float-time (file-attribute-modification-time (file-attributes file))) since)
             (dolist (p (+usage-beyond--file-prompts file (eq (car spec) 'codex)))
-              (push (cons (car spec) p) out)))))
+              ;; A transcript written today may have begun months ago.
+              (when (string> (or (car p) "") since-iso)
+                (push (cons (car spec) p) out))))))
       out)))
 
 (defvar familiar-history-directory)
@@ -438,16 +445,38 @@ Cached while the file doesn't change."
 
 ;;;; Reports
 
+(defconst +usage-beyond--secret-res
+  '(;; Authorization: Bearer xyz (case matters: "basic idea" is prose)
+    ("\\(\\_<\\(?:Bearer\\|Basic\\) +\\)[^ \"']+" "\\1«…»")
+    ;; GITHUB_TOKEN=…, api_key=…
+    ("\\(\\_<[A-Za-z_]*\\(?:TOKEN\\|KEY\\|SECRET\\|PASS\\(?:WORD\\)?\\|AUTH\\)[A-Za-z_]*=\\)[^ \"']+" "\\1«…»" t)
+    ;; --password …, -p=…
+    ("\\(\\_<--?\\(?:password\\|passwd\\|token\\|api-key\\|secret\\)[= ]\\)[^ \"']+" "\\1«…»" t)
+    ;; Keys by their shape: sk-…, ghp_…, xoxb-…, and anything long and opaque.
+    ("\\_<\\(?:sk-\\|gh[pousr]_\\|github_pat_\\|xox[abpr]-\\)[^ \"']+" "«…»")
+    ("[A-Za-z0-9_+=-]\\{40,\\}" "«…»"))
+  "What looks like a secret in a command or prompt: (REGEXP REPLACEMENT CASE-FOLD).")
+
+(defun +usage-beyond-redact (text)
+  "TEXT with what looks like a password, token or key replaced by «…».
+Commands and prompts are quoted in the summary, and the summary may go
+to a model."
+  (pcase-dolist (`(,re ,rep ,fold) +usage-beyond--secret-res text)
+    (let ((case-fold-search fold))
+      (setq text (replace-regexp-in-string re rep text t)))))
+
 (defun +usage-beyond-summary ()
-  "Everything outside Emacs, one Org section per category that has data."
-  (mapconcat #'identity
-             (delq nil (mapcar (lambda (src)
-                                 (when (memq src +usage-beyond-sources)
-                                   (condition-case err
-                                       (funcall (intern (format "+usage-beyond-%s" src)))
-                                     (error (format "* %s: not read (%s)\n" src (error-message-string err))))))
-                               '(shell desktop browser ai tmux)))
-             "\n"))
+  "Everything outside Emacs, one Org section per category that has data.
+Secrets in quoted commands and prompts are replaced (`+usage-beyond-redact')."
+  (+usage-beyond-redact
+   (mapconcat #'identity
+              (delq nil (mapcar (lambda (src)
+                                  (when (memq src +usage-beyond-sources)
+                                    (condition-case err
+                                        (funcall (intern (format "+usage-beyond-%s" src)))
+                                      (error (format "* %s: not read (%s)\n" src (error-message-string err))))))
+                                '(shell desktop browser ai tmux)))
+              "\n")))
 
 (defun +usage/beyond ()
   "What you do outside Emacs: shell, desktop, browser, AI prompts, tmux."
@@ -484,16 +513,47 @@ workflows across tools: do X in tool Y, with Z's integration, to skip W."
    t))
 
 (defvar +usage-beyond--summary-cache nil "(TIME . SUMMARY), for the suggestions.")
+(defvar +usage-beyond--refresh nil "The child Emacs reading the summary anew, while it runs.")
+(defconst +usage-beyond--file (or load-file-name buffer-file-name))
+
+(defun +usage-beyond-refresh ()
+  "Read the summary anew in a child Emacs; `+usage-beyond--summary-cache' gets it.
+The transcripts are hundreds of MB of JSON: seconds of jq, not in this Emacs."
+  (unless (process-live-p +usage-beyond--refresh)
+    (when (memq 'desktop +usage-beyond-sources) (ignore-errors (+usage-beyond-desktop-save)))
+    (let ((out (generate-new-buffer " *usage-beyond refresh*"))
+          (err (generate-new-buffer " *usage-beyond refresh errors*"))
+          (setup `(setq +usage-beyond-days ,+usage-beyond-days
+                        +usage-beyond-sources ',+usage-beyond-sources
+                        +usage-beyond-desktop-directory ,+usage-beyond-desktop-directory
+                        familiar-history-directory ,(bound-and-true-p familiar-history-directory))))
+      (setq +usage-beyond--refresh
+            (make-process
+             :name "usage-beyond" :buffer out :stderr err :noquery t :connection-type 'pipe
+             :command (list (expand-file-name invocation-name invocation-directory) "--batch" "-Q"
+                            "-l" +usage-beyond--file
+                            "--eval" (prin1-to-string `(progn ,setup (princ (+usage-beyond-summary)))))
+             :sentinel (lambda (proc _)
+                         (unless (process-live-p proc)
+                           (when (eql 0 (process-exit-status proc))
+                             (setq +usage-beyond--summary-cache
+                                   (cons (float-time) (with-current-buffer out (buffer-string)))))
+                           (kill-buffer out)
+                           (kill-buffer err))))))))
 
 (defun +usage-beyond--evidence ()
   "For +usage/suggest and +usage/tip: the summary of what happens outside Emacs.
-Reused for ten minutes: reading the transcripts the first time takes seconds."
-  (let ((s (if (and +usage-beyond--summary-cache
-                    (< (- (float-time) (car +usage-beyond--summary-cache)) 600))
-               (cdr +usage-beyond--summary-cache)
-             (cdr (setq +usage-beyond--summary-cache
-                        (cons (float-time) (+usage-beyond-summary)))))))
-    (unless (string-empty-p s) (concat "Outside Emacs:\n\n" s))))
+Never waits: a summary older than ten minutes is read anew in the
+background, and this gives the last one meanwhile (none at first)."
+  (let ((cache +usage-beyond--summary-cache))
+    (unless (and cache (< (- (float-time) (car cache)) 600))
+      (+usage-beyond-refresh))
+    (when (and cache (not (string-empty-p (cdr cache))))
+      (concat "Outside Emacs:\n\n" (cdr cache)))))
+
+;; The first tip of the day finds a summary ready.
+(when (and (daemonp) (not noninteractive))
+  (run-with-idle-timer 120 nil #'+usage-beyond-refresh))
 
 (with-eval-after-load '+usage
   (add-to-list '+usage-evidence-functions #'+usage-beyond--evidence t))

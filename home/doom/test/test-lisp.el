@@ -232,6 +232,42 @@
                        '(("dotfiles" "Fix the popup colors") ("todo" "And the tests"))))
       (delete-file file))))
 
+(ert-deftest usage-beyond/secrets-redacted-recent-prompts-only-evidence-never-waits ()
+  (load (expand-file-name "+usage-beyond" test-lisp-dir) nil t)
+  ;; Secrets in quoted commands and prompts; prose stays.
+  (should (equal (+usage-beyond-redact "curl -H \"Authorization: Bearer abc.def\" x")
+                 "curl -H \"Authorization: Bearer «…»\" x"))
+  (should (equal (+usage-beyond-redact "GITHUB_TOKEN=ghp_x gh pr list") "GITHUB_TOKEN=«…» gh pr list"))
+  (should (equal (+usage-beyond-redact "export api_key=sk-1 && mysql --password hunter2")
+                 "export api_key=«…» && mysql --password «…»"))
+  (should (equal (+usage-beyond-redact (concat "x " (make-string 44 ?a))) "x «…»"))
+  (dolist (prose '("the basic idea" "the token expires" "keyboard layout" "gh auth login"
+                   "nix build .#tx" "cd /nix/store/abcdefghijklmnopqrstuvwxyz012345-foo"))
+    (should (equal (+usage-beyond-redact prose) prose)))
+  ;; A transcript touched today but begun long ago: its old prompts are out.
+  (cl-letf (((symbol-function 'executable-find) (lambda (&rest _) "/bin/jq"))
+            ((symbol-function 'file-expand-wildcards)
+             (lambda (pat &rest _) (and (string-match-p "claude" pat) '("/t.jsonl"))))
+            ((symbol-function 'file-attributes)
+             (lambda (&rest _) (list nil nil nil nil nil (current-time))))
+            ((symbol-function '+usage-beyond--file-prompts)
+             (lambda (&rest _) (list (list "2020-01-01T00:00:00Z" "old" "then")
+                                     (list (format-time-string "%FT%TZ" nil t) "new" "now")))))
+    (should (equal (mapcar #'caddr (+usage-beyond--agent-prompts)) '("new"))))
+  ;; Evidence: a fresh summary as is; a stale one meanwhile, read anew aside.
+  (let ((refreshed 0))
+    (cl-letf (((symbol-function '+usage-beyond-refresh) (lambda () (cl-incf refreshed))))
+      (let ((+usage-beyond--summary-cache (cons (float-time) "* Shell\n")))
+        (should (equal (+usage-beyond--evidence) "Outside Emacs:\n\n* Shell\n"))
+        (should (= refreshed 0)))
+      (let ((+usage-beyond--summary-cache (cons (- (float-time) 3600) "* Shell\n")))
+        (should (equal (+usage-beyond--evidence) "Outside Emacs:\n\n* Shell\n"))
+        (should (= refreshed 1)))
+      (let ((+usage-beyond--summary-cache nil))
+        (should-not (+usage-beyond--evidence))
+        (should (= refreshed 2))))))
+
+
 ;;; +daemon
 
 (ert-deftest daemon/relaunch-script-waits-restarts-and-restores ()
