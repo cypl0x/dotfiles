@@ -3436,3 +3436,19 @@ what lies before the narrowing (minuet's own went there: args-out-of-range)."
         (let ((ctx (+suggest--get-context)))
           (should (equal (plist-get ctx :before-cursor) (make-string 300 ?b)))
           (should (equal (plist-get ctx :after-cursor) "")))))))
+
+
+;;; +completion: the file prompt's refresh
+
+(ert-deftest completion/refresh-only-in-a-live-vertico-session ()
+  "A directory change after the prompt closed (its minibuffer reused,
+no Vertico overlays) refreshes nothing: it raised overlayp nil."
+  (unless (fboundp '+completion/refresh-files)
+    (load (expand-file-name "+completion" test-lisp-dir) nil t))
+  (let (exhibited)
+    (cl-letf (((symbol-function 'vertico--exhibit) (lambda () (setq exhibited t))))
+      (with-temp-buffer
+        (setq-local vertico--input "old")
+        (setq-local vertico--count-ov nil)
+        (+completion/refresh-files)
+        (should-not exhibited)))))

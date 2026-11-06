@@ -30,6 +30,7 @@
 (declare-function doom-color "ext:doom-themes" (name &optional type))
 (declare-function doom-blend "ext:doom-themes" (color1 color2 alpha))
 (defvar cape-dict-file)
+(defvar vertico--count-ov)
 (defvar ispell-alternate-dictionary)
 (defvar cape-dabbrev-buffer-function)
 (declare-function cape--dabbrev-list "ext:cape" (input))
@@ -538,7 +539,13 @@ directory taken as ./ (~/Pictures/./) without its /./."
   "Read the directory of this file prompt again."
   (interactive)
   (setq +completion--mtimes nil)
-  (when (boundp 'vertico--input)
+  ;; Only while this minibuffer still runs a Vertico session: the refresh
+  ;; after a directory change comes 0.2 s later, when the prompt may be
+  ;; gone and *Minibuf-1* reused by another without Vertico's overlays
+  ;; ("wrong-type-argument overlayp nil" in vertico--display-count).
+  (when (and (bound-and-true-p vertico--input)
+             (overlayp (bound-and-true-p vertico--count-ov))
+             (eq (current-buffer) (window-buffer (active-minibuffer-window))))
     (setq vertico--input t)
     (vertico--exhibit)))
 
