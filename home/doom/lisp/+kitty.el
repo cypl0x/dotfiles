@@ -55,12 +55,19 @@ Returns its output; signals an error with kitty's message if it fails."
                                           (buffer-string)))))
       (buffer-string))))
 
-(defun +kitty--active-pid ()
-  "The pid of the window the compositor has focused (Hyprland), or nil."
+(defun +kitty--active-pid (pids)
+  "Of PIDS (kitty instances), the one focused most recently (Hyprland), or nil.
+Most recently, not now: from Emacs, the focused window is Emacs."
   (when (executable-find "hyprctl")
     (with-temp-buffer
-      (when (eql 0 (call-process "hyprctl" nil t nil "activewindow" "-j"))
-        (ignore-errors (plist-get (json-parse-string (buffer-string) :object-type 'plist) :pid))))))
+      (when (eql 0 (call-process "timeout" nil t nil (number-to-string +kitty-timeout)
+                                 "hyprctl" "clients" "-j"))
+        (when-let* ((clients (ignore-errors (json-parse-string (buffer-string) :object-type 'plist
+                                                               :array-type 'list))))
+          (plist-get (car (sort (seq-filter (lambda (c) (memql (plist-get c :pid) pids)) clients)
+                                (lambda (a b) (< (plist-get a :focusHistoryID)
+                                                 (plist-get b :focusHistoryID)))))
+                     :pid))))))
 
 (defun +kitty-windows ()
   "Every kitty window of every instance: plists, focused instance first.
@@ -86,12 +93,14 @@ Keys: :socket :kitty-pid :os-window :tab :tab-title :id :title :cwd
                           :status (plist-get w :last_cmd_exit_status)
                           :running (mapcar (lambda (p) (string-join (plist-get p :cmdline) " "))
                                            (plist-get w :foreground_processes))
-                          :focused (and (eq (plist-get osw :is_focused) t)
-                                        (eq (plist-get tab :is_focused) t)
-                                        (eq (plist-get w :is_focused) t)))
+                          :focused (and (eq (plist-get osw :is_active) t)
+                                        (eq (plist-get tab :is_active) t)
+                                        (eq (plist-get w :is_active) t)))
                     out))))))
-    ;; Each instance has a focused window; the compositor knows which has focus.
-    (when-let* ((active (+kitty--active-pid)))
+    ;; Each instance has an active window; the compositor knows which
+    ;; instance was focused last.
+    (when-let* ((pids (delete-dups (mapcar (lambda (w) (plist-get w :kitty-pid)) out)))
+                (active (+kitty--active-pid pids)))
       (dolist (w out)
         (unless (eql (plist-get w :kitty-pid) active) (plist-put w :focused nil))))
     (sort (nreverse out) (lambda (a b) (and (plist-get a :focused) (not (plist-get b :focused)))))))
@@ -300,9 +309,12 @@ window `+kitty/send' uses; with prefix arg PICK, pick another."
 (defun +kitty--window-by-name (name)
   "The window NAME (\"kitty-PID:ID\") stands for."
   (or (and (string-match "\\`\\(kitty-[0-9]+\\):\\([0-9]+\\)\\'" name)
-           (seq-find (lambda (w) (and (equal (file-name-nondirectory (plist-get w :socket)) (match-string 1 name))
-                                      (= (plist-get w :id) (string-to-number (match-string 2 name)))))
-                     (+kitty-windows)))
+           ;; Read the match now: `+kitty-windows' matches too.
+           (let ((socket (match-string 1 name))
+                 (id (string-to-number (match-string 2 name))))
+             (seq-find (lambda (w) (and (equal (file-name-nondirectory (plist-get w :socket)) socket)
+                                        (= (plist-get w :id) id)))
+                       (+kitty-windows))))
       (error "No kitty window %s" name)))
 
 (defun +kitty-ask-tools (keywords _origin)
