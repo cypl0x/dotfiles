@@ -506,6 +506,7 @@
 (load! "lisp/+perf")        ;; measured fixes: remote /nix/store freeze (TRAMP+projectile)
 (load! "lisp/+usage")       ;; local command/key counts → M-x +usage/report, /suggest
 (load! "lisp/+usage-flows") ;; ...and their order: flows → M-x +usage/flows
+(load! "lisp/+usage-beyond") ;; ...and outside Emacs: shell, desktop, browser, AI → M-x +usage/beyond
 ;; Counting is on: the evidence for keybinding and workflow decisions (local only).
 (+usage-mode 1)
 (load! "lisp/+lsp-fallback") ;; missing LSP server → quiet fallback, not errors

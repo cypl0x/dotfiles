@@ -146,6 +146,75 @@
         (should (equal shown "Flow done"))
         (should-not +mindreader--walk)))))
 
+;;; +usage-beyond
+
+(ert-deftest usage-beyond/shell-desktop-browser-and-prompts ()
+  ;; inbox: +usage should also read the shell, desktop, browser, AI prompts.
+  (load (expand-file-name "+usage-beyond" test-lisp-dir) nil t)
+  (let* ((now (float-time))
+         (rows (append (make-list 5 (list "nix build .#thing --print-build-logs" 1 60.0 "/src" (- now 9000)))
+                       (list (list "ssh host" 255 900.0 "/home" (- now 8000))
+                             (list "nix develop" 1 3000.0 "/src" (- now 7000))
+                             (list "sudo git push" 0 2.0 "/src" (- now 100)))))
+         (shell (+usage-beyond-shell rows)))
+    (should (string-match-p "^- nix ×6, failed ×5 (83%)$" shell))   ; nix develop's exit isn't nix's failure
+    (should (string-match-p "^- ssh ×1$" shell))                    ; a session's exit status isn't a failure
+    (should (string-match-p "^- git ×1$" shell))                    ; after sudo
+    (should (string-match-p "×5  nix build .#thing" shell))
+    (should (string-match-p "(5 min waited for builds and switches)" shell)))
+  ;; Desktop: focus time, switches, glances back.
+  (let ((+usage-beyond--desktop (list :focus nil :time nil :switch nil :workspace 0 :back 0))
+        (+usage-beyond--current nil) (+usage-beyond--previous nil)
+        (+usage-beyond-desktop-directory (make-temp-file "desk" t)))
+    (unwind-protect
+        (progn
+          (+usage-beyond-desktop-event "activewindow>>emacs,init.el" 100)
+          (+usage-beyond-desktop-event "activewindow>>firefox,Docs" 400)
+          (+usage-beyond-desktop-event "activewindow>>emacs,init.el" 405)
+          (+usage-beyond-desktop-event "workspace>>2" 406)
+          (+usage-beyond-desktop-event "activewindow>>,"  407)       ; no window: ignored
+          (should (equal (alist-get "emacs" (plist-get +usage-beyond--desktop :time) nil nil #'equal) 300))
+          (should (equal (alist-get '("emacs" . "firefox") (plist-get +usage-beyond--desktop :switch) nil nil #'equal) 1))
+          (should (= 1 (plist-get +usage-beyond--desktop :back)))
+          (should (= 1 (plist-get +usage-beyond--desktop :workspace)))
+          ;; Saved and merged into the day's file; the report reads it.
+          (+usage-beyond-desktop-save)
+          (+usage-beyond-desktop-event "activewindow>>firefox,Docs" 500)
+          (+usage-beyond-desktop-save)
+          (let ((report (+usage-beyond-desktop)))
+            (should (string-match-p "^- emacs 7min$" report))   ; 300 s + 95 s
+            (should (string-match-p "^- emacs → firefox ×2$" report))))
+      (delete-directory +usage-beyond-desktop-directory t)))
+  ;; Browser: sites from Firefox's reversed hosts.
+  (should (string-match-p "^- github.com ×7$"
+                          (+usage-beyond-browser '(("moc.buhtig.www." . 7) ("." . 3)))))
+  ;; Prompts: harness messages aren't prompts; repeats are found.
+  (should-not (+usage-beyond--prompt-p "<command-name>/goal</command-name>"))
+  (should-not (+usage-beyond--prompt-p "Stop hook feedback: …"))
+  (should (+usage-beyond--prompt-p "Can you fix the build?"))
+  (let ((ai (let ((familiar-history-directory nil))
+              (+usage-beyond-ai '((claude "t" "dotfiles" "continue") (claude "t" "dotfiles" "Continue")
+                                  (claude "t" "todo" "Can you fix\nthe build?"))))))
+    (should (string-match-p "claude ×3" ai))
+    (should (string-match-p "dotfiles ×2" ai))
+    (should (string-match-p "^- ×2  continue$" ai))))
+
+(ert-deftest usage-beyond/transcript-prompts-through-jq ()
+  (skip-unless (executable-find "jq"))
+  (load (expand-file-name "+usage-beyond" test-lisp-dir) nil t)
+  (let ((file (make-temp-file "transcript" nil ".jsonl"))
+        (+usage-beyond--prompt-cache (make-hash-table :test #'equal)))
+    (with-temp-file file
+      (insert "{\"type\":\"user\",\"timestamp\":\"2026-11-06T08:00:00Z\",\"cwd\":\"/home/u/dotfiles\",\"message\":{\"content\":\"Fix the popup colors\"}}\n"
+              "{\"type\":\"user\",\"isMeta\":true,\"cwd\":\"/x\",\"message\":{\"content\":\"meta\"}}\n"
+              "{\"type\":\"user\",\"cwd\":\"/x\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"content\":\"out\"}]}}\n"
+              "{\"type\":\"user\",\"cwd\":\"/home/u/todo\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"And the tests\"}]}}\n"
+              "{\"type\":\"assistant\",\"message\":{\"content\":\"no\"}}\n"))
+    (unwind-protect
+        (should (equal (mapcar #'cdr (+usage-beyond--file-prompts file))
+                       '(("dotfiles" "Fix the popup colors") ("todo" "And the tests"))))
+      (delete-file file))))
+
 ;;; +daemon
 
 (ert-deftest daemon/relaunch-script-waits-restarts-and-restores ()
