@@ -944,6 +944,9 @@ of the conversation, read only).  A failed background run: =SPC o ! w=
 asks Atuin AI why, with the command, how it ended and its last 30 lines.
 Tab in Org or Markdown puts the command in as a shell block.  From a
 remote directory the box runs here, the command there.
+Every box turn (your questions, its answers, the commands it suggested
+with their risk, what you did) goes into familiar's history with the M-ß
+turns (=SPC A j=, tag =atuin_hub=).
 
 Every turn, wherever it came from (M-ß, =ß= in the shell, OpenAI clients,
 familiar's tasks), lands in one Org history (=familiar-history.el=,

@@ -3344,3 +3344,36 @@ command runs out of sight and the echo area says how it ended."
       (let ((o (+atuin-ai--origin)))
         (should (equal (plist-get o :dir) "/ssh:inari:/srv/"))
         (should-not (file-remote-p (plist-get o :box-dir)))))))
+
+(ert-deftest atuin-ai/a-box-turn-lands-in-familiars-history ()
+  (skip-unless (and (fboundp 'sqlite-available-p) (sqlite-available-p)))
+  (add-to-list 'load-path (expand-file-name "familiar" test-lisp-dir))
+  (let* ((file (make-temp-file "atuin-ai-db" nil ".db"))
+         (db (sqlite-open file))
+         (+atuin-ai-sessions-db file)
+         (familiar-history-directory (make-temp-file "fam-hist" t))
+         (familiar-history-enabled t))
+    (sqlite-execute db "create table session_events (id text primary key, session_id text,
+      parent_id text, invocation_id text, event_type text, event_data text, created_at integer)")
+    (cl-loop for (type data at) in
+             `(("user_message" ((content . "old question")) 50)
+               ("user_message" ((content . "biggest files in /etc?")) 100)
+               ("text" ((content . "Here you go:")) 101)
+               ("tool_call" ((id . "t") (name . "suggest_command")
+                             (input . ((command . "du -ah /etc | sort -rh | head -3") (danger . "low")))) 101))
+             for i from 0 do
+             (sqlite-execute db "insert into session_events values (?, 's', null, 'i', ?, ?, ?)"
+                             (list (format "e%d" i) type (json-serialize data) at)))
+    (sqlite-close db)
+    (unwind-protect
+        (progn
+          (+atuin-ai--record '(execute . "du -ah /etc | sort -rh | head -3") 100)
+          (let ((text (with-temp-buffer
+                        (insert-file-contents (car (directory-files familiar-history-directory t "\\.org\\'")))
+                        (buffer-string))))
+            (should (string-match-p "^\\* biggest files in /etc\\?  :atuin_hub:" text))
+            (should-not (string-match-p "old question" text))
+            (should (string-match-p "- suggest_command: du -ah /etc | sort -rh | head -3  (low risk)" text))
+            (should (string-match-p "→ run: du -ah" text))))
+      (delete-file file)
+      (delete-directory familiar-history-directory t))))

@@ -38,6 +38,7 @@
 ;; A background command that failed: SPC o ! w asks Atuin AI why, with
 ;; the command, how it ended and its last output as the question.  Tab in
 ;; Org or Markdown puts the command in as a shell block.
+;; Every box turn goes into familiar's history (SPC A j), tagged atuin_hub.
 ;;
 ;;; Code:
 
@@ -160,6 +161,7 @@ When it closes, what was chosen is done for ORIGIN, commands run HOW."
   "Do what RESULT (from `+atuin-ai-parse') says, for ORIGIN.
 OPENED: when the box opened (to find what Atuin AI said about a command)."
   (+atuin-ai--back origin)
+  (+atuin-ai--record result opened)
   (pcase result
     (`(cancel) nil)
     (`(print . ,text) (+atuin-ai--answer text))
@@ -205,6 +207,59 @@ newest suggestion when none is COMMAND exactly (the hook can respell it)."
                       :confidence (alist-get 'confidence input)
                       :description (alist-get 'description input))))
           (sqlite-close db))))))
+
+(defun +atuin-ai-conversation (since)
+  "What was said in the box since SINCE (seconds), oldest first:
+\((you . TEXT) (ai . TEXT) (call . (NAME . INPUT)) …), from Atuin's record."
+  (when (and (fboundp 'sqlite-available-p) (sqlite-available-p)
+             (file-readable-p +atuin-ai-sessions-db))
+    (ignore-errors
+      (let ((db (sqlite-open +atuin-ai-sessions-db t)))
+        (unwind-protect
+            (mapcar (lambda (row)
+                      (let ((data (json-parse-string (cadr row) :object-type 'alist)))
+                        (pcase (car row)
+                          ("user_message" (cons 'you (alist-get 'content data)))
+                          ("text" (cons 'ai (alist-get 'content data)))
+                          (_ (cons 'call (cons (alist-get 'name data) (alist-get 'input data)))))))
+                    (sqlite-select
+                     db "select event_type, event_data from session_events
+                         where created_at >= ?
+                           and event_type in ('user_message', 'text', 'tool_call')
+                         order by created_at, rowid"
+                     (list (floor since))))
+          (sqlite-close db))))))
+
+(defun +atuin-ai--call-line (call)
+  "CALL (NAME . INPUT) of Atuin AI as one line for the history."
+  (pcase-let ((`(,name . ,input) call))
+    (let ((command (and (listp input) (alist-get 'command input)))
+          (danger (and (listp input) (alist-get 'danger input))))
+      (format "%s: %s%s" name
+              (if command (+atuin-ai--one-line command)
+                (truncate-string-to-width (format "%s" (if input (json-serialize input) "")) 100 nil nil "…"))
+              (if danger (format "  (%s risk)" danger) "")))))
+
+(defun +atuin-ai--record (result since)
+  "The box's turn (asked since SINCE, ended in RESULT) into familiar's
+history, next to the M-ß turns (SPC A j)."
+  (when (and since (require 'familiar-history nil t) (fboundp 'familiar-history-record))
+    (ignore-errors
+      (let* ((said (+atuin-ai-conversation since))
+             (asked (mapcar #'cdr (seq-filter (lambda (e) (eq (car e) 'you)) said))))
+        (when asked
+          (familiar-history-record
+           :prompt (string-join asked "\n\n")
+           :answer (string-join
+                    (delq nil (append
+                               (mapcar #'cdr (seq-filter (lambda (e) (eq (car e) 'ai)) said))
+                               (list (pcase result
+                                       (`(execute . ,c) (format "→ run: %s" c))
+                                       (`(insert . ,c) (format "→ inserted: %s" c))))))
+                    "\n\n")
+           :calls (mapcar (lambda (e) (+atuin-ai--call-line (cdr e)))
+                          (seq-filter (lambda (e) (eq (car e) 'call)) said))
+           :task "atuin-hub" :model "Atuin AI (Hub)"))))))
 
 (defun +atuin-ai--confirm (command info)
   "Whether COMMAND, rated in INFO, may run in the background: background,
