@@ -875,4 +875,4 @@ Config file: ~/.aider.conf.yml
 EOF
 }
 
-alias gdn='git --no-pager diff'      # git diff without pager
+alias gdn='git --no-pager diff' # git diff without pager
