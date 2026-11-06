@@ -18,6 +18,25 @@
 
 ;;; +kitty
 
+(ert-deftest kitty/ask-about-output-shows-its-end ()
+  ;; Errors end up at the end; point sits at the start of the output buffer.
+  (load (expand-file-name "+kitty" test-lisp-dir) nil t)
+  (let (asked)
+    (cl-letf (((symbol-function 'require) (lambda (&rest _) t))
+              ((symbol-function 'familiar-ask--capture)
+               (lambda () (list :buffer (current-buffer) :point (point) :region nil)))
+              ((symbol-function 'familiar-ask) (lambda (prompt _fresh origin) (setq asked (list prompt origin)))))
+      (with-temp-buffer
+        (dotimes (i 500) (insert (format "line %d\n" i)))
+        (insert "error: boom")
+        (goto-char (point-min))
+        (setq-local +kitty--source '(:cmd "make" :cwd "/src"))
+        (let ((+kitty-ask-lines 10)) (+kitty/ask-about-output))
+        (should (string-match-p "`make` in my terminal (/src)" (car asked)))
+        (let ((region (plist-get (cadr asked) :region)))
+          (should (= (cdr region) (point-max)))
+          (should (string-prefix-p "line 490\n" (buffer-substring (car region) (cdr region)))))))))
+
 (ert-deftest kitty/windows-send-and-keys-through-the-socket ()
   ;; inbox: kitty from Emacs (list tabs, run in a shell, send keys).
   (load (expand-file-name "+kitty" test-lisp-dir) nil t)

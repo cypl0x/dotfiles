@@ -286,14 +286,29 @@ window `+kitty/send' uses; with prefix arg PICK, pick another."
     (pop-to-buffer buf)))
 
 (declare-function familiar-ask "familiar-ask" (prompt &optional fresh origin model))
+(declare-function familiar-ask--capture "familiar-ask" ())
+
+(defvar +kitty-ask-lines 300
+  "Lines of output, from the end, the assistant sees (`+kitty/ask-about-output').")
 
 (defun +kitty/ask-about-output ()
-  "Ask the assistant about this kitty output (from `+kitty/output')."
+  "Ask the assistant about this kitty output (from `+kitty/output').
+It sees the last `+kitty-ask-lines' lines, where errors end up; the
+region instead, when one is active."
   (interactive)
   (unless +kitty--source (user-error "Not a kitty output buffer"))
-  (familiar-ask (format "About this output of `%s` in my terminal (%s): what does it say, and if it failed, why and what to do?"
-                        (or (plist-get +kitty--source :cmd) "a command")
-                        (abbreviate-file-name (or (plist-get +kitty--source :cwd) "")))))
+  (require 'familiar-ask)
+  (let ((origin (familiar-ask--capture)))
+    (unless (plist-get origin :region)
+      (setq origin (plist-put origin :region
+                              (cons (save-excursion (goto-char (point-max))
+                                                    (forward-line (- +kitty-ask-lines))
+                                                    (point))
+                                    (point-max)))))
+    (familiar-ask (format "About this output of `%s` in my terminal (%s): what does it say, and if it failed, why and what to do?"
+                          (or (plist-get +kitty--source :cmd) "a command")
+                          (abbreviate-file-name (or (plist-get +kitty--source :cwd) "")))
+                  nil origin)))
 
 ;;;; M-ß: @kitty
 
