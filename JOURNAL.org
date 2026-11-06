@@ -39,6 +39,17 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-06 Fr 10:33] — Inbox: ten items, all done (inbox.org is the source)
+- ✔ Popups take the theme's colors; M-ß: @echo says who answered, @words
+  highlighted and kept, M-1/2/3 or C-u C-u pick the model, SPC m m raises
+  it, tables aligned.
+- ✔ M-p brings back a suggestion that went away (no new request).
+- ✔ SPC q ?: is this Emacs in sync with the config, and the fix for each lag.
+- ✔ C-ß 1: one tip. C-SPC with nothing typed: words that fit, ranked.
+- ✔ SPC o K: kitty (go to, send, run, keys, output; @kitty in M-ß).
+- ✔ M-#: what you'd do next here, and the flows you repeat, walked through.
+- ✔ +usage beyond Emacs: shell, desktop (recording since 10:31), browser,
+  AI prompts → M-x +usage/beyond, +usage/suggest-everywhere.
 ** [2026-11-06 Fr 07:41] — Waits explained, slow keys counted, culprits named
 - 🛠 SPC f f /ssh: froze 132 s: my file sort asked every ssh host for a
   date. Fixed; ssh now gives up on an unreachable host after 5 s.
