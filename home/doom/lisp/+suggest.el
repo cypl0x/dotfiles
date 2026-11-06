@@ -8,6 +8,8 @@
 ;;   M-RET   take its first line (C-u N M-RET: N lines)
 ;;   M-]  M-[   next / previous suggestion
 ;;   C-g     dismiss
+;;   M-p     none showing: the last one that went away, back (no request);
+;;           M-p again the one before, M-n newer.  M-n: ask for one
 ;;
 ;; In code buffers and in Org and Markdown (see Prose below); M-x minuet-show-suggestion
 ;; anywhere else.  With corfu's popup open too, TAB is corfu's (its map
@@ -107,16 +109,6 @@ longer one (finish the paragraph or block) and one taking another direction.
 
 (add-hook! '(org-mode-hook markdown-mode-hook) #'+suggest-prose-h)
 
-(defun +suggest/next ()
-  "The next inline suggestion; ask for some when none shows."
-  (interactive)
-  (if (bound-and-true-p minuet-active-mode) (minuet-next-suggestion) (minuet-show-suggestion)))
-
-(defun +suggest/previous ()
-  "The previous inline suggestion; ask for some when none shows."
-  (interactive)
-  (if (bound-and-true-p minuet-active-mode) (minuet-previous-suggestion) (minuet-show-suggestion)))
-
 (map! :after org :map org-mode-map :i "M-n" #'+suggest/next :i "M-p" #'+suggest/previous)
 (map! :after markdown-mode :map markdown-mode-map :i "M-n" #'+suggest/next :i "M-p" #'+suggest/previous)
 
@@ -137,8 +129,8 @@ longer one (finish the paragraph or block) and one taking another direction.
                                       (let ((map (make-sparse-keymap)))
                                         (set-keymap-parent map minuet-active-mode-map)
                                         (define-key map (kbd "M-RET") #'+suggest/org-meta-return)
-                                        (define-key map (kbd "M-n") #'minuet-next-suggestion)
-                                        (define-key map (kbd "M-p") #'minuet-previous-suggestion)
+                                        (define-key map (kbd "M-n") #'+suggest/next)
+                                        (define-key map (kbd "M-p") #'+suggest/previous)
                                         map))
                                 minor-mode-overriding-map-alist)))))
 
@@ -188,17 +180,22 @@ push it sideways, so in prose only M-n asks for one."
 (defun +suggest--count (key &optional n)
   (setq +suggest--stats (plist-put +suggest--stats key (+ (or n 1) (plist-get +suggest--stats key)))))
 
+(defvar +suggest--recalling nil
+  "Non-nil while a suggestion that went away is shown again (`+suggest/again').")
+
 (defun +suggest-sane-a (args)
-  "Filter for `minuet--display-suggestion' ARGS: drop stale and talking ones."
-  (let* ((all (seq-filter #'stringp (car args)))
-         (items (seq-remove (lambda (s) (string-match-p +suggest-meta-re s)) all))
-         (stale (and +suggest--asked (eq (point) (car +suggest--asked))
-                     (/= (buffer-chars-modified-tick) (cdr +suggest--asked)))))
-    (+suggest--count :talking (- (length all) (length items)))
-    (cond ((null all) (+suggest--count :empty))
-          (stale (+suggest--count :stale) (setq items nil))
-          (items (+suggest--count :shown)))
-    (cons items (cdr args))))
+  "Filter for `minuet--display-suggestion' ARGS: drop stale and talking ones.
+One brought back (`+suggest/again') was checked when it first came."
+  (if +suggest--recalling args
+    (let* ((all (seq-filter #'stringp (car args)))
+           (items (seq-remove (lambda (s) (string-match-p +suggest-meta-re s)) all))
+           (stale (and +suggest--asked (eq (point) (car +suggest--asked))
+                       (/= (buffer-chars-modified-tick) (cdr +suggest--asked)))))
+      (+suggest--count :talking (- (length all) (length items)))
+      (cond ((null all) (+suggest--count :empty))
+            (stale (+suggest--count :stale) (setq items nil))
+            (items (+suggest--count :shown)))
+      (cons items (cdr args)))))
 
 (defun +suggest/stats ()
   "How inline suggestions fared since Emacs started, in the echo area."
@@ -213,6 +210,146 @@ push it sideways, so in prose only M-n asks for one."
   (advice-add 'minuet--display-suggestion :filter-args #'+suggest-sane-a)
   (advice-add 'minuet--display-suggestion :filter-args #'+suggest-prose-space-a))
 
+
+;;;; Bring back a suggestion that went away ───────────────────────────────
+
+;; A suggestion goes when you move or type something it doesn't start with,
+;; and asking again gives another one: the good one noticed a second too
+;; late was gone.  Each one that goes (unless taken) is kept here, with
+;; where it stood and the text around it.  M-p with none showing brings
+;; the last back, without asking the model: where you are if you typed its
+;; start (the rest shows), else where it stood, the cursor back there,
+;; while the text around is unchanged.  M-p again: the one before; M-n:
+;; newer.  M-n with none showing asks for a new one, as before.
+(defvar +suggest-recall-size 10 "How many suggestions that went away are kept per buffer.")
+
+(defvar-local +suggest--recall nil
+  "Suggestions that went away, newest first: plists (:marker :before :after
+:suggestions :index).")
+
+(defvar-local +suggest--recalled nil
+  "Index in `+suggest--recall' of the suggestion brought back now, or nil.")
+
+(defvar +suggest--taking nil "Non-nil while a suggestion is being taken (not kept).")
+
+(defvar minuet--current-overlay)
+(defvar minuet--current-suggestions)
+(defvar minuet--current-suggestion-index)
+(declare-function minuet--display-suggestion "ext:minuet" (suggestions &optional index))
+
+(defconst +suggest--recall-context 60
+  "Characters before and after a suggestion that must be unchanged to bring it back.")
+
+(defun +suggest--keep-a (&rest _)
+  "Before minuet removes a suggestion: keep it, unless it is being taken."
+  (when-let* (((not (or +suggest--taking +suggest--recalling)))
+              (ov minuet--current-overlay)
+              ((overlay-buffer ov))
+              (suggestions (seq-filter #'stringp minuet--current-suggestions)))
+    (with-current-buffer (overlay-buffer ov)
+      (let ((pos (overlay-start ov)))
+        ;; The same one again (cycled, redrawn, brought back): moved to the front.
+        (setq +suggest--recall
+              (cl-remove-if (lambda (e) (and (eql (marker-position (plist-get e :marker)) pos)
+                                             (equal (plist-get e :suggestions) suggestions)
+                                             (progn (set-marker (plist-get e :marker) nil) t)))
+                            +suggest--recall))
+        (push (list :marker (copy-marker pos)
+                      :before (buffer-substring-no-properties
+                               (max (point-min) (- pos +suggest--recall-context)) pos)
+                      :after (buffer-substring-no-properties
+                              pos (min (point-max) (+ pos +suggest--recall-context)))
+                      :suggestions suggestions
+                      :index minuet--current-suggestion-index)
+              +suggest--recall)
+        (when (nthcdr +suggest-recall-size +suggest--recall)
+          (set-marker (plist-get (car (last +suggest--recall)) :marker) nil)
+          (setq +suggest--recall (butlast +suggest--recall)))))))
+
+(defun +suggest--taking-a (fn &rest args)
+  "Around minuet's take commands (FN with ARGS): the suggestion isn't kept."
+  (let ((+suggest--taking t)) (apply fn args)))
+
+(defun +suggest--recall-fit (entry)
+  "Where and what ENTRY can show now: (POS SUGGESTIONS INDEX), or nil.
+Where you are, when the text since its place is what it starts with;
+else at its place, when the text around that is unchanged."
+  (let* ((pos (marker-position (plist-get entry :marker)))
+         (before (plist-get entry :before))
+         (after (plist-get entry :after))
+         (suggestions (plist-get entry :suggestions))
+         (index (or (plist-get entry :index) 0)))
+    (when (and pos (>= (- pos (point-min)) (length before))
+               (equal (buffer-substring-no-properties (- pos (length before)) pos) before))
+      (let* ((typed (and (> (point) pos) (<= (- (point) pos) 200)
+                         (buffer-substring-no-properties pos (point))))
+             (rest (and typed
+                        (delq nil (mapcar (lambda (s) (and (string-prefix-p typed s)
+                                                           (length> s (length typed))
+                                                           (substring s (length typed))))
+                                          suggestions)))))
+        (cond (rest (list (point) rest 0))
+              ((and (<= (+ pos (length after)) (point-max))
+                    (equal (buffer-substring-no-properties pos (+ pos (length after))) after))
+               (list pos suggestions index)))))))
+
+(defun +suggest--recall-show (from step)
+  "Show the first kept suggestion that fits, from index FROM going STEP.
+Non-nil when one showed."
+  (cl-loop for i = from then (+ i step)
+           while (and (>= i 0) (< i (length +suggest--recall)))
+           for fit = (+suggest--recall-fit (nth i +suggest--recall))
+           when fit
+           return (pcase-let ((`(,pos ,suggestions ,index) fit))
+                    (goto-char pos)
+                    (let ((+suggest--recalling t))   ; not kept twice, not "stale"
+                      (minuet--display-suggestion suggestions index))
+                    (setq +suggest--recalled i)
+                    (message "Brought back (%d of %d kept)%s" (1+ i) (length +suggest--recall)
+                             (if (< (1+ i) (length +suggest--recall)) ": M-p the one before" ""))
+                    t)))
+
+(defun +suggest--recalled-showing-p ()
+  "Non-nil when the suggestion showing is one brought back."
+  (and +suggest--recalled (bound-and-true-p minuet-active-mode)
+       (memq last-command '(+suggest/next +suggest/previous))))
+
+(defun +suggest/again ()
+  "Bring back the last suggestion that went away, without asking the model."
+  (interactive)
+  (unless (+suggest--recall-show 0 1)
+    (user-error "No suggestion to bring back here (none kept, or the text around it changed)")))
+
+(defun +suggest/next ()
+  "The next inline suggestion; ask for some when none shows.
+Showing one brought back (\\[+suggest/previous]): the newer kept one."
+  (interactive)
+  (cond ((+suggest--recalled-showing-p)
+         (unless (+suggest--recall-show (1- +suggest--recalled) -1)
+           (message "No newer one kept")))
+        ((bound-and-true-p minuet-active-mode) (minuet-next-suggestion))
+        (t (minuet-show-suggestion))))
+
+(defun +suggest/previous ()
+  "The previous inline suggestion.  None showing: bring back the last that
+went away (no request), or ask for one when none is kept for here.
+Showing one brought back: the one kept before it."
+  (interactive)
+  (cond ((+suggest--recalled-showing-p)
+         (unless (+suggest--recall-show (1+ +suggest--recalled) 1)
+           (message "No older one kept")))
+        ((bound-and-true-p minuet-active-mode) (minuet-previous-suggestion))
+        ((+suggest--recall-show 0 1))
+        (t (minuet-show-suggestion))))
+
+(with-eval-after-load 'minuet
+  (advice-add 'minuet--cleanup-suggestion :before #'+suggest--keep-a)
+  (dolist (take '(minuet-accept-suggestion minuet-accept-suggestion-line minuet-accept-suggestion-word))
+    (advice-add take :around #'+suggest--taking-a)))
+
+;; Code buffers too: M-n / M-p in insert state, also while one shows.
+(map! :after minuet :map minuet-active-mode-map "M-n" #'+suggest/next "M-p" #'+suggest/previous)
+(map! :map prog-mode-map :i "M-n" #'+suggest/next :i "M-p" #'+suggest/previous)
 ;;;; Narrowed buffers (Org capture): minuet's context counted from 1
 
 ;; `minuet--get-context' (minuet 2026-10-09, still so upstream) takes the

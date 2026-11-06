@@ -2226,6 +2226,65 @@ findings stand, following the text; once saved it runs again."
     (save-excursion (goto-char (point-min)) (insert "X") (delete-char -1))
     (should-not (car (+suggest-sane-a (list (list " and more.")))))))
 
+(ert-deftest suggest/a-suggestion-that-went-away-comes-back-without-a-request ()
+  ;; inbox: moved or typed by accident, the good suggestion was gone for good.
+  (skip-unless (require 'minuet nil t))
+  (load (expand-file-name "+suggest" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'minuet-show-suggestion)
+               (lambda () (error "Asked the model"))))
+      (insert "Hello wor")
+      (minuet--display-suggestion '("ld, again."))
+      (should minuet--current-overlay)
+      ;; An accidental motion: minuet removes it.
+      (goto-char (point-min))
+      (minuet--cleanup-suggestion)
+      (should-not minuet--current-overlay)
+      ;; M-p: back where it stood, the cursor too.
+      (+suggest/previous)
+      (should (= (point) (point-max)))
+      (should (equal minuet--current-suggestions '("ld, again.")))
+      ;; Kept once, though shown twice.
+      (minuet--cleanup-suggestion)
+      (should (= 1 (length +suggest--recall)))
+      ;; Typed its start: the rest shows, where you are.
+      (insert "ld")
+      (+suggest/again)
+      (should (equal minuet--current-suggestions '(", again.")))
+      (should (= (point) (point-max)))
+      ;; Taken: not kept.
+      (let ((n (length +suggest--recall)))
+        (minuet-accept-suggestion)
+        (should (equal (buffer-string) "Hello world, again."))
+        (should (= n (length +suggest--recall))))
+      ;; The text before it changed: nothing to bring back.
+      (erase-buffer)
+      (insert "Bye wor")
+      (setq +suggest--recall
+            (seq-remove (lambda (e) (not (marker-position (plist-get e :marker)))) +suggest--recall))
+      (should-error (+suggest/again) :type 'user-error))))
+
+(ert-deftest suggest/older-ones-come-back-in-turn ()
+  (skip-unless (require 'minuet nil t))
+  (load (expand-file-name "+suggest" test-lisp-dir) nil t)
+  (with-temp-buffer
+    (insert "one ")
+    (minuet--display-suggestion '("first"))
+    (minuet--cleanup-suggestion)
+    (insert "two ")
+    (minuet--display-suggestion '("second"))
+    (minuet--cleanup-suggestion)
+    (let ((last-command nil))
+      (+suggest/previous))
+    (should (equal minuet--current-suggestions '("second")))
+    (let ((last-command '+suggest/previous))
+      (+suggest/previous))
+    (should (equal minuet--current-suggestions '("first")))
+    (should (= (point) 5))
+    (let ((last-command '+suggest/previous))
+      (+suggest/next))
+    (should (equal minuet--current-suggestions '("second")))))
+
 (ert-deftest suggest/no-auto-suggestion-mid-line-in-prose ()
   (load (expand-file-name "+suggest" test-lisp-dir) nil t)
   (with-temp-buffer
