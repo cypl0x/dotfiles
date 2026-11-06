@@ -1546,8 +1546,14 @@ and meanings learned before that are dropped."
     (should (equal (lint #'+org-lint-blank-lines "a\n\n\nb\n#+begin_src sh\n1\n\n\n2\n#+end_src\n")
                    '("More than one blank line")))
     (should (equal (lint #'+org-lint-trailing-whitespace "a \nb\n") '("Trailing whitespace")))
-    (should (equal (lint #'+org-lint-missing-blank-line "* A\ntext\n\n* B\n")
-                   '("No blank line before this (SPC c f adds it)")))
+    (let ((+format-org-style 'spacious))
+      (should (equal (lint #'+org-lint-missing-blank-line "* A\ntext\n\n* B\n")
+                     '("No blank line before this (SPC c f adds it)"))))
+    (let ((+format-org-style 'doom))
+      (should-not (lint #'+org-lint-missing-blank-line "* A\ntext\n\n* B\n"))
+      (should (equal (lint #'+org-lint-missing-blank-line "* A\n\ntext\n* B\n")
+                     '("Blank line before this: Doom Docs have none here (SPC c f takes it out)"
+                       "No blank line before this (SPC c f adds it)"))))
     (should (equal (lint #'+org-lint-keyword-case "#+TITLE: x\n#+begin_src sh\n#+TITLE: in code\n#+end_src\n")
                    '("#+TITLE:: Org writes it lower case")))
     (should (equal (lint #'+org-lint-list-bullets "- a\n+ b\n\n1. x\n2) y\n")
@@ -1598,6 +1604,7 @@ findings stand, following the text; once saved it runs again."
                    '("Link text \"here\" (MD059): say where it leads")))))
 
 (ert-deftest org-lint/many-of-a-kind-shown-once-as-you-write ()
+  (let ((+format-org-style 'spacious))   ; the text is laid out that way
   (with-temp-buffer
     (org-mode)
     (insert "* A\n\none \n\n* B\n\ntwo \n\n* C\n\nthree \n\n* D\n\nfour \n\n#+begin_src\n#+end_src\n")
@@ -1606,7 +1613,7 @@ findings stand, following the text; once saved it runs again."
       ;; block without a language) as warnings.
       (should (equal (seq-filter (lambda (f) (eq (nth 1 f) 'info)) found)
                      '((9 info "Trailing whitespace, and 3 more like it (M-x org-lint lists them)"))))
-      (should (seq-find (lambda (f) (eq (nth 1 f) 'warning)) found)))))
+      (should (seq-find (lambda (f) (eq (nth 1 f) 'warning)) found))))))
 
 
 (ert-deftest completion/tex-names-complete-to-unicode-shown-in-the-popup ()

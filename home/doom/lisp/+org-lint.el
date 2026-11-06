@@ -17,7 +17,8 @@
 ;;   heading ending in . , ; : !   MD026
 ;;   runs of blank lines           MD012
 ;;   trailing spaces               MD009
-;;   blank line missing            MD022 MD031 MD032 (what SPC c f adds)
+;;   blank lines as SPC c f sets   MD022 MD031 MD032: missing ones; in the
+;;                                 Doom Docs style also extra ones
 ;;   #+KEYWORD in upper case       (Org writes them lower case since 9)
 ;;   bullets mixed in one list     MD004
 ;;   same text =x= here, ~x~ there
@@ -50,6 +51,8 @@
 (declare-function org-element-parent "org-element-ast" (node))
 (declare-function org-element-lineage "org-element-ast" (datum &optional types with-self))
 (declare-function +format-org--blank-positions "+format" ())
+(declare-function +format-org--doom-positions "+format" ())
+(defvar +format-org-style)
 (defvar org-lint--checkers)
 (defvar +format-org-verbatim)
 
@@ -150,13 +153,27 @@
     (nreverse reports)))
 
 (defun +org-lint-missing-blank-line (_ast)
+  "Blank lines where SPC c f would change them: missing ones, and, in the
+Doom Docs style (`+format-org-style'), ones it would take out."
   (when (fboundp '+format-org--blank-positions)   ; lisp/+format.el
-    (let (reports)
-      (dolist (pos (+format-org--blank-positions))
-        (save-excursion
-          (goto-char pos)
-          (unless (or (bobp)
-                      (save-excursion (forward-line -1) (looking-at-p "[ \t]*$")))
+    (let ((blank-before (lambda (pos)
+                          (save-excursion
+                            (goto-char pos)
+                            (or (bobp) (save-excursion (forward-line -1) (looking-at-p "[ \t]*$"))))))
+          reports)
+      (if (and (eq (bound-and-true-p +format-org-style) 'doom)
+               (fboundp '+format-org--doom-positions))
+          (pcase-dolist (`(,pos . ,kind) (+format-org--doom-positions))
+            (let ((has (save-excursion (goto-char pos)
+                                       (and (not (bobp))
+                                            (save-excursion (forward-line -1) (looking-at-p "[ \t]*$"))))))
+              (cond ((and (eq kind 'blank) (not (funcall blank-before pos)))
+                     (push (list pos "No blank line before this (SPC c f adds it)") reports))
+                    ((and (eq kind 'none) has)
+                     (push (list pos "Blank line before this: Doom Docs have none here (SPC c f takes it out)")
+                           reports)))))
+        (dolist (pos (+format-org--blank-positions))
+          (unless (funcall blank-before pos)
             (push (list pos "No blank line before this (SPC c f adds it)") reports))))
       (sort reports (lambda (a b) (< (car a) (car b)))))))
 
