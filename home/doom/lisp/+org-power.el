@@ -161,9 +161,10 @@ the label's text instead of wiping the label out."
 (defun +org-modern-todo-faces-h ()
   "Keyword and priority labels in the colours Org itself uses for them.
 Done items stay muted, in a grey dark text still reads on (WCAG 5.7)."
-  ;; doom-color is nil under a theme not from Doom (modus-operandi, your light
-  ;; side): Org then failed to load ("Invalid face").
-  (let ((muted (or (doom-color 'base7) (face-foreground 'shadow nil t))))
+  ;; Doom's palette only under a Doom theme (+themes.el): otherwise doom-color
+  ;; is the last Doom theme's (or nil before one: Org failed to load,
+  ;; "Invalid face"); modus-operandi, your light side, has its own grey.
+  (let ((muted (or (and (+themes-doom-p) (doom-color 'base7)) (face-foreground 'shadow nil t))))
     (setq org-modern-todo-faces
           (append (mapcar (lambda (kf) (cons (car kf) (+org-modern-label-face (cdr kf))))
                           org-todo-keyword-faces)
@@ -374,6 +375,7 @@ and whatever packages added (vellumory's V) stay."
 ;; if there is one; on a heading without one it folds or unfolds it.
 (defvar +org-fringe-width 16 "Left fringe width in Org buffers, in pixels.")
 
+(declare-function +themes-doom-p "+themes" ())
 (declare-function diff-hl-hunk-overlay-at "ext:diff-hl" (pos))
 (declare-function diff-hl-show-hunk "ext:diff-hl-show-hunk" ())
 (declare-function org-at-heading-p "org" (&optional invisible-not-ok))
