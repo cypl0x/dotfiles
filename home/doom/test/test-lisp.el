@@ -1375,18 +1375,11 @@ and meanings learned before that are dropped."
       (should mini))))
 
 (ert-deftest completion/next-word-after-a-space ()
+  ;; The words that followed the previous one (C-SPC after a space ranks them first).
   (with-temp-buffer
     (text-mode)
     (insert "The parser reads tokens. The parser builds trees. The parser reads input. The parser ")
-    (cl-letf (((symbol-function '+completion-context) (lambda () 'prose)))
-      (let ((r (+completion-next-word-capf)))
-        (should r)
-        (should (= (nth 0 r) (nth 1 r) (point)))
-        (should (equal (all-completions "" (nth 2 r)) '("reads" "builds")))
-        (should (string-match-p "×2" (funcall (plist-get (nthcdr 3 r) :annotation-function) "reads"))))
-      ;; Mid-word it leaves the job to the word completion.
-      (insert "re")
-      (should-not (+completion-next-word-capf)))))
+    (should (equal (+completion--next-words "parser") '(("reads" . 2) ("builds" . 1))))))
 
 (ert-deftest completion/paths-by-their-shape ()
   (let ((dir (make-temp-file "pathcomp" t)))

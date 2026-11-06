@@ -112,7 +112,7 @@ every Org buffer (11,448 of them, duplicate check quadratic)."
 
 (defvar +completion-next-word-limit 400000
   "Characters of text (this buffer first, then others of its mode) read
-for `+completion-next-word-capf'.")
+for the words that followed the previous one (`+completion-empty-capf').")
 
 (defun +completion--next-words (prev)
   "Words that followed PREV in this buffer and others of its mode, as
@@ -136,29 +136,6 @@ for `+completion-next-word-capf'.")
     (let (out)
       (maphash (lambda (w n) (push (cons w n) out)) counts)
       (sort out (lambda (a b) (> (cdr a) (cdr b)))))))
-
-(defun +completion-next-word-capf ()
-  "With nothing typed yet: the words that followed the previous word
-elsewhere (in this buffer and the others of its mode), most frequent
-first, each with its count.  C-SPC after a space offered nothing before."
-  (when (and (or (minibufferp) (eq (+completion-context) 'prose))
-             (not (looking-back "[[:alpha:]]" (1- (point)))))
-    (let* ((prev (save-excursion
-                   (skip-chars-backward " \t")
-                   (and (looking-back "\\b\\([[:alpha:]][[:alpha:]'’-]*\\)" (line-beginning-position))
-                        (match-string-no-properties 1))))
-           (found (and prev (+completion--next-words prev)))
-           (cands (mapcar (lambda (e) (propertize (car e) '+count (cdr e))) found)))
-      (when cands
-        (list (point) (point)
-              (lambda (string pred action)
-                (if (eq action 'metadata)
-                    '(metadata (display-sort-function . identity) (cycle-sort-function . identity))
-                  (complete-with-action action cands string pred)))
-              :annotation-function
-              (lambda (c) (format "  after “%s” ×%d" prev (or (cdr (assoc (substring-no-properties c) found)) 0)))
-              :exclusive 'no
-              :company-kind (lambda (_) 'text))))))
 
 (defun +completion-path-capf ()
   "Complete a file or directory name before point, recognized by its
@@ -225,7 +202,9 @@ an unclosed \"=~/va\" like prose and got words."
       (with-temp-file +completion-picks-file (prin1 alist (current-buffer))))
     (setq +completion--picks-dirty nil)))
 (add-hook 'kill-emacs-hook #'+completion--save-picks)
-(run-with-idle-timer 300 t #'+completion--save-picks)
+(defvar +completion--picks-timer nil)
+(when (timerp +completion--picks-timer) (cancel-timer +completion--picks-timer))   ; reloaded
+(setq +completion--picks-timer (run-with-idle-timer 300 t #'+completion--save-picks))
 
 (defun +completion--count-words (beg end table &optional min)
   "Count the prose words between BEG and END into TABLE (at least MIN letters)."
