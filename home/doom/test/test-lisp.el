@@ -3533,3 +3533,27 @@ words that begin one, and short ones, stay."
         (+tldr/explain))
       (should (string-match-p "part by part.*\ntar -czvf out.tgz src" asked))
       (kill-buffer "*tldr: tar*"))))
+
+(ert-deftest discover/learns-words-that-found-a-command-by-its-doc ()
+  "Words matching a command only through its doc or a synonym are learned
+and offered first next time; words already in its name are not."
+  (defun test-discover-link-preview () "Show images inline." (interactive))
+  (let* ((+discover-learned-file (make-temp-file "discover-words" nil ".eld"))
+         (+discover--learned nil)
+         (+discover--table (make-hash-table :test #'equal))
+         (+discover--used (make-hash-table :test #'eq))
+         (+discover-yours nil))
+    (delete-file +discover-learned-file)
+    (unwind-protect
+        (progn
+          (setq +discover--input '(execute-extended-command . "inline image"))
+          (let ((real-this-command 'execute-extended-command) (this-command 'test-discover-link-preview))
+            (+discover--learn-h))
+          (should-not +discover--input)
+          (+discover-learn "test discover link" 'test-discover-link-preview) ; in its name: not learned
+          (setq +discover--learned nil)                                       ; read back from the file
+          (should (equal (car (+discover--learned)) '((("inline image" . test-discover-link-preview) . 1))))
+          (let ((first (car (+discover--candidates))))
+            (should (string-prefix-p "inline image " first))
+            (should (equal (gethash first +discover--table) '(yours . test-discover-link-preview)))))
+      (when (file-exists-p +discover-learned-file) (delete-file +discover-learned-file)))))

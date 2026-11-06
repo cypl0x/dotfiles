@@ -233,6 +233,60 @@ styles still match the word itself."
   "(WORDS COMMANDS [NOTE]): words you'd use, the commands that do it (the
 first one defined is offered), what Emacs or Evil calls it.")
 
+;;;; Your words, learned
+
+;; Words that found a command whose name doesn't have them (its doc or a
+;; synonym matched: "image" → org-link-preview) become your words: C-ß
+;; offers them first next time.
+
+(defvar +discover-learned-file (locate-user-emacs-file "discover-words.eld")
+  "((WORDS . COMMAND) . TIMES) learned from C-ß and M-x.")
+(defvar +discover--learned nil "The file's data, read on first use.")
+(defvar +discover--input nil "(COMMAND . INPUT) of the search just left.")
+
+(defun +discover--learned ()
+  (or +discover--learned
+      (setq +discover--learned
+            (or (and (file-exists-p +discover-learned-file)
+                     (ignore-errors (with-temp-buffer (insert-file-contents +discover-learned-file)
+                                                      (read (current-buffer)))))
+                (list nil)))))
+
+(defun +discover--name-has-p (words cmd)
+  "Whether every one of WORDS begins a word of CMD's name."
+  (let ((name (split-string (downcase (symbol-name cmd)) "[^[:alnum:]]+" t)))
+    (seq-every-p (lambda (w) (seq-some (lambda (n) (string-prefix-p w n)) name))
+                 words)))
+
+(defun +discover-learn (input cmd)
+  "Remember that INPUT found CMD, when CMD's name alone wouldn't have."
+  (let ((words (split-string (downcase (string-trim input)) "[ \t]+" t)))
+    (when (and words (symbolp cmd) (commandp cmd)
+               (seq-every-p (lambda (w) (>= (length w) 3)) words)
+               (not (+discover--name-has-p words cmd)))
+      (let* ((key (cons (string-join words " ") cmd))
+             (data (+discover--learned))
+             (cell (assoc key (car data))))
+        (if cell (cl-incf (cdr cell)) (push (cons key 1) (car data)))
+        (let ((print-length nil) (print-level nil))
+          (with-temp-file +discover-learned-file (prin1 data (current-buffer))))))))
+
+(defun +discover--input-h ()
+  "Leaving C-ß's search or M-x: keep what was typed."
+  (when (memq current-minibuffer-command +discover-synonym-commands)
+    (setq +discover--input (cons current-minibuffer-command (minibuffer-contents-no-properties)))))
+
+(defun +discover--learn-h ()
+  "After the command C-ß or M-x ran: learn the words that found it."
+  (when-let* ((input +discover--input))
+    (setq +discover--input nil)
+    (when (memq real-this-command '(execute-extended-command execute-extended-command-for-buffer
+                                    +discover/anything))
+      (ignore-errors (+discover-learn (cdr input) this-command)))))
+
+(add-hook 'minibuffer-exit-hook #'+discover--input-h)
+(add-hook 'post-command-hook #'+discover--learn-h)
+
 ;;;; Emacs's words: the manual's glossary
 
 (defvar +discover-plain
@@ -342,6 +396,12 @@ first one defined is offered), what Emacs or Evil calls it.")
   "All candidates, in display order; fills `+discover--table'."
   (let ((table +discover--table) (used +discover--used) yours cmds terms mans opts)
     (cl-flet ((add (str entry list) (puthash str entry table) (cons str list)))
+      ;; Learned ones first, most used first.
+      (pcase-dolist (`((,words . ,cmd) . ,_n)
+                     (sort (copy-sequence (car (+discover--learned))) (lambda (a b) (> (cdr a) (cdr b)))))
+        (when (commandp cmd)
+          (setq yours (add (+discover--line words (format "→ %s   (learned)" cmd))
+                           (cons 'yours cmd) yours))))
       (pcase-dolist (`(,words ,commands ,note) +discover-yours)
         (when-let* ((cmd (+discover--first-command commands)))
           (setq yours (add (+discover--line words (format "→ %s%s" cmd (if note (concat "   " note) "")))
