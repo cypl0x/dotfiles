@@ -41,16 +41,36 @@
 
 ;;;; The API
 
+(defun +gh-fs--run (&rest args)
+  "Run gh with ARGS, its output into the current buffer: (EXIT . STDERR).
+Like `call-process', but waiting with `accept-process-output': timers
+run meanwhile, so the echo area can say what Emacs waits for
+\(lisp/+wait.el); C-g stops it and the process."
+  (let* ((default-directory temporary-file-directory)
+         (err (generate-new-buffer " *gh-fs-err*"))
+         (stderr (make-pipe-process :name "gh-fs-err" :buffer err :noquery t :sentinel #'ignore))
+         (proc (make-process :name "gh-fs-sync" :buffer (current-buffer) :command (cons "gh" args)
+                             :connection-type 'pipe :noquery t :stderr stderr :sentinel #'ignore)))
+    (unwind-protect
+        (progn
+          (while (accept-process-output proc))
+          (while (accept-process-output stderr 0))
+          (cons (process-exit-status proc)
+                (with-current-buffer err (buffer-string))))
+      (delete-process proc)
+      (delete-process stderr)
+      (kill-buffer err))))
+
 (defun +gh-fs--api (path &optional raw-file)
   "GET PATH with gh; parsed JSON (cached for the session).
 With RAW-FILE, write the raw body to that file and return it."
   (if raw-file
-      (let ((coding-system-for-read 'binary)
-            (default-directory temporary-file-directory))
+      (let ((coding-system-for-read 'binary))
         (with-temp-buffer
           (set-buffer-multibyte nil)
-          (unless (zerop (call-process "gh" nil t nil "api" "-H" "Accept: application/vnd.github.raw" path))
-            (error "GitHub: %s" (string-trim (buffer-string))))
+          (pcase-let ((`(,exit . ,stderr) (+gh-fs--run "api" "-H" "Accept: application/vnd.github.raw" path)))
+            (unless (zerop exit)
+              (error "GitHub: %s" (string-trim (concat (buffer-string) stderr)))))
           (make-directory (file-name-directory raw-file) t)
           (let ((coding-system-for-write 'binary)) (write-region nil nil raw-file nil 'silent))
           raw-file))
@@ -58,9 +78,8 @@ With RAW-FILE, write the raw body to that file and return it."
       (if (not (eq hit :none)) hit
         (puthash path
                  (with-temp-buffer
-                   (let ((coding-system-for-read 'utf-8)
-                         (default-directory temporary-file-directory))
-                     (if (zerop (call-process "gh" nil '(t nil) nil "api" path))
+                   (let ((coding-system-for-read 'utf-8))
+                     (if (zerop (car (+gh-fs--run "api" path)))
                          (progn (goto-char (point-min))
                                 (json-parse-buffer :object-type 'plist :array-type 'list
                                                    :null-object nil :false-object nil))

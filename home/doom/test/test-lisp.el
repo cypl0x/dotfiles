@@ -2282,6 +2282,52 @@ findings stand, following the text; once saved it runs again."
       (should test-diag-fake-mode)
       (should-not +diagnostics--paused))))
 
+(ert-deftest gh-fs/gh-runs-as-a-process-stdout-stderr-and-exit-apart ()
+  ;; A fake gh: bytes on stdout, a warning on stderr, exit 3.
+  (load (expand-file-name "+gh-fs" test-lisp-dir) nil t)
+  (let* ((bin (make-temp-file "fakegh" t))
+         (exec-path (cons bin exec-path)))
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "gh" bin)
+            (insert "#!/bin/sh\nprintf 'out:%s\\377' \"$2\"\necho warn >&2\nexit 3\n"))
+          (set-file-modes (expand-file-name "gh" bin) #o755)
+          (with-temp-buffer
+            (set-buffer-multibyte nil)
+            (let ((coding-system-for-read 'binary))
+              (should (equal (+gh-fs--run "api" "users/x") '(3 . "warn\n")))
+              (should (equal (buffer-string) "out:users/x\377")))))
+      (delete-directory bin t))))
+
+(ert-deftest wait/says-what-it-waits-for-after-a-while-then-clears ()
+  (load (expand-file-name "+wait" test-lisp-dir) nil t)
+  (let ((+wait-after 0.3) said)
+    (cl-letf (((symbol-function 'message)
+               (lambda (fmt &rest args) (push (and fmt (apply #'format fmt args)) said))))
+      (should (eq 'done
+                  (+wait-call "Connecting to pi"
+                              (lambda ()
+                                (let ((p (make-process :name "w" :command '("sleep" "1.3") :noquery t)))
+                                  (while (accept-process-output p)))
+                                'done)))))
+    (should (seq-some (lambda (s) (and s (string-match-p "\\`Connecting to pi… [0-9] s (C-g stops it)\\'" s))) said))
+    (should (null (car said)))          ; cleared at the end
+    (should-not +wait--timer))
+  ;; TRAMP's way: timers suspended, the wait loop polls.
+  (let ((+wait-after 0.3) said)
+    (cl-letf (((symbol-function 'message)
+               (lambda (fmt &rest args) (push (and fmt (apply #'format fmt args)) said))))
+      (+wait-call "Connecting to off"
+                  (lambda () (let (timer-list timer-idle-list)
+                               (dotimes (_ 10) (sleep-for 0.1) (+wait--poll))))))
+    (should (member "Connecting to off… 1 s (C-g stops it)" said)))
+  ;; Quick: nothing said, nothing left.
+  (let ((said nil))
+    (cl-letf (((symbol-function 'message) (lambda (&rest a) (push a said))))
+      (+wait-call "Quick" #'ignore))
+    (should-not said)
+    (should-not +wait--timer)))
+
 (defmacro test-ghfs--with-fake (&rest body)
   "BODY with GitHub faked: o/r on main holds README.md, src/a.el, src/b/."
   `(progn

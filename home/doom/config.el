@@ -551,6 +551,7 @@
 (load! "lisp/+desktop")     ;; SPC o y: network, Bluetooth, audio, disks, NixOS generations, power
 (load! "lisp/+system")      ;; SPC o y: containers, ports, USB/PCI, temperatures, modules, users, machine
 (load! "lisp/+gh-fs")       ;; /github/OWNER/REPO[@REF]/…: GitHub as a read-only file system
+(load! "lisp/+wait")        ;; blocked on TRAMP/GitHub/a download: the echo area says on what, and C-g
 (load! "lisp/+gh-browse")   ;; SPC o G: GitHub menu: browse, dashboard, search, profiles, clone, report
 (load! "lisp/+gh-cli")      ;; SPC o G x every gh command; write issues/PRs/gists; Actions; code grep
 (load! "lisp/+merge")       ;; your unsaved edits + changes on disk: three-way merge, no "overwrite?" (SPC f M)
