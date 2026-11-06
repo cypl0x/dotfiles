@@ -30,6 +30,7 @@
 (declare-function doom-color "ext:doom-themes" (name &optional type))
 (declare-function doom-blend "ext:doom-themes" (color1 color2 alpha))
 (defvar cape-dict-file)
+(defvar ispell-alternate-dictionary)
 (defvar cape-dabbrev-buffer-function)
 (declare-function cape--dabbrev-list "ext:cape" (input))
 (declare-function cape--dict-list "ext:cape" (input))
@@ -46,6 +47,15 @@
 (with-eval-after-load 'cape
   (when +completion-dict-files
     (setq cape-dict-file +completion-dict-files)))
+
+;; ispell's own word completion in text modes (Emacs 30) found no word list
+;; ("No plain word-list found", then Doom turned it off with an error, once
+;; per session): prose completion above already offers these words.  The
+;; list is still ispell's, for M-x ispell-complete-word and the like.
+(setq text-mode-ispell-word-completion nil)
+(with-eval-after-load 'ispell
+  (when +completion-dict-files
+    (setq ispell-alternate-dictionary (car +completion-dict-files))))
 
 (defun +completion--word-buffers ()
   "Buffers whose words prose completion offers.
