@@ -3,7 +3,8 @@
 ;; With Doom's :editor format off, SPC c f pointed at an undefined command.
 ;; Now it formats the region or buffer by what the buffer is:
 ;;
-;;   Org         `+format-org': blank lines by convention (below), lower-case
+;;   Org         `+format-org': blank lines as Doom Docs (the module READMEs)
+;;               set them, compact (`+format-org-style'; below), lower-case
 ;;               #+keywords, align tables and tags, repair lists (indent,
 ;;               numbering), update statistics cookies, drop trailing blanks.
 ;;               C-u: the canonical form Org's own parser prints back
@@ -60,6 +61,100 @@
         (delete-region (point) end)
         (insert "\n")))))
 
+;; hlissner's Doom Docs (the module READMEs), measured over its 173 files
+;; (2026-11-06): no blank line between a heading and what it holds (2077
+;; of 2099), one before a heading after text (2060 of 2064), none between a
+;; heading and its first subheading, a paragraph's src block right under
+;; it (162 of 191), one blank line between everything else; the file's
+;; #+title, #+subtitle, #+created, #+since values at column 12 (603 of 678).
+(defcustom +format-org-style 'doom
+  "How SPC c f sets Org apart: `doom' (Doom Docs: compact) or `spacious'
+\(a blank line under every heading and around every block, list, table)."
+  :type '(choice (const doom) (const spacious)) :group 'org)
+
+(defconst +format-org-joined '(src-block example-block)
+  "In the Doom style: blocks that follow their paragraph without a blank line.")
+
+(defun +format-org--none-before (pos)
+  "Make it no blank line before the line at POS."
+  (save-excursion
+    (goto-char pos)
+    (beginning-of-line)
+    (let ((end (point)))
+      (skip-chars-backward " \t\n")
+      (unless (bobp)
+        (forward-line 1)
+        (delete-region (point) end)))))
+
+(defun +format-org--ends-with-colon-p (paragraph)
+  "Whether PARAGRAPH ends with a colon (it introduces what follows)."
+  (save-excursion
+    (goto-char (org-element-property :contents-end paragraph))
+    (skip-chars-backward " \t\n")
+    (eq (char-before) ?:)))
+
+(defun +format-org--doom-positions ()
+  "(POS . blank) or (POS . none) for the Doom Docs style, last first."
+  (let (out)
+    (org-element-map (org-element-parse-buffer 'element) '(headline section)
+      (lambda (el)
+        (if (eq (org-element-type el) 'headline)
+            (let ((parent (org-element-property :parent el)))
+              ;; Right under its parent heading (no text between): none.
+              (push (cons (org-element-property :begin el)
+                          (if (and (eq (org-element-type parent) 'headline)
+                                   (eq (car (org-element-contents parent)) el))
+                              'none 'blank))
+                    out))
+          (let* ((under-heading (eq (org-element-type (org-element-property :parent el)) 'headline))
+                 (kids (org-element-contents el)))
+            ;; What a heading holds starts right under it.
+            (when (and under-heading kids)
+              (push (cons (org-element-property :begin (car kids)) 'none) out))
+            (cl-loop for (k next) on kids while next
+                     do (push (cons (org-element-property :begin next)
+                                    (cond ((memq (org-element-type k) '(planning property-drawer drawer)) 'none)
+                                          ;; #+title, #+subtitle …, and a "# -*- …" line before them.
+                                          ((and (memq (org-element-type k) '(keyword comment))
+                                                (eq (org-element-type next) 'keyword))
+                                           'none)
+                                          ((and (eq (org-element-type k) 'paragraph)
+                                                (or (memq (org-element-type next) +format-org-joined)
+                                                    ;; "…requires:" introduces its table, and its list when
+                                                    ;; one line, not opening the section (92 of 125).
+                                                    (and (+format-org--ends-with-colon-p k)
+                                                         (or (eq (org-element-type next) 'table)
+                                                             (and (eq (org-element-type next) 'plain-list)
+                                                                  (not (eq k (car kids)))
+                                                                  (= 1 (count-lines (org-element-property :begin k)
+                                                                                    (org-element-property :contents-end k))))))))
+                                           'none)
+                                          (t 'blank)))
+                              out))))))
+    (sort (delete-dups out) (lambda (a b) (> (car a) (car b))))))
+
+(defun +format-org-align-keywords ()
+  "The file's leading #+title, #+subtitle, #+created, #+since: values
+aligned one past the longest of them (Doom Docs: column 12 with #+subtitle)."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((re "^#\\+\\(title\\|subtitle\\|created\\|since\\|author\\|date\\):[ \t]*")
+          lines)
+      (while (progn (while (looking-at "^\\(?:# .*\\|[ \t]*\\)$") (forward-line 1))
+                    (looking-at re))
+        (push (point) lines)
+        (forward-line 1))
+      (when lines
+        (let ((col (1+ (apply #'max (mapcar (lambda (p) (goto-char p) (looking-at re)
+                                                      (- (match-end 1) p -1))
+                                                    lines)))))
+          (dolist (p lines)
+            (goto-char p)
+            (when (looking-at re)
+              (replace-match (concat "#+" (match-string 1) ":"
+                                     (make-string (- col (length (match-string 1)) 3) ?\s))
+                             t t))))))))
+
 (defun +format-org--blank-positions ()
   "Where a blank line goes: before each heading, before each top-level
 element set apart (and after it: before what follows), before a section's
@@ -103,8 +198,13 @@ text after the heading's planning and drawers."
         (unless (save-match-data
                   (save-excursion (goto-char (1+ (match-beginning 0))) (funcall verbatim)))
           (replace-match "\n\n" t t))))
-    (dolist (pos (+format-org--blank-positions))
-      (+format-org--blank-before pos))
+    (if (eq +format-org-style 'doom)
+        (progn
+          (pcase-dolist (`(,pos . ,kind) (+format-org--doom-positions))
+            (if (eq kind 'blank) (+format-org--blank-before pos) (+format-org--none-before pos)))
+          (+format-org-align-keywords))
+      (dolist (pos (+format-org--blank-positions))
+        (+format-org--blank-before pos)))
     ;; Org writes its keywords and block delimiters in lower case (since 9);
     ;; a block's own lines are its content.
     (save-excursion

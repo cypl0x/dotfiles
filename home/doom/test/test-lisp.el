@@ -1118,7 +1118,11 @@ and meanings learned before that are dropped."
           (let ((line (line-number-at-pos)))
             (setq +info--resumed nil)
             (Info-goto-node "Top")
-            (sit-for 0.05)
+            ;; The resume runs from a timer; other tests' timers can delay it.
+            (with-timeout (2 nil)
+              (while (not (and (equal Info-current-node "Symbol Components")
+                               (= (line-number-at-pos) line)))
+                (sit-for 0.02)))
             (should (equal Info-current-node "Symbol Components"))
             (should (= (line-number-at-pos) line))))
       (kill-buffer "*info-test*"))))
@@ -1146,6 +1150,7 @@ and meanings learned before that are dropped."
       (should (equal (buffer-string) "* One\ntext\n\n* New\n\n* Above\n\n* Two\n")))))
 
 (ert-deftest format/org-tidies-tables-lists-cookies-blanks ()
+  (let ((+format-org-style 'spacious))
   (with-temp-buffer
     (org-mode)
     (insert "* Tasks [/]   \n"
@@ -1157,7 +1162,7 @@ and meanings learned before that are dropped."
                    (concat "* Tasks [1/2]\n\n"
                            "- [X] one\n- [ ] two\n\nSteps:\n\n"
                            "1. a\n2. b\n3. c\n\n"
-                           "| x | longer |\n|---+--------|\n| 1 |      2 |\n")))))
+                           "| x | longer |\n|---+--------|\n| 1 |      2 |\n"))))))
 
 (ert-deftest format/org-region-only ()
   (with-temp-buffer
@@ -1482,6 +1487,8 @@ and meanings learned before that are dropped."
                  '("forward-word" "car" "fill-column"))))
 
 (ert-deftest format/org-blank-lines-by-convention ()
+  "The spacious style ('+format-org-style' spacious)."
+  (let ((+format-org-style 'spacious))
   (cl-flet ((fmt (text)
               (with-temp-buffer
                 (org-mode)
@@ -1511,7 +1518,7 @@ and meanings learned before that are dropped."
     (save-restriction
       (narrow-to-region 1 10)
       (+format-org-blank-lines))
-    (should (equal (buffer-string) "* A\n\ntext\n* B\nrest"))))
+    (should (equal (buffer-string) "* A\n\ntext\n* B\nrest")))))
 
 (load (expand-file-name "+org-lint" test-lisp-dir) nil t)
 
@@ -3624,3 +3631,19 @@ and offered first next time; words already in its name are not."
     (+discover/key-notation)
     (with-current-buffer "*Key notation*"
       (should (string-match-p "S-x +Shift" (buffer-string))))))
+
+(ert-deftest format/org-doom-docs-style ()
+  "The default style is Doom Docs': nothing between a heading and what it
+holds, one blank line before a heading after text, a paragraph's src block
+right under it, keyword values at column 12."
+  (let ((+format-org-style 'doom))
+    (with-temp-buffer
+      (org-mode)
+      (insert "#+title: X\n#+subtitle: Y\n\n\n* Description\n\nText here.\n"
+              "** Sub\n\n\nMore text:\n\n#+begin_src elisp\n(foo)\n#+end_src\nAfter.\n"
+              "- a\n- b\n* Empty\n** Child\nx\n")
+      (+format-org)
+      (should (equal (buffer-string)
+                     (concat "#+title:    X\n#+subtitle: Y\n\n* Description\nText here.\n\n"
+                             "** Sub\nMore text:\n#+begin_src elisp\n(foo)\n#+end_src\n\nAfter.\n\n"
+                             "- a\n- b\n\n* Empty\n** Child\nx\n"))))))
