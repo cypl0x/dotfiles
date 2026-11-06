@@ -3377,3 +3377,25 @@ command runs out of sight and the echo area says how it ended."
             (should (string-match-p "→ run: du -ah" text))))
       (delete-file file)
       (delete-directory familiar-history-directory t))))
+
+
+;;; +suggest: minuet's context in narrowed buffers
+
+(defvar minuet-context-window)
+(defvar minuet-context-ratio)
+
+(ert-deftest suggest/context-stays-inside-a-narrowed-buffer ()
+  "An Org capture far into its file: the context is what is visible, not
+what lies before the narrowing (minuet's own went there: args-out-of-range)."
+  (let ((minuet-context-window 8000) (minuet-context-ratio 0.75))
+    (cl-letf (((symbol-function 'minuet--add-language-comment) (lambda () ""))
+              ((symbol-function 'minuet--add-tab-comment) (lambda () "")))
+      (unless (fboundp '+suggest--get-context)
+        (load (expand-file-name "+suggest" test-lisp-dir) nil t))
+      (with-temp-buffer
+        (insert (make-string 14000 ?a) (make-string 300 ?b))
+        (narrow-to-region 14001 14301)
+        (goto-char (point-max))
+        (let ((ctx (+suggest--get-context)))
+          (should (equal (plist-get ctx :before-cursor) (make-string 300 ?b)))
+          (should (equal (plist-get ctx :after-cursor) "")))))))

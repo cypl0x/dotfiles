@@ -212,5 +212,52 @@ push it sideways, so in prose only M-n asks for one."
   (advice-add 'minuet-show-suggestion :before #'+suggest-ask-a)
   (advice-add 'minuet--display-suggestion :filter-args #'+suggest-sane-a)
   (advice-add 'minuet--display-suggestion :filter-args #'+suggest-prose-space-a))
+
+;;;; Narrowed buffers (Org capture): minuet's context counted from 1
+
+;; `minuet--get-context' (minuet 2026-10-09, still so upstream) takes the
+;; characters before point as `point' itself, not (- point (point-min)).
+;; In a narrowed buffer far into its file (an Org capture at the end of
+;; inbox.org) it then reached before the narrowing: args-out-of-range from
+;; its debounce timer at every pause, 109 times one evening.  The same
+;; function, counting from `point-min'.
+(defvar minuet-context-window)
+(defvar minuet-context-ratio)
+(declare-function minuet--add-language-comment "ext:minuet" ())
+(declare-function minuet--add-tab-comment "ext:minuet" ())
+
+(defun +suggest--get-context ()
+  "`minuet--get-context', right in narrowed buffers too."
+  (let* ((point (point))
+         (n-chars-before (- point (point-min)))
+         (point-max (point-max))
+         (n-chars-after (- point-max point))
+         (before-start (point-min))
+         (after-end point-max)
+         (is-incomplete-before nil)
+         (is-incomplete-after nil))
+    (when (>= (+ n-chars-before n-chars-after) minuet-context-window)
+      (cond ((< n-chars-before (* minuet-context-ratio minuet-context-window))
+             (setq after-end (+ point (- minuet-context-window n-chars-before))
+                   is-incomplete-after t))
+            ((< n-chars-after (* (- 1 minuet-context-ratio) minuet-context-window))
+             (setq before-start (- point (- minuet-context-window n-chars-after))
+                   is-incomplete-before t))
+            (t
+             (setq is-incomplete-before t
+                   is-incomplete-after t
+                   after-end (+ point (floor (* minuet-context-window (- 1 minuet-context-ratio))))
+                   before-start (+ (point-min)
+                                   (max 0 (- n-chars-before
+                                             (floor (* minuet-context-window minuet-context-ratio)))))))))
+    `(:before-cursor ,(buffer-substring-no-properties before-start point)
+      :after-cursor ,(buffer-substring-no-properties point after-end)
+      :language-and-tab ,(format "%s\n%s" (minuet--add-language-comment) (minuet--add-tab-comment))
+      :is-incomplete-before ,is-incomplete-before
+      :is-incomplete-after ,is-incomplete-after)))
+
+(with-eval-after-load 'minuet
+  (advice-add 'minuet--get-context :override #'+suggest--get-context))
+
 (provide '+suggest)
 ;;; +suggest.el ends here
