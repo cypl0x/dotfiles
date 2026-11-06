@@ -39,6 +39,15 @@ won't nag you. Relative ages ("+Nm") are measured from the session start at
 | GitHub CI                     | ✔      | merged to main; all jobs green; inari path filter now covers shared home modules                           |
 
 * 📓 Log
+** [2026-11-06 Fr 07:41] — Waits explained, slow keys counted, culprits named
+- 🛠 SPC f f /ssh: froze 132 s: my file sort asked every ssh host for a
+  date. Fixed; ssh now gives up on an unreachable host after 5 s.
+- ✔ Blocked on TRAMP, GitHub or a download: the echo area counts the
+  seconds and says C-g stops it.
+- ✔ Freeze reports name your config's functions in the stack (48 frames
+  deep now); SPC h ! k lists slow keystrokes (≥0.25 s) by cost.
+- ✔ org-fc's "Obsolete name argument" gone; M-DEL deletes a whole path
+  segment in file prompts.
 ** [2026-11-06 Fr 05:50] — Freeze folder audited; reports explain themselves
 - 🧊 All 16 recorded freezes accounted for: the 11-05 morning ones were
   /github/ listings (fixed then; re-checked now in a fresh Doom: owners
