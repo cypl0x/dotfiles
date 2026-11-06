@@ -622,10 +622,19 @@ in vertico's own order."
 (defun +usage--mx-data ()
   (or +usage--mx-data
       (setq +usage--mx-data
-            (or (and (file-exists-p +usage-mx-file)
-                     (ignore-errors (with-temp-buffer (insert-file-contents +usage-mx-file)
-                                                      (read (current-buffer)))))
-                (list :gave-up nil :meant nil)))))
+            (+usage--mx-prune
+             (or (and (file-exists-p +usage-mx-file)
+                      (ignore-errors (with-temp-buffer (insert-file-contents +usage-mx-file)
+                                                       (read (current-buffer)))))
+                 (list :gave-up nil :meant nil))))))
+
+(defun +usage--mx-prune (data)
+  "DATA without the meanings learned before `+usage-mx-related-p' (a
+command defined now and unrelated to the words); others are kept."
+  (plist-put data :meant
+             (seq-remove (lambda (e) (and (fboundp (cdar e))
+                                          (not (+usage-mx-related-p (caar e) (cdar e)))))
+                         (plist-get data :meant))))
 
 (defun +usage--mx-save ()
   (let ((print-length nil) (print-level nil))
@@ -647,15 +656,39 @@ in vertico's own order."
       (+usage--mx-bump input :gave-up)
       (setq +usage--mx-pending (cons input (float-time))))))
 
+(defun +usage-mx-related-p (input cmd)
+  "Whether CMD can be what INPUT (words typed into M-x) was looking for:
+a word of INPUT (3 letters at least) begins a word of CMD's name, or the
+other way round; or one of 5 letters at least begins a word of its doc's
+first line (shorter ones there, like \"mode\", match nearly anything).
+The command run next was often something else (2026-11-06: \"reop\" →
+backward-kill-word, \"slender fix\" → evil-window-down); learning those
+offered the wrong command."
+  (let ((typed (seq-filter (lambda (w) (>= (length w) 3))
+                           (split-string (downcase input) "[^[:alnum:]]+" t)))
+        (name (split-string (downcase (symbol-name cmd)) "[^[:alnum:]]+" t))
+        (doc (split-string (downcase (car (split-string (or (ignore-errors (documentation cmd t)) "")
+                                                        "\n")))
+                           "[^[:alnum:]]+" t)))
+    (seq-some (lambda (w)
+                (or (seq-some (lambda (n) (or (string-prefix-p w n)
+                                              (and (>= (length n) 3) (string-prefix-p n w))))
+                              name)
+                    (and (>= (length w) 5)
+                         (seq-some (lambda (d) (string-prefix-p w d)) doc))))
+              typed)))
+
 (defun +usage--mx-meant-h ()
-  "The first real command after giving up on M-x: what was meant."
+  "The first related command after giving up on M-x: what was meant.
+Unrelated ones in between (moving, editing) are passed over."
   (when (and +usage--mx-pending (not executing-kbd-macro))
     (let ((cmd (if (eq real-this-command 'execute-extended-command) this-command real-this-command)))
       (cond ((> (- (float-time) (cdr +usage--mx-pending)) +usage-mx-meant-within)
              (setq +usage--mx-pending nil))
             ((and (symbolp cmd) cmd (commandp cmd)
                   (not (memq cmd +usage--quit-commands))
-                  (not (string-match-p +usage--mx-not-meant (symbol-name cmd))))
+                  (not (string-match-p +usage--mx-not-meant (symbol-name cmd)))
+                  (+usage-mx-related-p (car +usage--mx-pending) cmd))
              (+usage--mx-bump (cons (car +usage--mx-pending) cmd) :meant)
              (setq +usage--mx-pending nil))))))
 
@@ -666,7 +699,8 @@ it (3 characters at least)."
   (let ((input (+usage--mx-norm input)) best (n 0))
     (when (>= (length input) 3)
       (pcase-dolist (`((,typed . ,cmd) . ,count) (plist-get (+usage--mx-data) :meant))
-        (when (and (string-prefix-p input typed) (> count n) (fboundp cmd))
+        (when (and (string-prefix-p input typed) (> count n) (fboundp cmd)
+                   (+usage-mx-related-p typed cmd))
           (setq best cmd n count))))
     best))
 

@@ -429,6 +429,43 @@ words meant: their start finds it again.  Too late, nothing is learned."
           (should-not (+usage-mx-meant "zz top")))
       (when (file-exists-p +usage-mx-file) (delete-file +usage-mx-file)))))
 
+
+(ert-deftest usage/mx-learns-only-related-commands ()
+  "What M-x was left with means a command sharing a word with it; the
+editing and moving in between is passed over (the cases are real ones),
+and meanings learned before that are dropped."
+  (should (+usage-mx-related-p "screen" '+screenshot/browse))
+  (should (+usage-mx-related-p "sync" '+nix/doom-sync))
+  (should (+usage-mx-related-p "remote" 'magit-remote))
+  (should-not (+usage-mx-related-p "reop" 'backward-kill-word))
+  (should-not (+usage-mx-related-p "slender fix" 'evil-window-down))
+  (should-not (+usage-mx-related-p "buffer" 'find-file))
+  (should-not (+usage-mx-related-p "consult mode" 'org-cycle))   ; "mode" in its doc
+  (let ((+usage-mx-file (make-temp-file "usage-mx" nil ".eld"))
+        (+usage--mx-data nil) (+usage--mx-pending nil))
+    (unwind-protect
+        (cl-flet ((run (cmd) (let ((this-command cmd) (real-this-command cmd)) (+usage--mx-meant-h))))
+          (with-temp-file +usage-mx-file
+            (prin1 '(:gave-up nil :meant ((("reop" . backward-kill-word) . 1)
+                                          (("screen" . +screenshot/browse) . 1)
+                                          (("later" . test-usage-not-loaded-yet) . 1)))
+                   (current-buffer)))
+          (defun +screenshot/browse () "Browse screenshots." (interactive))
+          (unless (fboundp (quote magit-blame-addition))
+            (defun magit-blame-addition () "Blame." (interactive)))
+          (should-not (+usage-mx-meant "reop"))
+          (should (eq (+usage-mx-meant "screen") '+screenshot/browse))
+          (should (assoc '("later" . test-usage-not-loaded-yet) (plist-get (+usage--mx-data) :meant)))
+          (should-not (assoc '("reop" . backward-kill-word) (plist-get (+usage--mx-data) :meant)))
+          (+usage--mx-gave-up "kill buffer")
+          (run 'backward-kill-word)               ; "kill" is in it: related
+          (should-not +usage--mx-pending)
+          (+usage--mx-gave-up "magit blame")
+          (run 'other-window) (run 'save-buffer)  ; unrelated: still waiting
+          (should +usage--mx-pending)
+          (run 'magit-blame-addition)
+          (should (eq (+usage-mx-meant "magit bl") 'magit-blame-addition)))
+      (when (file-exists-p +usage-mx-file) (delete-file +usage-mx-file)))))
 (ert-deftest usage/save-merges-across-sessions ()
   (test-lisp--with-usage
    (test-lisp--run-command 'find-file [?\C-x ?\C-f])
