@@ -3581,3 +3581,46 @@ and offered first next time; words already in its name are not."
             (should (string-match-p "n\\.org › Top › Inner" (+where-line)))
             (kill-buffer)))
       (delete-directory dir t))))
+
+
+;;; +asked: made from your questions to the assistant
+
+(load (expand-file-name "+asked" test-lisp-dir) nil t)
+
+(ert-deftest asked/remove-a-tag-from-every-heading ()
+  (with-temp-buffer
+    (org-mode)
+    (insert "* A :incomplete:x:\n* B :incomplete:\n** C :x:\n")
+    (should (= (+org/remove-tag-everywhere "incomplete") 2))
+    (should-not (string-match-p "incomplete" (buffer-string)))
+    (should (string-match-p ":x:" (buffer-string)))))
+
+(ert-deftest asked/tidy-sends-the-whole-buffer-without-a-region ()
+  (let (bounds instruction)
+    (cl-letf (((symbol-function 'familiar-fix)
+               (lambda (i &rest _) (setq instruction i bounds (cons (region-beginning) (region-end))))))
+      (with-temp-buffer
+        (insert "some messy\ntext")
+        (goto-char 3)
+        (transient-mark-mode 1)
+        (+org/ai-tidy)
+        (should (equal bounds (cons (point-min) (point-max))))
+        (should (string-match-p "nothing lost" instruction))))))
+
+(ert-deftest asked/save-a-buffer-into-the-vault ()
+  (let* ((org-directory (file-name-as-directory (make-temp-file "vault" t)))
+         (file (expand-file-name "idea.org" org-directory)))
+    (unwind-protect
+        (with-temp-buffer
+          (insert "* An idea\n")
+          (+org-vault/save-into-vault file)
+          (should (file-exists-p file))
+          (should (derived-mode-p 'org-mode))
+          (set-buffer-modified-p nil))
+      (delete-directory org-directory t))))
+
+(ert-deftest asked/key-notation-explains-shift ()
+  (save-window-excursion
+    (+discover/key-notation)
+    (with-current-buffer "*Key notation*"
+      (should (string-match-p "S-x +Shift" (buffer-string))))))

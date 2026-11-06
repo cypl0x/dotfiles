@@ -570,6 +570,7 @@
 (load! "lisp/+edit")       ;; v grows the selection, SPC c ~ cases, C-c ' comments apart, tree-sitter text objects
 (load! "lisp/+casual")     ;; SPC m m: the mode's Casual menu (dired, Info, agenda, help …); C-o in calc, isearch
 (load! "lisp/+where")      ;; where you are in the header line: project › file › function or Org heading (SPC t h)
+(load! "lisp/+asked")      ;; from your questions to the assistant: AI tidy, a tag out everywhere, save into the vault, key notation
 
 ;; ---------------------------------------------------------------------------
 ;; Keymap summary — top-level SPC bindings added by modules
