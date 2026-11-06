@@ -368,14 +368,18 @@ Cached while the file doesn't change."
     (let* ((since (+usage-beyond--since))
            ;; Transcripts stamp in UTC ISO 8601, which sorts as text.
            (since-iso (format-time-string "%FT%T" since t))
-           out)
+           seen out)
       (dolist (spec '((claude . "~/.claude/projects/*/*.jsonl") (codex . "~/.codex/sessions/*/*/*/*.jsonl")))
         (dolist (file (file-expand-wildcards (expand-file-name (cdr spec))))
           (when (> (float-time (file-attribute-modification-time (file-attributes file))) since)
+            (push file seen)
             (dolist (p (+usage-beyond--file-prompts file (eq (car spec) 'codex)))
               ;; A transcript written today may have begun months ago.
               (when (string> (or (car p) "") since-iso)
                 (push (cons (car spec) p) out))))))
+      ;; Transcripts gone or out of the window leave the cache.
+      (maphash (lambda (f _) (unless (member f seen) (remhash f +usage-beyond--prompt-cache)))
+               +usage-beyond--prompt-cache)
       out)))
 
 (defvar familiar-history-directory)

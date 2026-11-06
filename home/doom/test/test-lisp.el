@@ -272,7 +272,10 @@
             ((symbol-function '+usage-beyond--file-prompts)
              (lambda (&rest _) (list (list "2020-01-01T00:00:00Z" "old" "then")
                                      (list (format-time-string "%FT%TZ" nil t) "new" "now")))))
-    (should (equal (mapcar #'caddr (+usage-beyond--agent-prompts)) '("new"))))
+    (let ((+usage-beyond--prompt-cache (make-hash-table :test #'equal)))
+      (puthash "/gone.jsonl" '(nil) +usage-beyond--prompt-cache)
+      (should (equal (mapcar #'caddr (+usage-beyond--agent-prompts)) '("new")))
+      (should-not (gethash "/gone.jsonl" +usage-beyond--prompt-cache))))
   ;; Evidence: a fresh summary as is; a stale one meanwhile, read anew aside.
   (let ((refreshed 0))
     (cl-letf (((symbol-function '+usage-beyond-refresh) (lambda () (cl-incf refreshed))))

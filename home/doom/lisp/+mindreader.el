@@ -85,11 +85,14 @@
 
 (defun +mindreader-steps ()
   "Steps of the last `+mindreader-days' days and those not saved yet, oldest first."
-  (let (parts)
+  (let (parts files)
     (dotimes (i +mindreader-days)
       (let ((file (expand-file-name (format-time-string "%F.eld" (time-subtract nil (* 86400 i)))
                                     +usage-flows-directory)))
+        (push file files)
         (when (file-readable-p file) (push (+mindreader--file-steps file) parts))))
+    ;; Days out of the window leave the cache (a daemon runs for weeks).
+    (maphash (lambda (f _) (unless (member f files) (remhash f +mindreader--cache))) +mindreader--cache)
     (apply #'vconcat
            (append parts
                    (list (vconcat (delq nil (mapcar (lambda (e) (and (+mindreader--step-p (nth 2 e) (nth 5 e))
