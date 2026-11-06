@@ -91,6 +91,7 @@
     ("+" "Follow-up" familiar-ask-continue)
     ("N" "New conversation" familiar-ask-new)
     ("A" "Earlier conversations" familiar-ask-sessions)
+    ("m" "Show the conversation in a window" familiar-ask-raise)
     ("c" "Compose a long prompt" familiar-ask-compose)
     ("e" "Export a conversation" familiar-ask-export)
     ("p" "Insert a saved prompt" familiar-prompts-insert)]
@@ -146,6 +147,8 @@
   ;; Doom popups skip other-window; this one is a conversation: SPC w w reaches it.
   :parameters '((no-other-window . nil)))
 (set-popup-rule! "^\\*familiar-ask prompt\\*$" :size 0.3 :select t :quit nil)
+;; SPC m m in a conversation: out of the side window into a regular one.
+(map! :after familiar-ask :map familiar-ask-mode-map :localleader "m" #'familiar-ask-raise)
 
 ;; The prompt completes words too (+completion.el), as you type: corfu turns
 ;; itself on only in minibuffers that already have their own capfs, which

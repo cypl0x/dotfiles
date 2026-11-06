@@ -408,7 +408,9 @@ du -sh .
            (cl-letf (((symbol-function 'message)
                       (lambda (fmt &rest args) (setq shown (apply #'format fmt args)))))
              (familiar-ask--after-response nil nil))
-           (should (equal (substring-no-properties shown) "It is a *test*."))
+           ;; Said who wrote it: familiar and the model, not Emacs itself.
+           (should (string-match-p "\\`✦ familiar · [^ ]+: It is a \\*test\\*\\.\\'"
+                                   (substring-no-properties shown)))
            (should-not familiar-ask--echo)))))
    (should (familiar-ask "and a window this time"))
    (should displayed)))
@@ -1674,6 +1676,71 @@ prompt turns and the callback)."
               (should (equal (car familiar-ask-history) "a draft")))
           (kill-buffer)
           (kill-buffer "notes.org"))))))
+
+(ert-deftest familiar-ask/modifiers-are-remembered-for-the-next-prompt ()
+  (skip-unless test-familiar-available)
+  (should (equal (familiar-ask--modifiers "why @echo is @follow-up x @model:haiku @p:summary @nope")
+                 '("@echo" "@follow-up" "@model:haiku")))
+  (let ((familiar-ask-modifiers '("@echo" "@fast")) initial)
+    (cl-letf (((symbol-function 'read-string) (lambda (_p init &rest _) (setq initial init) "x")))
+      (let ((familiar-ask-remember-modifiers t)) (familiar-ask--read))
+      (should (equal initial "@echo @fast "))
+      (let ((familiar-ask-remember-modifiers nil)) (familiar-ask--read))
+      (should-not initial)
+      ;; A kept draft (C-c C-k) wins.
+      (let ((familiar-ask--draft "draft")) (familiar-ask--read))
+      (should (equal initial "draft")))))
+
+(ert-deftest familiar-ask/known-modifiers-are-highlighted ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (insert "explain @echo this @nope and @p:summary")
+    (familiar-ask--highlight-modifiers)
+    (should (equal (sort (mapcar (lambda (o) (buffer-substring (overlay-start o) (overlay-end o)))
+                                 familiar-ask--modifier-overlays)
+                         #'string<)
+                   '("@echo" "@p:summary")))
+    ;; Redone on each change, not piled up.
+    (familiar-ask--highlight-modifiers)
+    (should (= 2 (length (seq-filter (lambda (o) (overlay-get o 'face))
+                                     (overlays-in (point-min) (point-max))))))))
+
+(ert-deftest familiar-ask/prefix-picks-the-model ()
+  (skip-unless test-familiar-available)
+  (let ((familiar-models '((fast . m-fast) (smart . m-smart) (deep . m-deep)))
+        (familiar-backend 'backend))
+    (should (equal (familiar-ask--prefix-model 1) '(backend . m-fast)))
+    (should (equal (familiar-ask--prefix-model 3) '(backend . m-deep)))
+    (should-not (familiar-ask--prefix-model '(4)))   ; C-u: follow-up, as before
+    (should-not (familiar-ask--prefix-model nil))
+    (cl-letf (((symbol-function 'familiar-ask--resolve-model) (lambda (spec) (and (eq spec t) 'picked))))
+      (should (eq (familiar-ask--prefix-model '(16)) 'picked)))))
+
+(ert-deftest familiar-ask/answer-tables-are-aligned ()
+  (skip-unless test-familiar-available)
+  (with-temp-buffer
+    (org-mode)
+    (insert "** q  [2026-11-06 Fri 09:00]\n")
+    (insert (propertize "Here:\n| a | bb |\n|---|---|\n| ccc | d |\nDone.\n" 'gptel 'response))
+    (insert "\n** ")
+    (familiar-ask--align-tables)
+    (should (string-search "| a   | bb |\n|-----+----|\n| ccc | d  |\n" (buffer-string)))
+    ;; Still the answer: its rows keep gptel's property.
+    (goto-char (point-min))
+    (search-forward "| ccc")
+    (should (eq (get-text-property (point) 'gptel) 'response))
+    (should (equal (car (plist-get (familiar-ask--last-turn) :answer))
+                   (save-excursion (goto-char (point-min)) (forward-line 1) (point))))))
+
+(ert-deftest familiar-ask/raise-shows-the-conversation-in-a-window ()
+  (skip-unless test-familiar-available)
+  (test-familiar-ask--asking
+   (let ((buf (familiar-ask "q @echo")) switched)
+     (cl-letf (((symbol-function 'switch-to-buffer) (lambda (b &rest _) (setq switched b))))
+       (familiar-ask-raise))
+     (should (eq switched buf))
+     (kill-buffer buf)
+     (should-error (familiar-ask-raise) :type 'user-error))))
 
 (provide 'familiar-ask-test)
 ;;; familiar-ask-test.el ends here

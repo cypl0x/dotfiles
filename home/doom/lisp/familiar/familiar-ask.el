@@ -29,10 +29,16 @@
 ;;   @replace         write it in place of the region
 ;;   @transient       after RET, a transient: where the answer goes, which
 ;;                    conversation, who answers; then send or edit
+;;   M-1 M-2 M-3 M-ß  ask the fast, smart, deep model; C-u C-u M-ß: pick one
+;;                    (C-u M-ß: follow-up, see above)
+;;   @modifiers stay   the next prompt starts with the last one's @echo, @fast…
+;;                    (`familiar-ask-remember-modifiers'); known @words are
+;;                    highlighted as you type
 ;;   C-r  (prompt)    pick an earlier prompt
 ;;   C-c C-c          in the conversation: send the follow-up (from anywhere)
 ;;   RET / S-RET      at its end: send a follow-up / newline
 ;;   C-c C-e          copy the conversation as Markdown or Org
+;;   C-c C-w          raise the conversation to a regular window (Doom: SPC m m)
 ;;   C-c ! / C-c $    apply a suggestion from the latest answer (command, keys,
 ;;                    elisp block, shell command at the prompt) / the first one
 ;;   familiar-ask-sessions   reopen an earlier conversation
@@ -435,12 +441,30 @@ See `familiar-ask-edit-keep'.")
     (define-key map (kbd "C-c C-e") #'familiar-ask-export)
     (define-key map (kbd "C-c !") #'familiar-ask-apply)
     (define-key map (kbd "C-c $") #'familiar-ask-apply-first)
+    (define-key map (kbd "C-c C-w") #'familiar-ask-raise)
     map)
   "Keymap of `familiar-ask-mode'.")
 
 (define-minor-mode familiar-ask-mode
   "A `familiar-ask' conversation: RET at the end sends a follow-up."
   :lighter " ✦ask")
+
+(declare-function +popup/raise "ext:popup" (window &optional arg))
+(declare-function +popup-window-p "ext:popup" (&optional window))
+
+(defun familiar-ask-raise ()
+  "Show the conversation in a regular window, selected.
+In it, or with it in a side window (a Doom popup): that window becomes a
+regular one.  Not on screen (after an @echo answer): it takes this window."
+  (interactive)
+  (let* ((buf (if familiar-ask-mode (current-buffer)
+                (or (get-buffer familiar-ask--buffer-name)
+                    (user-error "No conversation yet"))))
+         (win (get-buffer-window buf)))
+    (cond ((and win (fboundp '+popup-window-p) (+popup-window-p win))
+           (+popup/raise win))
+          (win (select-window win))
+          (t (switch-to-buffer buf)))))
 
 (defun familiar-ask--send-with-model (model)
   "`gptel-send' here, answered by MODEL (BACKEND . MODEL) if non-nil."
@@ -581,6 +605,7 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
     (run-at-time 0 nil (lambda ()
                          (when (buffer-live-p buf)
                            (with-current-buffer buf
+                             (familiar-ask--align-tables)
                              (let ((save-silently t) (inhibit-message t)) (save-buffer))
                              (when (fboundp 'familiar-history-record)
                                (familiar-ask--history))
@@ -615,15 +640,41 @@ gptel itself leaves the next prompt heading (`gptel-prompt-prefix-alist')."
                   (format "[[file:%s::*%s][conversation]]"
                           (abbreviate-file-name buffer-file-name) heading))))))
 
+(defun familiar-ask--align-tables ()
+  "Align the Org tables of the latest answer.
+Models write them unaligned (or as Markdown, which gptel converts row by
+row); aligned they read as tables.  The rows stay part of the answer
+(text property `gptel'), which `familiar-ask--last-turn' finds it by."
+  (when-let* ((bounds (familiar-ask--last-answer-bounds)))
+    (save-excursion
+      (goto-char (car bounds))
+      (let ((end (copy-marker (cdr bounds) t)))
+        (while (re-search-forward "^[ \t]*|" end t)
+          (let ((prop (get-text-property (point) 'gptel))
+                (beg (copy-marker (line-beginning-position))))
+            (if (not (org-at-table-p))
+                (forward-line 1)
+              (ignore-errors (org-table-align))
+              (goto-char (org-table-end))
+              (when prop (put-text-property beg (point) 'gptel prop)))))
+        (set-marker end nil)))))
+
+(defun familiar-ask--echo-label ()
+  "Who wrote an @echo answer: familiar and the model, for the echo area."
+  (propertize (format "✦ familiar · %s:" (or familiar-ask--last-model gptel-model))
+              'face 'shadow))
+
 (defun familiar-ask--echo-answer ()
-  "Show the latest answer in the echo area, as Org displays it."
+  "Show the latest answer in the echo area, as Org displays it, after who
+wrote it (familiar and the model), so it isn't taken for Emacs's own."
   (when-let* ((bounds (familiar-ask--last-answer-bounds)))
     (font-lock-ensure (car bounds) (cdr bounds))
     (let ((text (familiar-ask--answer-text bounds))
           (message-truncate-lines nil))
       ;; Faces stay; org-indent's prefixes would indent the echo area.
       (remove-list-of-text-properties 0 (length text) '(line-prefix wrap-prefix) text)
-      (message "%s" (if (string-empty-p text) "✦ (no answer)" text)))))
+      (message "%s %s" (familiar-ask--echo-label)
+               (if (string-empty-p text) "(no answer)" text)))))
 
 
 ;; gptel's streaming Markdown→Org converter holds back a trailing `*' (or
@@ -1057,8 +1108,52 @@ A prompt equal to the newest one isn't added again (`add-to-history')."
         (add-to-history 'familiar-ask-history text)))))
 (add-hook 'minibuffer-exit-hook #'familiar-ask--keep-prompt-h)
 
-(defun familiar-ask--read ()
-  "Read a prompt, with history and @keyword completion."
+(defcustom familiar-ask-remember-modifiers t
+  "Non-nil: a prompt starts with the @modifiers of the one asked before.
+@echo, @fast, @model:NAME, @follow-up and the like stay until you delete
+them; @p:NAME (a prompt from the library) doesn't."
+  :type 'boolean :group 'familiar)
+
+(defvar familiar-ask-modifiers nil
+  "The @modifiers of the last prompt asked, as strings (\"@echo\" …).")
+
+(defun familiar-ask--modifier-names ()
+  "Names a prompt may hold as @NAME: keywords and gptel's presets."
+  (append (mapcar #'car (familiar-ask--all-keywords))
+          (mapcar (lambda (p) (symbol-name (car p))) gptel--known-presets)))
+
+(defconst familiar-ask--modifier-re
+  "\\(?:^\\|[ \t]\\)\\(@\\([[:alnum:]-]+\\)\\(?::[^ \t\n]*\\)?\\)"
+  "An @NAME or @NAME:ARG in a prompt; group 1 the whole, 2 the name.")
+
+(defun familiar-ask--modifiers (prompt)
+  "The @modifiers PROMPT holds, in order, as strings."
+  (let ((names (familiar-ask--modifier-names)) (start 0) found)
+    (while (string-match familiar-ask--modifier-re prompt start)
+      (setq start (match-end 0))
+      (when (member (match-string 2 prompt) names)
+        (push (match-string 1 prompt) found)))
+    (delete-dups (nreverse found))))
+
+;; @words the prompt understands stand out as you type them.
+(defvar-local familiar-ask--modifier-overlays nil)
+
+(defun familiar-ask--highlight-modifiers (&rest _)
+  "Show the known @modifiers in the prompt in `font-lock-keyword-face'."
+  (mapc #'delete-overlay familiar-ask--modifier-overlays)
+  (setq familiar-ask--modifier-overlays nil)
+  (let ((names (familiar-ask--modifier-names)))
+    (save-excursion
+      (goto-char (minibuffer-prompt-end))
+      (while (re-search-forward familiar-ask--modifier-re nil t)
+        (when (or (member (match-string 2) names) (equal (match-string 2) "p"))
+          (let ((ov (make-overlay (match-beginning 1) (match-end 1))))
+            (overlay-put ov 'face 'font-lock-keyword-face)
+            (push ov familiar-ask--modifier-overlays)))))))
+
+(defun familiar-ask--read (&optional model)
+  "Read a prompt, with history and @keyword completion.
+MODEL, a name, is shown as who answers instead of the tier's model."
   (minibuffer-with-setup-hook
       (lambda ()
         (use-local-map (make-composed-keymap familiar-ask-minibuffer-map (current-local-map)))
@@ -1066,29 +1161,49 @@ A prompt equal to the newest one isn't added again (`add-to-history')."
         (dolist (capf (reverse familiar-ask-prompt-capfs))
           (add-hook 'completion-at-point-functions capf 50 t))
         (setq-local familiar-ask--prompt-p t)
+        (add-hook 'after-change-functions #'familiar-ask--highlight-modifiers nil t)
+        (familiar-ask--highlight-modifiers)
         (run-hooks 'familiar-ask-prompt-setup-hook))
-    (prog1 (read-string (format "Ask (%s): " (alist-get familiar-ask-tier familiar-models))
-                        (prog1 familiar-ask--draft (setq familiar-ask--draft nil))
+    (prog1 (read-string (format "Ask (%s): " (or model (alist-get familiar-ask-tier familiar-models)))
+                        (prog1 (or familiar-ask--draft
+                                   (and familiar-ask-remember-modifiers familiar-ask-modifiers
+                                        (concat (string-join familiar-ask-modifiers " ") " ")))
+                          (setq familiar-ask--draft nil))
                         'familiar-ask-history)
       (when (bound-and-true-p savehist-mode)
-        (add-to-list 'savehist-additional-variables 'familiar-ask-history)))))
+        (add-to-list 'savehist-additional-variables 'familiar-ask-history)
+        (add-to-list 'savehist-additional-variables 'familiar-ask-modifiers)))))
+
+(defun familiar-ask--prefix-model (arg)
+  "Who answers, from the prefix ARG of \\[familiar-ask]: (BACKEND . MODEL) or nil.
+1, 2, 3 (M-1 …): the fast, smart, deep tier; C-u C-u: pick any model or agent."
+  (pcase arg
+    ('(16) (familiar-ask--resolve-model t))
+    ((and (pred integerp) n (guard (<= 1 n 3)))
+     (cons (or familiar-backend gptel-backend)
+           (alist-get (nth (1- n) '(fast smart deep)) familiar-models)))))
 
 ;;;###autoload
-(defun familiar-ask (prompt &optional fresh origin)
+(defun familiar-ask (prompt &optional fresh origin model)
   "Ask PROMPT about where you are.
 FRESH t starts a fresh conversation, `follow-up' continues the running
 one, nil does what `familiar-ask-follow-up' says; @new and @follow-up in
-PROMPT win over it.  Interactively the prefix arg does the opposite of
-the default.  @echo answers in the echo area, without a window.  ORIGIN
-is where it was asked from (`familiar-ask--capture'); from Lisp it
+PROMPT win over it.  Interactively C-u does the opposite of the default,
+M-1, M-2, M-3 ask the fast, smart or deep model, C-u C-u asks which model
+or agent answers.  @echo answers in the echo area, without a window.
+ORIGIN is where it was asked from (`familiar-ask--capture'); from Lisp it
 defaults to here and now.  It used to fall back to the last interactive
-ask's, which could be another buffer minutes ago."
+ask's, which could be another buffer minutes ago.  MODEL, (BACKEND .
+MODEL) or (agent . TARGET), answers unless PROMPT has an @model."
   (interactive
-   (let ((origin (familiar-ask--capture)))
+   (let* ((origin (familiar-ask--capture))
+          (model (familiar-ask--prefix-model current-prefix-arg)))
      (setq familiar-ask--origin origin)   ; for C-c ' (`familiar-ask-edit-prompt')
-     (list (familiar-ask--read)
-           (and current-prefix-arg (if familiar-ask-follow-up t 'follow-up))
-           origin)))
+     (list (let ((p (familiar-ask--read (and model (format "%s" (cdr model))))))
+             (setq familiar-ask-modifiers (familiar-ask--modifiers p))
+             p)
+           (and (equal current-prefix-arg '(4)) (if familiar-ask-follow-up t 'follow-up))
+           origin model)))
   (pcase-let* ((`(,prompt . ,spec) (familiar-ask--model-spec prompt))
                (`(,prompt . ,keywords) (familiar-ask--keywords prompt)))
     (when (string-blank-p prompt) (user-error "Empty prompt"))
@@ -1101,7 +1216,7 @@ ask's, which could be another buffer minutes ago."
                            (t familiar-ask-follow-up)))
              (echo (memq 'echo keywords))
              (origin (or origin (familiar-ask--capture)))
-             (model (and spec (familiar-ask--resolve-model spec))))
+             (model (if spec (familiar-ask--resolve-model spec) model)))
         (cond
          ((eq (car model) 'agent)
           (familiar-ask--hand-off prompt (cdr model) origin))
@@ -1155,7 +1270,7 @@ add tools for this turn (`familiar-ask-turn-tools-functions'); MODEL
       (goto-char (point-max)))
     (with-current-buffer buf (setq familiar-ask--echo echo))
     (if echo
-        (message "✦ Asking…")
+        (message "✦ familiar: asking…")
       (familiar-ask--show buf (plist-get origin :window))
       ;; Leaving a minibuffer undoes the window changes made while it was
       ;; open (`read-minibuffer-restore-windows'): asked from M-x, the answer
@@ -1307,6 +1422,7 @@ in the minibuffer."
         (mode major-mode))
     (setq familiar-ask--draft nil)
     (add-to-history 'familiar-ask-history text)
+    (setq familiar-ask-modifiers (familiar-ask--modifiers text))
     (quit-window t)
     ;; Where the prompt was started, not this prompt buffer.
     (familiar-ask (format "%s\n\n(Prompt written in %s.)" text mode) nil familiar-ask--origin)))

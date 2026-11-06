@@ -123,7 +123,9 @@ hunk by hunk.  With \\[universal-argument], say what to do instead."
   (when (overlayp +asked--prompt-hint)
     (move-overlay +asked--prompt-hint (point-max) (point-max))
     (overlay-put +asked--prompt-hint 'after-string
-                 (and (string-empty-p (minibuffer-contents-no-properties))
+                 ;; Empty, or only the @modifiers kept from the last prompt.
+                 (and (string-match-p "\\`\\(?:[ \t]*@[^ \t\n]+\\)*[ \t]*\\'"
+                                      (minibuffer-contents-no-properties))
                       (propertize (substitute-command-keys
                                    "  \\<familiar-ask-minibuffer-map>\\[familiar-ask-edit-prompt] write it in a buffer · \\[familiar-ask-pick-history] earlier prompts · @ keywords")
                                   'face 'shadow)))))
