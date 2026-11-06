@@ -3505,3 +3505,14 @@ a backtrace, shown in the report."
           (should (string-match-p "3× .*Error running timer: (wrong-type-argument timerp nil)"
                                   (buffer-string)))
           (should (string-match-p "cancel-timer" (buffer-string))))))))
+
+(ert-deftest usage/mx-corrects-a-typo-it-cannot-match ()
+  "A word within a typo or two of a command's word becomes that word;
+words that begin one, and short ones, stay."
+  (defun test-usage-zzfrobnicate-thing () (interactive))
+  (let ((+usage--mx-words nil))
+    (should (equal (+usage-mx-correct "zzfrobnicte") "zzfrobnicate"))
+    (should (equal (+usage-mx-correct "zzfrobincate thing") "zzfrobnicate thing"))
+    (should-not (+usage-mx-correct "zzfrob"))          ; begins a word
+    (should-not (+usage-mx-correct "zq"))              ; too short to guess
+    (should-not (+usage-mx-correct "qqqqqqqqqqqq"))))  ; nothing close

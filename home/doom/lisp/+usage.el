@@ -704,16 +704,70 @@ it (3 characters at least)."
           (setq best cmd n count))))
     best))
 
+;;;; M-x: "did you mean"
+;;
+;; Nothing matching because of a typo ("autuin" for atuin): orderless's
+;; ~flex keeps the letters' order, so it doesn't help.  Each word typed is
+;; matched by edit distance against the words command names are made of;
+;; the corrected input shows after yours, and RET (with nothing matching)
+;; puts it in place of what you typed.
+
+(defvar +usage--mx-words nil "(COUNT . WORDS): the words of command names.")
+
+(defun +usage--mx-words ()
+  "The words of all command names (3 letters at least), made once per
+number of commands."
+  (let ((n 0) words)
+    (mapatoms (lambda (s) (when (commandp s) (cl-incf n))))
+    (if (eql n (car +usage--mx-words))
+        (cdr +usage--mx-words)
+      (let ((seen (make-hash-table :test #'equal)))
+        (mapatoms
+         (lambda (s)
+           (when (commandp s)
+             (dolist (w (split-string (symbol-name s) "[^[:alnum:]]+" t))
+               (when (and (>= (length w) 3) (not (gethash w seen)))
+                 (puthash w t seen)
+                 (push w words))))))
+        (setq +usage--mx-words (cons n words))
+        words))))
+
+(defun +usage--mx-correct-word (word words)
+  "WORD as one of WORDS within a typo or two (it, if it begins one)."
+  (let ((w (downcase word)))
+    (if (or (< (length w) 3) (seq-find (lambda (x) (string-prefix-p w x)) words))
+        word
+      (let ((limit (if (<= (length w) 4) 1 2)) best (bd 99))
+        (dolist (x words)
+          ;; Against the whole word and its start (WORD may be unfinished).
+          (let ((d (min (string-distance w x)
+                        (string-distance w (substring x 0 (min (length x) (length w)))))))
+            (when (or (< d bd) (and (= d bd) best (< (length x) (length best))))
+              (setq best x bd d))))
+        (if (and best (<= bd limit)) best word)))))
+
+(defun +usage-mx-correct (input)
+  "INPUT with its typos corrected, or nil when there were none."
+  (let* ((words (+usage--mx-words))
+         (parts (split-string input "[ \t]+" t))
+         (fixed (mapcar (lambda (p) (+usage--mx-correct-word p words)) parts)))
+    (unless (equal parts fixed) (string-join fixed " "))))
+
 (defvar-local +usage--mx-overlay nil)
 
 (defun +usage--mx-show-meant-h ()
-  "In M-x: after the input, the command these words meant before."
+  "In M-x: after the input, the command these words meant before; or,
+with nothing matching, the input with its typos corrected."
   (when (memq current-minibuffer-command +usage--mx-commands)
-    (let* ((meant (+usage-mx-meant (minibuffer-contents-no-properties)))
+    (let* ((input (minibuffer-contents-no-properties))
+           (meant (+usage-mx-meant input))
            (key (and meant (with-current-buffer (window-buffer (minibuffer-selected-window))
                                (where-is-internal meant nil t))))
-           (text (and meant (concat "  → " (symbol-name meant)
-                                    (if key (format " (%s)" (key-description key)) "")))))
+           (fixed (and (not meant) (eql (bound-and-true-p vertico--total) 0)
+                       (not (string-blank-p input)) (+usage-mx-correct input)))
+           (text (cond (meant (concat "  → " (symbol-name meant)
+                                      (if key (format " (%s)" (key-description key)) "")))
+                       (fixed (format "  did you mean “%s”? RET" fixed)))))
       (unless +usage--mx-overlay
         (setq +usage--mx-overlay (make-overlay (point-max) (point-max) nil t t)))
       (move-overlay +usage--mx-overlay (point-max) (point-max))
@@ -722,7 +776,8 @@ it (3 characters at least)."
 
 (defun +usage--mx-setup-meant-h ()
   (when (memq current-minibuffer-command +usage--mx-commands)
-    (add-hook 'post-command-hook #'+usage--mx-show-meant-h nil t)))
+    ;; After vertico's own (depth 0): its count is for this input then.
+    (add-hook 'post-command-hook #'+usage--mx-show-meant-h 90 t)))
 
 (add-hook 'minibuffer-setup-hook #'+usage--mx-setup-meant-h)
 
@@ -735,7 +790,11 @@ it (3 characters at least)."
                   (boundp 'vertico--total) (eql vertico--total 0)
                   (not (string-blank-p input))))
         (apply fn args)
-      (let ((meant (+usage-mx-meant input)))
+      (let ((meant (+usage-mx-meant input))
+            (fixed (+usage-mx-correct input)))
+        (if (and (not meant) fixed)
+            ;; A typo: the corrected words in its place; RET again runs.
+            (progn (delete-minibuffer-contents) (insert fixed))
         (run-at-time 0 nil
                      (if meant
                          (lambda () (call-interactively meant))
@@ -746,7 +805,7 @@ it (3 characters at least)."
                               (format "@echo Which Emacs command (name, and its key here if bound) does this: %s" input)
                               t)
                            (message "No command matches %S" input)))))
-        (abort-minibuffers)))))
+        (abort-minibuffers))))))
 
 (with-eval-after-load 'vertico
   (advice-add 'vertico-exit :around #'+usage-mx-exit-a))
